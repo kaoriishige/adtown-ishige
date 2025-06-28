@@ -29,13 +29,13 @@ export default function LandingPage() {
           特売・運勢・診断・地域情報アプリなど55選、すべて使い放題！
         </p>
 
-        {/* LINEボタン画像のみ */}
+        {/* LINEボタン差し替え */}
         <div style={{ marginTop: '3rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
             LINE登録はこちら
           </h2>
           <a
-            href="https://lin.ee/jSgXSlq"
+            href="https://lin.ee/d3CIGrJ"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -54,6 +54,7 @@ export default function LandingPage() {
     </>
   )
 }
+
 
 
 

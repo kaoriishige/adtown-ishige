@@ -1,37 +1,11 @@
+// pages/landing-v2.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { Sparkles, CheckCircle, Gift, LineChart, Users } from 'lucide-react';
 
-type LandingData = {
-  title: string;
-  subtitle: string;
-  campaign: string;
-  cta: string;
-  benefits: string[];
-  referralNote: string;
-  companyName: string;
-};
+import { Sparkles, CheckCircle, Gift, LineChart } from 'lucide-react';
+
 
 export default function LandingV2() {
-  const [data, setData] = useState<LandingData | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const docRef = doc(db, 'settings', 'landingV2');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const fetched = docSnap.data() as LandingData;
-        setData(fetched);
-      }
-    };
-    fetchData();
-  }, []);
-
-  if (!data) return <p className="p-6 text-gray-600">読み込み中...</p>;
-
   return (
     <div className="bg-white text-gray-800">
       <section className="bg-white py-12 px-6 text-center">
@@ -47,6 +21,7 @@ export default function LandingV2() {
         </a>
       </section>
 
+
       <section className="py-14 px-6 text-center bg-white">
         <h2 className="text-2xl font-bold mb-6 flex items-center justify-center gap-2">
           <Sparkles className="w-6 h-6 text-purple-600" /> こんなお悩み、ありませんか？
@@ -59,6 +34,7 @@ export default function LandingV2() {
           <li>🎯 自分に合った情報が毎日ほしい</li>
         </ul>
       </section>
+
 
       <section className="bg-gray-50 py-16 px-6">
         <h2 className="text-2xl font-bold text-center mb-8">これだけの価値が、月額980円。</h2>
@@ -84,6 +60,7 @@ export default function LandingV2() {
         </p>
       </section>
 
+
       <section className="bg-green-50 py-16 px-6 text-center" id="register">
         <h2 className="text-2xl font-bold mb-6 flex items-center justify-center gap-2">
           <LineChart className="w-6 h-6 text-green-700" /> 紹介制度で“実質無料”どころか、副収入に！
@@ -100,15 +77,12 @@ export default function LandingV2() {
         <p className="text-sm text-gray-600">※ 紹介報酬は、紹介された方が980円で継続課金した場合の計算です。</p>
       </section>
 
+
       <section className="bg-blue-100 py-16 px-6 text-center">
         <h2 className="text-xl font-bold mb-4 flex justify-center items-center gap-2">
           <Gift className="w-5 h-5 text-blue-500" /> 先行登録キャンペーン 実施中！
         </h2>
-        <a
-          href="https://lin.ee/7GKI01W"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a href="https://lin.ee/7GKI01W" target="_blank" rel="noopener noreferrer">
           <img
             src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png"
             alt="友だち追加"
@@ -120,12 +94,13 @@ export default function LandingV2() {
         <p className="text-sm text-gray-500 mt-4">※ボタンをタップしてLINE登録！</p>
       </section>
 
+
       <footer className="bg-gray-100 text-center py-6 text-sm text-gray-600 leading-relaxed">
         みんなの那須アプリ<br />
         株式会社adtown<br />
         〒329-2711 栃木県那須塩原市石林698-35<br />
+        TEL:0287-39-7577
       </footer>
     </div>
   );
 }
-
