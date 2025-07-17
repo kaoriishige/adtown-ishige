@@ -1,5 +1,6 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { collection, getDocs } from 'firebase/firestore';
+// ▼▼▼ Client SDKのimportを削除 ▼▼▼
+// import { collection, getDocs } from 'firebase/firestore'; 
 import { admin } from '../../lib/firebase-admin';
 import Link from 'next/link';
 
@@ -71,7 +72,8 @@ const RewardsPage: NextPage<RewardsPageProps> = ({ summaries }) => {
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
     const db = admin.firestore();
-    const rewardsSnapshot = await getDocs(collection(db, 'referralRewards'));
+    // ▼▼▼ Admin SDKの正しい書き方に修正 ▼▼▼
+    const rewardsSnapshot = await db.collection('referralRewards').get();
     
     const rewards = rewardsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as RewardData[];
 
@@ -112,7 +114,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     return { 
       props: { 
-        // ページに渡す前に、JSONとして安全な形式に変換
         summaries: JSON.parse(JSON.stringify(summaries)) 
       } 
     };
