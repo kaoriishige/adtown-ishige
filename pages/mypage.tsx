@@ -122,3 +122,5 @@ const MyPage = () => {
   );
 };
 
+// ★★★ この行が最も重要です！ ★★★
+export default MyPage;
