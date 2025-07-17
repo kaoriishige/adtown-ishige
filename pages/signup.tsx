@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; // useEffect をインポート
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { doc, setDoc } from 'firebase/firestore';
 import { loadStripe } from '@stripe/stripe-js';
 
-// Stripe.jsを初期化
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 );
@@ -17,19 +16,6 @@ const SignupPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [referrerId, setReferrerId] = useState<string | null>(null); // 紹介者IDを保存するstate
-
-  // ▼▼ ここから追加 ▼▼
-  // ページが読み込まれた時に、URLから紹介者IDを取得する
-  useEffect(() => {
-    if (router.isReady) {
-      const { ref } = router.query;
-      if (typeof ref === 'string') {
-        setReferrerId(ref);
-      }
-    }
-  }, [router.isReady, router.query]);
-  // ▲▲ ここまで追加 ▲▲
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,31 +33,35 @@ const SignupPage = () => {
         email: user.email,
         subscriptionStatus: 'incomplete',
         createdAt: new Date(),
-        // ▼▼ 紹介者IDを保存するフィールドを追加 ▼▼
-        referrerId: referrerId, // URLにrefパラメータがあればそのID、なければnullが保存される
       });
 
-      // 3. 作成したAPIを呼び出し、Stripeの決済ページを生成
+      // ★★★ 修正箇所 ★★★
+      // 3. 作成したAPIを呼び出す際に、FirebaseのUIDを渡す
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        // ▼▼ ユーザーIDをAPIに渡す処理を追加 ▼▼
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ uid: user.uid }), // ユーザー自身のIDを渡す
+        body: JSON.stringify({ uid: user.uid }), // ユーザーIDを送信
       });
-      // ▲▲ ここまで修正 ▲▲
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '決済ページの作成に失敗しました。');
+      }
+
       const { sessionId } = await response.json();
 
       // 4. Stripeの決済ページにリダイレクト
       const stripe = await stripePromise;
       if (stripe) {
-        stripe.redirectToCheckout({ sessionId });
+        await stripe.redirectToCheckout({ sessionId });
+      } else {
+         throw new Error('Stripe.jsの読み込みに失敗しました。');
       }
 
     } catch (err: any) {
-      let errorMessage = '登録に失敗しました。';
+      let errorMessage = err.message || '登録に失敗しました。';
       if (err.code === 'auth/email-already-in-use') {
         errorMessage = 'このメールアドレスは既に使用されています。';
       } else if (err.code === 'auth/weak-password') {
@@ -110,4 +100,3 @@ const SignupPage = () => {
 };
 
 export default SignupPage;
-

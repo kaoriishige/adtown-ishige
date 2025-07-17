@@ -1,9 +1,7 @@
-// pages/api/stripe-webhook.ts
-
 import { NextApiRequest, NextApiResponse } from 'next';
 import { buffer } from 'micro';
 import Stripe from 'stripe';
-import { admin } from '@/lib/firebase-admin';
+import { admin } from '../../lib/firebase-admin';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -21,7 +19,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   const buf = await buffer(req);
-  const sig = req.headers['stripe-signature']!;
+  const sig = req.headers['stripe-signature'];
+
+  if (!sig || !webhookSecret) {
+    return res.status(400).send('Webhook secret not configured');
+  }
 
   let event: Stripe.Event;
 
@@ -36,26 +38,41 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   try {
     switch (event.type) {
+      // 最初の支払い・登録が完了したとき
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const firebaseUid = session.client_reference_id!;
+        
+        // ★★★ ここでUIDを受け取る ★★★
+        const firebaseUid = session.client_reference_id;
         const stripeCustomerId = session.customer as string;
         const subscriptionId = session.subscription as string;
+
+        if (!firebaseUid) {
+            console.error('Webhook Error: Firebase UID (client_reference_id) not found in session.');
+            break; 
+        }
 
         await db.collection('users').doc(firebaseUid).update({
           stripeCustomerId: stripeCustomerId,
           subscriptionId: subscriptionId,
-          subscriptionStatus: 'active',
+          subscriptionStatus: 'active', // トライアル中でもactiveとして扱う
         });
         console.log(`✅ [${firebaseUid}] checkout.session.completed: User status updated.`);
         break;
       }
 
-      // ▼▼▼ 報酬率のロジックを更新 ▼▼▼
+      // 2回目以降の支払いが成功したとき（紹介報酬の計算）
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        const stripeCustomerId = invoice.customer as string;
         
+        // 初回登録時の請求は無視する（checkout.session.completedで処理するため）
+        if (invoice.billing_reason === 'subscription_create') {
+            break;
+        }
+
+        const stripeCustomerId = invoice.customer as string;
+        if (!stripeCustomerId) break;
+
         const userQuery = await db.collection('users').where('stripeCustomerId', '==', stripeCustomerId).limit(1).get();
         if (userQuery.empty) break; 
         
@@ -64,21 +81,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         const referrerId = referredUserData.referrerId;
 
         if (referrerId) {
-          // 紹介者の情報を取得
           const referrerDocRef = db.collection('users').doc(referrerId);
           const referrerDoc = await referrerDocRef.get();
           if (!referrerDoc.exists) break;
 
           let rewardRate = referrerDoc.data()?.referralRate;
 
-          // もし報酬率が未設定なら（＝最初の紹介）、日付で判定して設定
-          if (!rewardRate) {
-            const campaignEndDate = new Date('2025-08-31T23:59:59+09:00'); // JST
+          if (typeof rewardRate !== 'number') {
+            const campaignEndDate = new Date('2025-08-31T23:59:59+09:00');
             const now = new Date();
-            
-            rewardRate = now <= campaignEndDate ? 0.30 : 0.20; // 30% or 20%
-            
-            // 決定した報酬率をユーザー情報に保存
+            rewardRate = now <= campaignEndDate ? 0.30 : 0.20;
             await referrerDocRef.update({ referralRate: rewardRate });
             console.log(`[${referrerId}] First referral! Set rewardRate to ${rewardRate}.`);
           }
@@ -86,37 +98,43 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           const paymentAmount = invoice.amount_paid;
           const rewardAmount = Math.floor(paymentAmount * rewardRate);
 
-          await db.collection('referralRewards').add({
-            referrerUid: referrerId,
-            referredUid: referredUserDoc.id,
-            referredUserEmail: referredUserData.email,
-            invoiceId: invoice.id,
-            paymentAmount: paymentAmount,
-            rewardAmount: rewardAmount,
-            rewardRate: rewardRate, // どの率で計算したか記録
-            rewardStatus: 'pending',
-            paymentDate: admin.firestore.Timestamp.fromMillis(invoice.created * 1000),
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-
-          console.log(`🎉 [${referrerId}] received a reward of ${rewardAmount} (rate: ${rewardRate})`);
+          if (rewardAmount > 0) {
+            await db.collection('referralRewards').add({
+              referrerUid: referrerId,
+              referredUid: referredUserDoc.id,
+              referredUserEmail: referredUserData.email,
+              invoiceId: invoice.id,
+              paymentAmount: paymentAmount,
+              rewardAmount: rewardAmount,
+              rewardRate: rewardRate,
+              rewardStatus: 'pending',
+              paymentDate: admin.firestore.Timestamp.fromMillis(invoice.created * 1000),
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            console.log(`🎉 [${referrerId}] received a reward of ${rewardAmount} (rate: ${rewardRate})`);
+          }
         }
         break;
       }
-      // ▲▲▲ ここまで更新 ▲▲▲
 
-      case 'customer.subscription.updated': {
-        // ... (省略)
-        break;
-      }
-
+      // サブスクリプションがキャンセルされたとき
       case 'customer.subscription.deleted': {
-        // ... (省略)
+        const subscription = event.data.object as Stripe.Subscription;
+        const stripeCustomerId = subscription.customer as string;
+
+        const userQuery = await db.collection('users').where('stripeCustomerId', '==', stripeCustomerId).limit(1).get();
+        if (userQuery.empty) break;
+
+        const userDoc = userQuery.docs[0];
+        await db.collection('users').doc(userDoc.id).update({
+          subscriptionStatus: 'canceled',
+        });
+        console.log(`[${userDoc.id}] Subscription canceled.`);
         break;
       }
 
       default:
-        console.log(`🤷‍♀️ Unhandled event type: ${event.type}`);
+        // console.log(`🤷‍♀️ Unhandled event type: ${event.type}`);
     }
 
     res.status(200).json({ received: true });
