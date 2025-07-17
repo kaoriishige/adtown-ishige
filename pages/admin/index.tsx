@@ -1,53 +1,52 @@
 import Link from 'next/link';
 
-const AdminMenu = () => {
-  // ボタンに適用する共通のスタイル
-  const buttonStyle = "w-full p-5 text-lg font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors";
+const AdminPage = () => {
+  // ★★★ エラー修正箇所 ★★★
+  // 各リンクに適用する共通のスタイルをここで定義します。
+  const linkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-gray-700 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-gray-600 transition-transform transform hover:scale-105 text-center";
 
   return (
-    <div className="p-5 max-w-3xl mx-auto my-10 text-center">
-      <h1 className="text-3xl font-bold mb-6">管理メニュー</h1>
-      <div className="grid grid-cols-2 gap-4">
-        
-        <Link href="/admin/landing-editor">
-          <button className={buttonStyle}>ランディング編集</button>
+    <div className="p-5 my-10">
+      <h1 className="text-4xl font-extrabold mb-10 text-center text-gray-800">管理メニュー</h1>
+      <nav className="space-y-5">
+        {/* 既存のメニュー項目 */}
+        <Link href="/admin/app-management" className={linkStyle}>
+          アプリ管理 (CRUD)
+        </Link>
+        <Link href="/admin/landing-editor" className={linkStyle}>
+          ランディングページ編集
+        </Link>
+        <Link href="/admin/user-management" className={linkStyle}>
+          ユーザー管理
+        </Link>
+        <Link href="/admin/inquiry-list" className={linkStyle}>
+          問い合わせ管理
         </Link>
         
-        <Link href="/admin/manageApps">
-          <button className={buttonStyle}>アプリ管理</button>
+        {/* ▼▼▼ ここに新しいリンクを追加しました ▼▼▼ */}
+        <Link href="/admin/genres" className={linkStyle}>
+          ジャンル管理
         </Link>
-
-        <Link href="/admin/users">
-          <button className={buttonStyle}>ユーザー管理</button>
+        
+        {/* 未実装のメニュー項目 */}
+        <Link href="/admin/referral-rewards" className={linkStyle}>
+          紹介報酬管理
         </Link>
-
-        <Link href="/admin/inquiries">
-          <button className={buttonStyle}>お問い合わせ管理</button>
+        <Link href="/admin/csv-export" className={linkStyle}>
+          CSV出力
         </Link>
-
-        {/* 以下は未実装のページへのリンク */}
-        <Link href="/admin/rewards">
-          <button className={buttonStyle}>紹介報酬管理</button>
+        <Link href="/admin/manual-functions" className={linkStyle}>
+          関数手動実行
         </Link>
-
-        <Link href="/admin/csv-export">
-          <button className={buttonStyle}>CSV出力</button>
+        <Link href="/admin/operation-guide" className={linkStyle}>
+          運用ガイド
         </Link>
-
-        <Link href="/admin/manual-functions">
-          <button className={buttonStyle}>関数手動実行</button>
-        </Link>
-
-        <Link href="/admin/operation-guide">
-          <button className={buttonStyle}>運用ガイド</button>
-        </Link>
-
-      </div>
+      </nav>
     </div>
   );
 };
 
-export default AdminMenu;
+export default AdminPage;
 
 
 
