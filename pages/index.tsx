@@ -20,13 +20,14 @@ interface LandingData {
   lineBenefitsTitle: string;
   lineButtonLabel: string;
   lineButtonNote: string;
-  lineBenefits: string[]; 
+  lineBenefits: string[];
 }
 interface LandingPageProps {
   data: LandingData;
 }
 
-const LandingV2: NextPage<LandingPageProps> = ({ data }) => {
+// ▼▼コンポーネント名をファイル名に合わせてIndexPageに変更▼▼
+const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
   return (
     <>
       {/* ファーストビュー */}
@@ -36,9 +37,13 @@ const LandingV2: NextPage<LandingPageProps> = ({ data }) => {
           <p className="text-xl font-semibold text-blue-600 mb-2">{data.catchCopy}</p>
           <p className="text-red-600 font-bold">{data.campaignNote}</p>
           <div className="mt-6">
-           <Link href="/register">
-  <a className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full text-lg shadow-lg hover:bg-blue-700 transition">アプリ申込みはこちら</a>
-</Link>
+            {/* ▼▼ <a>タグを削除し、classNameをLinkに直接適用 ▼▼ */}
+            <Link
+              href="/register"
+              className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full text-lg shadow-lg hover:bg-blue-700 transition"
+            >
+              アプリ申込みはこちら
+            </Link>
           </div>
         </div>
       </section>
@@ -76,9 +81,13 @@ const LandingV2: NextPage<LandingPageProps> = ({ data }) => {
 
       <section className="bg-white py-12">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <Link href="/register">
-  <a className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full text-lg shadow-lg hover:bg-blue-700 transition">アプリ申込みはこちら</a>
-</Link>
+          {/* ▼▼ <a>タグを削除し、classNameをLinkに直接適用 ▼▼ */}
+          <Link
+            href="/register"
+            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full text-lg shadow-lg hover:bg-blue-700 transition"
+          >
+            アプリ申込みはこちら
+          </Link>
         </div>
       </section>
 
@@ -86,6 +95,7 @@ const LandingV2: NextPage<LandingPageProps> = ({ data }) => {
       <section className="bg-blue-50 py-10 mt-20">
         <div className="max-w-2xl mx-auto px-4 text-center">
           <h2 className="text-lg font-bold mb-2 text-green-700">{data.lineCampaignTitle}</h2>
+          {/* 外部リンクのaタグはそのまま残します */}
           <a href="https://lin.ee/24ulfrK" className="inline-block">
             <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt={data.lineButtonLabel} width={160} height={36}/>
           </a>
@@ -113,23 +123,11 @@ export const getServerSideProps: GetServerSideProps = async () => {
     title: '', catchCopy: '', campaignNote: '', troublesTitle: '', troubles: [],
     pricingTitle: '', pricingBenefits: [], referralTitle: '', referralNotes: [],
     referralCaution: '', lineCampaignTitle: '', lineBenefitsTitle: '', 
-    lineButtonLabel: '', lineButtonNote: ''
+    lineButtonLabel: '', lineButtonNote: '', lineBenefits: []
   };
   const data = docSnap.exists() ? { ...fallbackData, ...docSnap.data() } : fallbackData;
   return { props: { data: JSON.parse(JSON.stringify(data)) } };
 };
 
-export default LandingV2;
-
-
-
-
-
-
-
-
-
-
-
-
-
+// ▼▼ コンポーネント名をファイル名に合わせて変更 ▼▼
+export default IndexPage;
