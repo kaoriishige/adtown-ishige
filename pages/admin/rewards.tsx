@@ -97,7 +97,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
       }
     }
 
-    const referrerUids = [...new Set(Object.values(summaryMap).map(s => s.referrerUid))];
+   const referrerUids = Array.from(new Set(Object.values(summaryMap).map(s => s.referrerUid)));
     const userRecords = await Promise.all(
       referrerUids.map(uid => admin.auth().getUser(uid).catch(() => null))
     );
