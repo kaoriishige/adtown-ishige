@@ -1,0 +1,6 @@
+# build-export.ps1
+cd "$PSScriptRoot"
+npm install
+npm run build
+Compress-Archive -Path .next, public, out, package.json, next.config.js -DestinationPath out.zip
+pause

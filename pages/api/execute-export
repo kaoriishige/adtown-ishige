@@ -1,0 +1,32 @@
+// pages/api/execute-export.ts
+import type { NextApiRequest, NextApiResponse } from "next";
+import axios from "axios"; // ✅ 型も補完もOK
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).json({ error: "Method Not Allowed" });
+  }
+
+  try {
+    const response = await axios.post(
+      "https://us-central1-＜YOUR_PROJECT_ID＞.cloudfunctions.net/exportReferralSummariesToCSV"
+    );
+
+    return res.status(200).json({ success: true });
+  } catch (error: any) {
+    console.error("関数実行エラー:", error);
+    return res.status(500).json({
+      error: error?.response?.data || error.message || "Internal Server Error",
+    });
+  }
+}
+
+
+
+
+
+

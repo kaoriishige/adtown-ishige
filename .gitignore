@@ -1,8 +1,21 @@
-node_modules
-.next
-out
-.env
+# Dependencies
+/node_modules
+
+# Next.js build output
+/.next
+/out
+
+# Logs
 *.log
+
+# Environment variables
+.env
+.env.local
+
+# Secret Keys (Firebase, etc.)
+serviceAccountKey.json
+*firebase-adminsdk*.json
+
 
 
 

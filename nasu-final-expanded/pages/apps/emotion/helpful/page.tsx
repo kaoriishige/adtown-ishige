@@ -1,0 +1,1 @@
+// ジャンルページ: /apps/emotion/helpful

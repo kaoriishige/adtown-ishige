@@ -1,0 +1,277 @@
+[
+  {
+    "name": "誰にも言えない恋の悩み、AIにだけそっと相談",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "あなたの人間関係、ストレスレベル診断AI",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "借金・ローン・投資、お金の悩みを匿名でAIに相談",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "私のスキル、いくら稼げる？副業収入シミュレーター",
+    "genre": "診断・運勢",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "こころの天気予報、メンタルセルフチェックAI",
+    "genre": "健康支援",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "毎日届く！あなただけの褒め言葉シャワーAI",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "愚痴聞き地蔵AI、ここに全部吐き出して",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "あの日の恋、秘密の恋、AIが黙って聞きます",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "過去と向き合う、心の整理サポートAI",
+    "genre": "健康支援",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "大人の恋愛、再出発応援アドバイザーAI",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "チラシ不要！近所の特売ハンターAI",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "まだ食べられる！ご近所フードレスキューAI",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "その保険、高くない？保険証券おまかせ診断AI",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "NISA・iDeCo、何から始める？投資の第一歩相談AI",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "レシート撮影で家計診断！節約コーチングAI",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "スマホ代・電気代、賢く見直しアドバイスAI",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "どのPayがお得？今日の最適キャッシュレス決済AI",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "一番お得な返礼品は？ふるさと納税コンシェルジュ",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "節約の神AIが降臨「今はコレだけ買いなさい」",
+    "genre": "節約・特売",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "給料日まであといくら？お財布サバイバル診断",
+    "genre": "診断・運勢",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "最高の睡眠プランナーAI",
+    "genre": "健康支援",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "今日の体調、どうだった？健康ふりかえり日記AI",
+    "genre": "健康支援",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "毎朝スッキリ！今日のタスク整理アシスタントAI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "今日の天気で何着る？服装コーデ提案AI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "「あっ、ゴミの日！」をなくす、ゴミ出しリマインダー",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "冷蔵庫にあるもので！今日の晩ごはんAI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "「ごはん、何にしよう…」献立お悩み相談AI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "疲れた気分に寄り添う、癒やしの言葉と音楽AI",
+    "genre": "エンタメ",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "三日坊主にならない！目標達成ふりかえり日記",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "もう買い忘れない！お買い物リスト作成アシスタント",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "20代のためのキャリア設計相談室AI",
+    "genre": "教育・学習",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "仕事と育児、両立のヒントをくれる30代の味方AI",
+    "genre": "子育て",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "板挟みのツラさ、吐き出して。40代中間管理職の相談役",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "親のもしもに備える、50代からの介護準備アドバイス",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "60代からの健康長寿、毎日の新習慣づくりAI",
+    "genre": "健康支援",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "自分に合うバイトは？学生のためのアルバイト診断",
+    "genre": "教育・学習",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "新婚生活の「こんなはずじゃ…」を解決する夫婦会議AI",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "次の幸せへ、離婚・再婚の心のステップ整理AI",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "おひとりさまをもっと楽しく！シングルライフ応援AI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "定年後の人生、どう楽しむ？セカンドライフ設計AI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "次の旅行、どこ行く？旅のプランニング相談AI",
+    "genre": "趣味・文化",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "家、いつ買う？マイホーム購入ステップ・バイ・ステップ",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "知らないと損！確定申告・医療費控除お助けAI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "保育園・小学校、入園・入学準備のTODOリスト",
+    "genre": "子育て",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "いざという時慌てない、冠婚葬祭マナーチェックAI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "今日からできる！節電・エコ生活アドバイザー",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "わが家の防災、足りてる？防災グッズ準備チェッカー",
+    "genre": "防災・安全",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "災害発生！どう動く？避難行動シミュレーションAI",
+    "genre": "防災・安全",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "面倒な手続き、忘れない。引っ越し準備ダンドリAI",
+    "genre": "生活情報",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "親にスマホを教えよう！世界一やさしいスマホ先生AI",
+    "genre": "教育・学習",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "心が折れそうな夜に、そっと寄り添うAI",
+    "genre": "エンタメ",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "その怒り、6秒待って。アンガーマネジメントAI",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "「ひとりじゃないよ」孤独を癒やす共感チャットAI",
+    "genre": "人間関係",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "好きなもの、語り合おう！趣味ともだちAI",
+    "genre": "趣味・文化",
+    "url": "https://example.com/app/placeholder-url"
+  },
+  {
+    "name": "誰かと話したい、今。秒で呼べる雑談AI",
+    "genre": "エンタメ",
+    "url": "https://example.com/app/placeholder-url"
+  }
+]

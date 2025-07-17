@@ -1,0 +1,9 @@
+{
+  "hosting": {
+    "public": "out",
+    "rewrites": [
+      { "source": "/landing-v2", "destination": "/landing-v2.html" }
+    ]
+  }
+}
+

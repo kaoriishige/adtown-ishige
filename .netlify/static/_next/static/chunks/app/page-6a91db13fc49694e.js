@@ -1,1 +1,0 @@
-(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[974],{127:(e,u,r)=>{"use strict";r.r(u),r.d(u,{default:()=>t});var s=r(2115),n=r(8999);function t(){let e=(0,n.useRouter)();return(0,s.useEffect)(()=>{e.replace("/admin")},[e]),null}},299:(e,u,r)=>{Promise.resolve().then(r.bind(r,127))}},e=>{var u=u=>e(e.s=u);e.O(0,[441,684,358],()=>u(299)),_N_E=e.O()}]);
