@@ -1,9 +1,9 @@
 import { GetServerSideProps, NextPage } from 'next';
 import { collection, getDocs } from 'firebase/firestore';
-import { admin } from '@/lib/firebase-admin'; // @/lib/.. でインポート
+import { admin } from '../../lib/firebase-admin';
 import Link from 'next/link';
 
-// 報酬データの型を厳密に定義
+// 報酬データの型を定義
 interface RewardData {
   id: string;
   paymentDate: admin.firestore.Timestamp;
@@ -12,7 +12,7 @@ interface RewardData {
   referredUid: string;
 }
 
-// 表示用サマリーデータの型
+// 表示する集計データの型
 interface MonthlyRewardSummary {
   month: string;
   referrerEmail: string;
@@ -78,7 +78,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const summaryMap: { [key: string]: { totalReward: number; uids: Set<string>; referrerUid: string } } = {};
 
     for (const reward of rewards) {
-      if (reward.paymentDate && reward.referrerUid) { // データが存在するかチェック
+      if (reward.paymentDate && reward.referrerUid) {
         const paymentDate = reward.paymentDate.toDate();
         const monthKey = `${paymentDate.getFullYear()}-${(paymentDate.getMonth() + 1).toString().padStart(2, '0')}`;
         const groupKey = `${monthKey}-${reward.referrerUid}`;
@@ -110,7 +110,13 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     summaries.sort((a, b) => b.month.localeCompare(a.month));
 
-    return { props: { summaries: JSON.parse(JSON.stringify(summaries)) } };
+    // ▼▼▼ エラーの原因箇所を修正 ▼▼▼
+    // FirestoreのTimestamp型を直接渡さずに、安全なオブジェクトに変換する
+    return { 
+      props: { 
+        summaries: JSON.parse(JSON.stringify(summaries)) 
+      } 
+    };
 
   } catch (error) {
     console.error("Error in getServerSideProps for rewards page:", error);
