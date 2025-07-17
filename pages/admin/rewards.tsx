@@ -110,10 +110,9 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     summaries.sort((a, b) => b.month.localeCompare(a.month));
 
-    // ▼▼▼ エラーの原因箇所を修正 ▼▼▼
-    // FirestoreのTimestamp型を直接渡さずに、安全なオブジェクトに変換する
     return { 
       props: { 
+        // ページに渡す前に、JSONとして安全な形式に変換
         summaries: JSON.parse(JSON.stringify(summaries)) 
       } 
     };
@@ -125,7 +124,3 @@ export const getServerSideProps: GetServerSideProps = async () => {
 };
 
 export default RewardsPage;
-
-
-
-
