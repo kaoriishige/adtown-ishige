@@ -23,7 +23,6 @@ const MyPage = () => {
     return () => unsubscribe(); // クリーンアップ
   }, [router]);
 
-  // ★★★ エラー修正箇所 ★★★
   // ログアウト処理を定義
   const handleLogout = async () => {
     try {
@@ -83,16 +82,16 @@ const MyPage = () => {
       <p className="mb-8">ようこそ、{user.email}さん</p>
       
       <div className="flex flex-col items-center">
-        <Link href="/home">
-          <a className={buttonStyle}>アプリページはこちら</a>
+        <Link href="/home" className={buttonStyle}>
+          アプリページはこちら
         </Link>
         
         <button onClick={handleRegisterPayouts} disabled={isRedirecting} className={buttonStyle}>
           {isRedirecting ? '準備中...' : '報酬受取口座を登録・編集する'}
         </button>
         
-        <Link href="/referral-info">
-           <a className={buttonStyle}>紹介用URLとQRコード</a>
+        <Link href="/referral-info" className={buttonStyle}>
+           紹介用URLとQRコード
         </Link>
         
         <div className="max-w-2xl bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-6 my-8 rounded-lg text-left">
@@ -109,11 +108,11 @@ const MyPage = () => {
           <p className="text-xs mt-4">※紹介報酬は、紹介された方が980円で継続課金した場合の計算です。</p>
         </div>
 
-        <Link href="/contact">
-          <a className={buttonStyle}>お問い合わせ・アプリ希望</a>
+        <Link href="/contact" className={buttonStyle}>
+          お問い合わせ・アプリ希望
         </Link>
-        <Link href="/cancel-subscription">
-          <a className={buttonStyle}>解約希望の方はこちら</a>
+        <Link href="/cancel-subscription" className={buttonStyle}>
+          解約希望の方はこちら
         </Link>
         <button onClick={handleLogout} className="mt-8 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
           ログアウト
@@ -122,5 +121,4 @@ const MyPage = () => {
     </div>
   );
 };
-
 
