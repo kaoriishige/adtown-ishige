@@ -1,37 +1,37 @@
 import Link from 'next/link';
 import { GetServerSideProps, NextPage } from 'next';
-import { collection, doc, getDoc, getDocs, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-// Firestoreから取得するデータの型を定義
-interface Genre {
-  id: string;
-  name: string;
-}
+// あなたが完成させていた、元の正しいジャンルリストです
+const genres = [
+  '生活情報', '健康支援', '節約・特売', '人間関係', '教育・学習',
+  '子育て', '防災・安全', '診断・運勢', 'エンタメ', '趣味・文化'
+];
+
 interface HomePageProps {
   content: {
     mainHeading: string;
     subheading: string;
-  };
-  genres: Genre[]; // ジャンルリストの型を追加
+  }
 }
 
-const HomePage: NextPage<HomePageProps> = ({ content, genres }) => {
+const HomePage: NextPage<HomePageProps> = ({ content }) => {
   return (
     <div className="bg-blue-50 min-h-screen p-5 text-center flex flex-col justify-center">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{content.mainHeading}</h1>
-        <p className="text-lg text-gray-600 mb-12">{content.subheading}</p>
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{content.mainHeading || 'みんなの那須アプリ'}</h1>
+        <p className="text-lg text-gray-600 mb-12">{content.subheading || '下記のジャンルからお選びください。'}</p>
 
+        {/* ▼▼▼ ここに、元通り復元したジャンルが表示されます ▼▼▼ */}
         <div className="flex flex-wrap justify-center gap-4">
-          {/* ▼▼▼ データベースから取得したジャンルを表示 ▼▼▼ */}
           {genres.map(genre => (
             <Link
-              key={genre.id} // keyをidに変更
-              href={`/genre/${encodeURIComponent(genre.name)}`}
+              key={genre}
+              href={`/genre/${encodeURIComponent(genre)}`}
               className="px-5 py-2 bg-white border border-blue-300 text-blue-700 font-semibold rounded-full cursor-pointer shadow-md transition-all duration-300 hover:bg-blue-100 hover:shadow-lg hover:scale-110"
             >
-              {genre.name}
+              {genre}
             </Link>
           ))}
         </div>
@@ -55,45 +55,28 @@ const HomePage: NextPage<HomePageProps> = ({ content, genres }) => {
   );
 };
 
-// ▼▼▼ サーバーサイドの処理を修正 ▼▼▼
+// サーバーサイドでFirestoreから見出しのデータを取得します
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // 見出しコンテンツの取得（既存の処理）
-    const contentRef = doc(db, 'siteContent', 'landing');
-    const contentSnap = await getDoc(contentRef);
-    const content = contentSnap.exists()
-      ? contentSnap.data()
-      : { mainHeading: '（見出し未設定）', subheading: '（サブ見出し未設定）' };
+    const docRef = doc(db, 'siteContent', 'landing');
+    const docSnap = await getDoc(docRef);
+    const content = docSnap.exists()
+      ? docSnap.data()
+      : { mainHeading: 'みんなの那須アプリ', subheading: '下記のジャンルからお選びください。' };
 
-    // ジャンルリストの取得（新しい処理）
-    const genresQuery = query(collection(db, 'genres'), orderBy('name'));
-    const genresSnapshot = await getDocs(genresQuery);
-    const genres = genresSnapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data().name,
-    }));
-
-    // 取得した両方のデータをpropsとしてページに渡す
     return {
       props: {
         content: JSON.parse(JSON.stringify(content)),
-        genres: JSON.parse(JSON.stringify(genres)),
       },
     };
   } catch (error) {
-    console.error("Error fetching home page data:", error);
-    // エラーが発生した場合もページが表示されるように、空のデータを渡す
-    return { 
-      props: { 
-        content: { mainHeading: 'エラー', subheading: 'コンテンツの読み込みに失敗しました' },
-        genres: [] 
-      } 
-    };
+    console.error("Error fetching landing page content:", error);
+    const content = { mainHeading: 'エラー', subheading: 'コンテンツの読み込みに失敗しました' };
+    return { props: { content } };
   }
 };
 
 export default HomePage;
-
 
 
 

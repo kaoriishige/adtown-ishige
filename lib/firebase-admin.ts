@@ -1,24 +1,20 @@
-// lib/firebase-admin.ts
-
 import * as admin from 'firebase-admin';
 
-// サービスアカウントキーのJSON文字列
-const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-// 環境変数が設定されていない場合はエラーを投げる
-if (!serviceAccountJson) {
-  throw new Error('The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
-}
-
-const serviceAccount = JSON.parse(serviceAccountJson);
-
-// Appが初期化済みでない場合のみ初期化する
+// 環境変数が設定されていない場合のみ、一度だけ初期化を行います
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  try {
+    // Netlifyの環境変数から、安全に認証情報を読み込みます
+    const serviceAccount = JSON.parse(
+      process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_KEY as string
+    );
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } catch (error) {
+    console.error('Firebase admin initialization error', error);
+  }
 }
 
-// 初期化したadminインスタンスをエクスポート
+// 初期化したadminインスタンスをエクスポートします
 export { admin };
-
