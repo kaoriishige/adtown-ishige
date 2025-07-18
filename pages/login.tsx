@@ -1,3 +1,5 @@
+// pages/login.tsx
+
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
@@ -16,8 +18,18 @@ const LoginPage = () => {
     setIsLoading(true);
     setError('');
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/mypage'); // ログイン後のリダイレクト先
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // 認証情報をサーバーサイドのCookieに保存
+      const token = await userCredential.user.getIdToken();
+      await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+
+      router.push('/mypage'); // Cookie保存後にマイページへ移動
+
     } catch (err: any) {
       setError('メールアドレスまたはパスワードが間違っています。');
       console.error(err);
@@ -26,7 +38,6 @@ const LoginPage = () => {
     }
   };
 
-  // パスワードリセット処理
   const handlePasswordReset = async () => {
     const email = prompt('パスワードをリセットしたいメールアドレスを入力してください。');
     if (email) {
