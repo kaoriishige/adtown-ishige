@@ -3,10 +3,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import nookies from 'nookies';
 
-// reqとresの両方をany型に変更
-const handler = (req: any, res: any) => {
+const handler = (req: NextApiRequest, res: NextApiResponse) => {
   nookies.destroy(
-    { req, res },
+    { res }, // 変更点： req を削除
     'token',
     { path: '/' }
   );
@@ -14,3 +13,4 @@ const handler = (req: any, res: any) => {
 };
 
 export default handler;
+
