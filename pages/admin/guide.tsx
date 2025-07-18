@@ -1,9 +1,7 @@
-// pages/admin/guide.tsx
-
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 
-// 前回作成したガイドの文章をここに記述
+// あなたが作成された、完全なガイドの文章を、すべて元通りに復元しました。
 const guideContent = `
 ## 運用ガイド：AIアシスタントへの質問テンプレート集
 
@@ -189,17 +187,22 @@ AIに機能追加や修正を依頼する際は、最初に**【プロジェク�
 const GuidePage = () => {
   return (
     <div className="bg-gray-50 min-h-screen p-4 sm:p-8">
-      <div className="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-xl shadow-lg">
-        {/* proseクラスを適用すると、中の見出しやリストが自動で綺麗になる */}
-        <article className="prose lg:prose-xl">
-          <ReactMarkdown>{guideContent}</ReactMarkdown>
-        </article>
-
-        <div className="text-center mt-12 border-t pt-8">
-          <Link href="/admin" className="text-blue-600 hover:underline">
-            管理トップに戻る
-          </Link>
+      <div className="max-w-4xl mx-auto">
+        
+        {/* ▼▼▼ ご依頼の通り、「管理メニューに戻る」を、ここ（ページ上部）に配置しました ▼▼▼ */}
+        <div className="mb-6">
+            <Link href="/admin" className="text-blue-600 hover:underline">
+                ← 管理メニューに戻る
+            </Link>
         </div>
+
+        <div className="bg-white p-6 sm:p-10 rounded-xl shadow-lg">
+          {/* proseクラスを適用すると、中の見出しやリストが自動で綺麗になる */}
+          <article className="prose lg:prose-xl max-w-none">
+            <ReactMarkdown>{guideContent}</ReactMarkdown>
+          </article>
+        </div>
+
       </div>
     </div>
   );
