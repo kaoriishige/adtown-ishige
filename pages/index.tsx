@@ -1,11 +1,12 @@
-import { useEffect } from 'react'; // useEffectをインポート
-import { useRouter } from 'next/router'; // useRouterをインポート
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { GetServerSideProps, NextPage } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+// 不要になったLINE関連の項目を削除
 interface LandingData {
   title: string;
   catchCopy: string;
@@ -17,31 +18,22 @@ interface LandingData {
   referralTitle: string;
   referralNotes: string[];
   referralCaution: string;
-  lineCampaignTitle: string;
-  lineBenefitsTitle: string;
-  lineButtonLabel: string;
-  lineButtonNote: string;
-  lineBenefits: string[];
 }
 interface LandingPageProps {
   data: LandingData;
 }
 
 const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
-  // ▼▼▼ ここから追加 ▼▼▼
   const router = useRouter();
 
   useEffect(() => {
-    // router.isReadyで、URLのパラメータが読み込み完了したことを確認
     if (router.isReady) {
       const { ref } = router.query;
-      // URLに ref=... が含まれていたら、そのIDをブラウザの一時記憶に保存
       if (ref && typeof ref === 'string') {
         sessionStorage.setItem('referrerId', ref);
       }
     }
   }, [router.isReady, router.query]);
-  // ▲▲▲ ここまで追加 ▲▲▲
 
   return (
     <>
@@ -104,22 +96,7 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
         </div>
       </section>
 
-      {/* LINE登録セクション */}
-      <section className="bg-blue-50 py-10 mt-20">
-        <div className="max-w-2xl mx-auto px-4 text-center">
-          <h2 className="text-lg font-bold mb-2 text-green-700">{data.lineCampaignTitle}</h2>
-          <a href="https://lin.ee/24ulfrK" className="inline-block">
-            <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt={data.lineButtonLabel} width={160} height={36}/>
-          </a>
-          <p className="text-xs text-gray-500 mt-2">{data.lineButtonNote}</p>
-          <div className="bg-white p-4 mt-6 rounded-xl shadow">
-            <p className="font-bold text-left">{data.lineBenefitsTitle}</p>
-            <ul className="list-disc list-inside text-left text-sm mt-2">
-              {data.lineBenefits.map((item, i) => item && <li key={i}>{item}</li>)}
-            </ul>
-          </div>
-        </div>
-      </section>
+      {/* ▼▼▼ LINE登録セクションを削除 ▼▼▼ */}
       
       <footer className="text-center text-sm text-gray-500 mt-12 pb-8 space-y-2">
         <div className="flex justify-center space-x-6">
@@ -136,11 +113,11 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
 export const getServerSideProps: GetServerSideProps = async () => {
   const docRef = doc(db, 'settings', 'landingV2');
   const docSnap = await getDoc(docRef);
+  // 不要になったLINE関連の項目を削除
   const fallbackData = { 
     title: '', catchCopy: '', campaignNote: '', troublesTitle: '', troubles: [],
     pricingTitle: '', pricingBenefits: [], referralTitle: '', referralNotes: [],
-    referralCaution: '', lineCampaignTitle: '', lineBenefitsTitle: '', 
-    lineButtonLabel: '', lineButtonNote: '', lineBenefits: []
+    referralCaution: '',
   };
   const data = docSnap.exists() ? { ...fallbackData, ...docSnap.data() } : fallbackData;
   return { props: { data: JSON.parse(JSON.stringify(data)) } };
