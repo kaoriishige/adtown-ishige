@@ -2,12 +2,11 @@ import { GetStaticProps, GetStaticPaths, NextPage } from 'next';
 import Link from 'next/link';
 import { admin } from '../../lib/firebase-admin'; // サーバー用のAdmin SDKをインポート
 
-// Appの型定義にcreatedAtを追加
+// Appの型定義
 type App = {
   name: string;
   url: string;
   genre: string;
-  createdAt: string; // 日付は文字列として扱う
 };
 
 interface GenrePageProps {
@@ -20,7 +19,6 @@ export const getStaticPaths: GetStaticPaths = async () => {
   const db = admin.firestore();
   const appsSnapshot = await db.collection('apps').get();
   
-  // Setを使ってジャンルの重複をなくす
   const genres = new Set<string>();
   appsSnapshot.forEach(doc => {
     const genre = doc.data().genre;
@@ -35,7 +33,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
   return {
     paths,
-    fallback: 'blocking', // 'blocking'にすることで、新しいジャンルが追加されても対応可能
+    fallback: 'blocking',
   };
 };
 
@@ -55,24 +53,25 @@ export const getStaticProps: GetStaticProps = async (context) => {
   }
 
   // ▼▼▼ ここがエラー解決の最重要ポイント ▼▼▼
-  // データをページに渡す前に、日付(Timestamp)を安全な文字列に変換する
+  // createdAtが存在しない場合も安全に処理する
   const apps = querySnapshot.docs.map((doc) => {
     const data = doc.data();
     return {
       name: data.name || '',
       url: data.url || '',
       genre: data.genre || '',
-      // TimestampをISO文字列に変換
-      createdAt: data.createdAt.toDate().toISOString(),
+      // createdAtが存在する場合のみ日付に変換し、なければnullにする
+      createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
     };
   });
 
   return {
     props: {
       genre,
-      apps,
+      // appsをJSONとして安全な形式に変換
+      apps: JSON.parse(JSON.stringify(apps)),
     },
-    revalidate: 60, // 60秒ごとにデータを再生成
+    revalidate: 60,
   };
 };
 
@@ -104,6 +103,7 @@ const GenrePage: NextPage<GenrePageProps> = ({ genre, apps }) => {
 };
 
 export default GenrePage;
+
 
 
 
