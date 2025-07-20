@@ -1,3 +1,5 @@
+import { useEffect } from 'react'; // useEffectをインポート
+import { useRouter } from 'next/router'; // useRouterをインポート
 import Link from 'next/link';
 import Image from 'next/image';
 import { GetServerSideProps, NextPage } from 'next';
@@ -26,6 +28,21 @@ interface LandingPageProps {
 }
 
 const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
+  // ▼▼▼ ここから追加 ▼▼▼
+  const router = useRouter();
+
+  useEffect(() => {
+    // router.isReadyで、URLのパラメータが読み込み完了したことを確認
+    if (router.isReady) {
+      const { ref } = router.query;
+      // URLに ref=... が含まれていたら、そのIDをブラウザの一時記憶に保存
+      if (ref && typeof ref === 'string') {
+        sessionStorage.setItem('referrerId', ref);
+      }
+    }
+  }, [router.isReady, router.query]);
+  // ▲▲▲ ここまで追加 ▲▲▲
+
   return (
     <>
       {/* ファーストビュー */}
@@ -104,17 +121,14 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
         </div>
       </section>
       
-      {/* ▼▼▼ フッターを修正 ▼▼▼ */}
       <footer className="text-center text-sm text-gray-500 mt-12 pb-8 space-y-2">
         <div className="flex justify-center space-x-6">
           <Link href="/legal" className="hover:underline">特定商取引法に基づく表記</Link>
-          {/* <Link href="/privacy" className="hover:underline">プライバシーポリシー</Link> */}
         </div>
         <div>
           <p>みんなの那須アプリ運営</p><p>株式会社adtown</p><p>〒329-2711 栃木県那須塩原市石林698-35</p><p>TEL:0287-39-7577</p>
         </div>
       </footer>
-      {/* ▲▲▲ ここまで修正 ▲▲▲ */}
     </>
   );
 }

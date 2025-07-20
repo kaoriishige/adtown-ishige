@@ -17,7 +17,8 @@ const ReferralInfoPage = () => {
       router.push('/login');
     } else if (user) {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      setReferralLink(`${origin}/signup?ref=${user.uid}`);
+      // ▼▼▼ リンクの行き先をランディングページ('/')に変更 ▼▼▼
+      setReferralLink(`${origin}/?ref=${user.uid}`);
     }
   }, [user, loading, router]);
 

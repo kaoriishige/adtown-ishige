@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // useEffectをインポート
 import { useRouter } from 'next/router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
@@ -16,6 +16,17 @@ const SignupPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [referrerId, setReferrerId] = useState<string | null>(null); // 紹介者IDを保存するstate
+
+  // ▼▼▼ ここから追加 ▼▼▼
+  // ページが読み込まれた時に、ブラウザの一時記憶から紹介者IDを取得する
+  useEffect(() => {
+    const storedReferrerId = sessionStorage.getItem('referrerId');
+    if (storedReferrerId) {
+      setReferrerId(storedReferrerId);
+    }
+  }, []); // 空の配列を渡すことで、最初の1回だけ実行される
+  // ▲▲▲ ここまで追加 ▲▲▲
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +44,10 @@ const SignupPage = () => {
         email: user.email,
         subscriptionStatus: 'incomplete',
         createdAt: new Date(),
+        // ▼▼▼ ブラウザに記憶された紹介者IDを保存 ▼▼▼
+        referrerId: referrerId,
       });
 
-      // ★★★ 修正箇所 ★★★
       // 3. 作成したAPIを呼び出す際に、FirebaseのUIDを渡す
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
