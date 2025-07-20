@@ -1,5 +1,3 @@
-// pages/login.tsx
-
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
@@ -17,23 +15,36 @@ const LoginPage = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    
+    // ▼▼▼ デバッグ用の目印を追加 ▼▼▼
+    console.log('1. ログイン処理を開始します。');
+    console.log('入力されたメールアドレス:', email);
+
     try {
+      console.log('2. Firebaseに認証情報を送信します...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      console.log('3. Firebase認証に成功しました。');
       
       // 認証情報をサーバーサイドのCookieに保存
       const token = await userCredential.user.getIdToken();
+      console.log('4. Cookie保存APIを呼び出します...');
       await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
 
+      console.log('5. Cookie保存完了。マイページに移動します。');
       router.push('/mypage'); // Cookie保存後にマイページへ移動
 
     } catch (err: any) {
+      console.log('6. 認証またはAPI呼び出しで失敗しました。エラー:', err); // エラー内容をコンソールに表示
       setError('メールアドレスまたはパスワードが間違っています。');
       console.error(err);
+
     } finally {
+      console.log('7. ログイン処理を終了します。');
       setIsLoading(false);
     }
   };
