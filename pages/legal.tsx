@@ -18,7 +18,7 @@ const LegalPage: NextPage = () => {
           </div>
           <div>
             <h2 className="text-lg font-semibold">運営統括責任者名</h2>
-            <p>石下 香織</p>
+            <p>石下 かをり</p>
           </div>
           <div>
             <h2 className="text-lg font-semibold">所在地</h2>
@@ -30,7 +30,7 @@ const LegalPage: NextPage = () => {
           </div>
           <div>
             <h2 className="text-lg font-semibold">メールアドレス</h2>
-            <p>adtown@able.ocn.ne.jp </p>
+            <p>（ここに連絡先メールアドレスを記載）</p>
           </div>
           <div>
             <h2 className="text-lg font-semibold">販売価格</h2>
