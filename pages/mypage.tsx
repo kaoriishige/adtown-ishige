@@ -1,10 +1,9 @@
 // pages/mypage.tsx
 
-import { useState } from 'react';
 import { GetServerSideProps, NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { signOut, User } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { admin } from '../lib/firebase-admin';
 import nookies from 'nookies';
@@ -23,9 +22,6 @@ interface MyPageProps {
 
 const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
   const router = useRouter();
-  const [isRedirecting, setIsRedirecting] = useState(false);
-
-  // pages/mypage.tsx の handleLogout 関数のみを修正
 
   // ログアウト処理
   const handleLogout = async () => {
@@ -41,34 +37,8 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
     }
   };
 
-  // 報酬口座登録の処理
-  const handleRegisterPayouts = async () => {
-    setIsRedirecting(true);
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('User not found');
-
-      const token = await currentUser.getIdToken();
-      const response = await fetch('/api/create-connect-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Stripeアカウント連携の準備に失敗しました。');
-      }
-
-      const { url } = await response.json();
-      window.location.href = url;
-
-    } catch (error) {
-      console.error(error);
-      alert(`エラーが発生しました: ${error instanceof Error ? error.message : '時間をおいて再度お試しください。'}`);
-      setIsRedirecting(false);
-    }
-  };
+  // ★★★ 以前ここにあったStripe Connectを呼び出す処理(handleRegisterPayouts)は、
+  // シンプルな口座情報入力フォームへの移行に伴い、削除済みです。 ★★★
 
   const buttonStyle = "w-full max-w-lg p-4 mb-4 text-lg font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400";
 
@@ -77,7 +47,7 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
       <h1 className="text-3xl font-bold mb-4">マイページ</h1>
       <p className="mb-8">ようこそ、{user.email}さん</p>
 
-      {/* ▼▼▼ 報酬表示セクションを追加 ▼▼▼ */}
+      {/* 報酬表示セクション */}
       <div className="max-w-2xl mx-auto bg-green-100 border border-green-300 text-green-800 p-6 my-8 rounded-lg text-left shadow">
         <h2 className="text-2xl font-bold mb-4 text-green-900">あなたの紹介報酬 💰</h2>
         <div className="space-y-2 text-lg">
@@ -92,16 +62,16 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
         </div>
         <p className="text-xs mt-4 text-gray-600">※未払い報酬額が3,000円以上になると、翌月15日にご登録の口座へ自動で振り込まれます。</p>
       </div>
-      {/* ▲▲▲ ここまで追加 ▲▲▲ */}
       
       <div className="flex flex-col items-center">
         <Link href="/home" className={buttonStyle}>
           アプリページはこちら
         </Link>
         
-        <button onClick={handleRegisterPayouts} disabled={isRedirecting} className={buttonStyle}>
-          {isRedirecting ? '準備中...' : '報酬受取口座を登録・編集する'}
-        </button>
+        {/* ▼▼▼ このボタンはStripeではなく、シンプルな口座情報入力ページ(/payout-settings)にリンクされています ▼▼▼ */}
+        <Link href="/payout-settings" className={buttonStyle}>
+          報酬受取口座を登録・編集する
+        </Link>
         
         <Link href="/referral-info" className={buttonStyle}>
           紹介用URLとQRコード
@@ -129,7 +99,6 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
   );
 };
 
-// ▼▼▼ サーバーサイドで報酬データを取得する処理を追加 ▼▼▼
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
@@ -159,7 +128,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (error) {
-    // ログインしていない場合はログインページへリダイレクト
     return {
       redirect: {
         destination: '/login',
