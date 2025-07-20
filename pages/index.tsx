@@ -35,7 +35,6 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
           <p className="text-xl font-semibold text-blue-600 mb-2">{data.catchCopy}</p>
           <p className="text-red-600 font-bold">{data.campaignNote}</p>
           <div className="mt-6">
-            {/* ▼▼▼ href="/signup" になっていることを確認 ▼▼▼ */}
             <Link
               href="/signup"
               className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full text-lg shadow-lg hover:bg-blue-700 transition"
@@ -79,7 +78,6 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
 
       <section className="bg-white py-12">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          {/* ▼▼▼ href="/signup" になっていることを確認 ▼▼▼ */}
           <Link
             href="/signup"
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full text-lg shadow-lg hover:bg-blue-700 transition"
@@ -106,9 +104,17 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
         </div>
       </section>
       
-      <footer className="text-center text-sm text-gray-500 mt-12 pb-8">
-        <p>みんなの那須アプリ運営</p><p>株式会社adtown</p><p>〒329-2711 栃木県那須塩原市石林698-35</p><p>TEL:0287-39-7577</p>
+      {/* ▼▼▼ フッターを修正 ▼▼▼ */}
+      <footer className="text-center text-sm text-gray-500 mt-12 pb-8 space-y-2">
+        <div className="flex justify-center space-x-6">
+          <Link href="/legal" className="hover:underline">特定商取引法に基づく表記</Link>
+          {/* <Link href="/privacy" className="hover:underline">プライバシーポリシー</Link> */}
+        </div>
+        <div>
+          <p>みんなの那須アプリ運営</p><p>株式会社adtown</p><p>〒329-2711 栃木県那須塩原市石林698-35</p><p>TEL:0287-39-7577</p>
+        </div>
       </footer>
+      {/* ▲▲▲ ここまで修正 ▲▲▲ */}
     </>
   );
 }
