@@ -5,7 +5,7 @@ import { db } from '../../lib/firebase';
 import Link from 'next/link';
 import Image from 'next/image';
 
-// お客様が作成したFirestoreのデータ構造に合わせた型
+// 不要になったLINE関連の項目を削除
 interface LandingData {
   title: string;
   catchCopy: string;
@@ -17,11 +17,6 @@ interface LandingData {
   referralTitle: string;
   referralNotes: string[];
   referralCaution: string;
-  lineCampaignTitle: string;
-  lineBenefitsTitle: string;
-  lineButtonLabel: string;
-  lineButtonNote: string;
-  lineBenefits: string[];
 }
 
 interface EditorPageProps {
@@ -49,7 +44,13 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
     setIsLoading(true);
     const docRef = doc(db, 'settings', 'landingV2');
     try {
-      await setDoc(docRef, data, { merge: true });
+      // 保存するデータからLINE関連のフィールドを確実に除外する
+      const { 
+        lineCampaignTitle, lineBenefitsTitle, lineButtonLabel, lineButtonNote, lineBenefits, 
+        ...dataToSave 
+      } = data as any;
+
+      await setDoc(docRef, dataToSave, { merge: true });
       alert('保存しました！');
     } catch (error) {
       alert('保存中にエラーが発生しました。');
@@ -61,11 +62,12 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
   return (
     <div className="flex bg-gray-100 min-h-screen">
       {/* --- 左側：編集フォーム --- */}
-      <div className="w-1/3 p-6 bg-white border-r">
+      <div className="w-1/3 p-6 bg-white border-r overflow-y-auto">
         <Link href="/admin" className="text-blue-500 hover:underline">← 管理メニューに戻る</Link>
         <h1 className="text-2xl font-bold my-4">ランディングページ編集</h1>
         <div className="space-y-4">
-          {Object.keys(initialContent).map((key) => (
+          {/* Object.keys(data) を使うことで、表示する項目を動的に制御 */}
+          {Object.keys(data).map((key) => (
             <div key={key}>
               <label className="block text-sm font-bold mb-1 capitalize">{key}:</label>
               {Array.isArray((data as any)[key]) ? (
@@ -84,7 +86,7 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
       </div>
 
       {/* --- 右側：ライブプレビュー --- */}
-      <div className="w-2/3">
+      <div className="w-2/3 overflow-y-auto">
         <div className="bg-gray-50 p-4">
           <section className="bg-white text-center py-16 px-4">
             <h1 className="text-4xl md:text-5xl font-extrabold text-blue-800 mb-4">{data.title}</h1>
@@ -120,21 +122,9 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
           <section className="bg-white py-12 text-center">
             <a href="#" onClick={(e) => e.preventDefault()} className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full text-lg shadow-lg">アプリ申込みはこちら</a>
           </section>
-          <section className="bg-blue-50 py-10 mt-20">
-            <div className="max-w-2xl mx-auto px-4 text-center">
-              <h2 className="text-lg font-bold mb-2 text-green-700">{data.lineCampaignTitle}</h2>
-              <a href="#" onClick={(e) => e.preventDefault()} className="inline-block">
-                <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt={data.lineButtonLabel} width={160} height={36}/>
-              </a>
-              <p className="text-xs text-gray-500 mt-2">{data.lineButtonNote}</p>
-              <div className="bg-white p-4 mt-6 rounded-xl shadow">
-                <p className="font-bold text-left">{data.lineBenefitsTitle}</p>
-                <ul className="list-disc list-inside text-left text-sm mt-2">
-                  {data.lineBenefits.map((item, i) => item && <li key={i}>{item}</li>)}
-                </ul>
-              </div>
-            </div>
-          </section>
+          
+          {/* ▼▼▼ プレビューからもLINE登録セクションを削除 ▼▼▼ */}
+
           <footer className="text-center text-sm text-gray-500 mt-12 pb-8">
             <p>みんなの那須アプリ運営</p><p>株式会社adtown</p><p>〒329-2711 栃木県那須塩原市石林698-35</p><p>TEL:0287-39-7577</p>
           </footer>
@@ -147,13 +137,20 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
 export const getServerSideProps: GetServerSideProps = async () => {
   const docRef = doc(db, 'settings', 'landingV2');
   const docSnap = await getDoc(docRef);
-  const fallbackData = { 
+  // 不要になったLINE関連の項目を削除
+  const fallbackData: LandingData = { 
     title: '', catchCopy: '', campaignNote: '', troublesTitle: '', troubles: [],
     pricingTitle: '', pricingBenefits: [], referralTitle: '', referralNotes: [],
-    referralCaution: '', lineCampaignTitle: '', lineBenefitsTitle: '', 
-    lineButtonLabel: '', lineButtonNote: '', lineBenefits: []
+    referralCaution: '',
   };
-  const initialContent = docSnap.exists() ? { ...fallbackData, ...docSnap.data() } : fallbackData;
+  
+  const dbData = docSnap.exists() ? docSnap.data() : {};
+  // データベースのデータとfallbackをマージし、不要なキーをフィルタリング
+  const initialContent = Object.keys(fallbackData).reduce((acc, key) => {
+    (acc as any)[key] = (dbData as any)[key] ?? (fallbackData as any)[key];
+    return acc;
+  }, {} as LandingData);
+
   return { props: { initialContent: JSON.parse(JSON.stringify(initialContent)) } };
 };
 
