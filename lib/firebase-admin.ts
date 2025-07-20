@@ -1,29 +1,19 @@
-// lib/firebase-admin.ts (診断用コード)
+// lib/firebase-admin.ts
 
 import * as admin from 'firebase-admin';
 
-// --- ここから診断用コード ---
-console.log('--- Netlifyの環境変数診断を開始します ---');
-console.log('現在認識されているすべてのキー:', Object.keys(process.env));
+// Netlifyから分割されたキーを読み込む
+const part1 = process.env.FIREBASE_KEY_PART_1;
+const part2 = process.env.FIREBASE_KEY_PART_2;
+const part3 = process.env.FIREBASE_KEY_PART_3;
 
-const keyExists = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-console.log('FIREBASE_SERVICE_ACCOUNT_KEYは存在しますか？:', keyExists);
-
-if (keyExists) {
-    console.log('キーの文字数:', process.env.FIREBASE_SERVICE_ACCOUNT_KEY!.length);
-} else {
-    console.log('キーが見つかりませんでした。NetlifyのUI設定を再確認してください。');
+// 3つのパートがすべて存在するかチェック
+if (!part1 || !part2 || !part3) {
+  throw new Error('One or more parts of the Firebase service account key are missing.');
 }
-console.log('--- 診断を終了します ---');
-// --- ここまで診断用コード ---
 
-
-// Netlifyから安全な文字列（Base64）を読み込む
-const base64ServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-if (!base64ServiceAccount) {
-  throw new Error('The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
-}
+// 3つのパートを合体させて、元の長い文字列に戻す
+const base64ServiceAccount = part1 + part2 + part3;
 
 try {
   // 安全な文字列を、元の秘密鍵の形に復元する
