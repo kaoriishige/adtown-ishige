@@ -1,6 +1,22 @@
-// lib/firebase-admin.ts
+// lib/firebase-admin.ts (診断用コード)
 
 import * as admin from 'firebase-admin';
+
+// --- ここから診断用コード ---
+console.log('--- Netlifyの環境変数診断を開始します ---');
+console.log('現在認識されているすべてのキー:', Object.keys(process.env));
+
+const keyExists = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+console.log('FIREBASE_SERVICE_ACCOUNT_KEYは存在しますか？:', keyExists);
+
+if (keyExists) {
+    console.log('キーの文字数:', process.env.FIREBASE_SERVICE_ACCOUNT_KEY!.length);
+} else {
+    console.log('キーが見つかりませんでした。NetlifyのUI設定を再確認してください。');
+}
+console.log('--- 診断を終了します ---');
+// --- ここまで診断用コード ---
+
 
 // Netlifyから安全な文字列（Base64）を読み込む
 const base64ServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
