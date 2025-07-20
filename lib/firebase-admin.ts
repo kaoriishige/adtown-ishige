@@ -2,22 +2,14 @@
 
 import * as admin from 'firebase-admin';
 
-// Netlifyから分割されたキーを読み込む
-const part1 = process.env.FIREBASE_KEY_PART_1;
-const part2 = process.env.FIREBASE_KEY_PART_2;
-const part3 = process.env.FIREBASE_KEY_PART_3;
+// Netlifyから1行のJSON文字列を読み込む
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-// 3つのパートがすべて存在するかチェック
-if (!part1 || !part2 || !part3) {
-  throw new Error('One or more parts of the Firebase service account key are missing.');
+if (!serviceAccountJson) {
+  throw new Error('The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
 }
 
-// 3つのパートを合体させて、元の長い文字列に戻す
-const base64ServiceAccount = part1 + part2 + part3;
-
 try {
-  // 安全な文字列を、元の秘密鍵の形に復元する
-  const serviceAccountJson = Buffer.from(base64ServiceAccount, 'base64').toString('utf-8');
   const serviceAccount = JSON.parse(serviceAccountJson);
 
   // Appが初期化済みでない場合のみ初期化する
