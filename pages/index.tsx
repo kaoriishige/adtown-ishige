@@ -6,7 +6,6 @@ import { GetServerSideProps, NextPage } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-// 不要になったLINE関連の項目を削除
 interface LandingData {
   title: string;
   catchCopy: string;
@@ -54,11 +53,11 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
         </div>
       </section>
 
-      {/* 悩みセクション */}
-      <section className="bg-gray-50 py-12">
+      {/* ▼▼▼ 悩みセクションのデザインを修正 ▼▼▼ */}
+      <section className="bg-blue-600 text-white py-12">
         <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-xl font-bold mb-4">{data.troublesTitle}</h2>
-          <ul className="list-disc list-inside text-gray-700 space-y-2">
+          <h2 className="text-2xl font-bold mb-4 text-center">{data.troublesTitle}</h2>
+          <ul className="list-disc list-inside space-y-2">
             {data.troubles.map((item, i) => item && <li key={i}>{item}</li>)}
           </ul>
         </div>
@@ -74,14 +73,14 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
         </div>
       </section>
       
-      {/* 紹介制度セクション */}
-      <section className="bg-green-50 py-12">
+      {/* ▼▼▼ 紹介制度セクションのデザインを修正 ▼▼▼ */}
+      <section className="bg-blue-600 text-white py-12">
         <div className="max-w-3xl mx-auto px-6">
-          <h2 className="text-xl font-bold mb-4">{data.referralTitle}</h2>
-          <ul className="list-disc list-inside text-gray-700 space-y-2">
+          <h2 className="text-2xl font-bold mb-4 text-center">{data.referralTitle}</h2>
+          <ul className="list-disc list-inside space-y-2">
             {data.referralNotes.map((item, i) => item && <li key={i}>{item}</li>)}
           </ul>
-          <p className="text-xs text-gray-500 mt-4">{data.referralCaution}</p>
+          <p className="text-xs text-gray-200 mt-4">{data.referralCaution}</p>
         </div>
       </section>
 
@@ -95,8 +94,6 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
           </Link>
         </div>
       </section>
-
-      {/* ▼▼▼ LINE登録セクションを削除 ▼▼▼ */}
       
       <footer className="text-center text-sm text-gray-500 mt-12 pb-8 space-y-2">
         <div className="flex justify-center space-x-6">
@@ -113,11 +110,31 @@ const IndexPage: NextPage<LandingPageProps> = ({ data }) => {
 export const getServerSideProps: GetServerSideProps = async () => {
   const docRef = doc(db, 'settings', 'landingV2');
   const docSnap = await getDoc(docRef);
-  // 不要になったLINE関連の項目を削除
   const fallbackData = { 
-    title: '', catchCopy: '', campaignNote: '', troublesTitle: '', troubles: [],
-    pricingTitle: '', pricingBenefits: [], referralTitle: '', referralNotes: [],
-    referralCaution: '',
+    title: '', 
+    catchCopy: '', 
+    campaignNote: '', 
+    troublesTitle: 'こんなお悩み、ありませんか？', 
+    troubles: [
+      '毎日がマンネリで、ちょっと刺激や癒しがほしい',
+      '忙しすぎて、誰かと話す余裕もない',
+      '将来のことが不安でたまらない',
+      '人に言えない悩みを抱えている',
+      '家計を見直したいけど面倒で続かない'
+    ],
+    pricingTitle: '', 
+    pricingBenefits: [], 
+    referralTitle: '紹介制度で“実質無料”どころか、副収入に！', 
+    referralNotes: [
+      '8月末までに紹介した方には → 紹介報酬[30%]ずっと継続!!',
+      '9月より初めて紹介された方は→紹介報酬[20%]',
+      'あなたのリンク経由で登録されるだけでOK',
+      '報酬は即時アカウントに反映',
+      '月5人紹介すれば月額アプリ料金分以上が還元',
+      '100人紹介すれば、毎月約30,000円の報酬を継続でGET！',
+      '追加の設定は不要、すぐ開始可能'
+    ],
+    referralCaution: '※紹介報酬は、紹介された方が980円で継続課金した場合の計算です。',
   };
   const data = docSnap.exists() ? { ...fallbackData, ...docSnap.data() } : fallbackData;
   return { props: { data: JSON.parse(JSON.stringify(data)) } };
