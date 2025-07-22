@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useState } from 'react'; // 読み込み元を'next'から'react'に修正
 import { GetServerSideProps, NextPage } from 'next';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // パスを修正しました
+import { db } from '@/lib/firebase';
 import Link from 'next/link';
 
-// 新しいデータ構造に合わせた型
+// 新しいランディングページのデータ構造に合わせた型
 interface LandingData {
+  // ファーストビュー
   heroHeadline: string;
   heroSubheadline: string;
   heroCta: string;
+  // 問題提起
   problemTitle: string;
   problemIntro: string;
   problemItem1_Title: string;
@@ -23,17 +25,17 @@ interface LandingData {
   problemItem4_Title: string;
   problemItem4_Amount: string;
   problemItem4_Desc: string;
-  problemItem5_Title: string;
-  problemItem5_Amount: string;
-  problemItem5_Desc: string;
+  // 価値提案
   valueTitle: string;
   valueSubTitle: string;
   valueIntro: string;
   valuePoints: string[];
   valueConclusion: string;
+  // 価格提示
   pricingTitle: string;
   pricingSubTitle: string;
   pricingConclusion: string;
+  // 紹介制度
   referralTitle: string;
   referralIntro: string;
   referralBonus1_Title: string;
@@ -42,10 +44,12 @@ interface LandingData {
   referralBonus2_Desc: string;
   referralPoints: string[];
   referralCaution: string;
+  // 最後のひと押し
   finalCtaTitle: string;
   finalCtaText: string;
   finalCtaButton: string;
   finalCtaNote: string;
+  // フッター
   footerNote: string;
 }
 
@@ -57,13 +61,11 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
   const [data, setData] = useState<LandingData>(initialContent);
   const [isLoading, setIsLoading] = useState(false);
 
-  // ▼▼▼ prevに型を明記してエラーを解消 ▼▼▼
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setData((prev: LandingData) => ({ ...prev, [name]: value }));
   };
 
-  // ▼▼▼ prevに型を明記してエラーを解消 ▼▼▼
   const handleArrayChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setData((prev: LandingData) => ({ ...prev, [name]: value.split('\n') }));
@@ -139,29 +141,25 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
 export const getServerSideProps: GetServerSideProps = async () => {
   const docRef = doc(db, 'settings', 'landingV2');
   const docSnap = await getDoc(docRef);
-  const dbData = docSnap.exists() ? docSnap.data() : {};
   
   const fallbackData: LandingData = { 
-    heroHeadline: '那須で暮らすあなた、\nもしかして、年間91,400円「損」していませんか？',
+    heroHeadline: '那須で暮らすあなた、\nもしかして、年間76,400円「損」していませんか？',
     heroSubheadline: 'その「損」、この地域で賢く暮らす人たちは、\nみんなの那須アプリで「得」に変えています。',
     heroCta: '▶︎ 私が「損」している理由を確かめる（7日間無料）',
-    problemTitle: 'あなたの家族が失っている、年間91,400円の「見えない損」。',
+    problemTitle: 'あなたの家族が失っている、年間76,400円の「見えない損」。',
     problemIntro: 'その正体は、日常に隠れたこんな「当たり前」の行動に潜んでいます。',
     problemItem1_Title: '食費の損',
     problemItem1_Amount: '年間 24,000円',
-    problemItem1_Desc: '「今日の買い物、どこのスーパーが一番安いんだろう…？」\n毎週、無意識に同じスーパーへ向かっていませんか？ このアプリのAIは、今日のあなたの買い物リストを、エリア全域のチラシ情報から瞬時に計算し、「合計金額が最も安くなる店」を教えてくれます。「なんとなく」で店を選ぶ習慣を、「賢く」選ぶ習慣に変えるだけで、この金額が浮くのです。',
+    problemItem1_Desc: '「今日の買い物、どこのスーパーが一番安いんだろう…？」\n毎週、無意識に同じスーパーへ向かっていませんか？ その行動が、月々2,000円、年間で24,000円の「損」を生んでいます。このアプリのAIは、今日のあなたの買い物リストを、エリア全域のチラシ情報から瞬時に計算し、「合計金額が最も安くなる店」を教えてくれます。「なんとなく」で店を選ぶ習慣を、「賢く」選ぶ習慣に変えるだけで、この金額が浮くのです。',
     problemItem2_Title: 'レジャー・外食費の損',
     problemItem2_Amount: '年間 24,000円',
-    problemItem2_Desc: '「あ、あそこのテーブル、クーポン使ってる…うちは定価だ…」\nお会計の時、隣の席の人がスマホ画面を見せてスマートに会計している。あなたは何も知らずに、定価で支払う…。その「知らなかった」というだけで、あなたは他の会員より毎月2,000円、年間で24,000円も「多く」支払っているのです。このアプリは、あなたが訪れるほぼ全ての場所で「会員だけの特別待遇」を用意しています。',
+    problemItem2_Desc: '「あ、あそこのテーブル、クーポン使ってる…うちは定価だ…」\nお会計の時、隣の席の人がスマホ画面を見せてスマートに会計している。あなたは何も知らずに、定価で支払う…。その「知らなかった」というだけで、あなたは他の会員より毎月2,000円、年間で24,000円も「多く」支払っているのです。このアプリは、あなたが訪れるほぼ全ての場所で「会員だけの特別待遇」を用意しています。同じものを食べ、同じ体験をしても、知っているか知らないかで、支払う金額にこれだけの差が生まれます。',
     problemItem3_Title: '情報収集の時間の損',
     problemItem3_Amount: '年間 18,000円',
-    problemItem3_Desc: '「土曜の午後、急な子供の熱… 今から診てくれる病院はどこ！？」\n休日の夕方、突然のトラブル。『エアコンが壊れた！』『鍵をなくした！』。スマホを片手に焦って検索するも、出てくるのは古い情報や広告ばかり。このアプリは、那須エリアのあらゆる生活サービスの正確な情報を網羅した、あなたの家族だけの「お守り電話帳」です。',
+    problemItem3_Desc: '「土曜の午後、急な子供の熱… 今から診てくれる病院はどこ！？」\n休日の夕方、突然のトラブル。『エアコンが壊れた！』『鍵をなくした！』。スマホを片手に焦って検索するも、出てくるのは古い情報や広告ばかり。本当に信頼できて、今すぐ対応してくれる地域の業者が見つからず、時間だけが過ぎていく…。その『いざという時に、必死で探す時間』こそ、あなたが失っている時間です。\nこのアプリは、那須エリアのあらゆる生活サービス（休日当番医、水道修理、習い事など）の正確な情報を網羅した、あなたの家族だけの「お守り電話帳」です。あの絶望的な30分を、私たちは「確実な安心」に変えます。その積み重ねが、年間18,000円分もの価値になるのです。',
     problemItem4_Title: 'ガソリン代・補助金の損',
     problemItem4_Amount: '年間 12,000円＋α',
     problemItem4_Desc: '「とりあえず、いつものスタンドで満タンに」「市役所のお知らせ、よく読んでないな…」\nその「とりあえず」の給油が、実は一番高い選択肢かもしれません。アプリが教える「1円でも安いスタンド」を選び、「レシートを登録するだけ」で、年間12,000円は確実に節約できます。さらに、あなたが読み飛ばしている市役所からのお知らせの中に、数万円単位の補助金情報が眠っているのです。このアプリは、その「知らなくても仕方ない損」を、根こそぎ「得」に変えます。',
-    problemItem5_Title: 'フードロス（廃棄食料）の損',
-    problemItem5_Amount: '年間 15,000円＋α',
-    problemItem5_Desc: 'まだ美味しく食べられるのに、形が悪いだけで捨てられてしまう野菜や、閉店間際のパンやお惣菜。この「もったいない」を見過ごすことで、あなたは食費をさらに圧縮できるチャンスを逃しています。このアプリは、地域の飲食店や小売店がGoogleスプレッドシートに書き込むだけで、リアルタイムのフードロス情報をあなたに届けます。環境に優しく、お財布にもっと優しい選択が、毎日可能になります。',
     valueTitle: 'これは、アプリではありません。',
     valueSubTitle: '那須での暮らしを最高にする「特別な会員権」です。',
     valueIntro: '私たちが提供したいのは、55個の便利な機能ではありません。',
@@ -179,17 +177,20 @@ export const getServerSideProps: GetServerSideProps = async () => {
     referralPoints: ['紹介は簡単。あなた専用のリンク経由で登録されるだけでOK。報酬は即時にあなたのアカウントに反映され、月々の支払いに充当したり、現金として受け取ったりできます。', '月5人の紹介で、月額アプリ料金が実質無料以上に！', '100人の紹介なら、毎月約30,000円の報酬を継続的にGET！', '追加の設定は一切不要。会員になったその日から、すぐに紹介活動を始められます。'],
     referralCaution: '※紹介報酬は、紹介された方が980円で継続課金した場合からの計算です。',
     finalCtaTitle: 'さあ、あなたはどちらを選びますか？',
-    finalCtaText: 'これまで通り、気づかぬうちに年間91,400円を「損」し続ける日常か。\nそれとも、このアプリを手に入れて**「得」をし、さらに「収入」さえも生み出す**新しい毎日か。',
+    finalCtaText: 'これまで通り、気づかぬうちに年間76,400円を「損」し続ける日常か。\nそれとも、このアプリを手に入れて**「得」をし、さらに「収入」さえも生み出す**新しい毎日か。',
     finalCtaButton: '今すぐ7日間、新しい那須の暮らしを無料で体験する',
     finalCtaNote: '※無料体験期間中にいつでも解約可能です。料金は一切かかりません。',
-    footerNote: '※年間損失額91,400円の算出根拠について：食費の節約(月2,000円)、レジャー・外食費の割引(月2,000円)、情報収集にかかる時間の価値(月1,500円)、ガソリン代の節約(月1,000円)、フードロス削減による節約(月1,250円)等の合計を元にした参考金額です。効果を保証するものではありません。',
+    footerNote: '※年間損失額76,400円の算出根拠について：食費の節約(月2,000円×12ヶ月=24,000円)、レジャー・外食費の割引(月2,000円×12ヶ月=24,000円)、情報収集にかかる時間の価値(時給1,000円×月1.5h×12ヶ月=18,000円)、ガソリン代の節約(月1,000円×12ヶ月=12,000円)の合計78,000円を元に、利用状況を考慮して少し低めに丸めた参考金額です。効果を保証するものではありません。',
   };
   
-  const data = { ...fallbackData, ...dbData };
+  const dbData = docSnap.exists() ? docSnap.data() : {};
+  const initialContent = Object.keys(fallbackData).reduce((acc, key) => {
+    (acc as any)[key] = (dbData as any)[key] ?? (fallbackData as any)[key];
+    return acc;
+  }, {} as LandingData);
 
-  return { props: { initialContent: JSON.parse(JSON.stringify(data)) } };
+  return { props: { initialContent: JSON.parse(JSON.stringify(initialContent)) } };
 };
 
 export default LandingEditorPage;
-
 
