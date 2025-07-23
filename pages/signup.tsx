@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; // useEffectをインポート
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
@@ -16,17 +16,14 @@ const SignupPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [referrerId, setReferrerId] = useState<string | null>(null); // 紹介者IDを保存するstate
+  const [referrerId, setReferrerId] = useState<string | null>(null);
 
-  // ▼▼▼ ここから追加 ▼▼▼
-  // ページが読み込まれた時に、ブラウザの一時記憶から紹介者IDを取得する
   useEffect(() => {
     const storedReferrerId = sessionStorage.getItem('referrerId');
     if (storedReferrerId) {
       setReferrerId(storedReferrerId);
     }
-  }, []); // 空の配列を渡すことで、最初の1回だけ実行される
-  // ▲▲▲ ここまで追加 ▲▲▲
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,27 +31,22 @@ const SignupPage = () => {
     setError('');
 
     try {
-      // 1. Firebaseにユーザーを登録
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Firestoreにユーザー情報を保存
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
+      await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
         subscriptionStatus: 'incomplete',
         createdAt: new Date(),
-        // ▼▼▼ ブラウザに記憶された紹介者IDを保存 ▼▼▼
         referrerId: referrerId,
       });
 
-      // 3. 作成したAPIを呼び出す際に、FirebaseのUIDを渡す
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ uid: user.uid }), // ユーザーIDを送信
+        body: JSON.stringify({ uid: user.uid }),
       });
       
       if (!response.ok) {
@@ -64,7 +56,6 @@ const SignupPage = () => {
 
       const { sessionId } = await response.json();
 
-      // 4. Stripeの決済ページにリダイレクト
       const stripe = await stripePromise;
       if (stripe) {
         await stripe.redirectToCheckout({ sessionId });
@@ -104,7 +95,13 @@ const SignupPage = () => {
           </button>
         </div>
       </form>
-      <p className="text-center text-sm">
+      
+      {/* ▼▼▼ ここに注意書きを追加しました ▼▼▼ */}
+      <p className="text-center text-xs text-gray-500 mt-4">
+        ※7日間の無料体験期間中にいつでも解約可能です。料金は一切かかりません。
+      </p>
+
+      <p className="text-center text-sm mt-4">
         すでにアカウントをお持ちですか？ <Link href="/login" className="text-blue-500 hover:underline">ログイン</Link>
       </p>
     </div>
@@ -112,3 +109,4 @@ const SignupPage = () => {
 };
 
 export default SignupPage;
+

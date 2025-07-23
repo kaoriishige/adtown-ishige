@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState } from 'next';
 import { GetServerSideProps, NextPage } from 'next';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db } from '@/lib/firebase'; // ← パスを修正しました
 import Link from 'next/link';
 
 // 新しいランディングページのデータ構造に合わせた型
@@ -192,7 +192,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
   
   const data = { ...fallbackData, ...dbData };
 
-  return { props: { initialContent: JSON.parse(JSON.stringify(data)) } };
+  return { props: { initialContent: JSON.parse(JSON.stringify(initialContent)) } };
 };
 
 export default LandingEditorPage;
