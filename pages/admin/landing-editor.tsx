@@ -1,4 +1,4 @@
-import { useState } from 'react'; // 読み込み元を'next'から'react'に修正
+import { useState } from 'react';
 import { GetServerSideProps, NextPage } from 'next';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -124,6 +124,7 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
       </div>
 
       {/* --- 右側：ライブプレビュー (簡易版) --- */}
+      {/* ▼▼▼ プレビューの表示内容を新しいデータ構造に修正 ▼▼▼ */}
       <div className="w-2/3 overflow-y-auto p-8">
         <h2 className="text-xl font-bold mb-4">簡易プレビュー</h2>
         <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
@@ -137,6 +138,7 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
             <p className="whitespace-pre-wrap">{data.valueTitle}</p>
         </div>
       </div>
+      {/* ▲▲▲ ここまで修正 ▲▲▲ */}
     </div>
   );
 };
@@ -183,7 +185,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     referralPoints: ['紹介は簡単。あなた専用のリンク経由で登録されるだけでOK。報酬は即時にあなたのアカウントに反映され、月々の支払いに充当したり、現金として受け取ったりできます。', '月5人の紹介で、月額アプリ料金が実質無料以上に！', '100人の紹介なら、毎月約30,000円の報酬を継続的にGET！', '追加の設定は一切不要。会員になったその日から、すぐに紹介活動を始められます。'],
     referralCaution: '※紹介報酬は、紹介された方が980円で継続課金した場合からの計算です。',
     finalCtaTitle: 'さあ、あなたはどちらを選びますか？',
-    finalCtaText: 'これまで通り、気づかぬうちに年間91,400円を「損」し続ける日常か。\nそれとも、このアプリを手に入れて**「得」をし、さらに「収入」さえも生み出す**新しい毎日か。',
+    finalCtaText: 'これまで通り、気づくうちに年間91,400円を「損」し続ける日常か。\nそれとも、このアプリを手に入れて**「得」をし、さらに「収入」さえも生み出す**新しい毎日か。',
     finalCtaButton: '今すぐ7日間、新しい那須の暮らしを無料で体験する',
     finalCtaNote: '※無料体験期間中にいつでも解約可能です。料金は一切かかりません。',
     footerNote: '※年間損失額91,400円の算出根拠について：食費の節約(月2,000円)、レジャー・外食費の割引(月2,000円)、情報収集にかかる時間の価値(月1,500円)、ガソリン代の節約(月1,000円)、フードロス削減による節約(月1,250円)等の合計を元にした参考金額です。効果を保証するものではありません。',
