@@ -1,7 +1,7 @@
-import { useState } from 'next';
+import { useState } from 'react'; // 読み込み元を'next'から'react'に修正
 import { GetServerSideProps, NextPage } from 'next';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // ← パスを修正しました
+import { db } from '@/lib/firebase';
 import Link from 'next/link';
 
 // 新しいランディングページのデータ構造に合わせた型
@@ -66,12 +66,12 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setData(prev => ({ ...prev, [name]: value }));
+    setData((prev: LandingData) => ({ ...prev, [name]: value }));
   };
 
   const handleArrayChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setData(prev => ({ ...prev, [name]: value.split('\n') }));
+    setData((prev: LandingData) => ({ ...prev, [name]: value.split('\n') }));
   };
 
   const handleSave = async () => {
@@ -144,7 +144,6 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
 export const getServerSideProps: GetServerSideProps = async () => {
   const docRef = doc(db, 'settings', 'landingV2');
   const docSnap = await getDoc(docRef);
-  const dbData = docSnap.exists() ? docSnap.data() : {};
   
   const fallbackData: LandingData = { 
     heroHeadline: '那須で暮らすあなた、\nもしかして、年間91,400円「損」していませんか？',
@@ -190,7 +189,11 @@ export const getServerSideProps: GetServerSideProps = async () => {
     footerNote: '※年間損失額91,400円の算出根拠について：食費の節約(月2,000円)、レジャー・外食費の割引(月2,000円)、情報収集にかかる時間の価値(月1,500円)、ガソリン代の節約(月1,000円)、フードロス削減による節約(月1,250円)等の合計を元にした参考金額です。効果を保証するものではありません。',
   };
   
-  const data = { ...fallbackData, ...dbData };
+  const dbData = docSnap.exists() ? docSnap.data() : {};
+  const initialContent = Object.keys(fallbackData).reduce((acc, key) => {
+    (acc as any)[key] = (dbData as any)[key] ?? (fallbackData as any)[key];
+    return acc;
+  }, {} as LandingData);
 
   return { props: { initialContent: JSON.parse(JSON.stringify(initialContent)) } };
 };
