@@ -1,27 +1,64 @@
-// pages/api/getFlyers.ts のコード（すべてコピーして貼り付けてください）
+// pages/api/getFlyers.ts のコード（Netlifyデプロイ用、すべてコピーして貼り付けてください）
 import type { NextApiRequest, NextApiResponse } from 'next';
-import admin from 'firebase-admin'; // Firebase Admin SDK をインポート
+import admin from 'firebase-admin';
 
 // Firebase Admin SDK の初期化
-// GOOGLE_APPLICATION_CREDENTIALS 環境変数を使用する方法で初期化します。
+// Netlifyに登録した分割環境変数からサービスアカウント情報を読み込む
 if (!admin.apps.length) {
   try {
-    console.log('Attempting to initialize Firebase Admin SDK using GOOGLE_APPLICATION_CREDENTIALS...');
+    console.log('Attempting to initialize Firebase Admin SDK from segmented environment variables...');
     
-    // .env.local に設定された GOOGLE_APPLICATION_CREDENTIALS 環境変数の値を取得
-    const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    // Netlifyで設定した環境変数から値を取得
+    const firebaseSaConfig = {
+      type: process.env.FIREBASE_SA_TYPE,
+      projectId: process.env.FIREBASE_SA_PROJECT_ID,
+      private_key_id: process.env.FIREBASE_SA_PRIVATE_KEY_ID,
+      // private_keyはBase64エンコードの必要はありません。Netlifyの入力欄で改行を\nにして1行にした文字列をそのまま受け取ります。
+      private_key: process.env.FIREBASE_SA_PRIVATE_KEY?.replace(/\\n/g, '\n'), // \n を実際の改行に戻す
+      client_email: process.env.FIREBASE_SA_CLIENT_EMAIL,
+      // サービスアカウントJSONにある他のフィールドも、必要ならNetlifyに環境変数として登録し、ここに追加
+      // 例: client_id: process.env.FIREBASE_SA_CLIENT_ID,
+      // auth_uri: process.env.FIREBASE_SA_AUTH_URI,
+      // token_uri: process.env.FIREBASE_SA_TOKEN_URI,
+      // auth_provider_x509_cert_url: process.env.FIREBASE_SA_AUTH_PROVIDER_X509_CERT_URL,
+      // client_x509_cert_url: process.env.FIREBASE_SA_CLIENT_X509_CERT_URL,
+      // universe_domain: process.env.FIREBASE_SA_UNIVERSE_DOMAIN,
+    };
 
-    if (!serviceAccountPath) {
-      console.error('GOOGLE_APPLICATION_CREDENTIALS 環境変数が設定されていません。');
-      throw new Error('GOOGLE_APPLICATION_CREDENTIALS が見つかりません。');
+    // 必須の環境変数が設定されているかチェック
+    if (
+      !firebaseSaConfig.type ||
+      !firebaseSaConfig.projectId ||
+      !firebaseSaConfig.private_key_id ||
+      !firebaseSaConfig.private_key || // private_keyが空でないことをチェック
+      !firebaseSaConfig.client_email
+    ) {
+      console.error('必要なFirebaseサービスアカウント環境変数が不足しています。Netlifyのデプロイ設定を確認してください。');
+      console.error('Missing: ', {
+        type: !!firebaseSaConfig.type,
+        projectId: !!firebaseSaConfig.projectId,
+        private_key_id: !!firebaseSaConfig.private_key_id,
+        private_key: !!firebaseSaConfig.private_key,
+        client_email: !!firebaseSaConfig.client_email,
+      });
+      throw new Error('Missing Firebase service account environment variables for API route.');
     }
+    
+    // Admin SDKのcredential.cert()はServiceAccount型を期待
+    const serviceAccount: admin.ServiceAccount = {
+      type: firebaseSaConfig.type,
+      project_id: firebaseSaConfig.projectId, 
+      private_key_id: firebaseSaConfig.private_key_id,
+      private_key: firebaseSaConfig.private_key,
+      client_email: firebaseSaConfig.client_email,
+      // 他のフィールドも serviceAccount に追加する必要がある場合、firebaseSaConfigから取得して追加
+    } as admin.ServiceAccount; // 型アサーション
 
-    // Firebase Admin SDK を、GOOGLE_APPLICATION_CREDENTIALS 環境変数から自動で認証情報を読み込む形式で初期化
     admin.initializeApp({
-      credential: admin.credential.applicationDefault(), // 環境変数から自動で読み込む
-      databaseURL: `https://supersaver-ai.firebaseio.com` // SuperSaver AI プロジェクトのDB URL
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: `https://${serviceAccount.projectId}.firebaseio.com` 
     });
-    console.log(`Firebase Admin SDK が '${serviceAccountPath}' (GOOGLE_APPLICATION_CREDENTIALS) から正常に初期化されました！`);
+    console.log('Firebase Admin SDK が分割環境変数から正常に初期化されました！');
 
   } catch (error) {
     console.error('Firebase Admin SDK 初期化エラー（詳細）:', error);
@@ -47,7 +84,6 @@ export default async function handler(
       const querySnapshot = await dbAdmin.collection('deals')
         .where('region', '==', region)
         // 必要に応じて、日付フィルターやステータスフィルターを追加する
-        // 例: 現在の日付（2025年7月27日）以降が有効な期間のチラシのみ取得
         .where('period', '>=', new Date().toISOString().split('T')[0]) 
         .where('status', '==', '公開') // 例: 公開ステータスのチラシ
         .get();
@@ -71,4 +107,4 @@ export default async function handler(
     res.setHeader('Allow', ['GET']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-}
+  }
