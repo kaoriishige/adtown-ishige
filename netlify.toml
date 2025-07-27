@@ -1,0 +1,16 @@
+# adtown-ishige/netlify.toml のコード（すべてコピーして貼り付けてください）
+
+[build]
+  publish = ".next" # Next.jsのビルド出力ディレクトリ
+  # command を修正し、作成したスクリプトをビルドの前に呼び出すように変更
+  # `node scripts/createServiceAccountFile.js` がサービスアカウントキーファイルを生成します。
+  command = "node scripts/createServiceAccountFile.js && npm run build" 
+
+[functions]
+  node_bundler = "esbuild" # 関数ビルドにesbuildを使用（Next.jsでは推奨）
+  # デプロイされる関数が参照するGOOGLE_APPLICATION_CREDENTIALSのパス
+  # /var/task/ はNetlify Functionsの実行環境のルートディレクトリ
+  environment = { GOOGLE_APPLICATION_CREDENTIALS = "/var/task/serviceAccountKey.json" }
+
+# [build.environment]セクションはもう不要です。
+# Base64文字列は scripts/createServiceAccountFile.js ファイル内に直接記述されます。
