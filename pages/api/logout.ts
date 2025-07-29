@@ -1,16 +1,11 @@
-// pages/api/logout.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-import { NextApiRequest, NextApiResponse } from 'next';
-import nookies from 'nookies';
-
-const handler = (req: NextApiRequest, res: NextApiResponse) => {
-  nookies.destroy(
-    { res }, // 変更点： req を削除
-    'token',
-    { path: '/' }
-  );
-  res.status(200).json({ success: true });
-};
-
-export default handler;
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  // このAPIはクライアントのログアウト処理を補完する役割です。
+  // 今後のセッション管理拡張のために用意しています。
+  res.status(200).json({ message: 'Logged out successfully' });
+}
 

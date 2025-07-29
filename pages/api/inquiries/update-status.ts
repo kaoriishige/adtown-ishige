@@ -1,38 +1,32 @@
-// pages/api/inquiries/update-status.ts
-
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { admin } from '../../../lib/firebase-admin';
-import nookies from 'nookies';
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') {
-    return res.status(405).end();
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
-
   try {
-    // 管理者認証
-    const cookies = nookies.get({ req });
-    const token = await admin.auth().verifyIdToken(cookies.token);
-    if (!token.uid) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    const { authorization } = req.headers;
+    if (!authorization) return res.status(401).json({ error: 'Unauthorized' });
+    const token = authorization.split('Bearer ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    if (decodedToken.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden' });
     }
-    
-    const { inquiryId, newStatus } = req.body;
-    if (!inquiryId || !newStatus) {
-      return res.status(400).json({ error: 'Missing parameters' });
+    const { inquiryId, status } = req.body;
+    if (!inquiryId || !status) {
+      return res.status(400).json({ error: 'inquiryId and status are required' });
     }
-
-    const db = admin.firestore();
-    await db.collection('inquiries').doc(inquiryId).update({
-      status: newStatus,
+    const inquiryRef = admin.firestore().collection('inquiries').doc(inquiryId);
+    await inquiryRef.update({
+      status: status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-
-    res.status(200).json({ success: true, message: 'Status updated successfully' });
-
-  } catch (error: any) {
-    console.error("Status update error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(200).json({ message: 'Status updated successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
   }
-};
-
-export default handler;
+}

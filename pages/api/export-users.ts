@@ -1,42 +1,45 @@
-// pages/api/export-users.ts
-
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { admin } from '../../lib/firebase-admin';
 
-// CSV文字列を生成するヘルパー関数
 const convertToCSV = (data: any[]) => {
-  const header = ['Email', 'UID', '登録日時'];
-  const rows = data.map(user => 
-    [
-      user.email,
-      user.uid,
-      // 日時を日本標準時にフォーマット
-      new Date(user.creationTime).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-    ].join(',')
-  );
-  return [header.join(','), ...rows].join('\n');
+  if (data.length === 0) return '';
+  const header = Object.keys(data[0]);
+  const replacer = (key: string, value: any) => value === null ? '' : value;
+  const csv = [
+    header.join(','),
+    ...data.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
+  ].join('\r\n');
+  return csv;
 };
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
   try {
-    const userRecords = await admin.auth().listUsers();
-    const users = userRecords.users.map(user => ({
+    const { authorization } = req.headers;
+    if (!authorization) return res.status(401).json({ error: 'Unauthorized' });
+    const token = authorization.split('Bearer ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    if (decodedToken.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const listUsersResult = await admin.auth().listUsers(1000);
+    const usersData = listUsersResult.users.map(user => ({
       uid: user.uid,
       email: user.email,
+      emailVerified: user.emailVerified,
       creationTime: user.metadata.creationTime,
+      lastSignInTime: user.metadata.lastSignInTime,
     }));
-
-    const csvData = convertToCSV(users);
-    
-    // CSVファイルとしてダウンロードさせるためのヘッダーを設定
+    const csvData = convertToCSV(usersData);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="users-${new Date().toISOString().slice(0,10)}.csv"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="users.csv"');
     res.status(200).send(csvData);
-
   } catch (error) {
-    console.error('Error exporting users:', error);
-    res.status(500).json({ error: 'Failed to export user data' });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
-};
-
-export default handler;
+}

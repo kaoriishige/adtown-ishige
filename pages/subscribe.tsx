@@ -1,43 +1,62 @@
-'use client';
-
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/router';
+import axios from 'axios';
+import { loadStripe } from '@stripe/stripe-js';
 
-export default function SubscribePage() {
-  const [loading, setLoading] = useState(false);
+// ★重要：あなたのStripeのパブリッシャブルキーに置き換えてください
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
+const SubscribePage = () => {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
   const handleSubscribe = async () => {
-    setLoading(true);
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    setIsSubscribing(true);
     try {
-      const res = await fetch('/.netlify/functions/create-checkout-session', {
-        method: 'POST',
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert('Checkoutセッション作成に失敗しました');
+      const token = await user.getIdToken();
+      // サーバーサイドでStripe Checkoutセッションを作成するAPIを呼び出す
+      const response = await axios.post(
+        '/api/stripe-create-checkout-session',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const { sessionId } = response.data;
+      const stripe = await stripePromise;
+      if (stripe) {
+        await stripe.redirectToCheckout({ sessionId });
       }
     } catch (error) {
-      console.error('エラー:', error);
-      alert('通信エラーが発生しました');
-    } finally {
-      setLoading(false);
+      console.error('Subscription failed:', error);
+      setIsSubscribing(false);
     }
   };
 
+  if (loading) {
+    return <div>読み込み中...</div>;
+  }
+
   return (
-    <div className="p-6 max-w-xl mx-auto text-center">
-      <h1 className="text-2xl font-bold mb-4">サブスクリプション登録</h1>
-      <p className="mb-6">7日間の無料トライアル後、月額¥980で継続課金されます。</p>
+    <div className="container mx-auto p-4 text-center">
+      <h1 className="text-3xl font-bold mb-4">サービスに登録</h1>
+      <p className="mb-6">月額980円で全ての機能が使い放題。最初の7日間は無料です。</p>
       <button
         onClick={handleSubscribe}
-        disabled={loading}
-        className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 font-semibold"
+        disabled={isSubscribing}
+        className="bg-green-500 text-white px-6 py-3 rounded-lg font-bold text-xl hover:bg-green-600 disabled:bg-gray-400"
       >
-        {loading ? '読み込み中...' : '登録してはじめる'}
+        {isSubscribing ? '処理中...' : '7日間の無料体験を始める'}
       </button>
     </div>
   );
-}
+};
+
+export default SubscribePage;
 
 

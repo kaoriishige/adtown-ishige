@@ -5,7 +5,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
+  if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
   try {
@@ -16,8 +16,12 @@ export default async function handler(
     if (decodedToken.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden' });
     }
-    await admin.firestore().collection('settings').doc('payout').set(req.body, { merge: true });
-    res.status(200).json({ message: 'Settings saved successfully' });
+    const docSnap = await admin.firestore().collection('settings').doc('payout').get();
+    if (docSnap.exists) {
+      res.status(200).json(docSnap.data());
+    } else {
+      res.status(200).json({});
+    }
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }

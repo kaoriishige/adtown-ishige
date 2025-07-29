@@ -1,42 +1,45 @@
-// pages/api/manual/recalculate-rewards.ts
-
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { admin } from '../../../lib/firebase-admin';
-import { getAuth } from 'firebase-admin/auth';
-import nookies from 'nookies';
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') {
-    return res.status(405).end();
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
-
   try {
-    // 管理者認証
-    const cookies = nookies.get({ req });
-    const token = await admin.auth().verifyIdToken(cookies.token);
-    // ここで特定の管理者UIDかチェックすることも可能
-    if (!token.uid) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    const { authorization } = req.headers;
+    if (!authorization) return res.status(401).json({ error: 'Unauthorized' });
+    const token = authorization.split('Bearer ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    if (decodedToken.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden' });
     }
-
     const db = admin.firestore();
-    
-    // ロジック：ここではダミー処理として成功メッセージを返す
-    // 実際のロジックは非常に複雑になるため、別途詳細に実装する必要があります。
-    // 例：
-    // 1. 先月の日付範囲を計算
-    // 2. referralRewards から先月分のデータを削除
-    // 3. users と Stripeの支払い履歴を照合
-    // 4. 先月分の報酬を再生成して referralRewards に追加
-
-    console.log(`Manual recalculation triggered by admin: ${token.email}`);
-    
-    res.status(200).json({ success: true, message: '報酬の再計算処理を開始しました。完了まで数分かかる場合があります。' });
-
-  } catch (error: any) {
-    console.error("Manual function error:", error);
-    res.status(500).json({ error: error.message });
+    const usersSnapshot = await db.collection('users').where('referredBy', '!=', null).get();
+    let recalculatedCount = 0;
+    const batch = db.batch();
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      if (userData.subscriptionStatus === 'active') {
+        const rewardAmount = 980 * 0.2; // 報酬率20%と仮定
+        const rewardId = `recalc_${userDoc.id}_${new Date().getTime()}`;
+        const rewardRef = db.collection('rewards').doc(rewardId);
+        batch.set(rewardRef, {
+          referrerUid: userData.referredBy,
+          referredUid: userDoc.id,
+          amount: rewardAmount,
+          status: 'pending',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          notes: 'Manual recalculation',
+        });
+        recalculatedCount++;
+      }
+    }
+    await batch.commit();
+    res.status(200).json({ message: `Successfully recalculated rewards for ${recalculatedCount} users.` });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
   }
-};
-
-export default handler;
+}

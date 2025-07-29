@@ -9,8 +9,11 @@
     "build:css": "npx tailwindcss -i ./styles/tailwind.css -o ./public/output.css --minify"
   },
   "dependencies": {
+    "@google-cloud/secret-manager": "^5.0.0",
+    "@react-three/drei": "^9.0.0",
     "@stripe/stripe-js": "^2.4.0",
     "@types/micro": "^7.3.7",
+    "axios": "^1.11.0",
     "firebase": "^10.12.0",
     "firebase-admin": "^13.4.0",
     "lucide-react": "^0.316.0",
@@ -25,9 +28,7 @@
     "react-qr-code": "^2.0.18",
     "sharp": "^0.33.0",
     "stripe": "^18.3.0",
-    "styled-jsx": "^5.1.1",
-    "@react-three/drei": "^9.0.0",
-    "@google-cloud/secret-manager": "^5.0.0"
+    "styled-jsx": "^5.1.1"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
