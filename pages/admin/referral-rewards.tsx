@@ -1,5 +1,5 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { admin } from '../../lib/firebase-admin'; // 正しいインポートパス
+import admin from '../../lib/firebase-admin';
 
 interface ReferralReward {
   id: string;
