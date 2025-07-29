@@ -1,16 +1,11 @@
 import * as admin from 'firebase-admin';
 
+// 既に初期化されている場合は再初期化しない
 if (admin.apps.length === 0) {
   try {
-    // FIREBASE_SERVICE_ACCOUNT_KEY 環境変数からサービスアカウント情報をパース
-    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (!serviceAccountString) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
-    }
-    const serviceAccount = JSON.parse(serviceAccountString); // JSON文字列をオブジェクトにパース
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount), // パースしたオブジェクトを直接渡す
+    admin.initializeApp({ // ★ここが抜けていました。修正済みです★
+      // ★あなたのJSONファイルのパスをここに入れました★
+      credential: admin.credential.cert(require('C:\\Users\\user\\Downloads\\minna-no-nasu-app-firebase-adminsdk-fbsvc-ebfee99d33.json')),
     });
   } catch (error) {
     console.error('Firebase admin initialization error', error);
