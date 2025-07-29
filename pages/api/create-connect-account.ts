@@ -3,7 +3,7 @@ import { admin } from '../../lib/firebase-admin';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
+  apiVersion: '2025-06-30.basil', // ★ここを修正★
 });
 
 export default async function handler(

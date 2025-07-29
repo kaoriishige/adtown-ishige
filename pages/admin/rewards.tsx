@@ -1,124 +1,58 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { admin } from '../../lib/firebase-admin';
-import Link from 'next/link';
+import { admin } from '../../lib/firebase-admin'; // 正しいインポートパス
 
-// 報酬データの型を定義
-interface RewardData {
-  id: string;
-  paymentDate: admin.firestore.Timestamp;
-  referrerUid: string;
-  rewardAmount: number;
-  referredUid: string;
-}
-
-// 表示する集計データの型
-interface MonthlyRewardSummary {
-  month: string;
-  referrerEmail: string;
-  referralCount: number;
-  totalReward: number;
+interface RewardSummary {
+  totalRewardsCount: number;
+  totalRewardsAmount: number;
+  // 必要に応じて他の概要データも追加
 }
 
 interface RewardsPageProps {
-  summaries: MonthlyRewardSummary[];
+  summary: RewardSummary;
+  error?: string;
 }
 
-const RewardsPage: NextPage<RewardsPageProps> = ({ summaries }) => {
-  return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">紹介報酬：月別集計一覧</h1>
-      
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-4 text-left font-semibold text-gray-700">月</th>
-              <th className="p-4 text-left font-semibold text-gray-700">紹介者（メール）</th>
-              <th className="p-4 text-left font-semibold text-gray-700">対象人数</th>
-              <th className="p-4 text-left font-semibold text-gray-700">報酬額（円）</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {summaries.map((summary, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="p-4 whitespace-nowrap">{summary.month}</td>
-                <td className="p-4 whitespace-nowrap">{summary.referrerEmail}</td>
-                <td className="p-4 whitespace-nowrap">{summary.referralCount} 人</td>
-                <td className="p-4 whitespace-nowrap">{summary.totalReward.toLocaleString()} 円</td>
-              </tr>
-            ))}
-            {summaries.length === 0 && (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-gray-500">
-                  報酬データはまだありません。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-8">
-        <Link href="/admin" className="text-blue-600 hover:underline">
-          管理トップに戻る
-        </Link>
-      </div>
-    </div>
-  );
-};
-
-export const getServerSideProps: GetServerSideProps = async () => {
+export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const db = admin.firestore();
-    const rewardsSnapshot = await db.collection('referralRewards').get();
-    
-    const rewards = rewardsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as RewardData[];
+    const rewardsSnapshot = await admin.firestore().collection('rewards').get();
+    let totalAmount = 0;
+    rewardsSnapshot.forEach(doc => {
+      totalAmount += doc.data().amount || 0;
+    });
 
-    const summaryMap: { [key: string]: { totalReward: number; uids: Set<string>; referrerUid: string } } = {};
-
-    for (const reward of rewards) {
-      if (reward.paymentDate && reward.referrerUid) {
-        const paymentDate = reward.paymentDate.toDate();
-        const monthKey = `${paymentDate.getFullYear()}-${(paymentDate.getMonth() + 1).toString().padStart(2, '0')}`;
-        const groupKey = `${monthKey}-${reward.referrerUid}`;
-
-        if (!summaryMap[groupKey]) {
-          summaryMap[groupKey] = {
-            totalReward: 0,
-            uids: new Set<string>(),
-            referrerUid: reward.referrerUid,
-          };
-        }
-        summaryMap[groupKey].totalReward += reward.rewardAmount;
-        summaryMap[groupKey].uids.add(reward.referredUid);
-      }
-    }
-
-   const referrerUids = Array.from(new Set(Object.values(summaryMap).map(s => s.referrerUid)));
-    const userRecords = await Promise.all(
-      referrerUids.map(uid => admin.auth().getUser(uid).catch(() => null))
-    );
-    const emailMap = new Map(userRecords.filter(Boolean).map(u => [u!.uid, u!.email]));
-
-    const summaries: MonthlyRewardSummary[] = Object.entries(summaryMap).map(([key, data]) => ({
-      month: `${key.substring(0, 4)}-${key.substring(5, 7)}`,
-      referrerEmail: emailMap.get(data.referrerUid) || '不明なユーザー',
-      referralCount: data.uids.size,
-      totalReward: data.totalReward,
-    }));
-
-    summaries.sort((a, b) => b.month.localeCompare(a.month));
-
-    return { 
-      props: { 
-        summaries: JSON.parse(JSON.stringify(summaries)) 
-      } 
+    const summary: RewardSummary = {
+      totalRewardsCount: rewardsSnapshot.size,
+      totalRewardsAmount: totalAmount,
     };
 
-  } catch (error) {
-    console.error("Error in getServerSideProps for rewards page:", error);
-    return { props: { summaries: [] } };
+    return {
+      props: {
+        summary: JSON.parse(JSON.stringify(summary)), // シリアライズ可能に変換
+      },
+    };
+  } catch (error: any) {
+    console.error("Error fetching rewards summary:", error);
+    return {
+      props: {
+        summary: { totalRewardsCount: 0, totalRewardsAmount: 0 },
+        error: "報酬概要の取得に失敗しました。" + error.message,
+      },
+    };
   }
+};
+
+const RewardsPage: NextPage<RewardsPageProps> = ({ summary, error }) => {
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">報酬概要</h1>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+      <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded mb-4">
+        <p>累計報酬数: {summary.totalRewardsCount}</p>
+        <p>累計報酬額: {summary.totalRewardsAmount.toLocaleString()} 円</p>
+      </div>
+      {/* 必要に応じて個別の報酬を表示するUIを追加 */}
+    </div>
+  );
 };
 
 export default RewardsPage;
