@@ -2,12 +2,15 @@ import * as admin from 'firebase-admin';
 
 if (admin.apps.length === 0) {
   try {
+    // FIREBASE_SERVICE_ACCOUNT_KEY 環境変数からサービスアカウント情報をパース
+    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccountString) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+    }
+    const serviceAccount = JSON.parse(serviceAccountString); // JSON文字列をオブジェクトにパース
+
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID, // Netlifyの環境変数から読み込む
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL, // Netlifyの環境変数から読み込む
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Netlifyの環境変数から読み込み、改行を変換
-      }),
+      credential: admin.credential.cert(serviceAccount), // パースしたオブジェクトを直接渡す
     });
   } catch (error) {
     console.error('Firebase admin initialization error', error);
