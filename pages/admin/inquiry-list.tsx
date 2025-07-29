@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useState } from 'react';
-import { admin } from '../../lib/firebase-admin';
+import admin from '../../lib/firebase-admin';
 import nookies from 'nookies';
 
 type InquiryStatus = '新規' | '対応中' | '完了';
