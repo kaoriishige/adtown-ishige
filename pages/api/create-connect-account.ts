@@ -5,7 +5,7 @@ import nookies from 'nookies';
 
 // Stripeの初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-06-30.basil',
 });
 
 // レスポンスの型定義
