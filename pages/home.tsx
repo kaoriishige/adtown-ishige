@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { GetServerSideProps, NextPage } from 'next';
 
+// ジャンル名の配列
 const genres = [
   '生活情報', '健康支援', '節約・特売', '人間関係', '教育・学習',
   '子育て', '防災・安全', '診断・運勢', 'エンタメ', '趣味・文化'
 ];
 
+// ページが受け取るデータの型
 interface HomePageProps {
   content: {
     mainHeading: string;
@@ -18,8 +20,9 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
     <div className="bg-blue-50 min-h-screen p-5 text-center flex flex-col">
       <main className="flex-grow flex flex-col justify-center">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{content.mainHeading || 'みんなの那須アプリ'}</h1>
-          <p className="text-lg text-gray-600 mb-12">{content.subheading || '下記のジャンルからお選びください。'}</p>
+          {/* ボタンの追加やスタイルの変更は、この部分で行ってください */}
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{content.mainHeading}</h1>
+          <p className="text-lg text-gray-600 mb-12">{content.subheading}</p>
 
           <div className="flex flex-wrap justify-center gap-4">
             {genres.map(genre => (
@@ -33,17 +36,7 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
             ))}
           </div>
 
-          {/* ▼▼▼ ここからボタンを追加・修正 ▼▼▼ */}
           <div className="mt-16">
-            <Link
-              href="/deals"
-              className="inline-block bg-orange-500 text-white font-bold px-12 py-5 rounded-full shadow-xl hover:bg-orange-600 hover:scale-105 transition-all duration-300 transform text-2xl"
-            >
-              店舗お得情報 🛒
-            </Link>
-          </div>
-
-          <div className="mt-8">
             <Link
               href="/apps/all"
               className="inline-block bg-gradient-to-r from-blue-500 to-teal-400 text-white font-bold px-10 py-4 rounded-full shadow-xl hover:scale-105 transition-all duration-300 transform"
@@ -51,8 +44,7 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
               すべてのアプリを見る
             </Link>
           </div>
-          {/* ▲▲▲ ここまでボタンを追加・修正 ▲▲▲ */}
-
+          
           <div className="mt-20">
             <Link href="/mypage" className="text-gray-600 hover:text-blue-600 hover:underline">
               マイページに戻る
@@ -68,20 +60,23 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
   );
 };
 
+// サーバーサイドでデータを取得する正しい方法
 export const getServerSideProps: GetServerSideProps = async () => {
-  // ▼▼▼ 安全なサーバー専用のFirebase Admin SDKを使用するように修正 ▼▼▼
+  // ▼▼▼ ここをサーバー専用のFirebase Admin SDKを使うように修正 ▼▼▼
   const admin = require('../lib/firebase-admin').default;
   const db = admin.firestore();
 
   try {
     const docRef = db.collection('siteContent').doc('landing');
     const docSnap = await docRef.get();
+    
     const content = docSnap.exists
       ? docSnap.data()
       : { mainHeading: 'みんなの那須アプリ', subheading: '下記のジャンルからお選びください。' };
 
     return {
       props: {
+        // FirestoreのTimestamp型などを正しく変換
         content: JSON.parse(JSON.stringify(content)),
       },
     };
@@ -93,7 +88,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
 };
 
 export default HomePage;
-
 
 
 
