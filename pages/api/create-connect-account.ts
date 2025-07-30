@@ -1,48 +1,74 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import admin from '../../lib/firebase-admin';
+import admin from '../../lib/firebase-admin'; // 修正済みのimport文
 import Stripe from 'stripe';
+import nookies from 'nookies';
 
+// Stripeの初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil', // ★ここを修正★
+  apiVersion: '2024-06-20',
 });
+
+// レスポンスの型定義
+type Data = {
+  url?: string;
+  error?: string;
+};
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<Data>
 ) {
+  // POSTメソッド以外のリクエストは拒否
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    res.setHeader('Allow', 'POST');
+    return res.status(405).end('Method Not Allowed');
   }
+
   try {
-    const { authorization } = req.headers;
-    if (!authorization) return res.status(401).json({ error: 'Unauthorized' });
-    const token = authorization.split('Bearer ')[1];
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const { uid, email } = decodedToken;
+    // 1. Cookieからトークンを取得し、ユーザーを認証
+    const cookies = nookies.get({ req });
+    if (!cookies.token) {
+      return res.status(401).json({ error: '認証されていません。' });
+    }
+    const token = await admin.auth().verifyIdToken(cookies.token);
+    const { uid, email } = token;
+
+    // 2. Firestoreからユーザーの情報を取得
     const db = admin.firestore();
     const userRef = db.collection('users').doc(uid);
     const userDoc = await userRef.get();
-    let stripeConnectAccountId = userDoc.data()?.stripeConnectAccountId;
-    if (!stripeConnectAccountId) {
+    let stripeAccountId = userDoc.data()?.stripeConnectAccountId;
+
+    // 3. もしStripeアカウントIDがなければ、新しく作成
+    if (!stripeAccountId) {
       const account = await stripe.accounts.create({
         type: 'express',
         email: email,
         capabilities: {
-          card_payments: { requested: true },
-          transfers: { requested: true },
+          transfers: { requested: true }, // 報酬の送金機能をリクエスト
         },
       });
-      stripeConnectAccountId = account.id;
-      await userRef.set({ stripeConnectAccountId }, { merge: true });
+      stripeAccountId = account.id;
+
+      // 4. 作成したIDをFirestoreに保存
+      await userRef.set({ stripeConnectAccountId: stripeAccountId }, { merge: true });
     }
+
+    // 5. ユーザーが口座情報を登録するための、特別なURL（アカウントリンク）を作成
+    const returnUrl = `${process.env.BASE_URL}/mypage`; // 登録完了後に戻ってくるURL
+
     const accountLink = await stripe.accountLinks.create({
-      account: stripeConnectAccountId,
-      refresh_url: `${req.headers.origin}/mypage`,
-      return_url: `${req.headers.origin}/mypage`,
+      account: stripeAccountId,
+      refresh_url: returnUrl, // 無効になった場合のリダイレクト先
+      return_url: returnUrl,  // 登録完了後のリダイレクト先
       type: 'account_onboarding',
     });
+
+    // 6. 作成したURLをクライアントに返す
     res.status(200).json({ url: accountLink.url });
+
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Stripe Connectアカウントの作成に失敗しました:', error);
+    res.status(500).json({ error: 'サーバー側でエラーが発生しました。' });
   }
 }
