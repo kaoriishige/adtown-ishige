@@ -1,105 +1,86 @@
 import { GetStaticProps, GetStaticPaths, NextPage } from 'next';
 import Link from 'next/link';
-import { admin } from '../../lib/firebase-admin'; // サーバー用のAdmin SDKをインポート
+// ▼▼▼ Firestoreの型をインポートします ▼▼▼
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // Appの型定義
 type App = {
+  id: string;
   name: string;
-  url: string;
-  genre: string;
+  description: string;
+  // 他に必要なフィールドがあれば追加
 };
 
+// ページが受け取るpropsの型
 interface GenrePageProps {
-  genre: string;
   apps: App[];
+  genre: string;
 }
 
-// getStaticPaths: 動的なルートを生成
+const GenrePage: NextPage<GenrePageProps> = ({ apps, genre }) => {
+  return (
+    <div className="container mx-auto p-8">
+      <Link href="/home" className="text-blue-500 hover:underline mb-8 inline-block">
+        ← ホームに戻る
+      </Link>
+      <h1 className="text-4xl font-bold mb-2">ジャンル: {genre}</h1>
+      <p className="text-gray-600 mb-8">このジャンルのアプリ一覧です。</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {apps.length > 0 ? (
+          apps.map(app => (
+            <div key={app.id} className="border rounded-lg p-6 shadow hover:shadow-lg transition-shadow">
+              <h2 className="text-2xl font-bold">{app.name}</h2>
+              <p className="text-gray-700 mt-2">{app.description}</p>
+            </div>
+          ))
+        ) : (
+          <p>このジャンルのアプリはまだありません。</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// どのジャンルのページを事前に生成するかを決定する
 export const getStaticPaths: GetStaticPaths = async () => {
+  const admin = require('../../lib/firebase-admin').default;
   const db = admin.firestore();
+  
   const appsSnapshot = await db.collection('apps').get();
   
-  const genres = new Set<string>();
-  appsSnapshot.forEach(doc => {
-    const genre = doc.data().genre;
-    if (genre) {
-      genres.add(genre);
-    }
-  });
+  // ▼▼▼ docに型を指定します ▼▼▼
+  const genres = new Set(appsSnapshot.docs.map((doc: QueryDocumentSnapshot) => doc.data().genre));
+  
+  const paths = Array.from(genres).map(genre => ({
+    params: { genre: genre as string },
+  }));
 
-  const paths = Array.from(genres).map((genre) => ({
-    params: { genre },
+  return { paths, fallback: 'blocking' };
+};
+
+// 各ジャンルページのデータを取得する
+export const getStaticProps: GetStaticProps = async (context) => {
+  const admin = require('../../lib/firebase-admin').default;
+  const db = admin.firestore();
+  
+  const genre = context.params?.genre as string;
+
+  const appsSnapshot = await db.collection('apps').where('genre', '==', genre).get();
+  
+  // ▼▼▼ こちらのdocにも型を指定しておきます ▼▼▼
+  const apps = appsSnapshot.docs.map((doc: QueryDocumentSnapshot) => ({
+    id: doc.id,
+    ...doc.data(),
   }));
 
   return {
-    paths,
-    fallback: 'blocking',
-  };
-};
-
-// getStaticProps: ジャンルごとのアプリデータを取得
-export const getStaticProps: GetStaticProps = async (context) => {
-  const genre = context.params?.genre as string;
-  if (!genre) {
-    return { notFound: true };
-  }
-
-  const db = admin.firestore();
-  const appsQuery = db.collection('apps').where('genre', '==', genre);
-  const querySnapshot = await appsQuery.get();
-
-  if (querySnapshot.empty) {
-    return { notFound: true };
-  }
-
-  // ▼▼▼ ここがエラー解決の最重要ポイント ▼▼▼
-  // createdAtが存在しない場合も安全に処理する
-  const apps = querySnapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      name: data.name || '',
-      url: data.url || '',
-      genre: data.genre || '',
-      // createdAtが存在する場合のみ日付に変換し、なければnullにする
-      createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
-    };
-  });
-
-  return {
     props: {
+      apps,
       genre,
-      // appsをJSONとして安全な形式に変換
-      apps: JSON.parse(JSON.stringify(apps)),
     },
-    revalidate: 60,
+    revalidate: 3600, // 1時間ごとにデータを更新
   };
-};
-
-const GenrePage: NextPage<GenrePageProps> = ({ genre, apps }) => {
-  return (
-    <main className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-blue-700 mb-6">{genre} のアプリ</h1>
-      <ul className="space-y-3">
-        {apps.map((app, index) => (
-          <li key={index} className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <a 
-              href={app.url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-blue-700 font-semibold hover:underline"
-            >
-              {app.name}
-            </a>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-8 text-center">
-        <Link href="/home" className="text-gray-600 hover:text-blue-600 hover:underline">
-          ジャンル選択に戻る
-        </Link>
-      </div>
-    </main>
-  );
 };
 
 export default GenrePage;

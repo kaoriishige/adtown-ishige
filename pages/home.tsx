@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import { GetServerSideProps, NextPage } from 'next';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 
 const genres = [
   '生活情報', '健康支援', '節約・特売', '人間関係', '教育・学習',
@@ -17,7 +15,6 @@ interface HomePageProps {
 
 const HomePage: NextPage<HomePageProps> = ({ content }) => {
   return (
-    // ▼▼▼ flex-growとフッターを追加 ▼▼▼
     <div className="bg-blue-50 min-h-screen p-5 text-center flex flex-col">
       <main className="flex-grow flex flex-col justify-center">
         <div className="max-w-4xl mx-auto">
@@ -36,7 +33,17 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
             ))}
           </div>
 
+          {/* ▼▼▼ ここからボタンを追加・修正 ▼▼▼ */}
           <div className="mt-16">
+            <Link
+              href="/deals"
+              className="inline-block bg-orange-500 text-white font-bold px-12 py-5 rounded-full shadow-xl hover:bg-orange-600 hover:scale-105 transition-all duration-300 transform text-2xl"
+            >
+              店舗お得情報 🛒
+            </Link>
+          </div>
+
+          <div className="mt-8">
             <Link
               href="/apps/all"
               className="inline-block bg-gradient-to-r from-blue-500 to-teal-400 text-white font-bold px-10 py-4 rounded-full shadow-xl hover:scale-105 transition-all duration-300 transform"
@@ -44,6 +51,7 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
               すべてのアプリを見る
             </Link>
           </div>
+          {/* ▲▲▲ ここまでボタンを追加・修正 ▲▲▲ */}
 
           <div className="mt-20">
             <Link href="/mypage" className="text-gray-600 hover:text-blue-600 hover:underline">
@@ -57,15 +65,18 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
         <p className="mt-1">© 2025 株式会社adtown</p>
       </footer>
     </div>
-    // ▲▲▲ ここまで修正 ▲▲▲
   );
 };
 
 export const getServerSideProps: GetServerSideProps = async () => {
+  // ▼▼▼ 安全なサーバー専用のFirebase Admin SDKを使用するように修正 ▼▼▼
+  const admin = require('../lib/firebase-admin').default;
+  const db = admin.firestore();
+
   try {
-    const docRef = doc(db, 'siteContent', 'landing');
-    const docSnap = await getDoc(docRef);
-    const content = docSnap.exists()
+    const docRef = db.collection('siteContent').doc('landing');
+    const docSnap = await docRef.get();
+    const content = docSnap.exists
       ? docSnap.data()
       : { mainHeading: 'みんなの那須アプリ', subheading: '下記のジャンルからお選びください。' };
 
