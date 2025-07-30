@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useState } from 'react'; // 状態管理のため追加
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase'; // クライアント用Firebase
-import admin from '../lib/firebase-admin'; // 【修正点①】サーバー用Firebase Admin SDKをインポート
 import nookies from 'nookies';
 
 // Propsの型定義 (変更なし)
@@ -101,6 +100,7 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { default: admin } = await import('../lib/firebase-admin');
   try {
     const cookies = nookies.get(context);
     const token = await admin.auth().verifyIdToken(cookies.token);
