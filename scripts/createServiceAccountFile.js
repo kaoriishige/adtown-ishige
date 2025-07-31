@@ -2,27 +2,35 @@
 const fs = require('fs');
 const path = require('path');
 
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+let serviceAccount;
 
-if (!privateKey) {
-  console.error('Environment variable FIREBASE_PRIVATE_KEY is not set.');
-  process.exit(1);
+// Netlifyビルド環境では、プロジェクトのルートにあるJSONファイルを直接読み込む
+// ローカル開発環境では、環境変数から読み込む
+if (process.env.CONTEXT === 'production' && fs.existsSync(path.resolve(__dirname, '../../serviceAccountKey.json'))) {
+    serviceAccount = require('../../serviceAccountKey.json');
+} else {
+    // 環境変数から情報を構築する
+    serviceAccount = {
+        "type": "service_account",
+        "project_id": process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        "private_key": process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        "client_email": process.env.FIREBASE_CLIENT_EMAIL,
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(process.env.FIREBASE_CLIENT_EMAIL)}`,
+        "universe_domain": "googleapis.com"
+    };
 }
 
-// 秘密鍵の改行コードを修正（Netlifyでのエスケープに対応）
-const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+const clientEmail = serviceAccount.client_email; 
+const projectId = serviceAccount.project_id; 
+const privateKey = serviceAccount.private_key;
 
-if (!formattedPrivateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
-  console.error('Invalid private key format. Must start with -----BEGIN PRIVATE KEY-----');
-  process.exit(1);
-}
-
-const serviceAccount = {
+const serviceAccountJson = {
   "type": "service_account",
   "project_id": projectId,
-  "private_key": formattedPrivateKey,
+  "private_key": privateKey,
   "client_email": clientEmail,
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
   "token_uri": "https://oauth2.googleapis.com/token",
@@ -39,7 +47,7 @@ if (!fs.existsSync(outputDir)) {
 }
 
 try {
-  fs.writeFileSync(outputPath, JSON.stringify(serviceAccount, null, 2));
+  fs.writeFileSync(outputPath, JSON.stringify(serviceAccountJson, null, 2));
   console.log('--- Netlify Build Script: Creating Service Account Key File ---');
   console.log('Service Account Key file created at:', outputPath);
   console.log('--- End Service Account Key File Creation ---');
