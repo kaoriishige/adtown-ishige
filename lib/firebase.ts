@@ -17,6 +17,13 @@ const firebaseConfig = {
 // Firebaseアプリを初期化（既に初期化されている場合は再初期化しない）
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
+// ★ここから追加するコード★
+console.log('--- Firebase Initialization Check ---');
+console.log('Firebase App Name:', app.name);
+console.log('Firebase Project ID (from app.options):', app.options.projectId);
+console.log('--- End Firebase Initialization Check ---');
+// ★追加するコードここまで★
+
 // 各Firebaseサービスのインスタンスを取得
 const auth = getAuth(app); // exportを削除
 const db = getFirestore(app);   // exportを削除

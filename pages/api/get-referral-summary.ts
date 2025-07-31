@@ -1,32 +1,33 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import admin from '../../lib/firebase-admin';
+import nookies from 'nookies';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { authorization } = req.headers;
-    if (!authorization) return res.status(401).json({ error: 'Unauthorized' });
-    const token = authorization.split('Bearer ')[1];
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    if (decodedToken.role !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    const rewardsSnapshot = await admin.firestore().collection('rewards').get();
-    let totalAmount = 0;
-    rewardsSnapshot.forEach(doc => {
-      totalAmount += doc.data().amount || 0;
+    // ユーザーを認証
+    const cookies = nookies.get({ req });
+    const token = await admin.auth().verifyIdToken(cookies.token);
+    const { uid } = token;
+
+    // Firestoreから紹介報酬データを取得
+    const db = admin.firestore();
+    const rewardsQuery = await db.collection('referralRewards').where('referrerUid', '==', uid).get();
+
+    let total = 0;
+    let pending = 0;
+
+    rewardsQuery.forEach(doc => {
+      const data = doc.data();
+      total += data.rewardAmount || 0;
+      if (data.rewardStatus === 'pending') {
+        pending += data.rewardAmount || 0;
+      }
     });
-    const summary = {
-      totalRewardsCount: rewardsSnapshot.size,
-      totalRewardsAmount: totalAmount,
-    };
-    res.status(200).json(summary);
+
+    res.status(200).json({ total, pending });
+
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('紹介サマリーの取得に失敗:', error);
+    res.status(401).json({ error: '認証エラー、またはデータの取得に失敗しました。' });
   }
 }

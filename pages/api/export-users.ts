@@ -1,45 +1,47 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import admin from '../../lib/firebase-admin';
+import nookies from 'nookies';
 
-const convertToCSV = (data: any[]) => {
+// データをCSV形式の文字列に変換するヘルパー関数
+const convertToCSV = (data: Record<string, any>[]) => {
   if (data.length === 0) return '';
-  const header = Object.keys(data[0]);
-  const replacer = (key: string, value: any) => value === null ? '' : value;
-  const csv = [
-    header.join(','),
-    ...data.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
-  ].join('\r\n');
-  return csv;
+  const headers = Object.keys(data[0]);
+  const csvRows = [
+    headers.join(','), // ヘッダー行
+    ...data.map(row => 
+      headers.map(header => 
+        JSON.stringify(row[header], (_, value) => value ?? '')
+      ).join(',')
+    )
+  ];
+  return csvRows.join('\n');
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { authorization } = req.headers;
-    if (!authorization) return res.status(401).json({ error: 'Unauthorized' });
-    const token = authorization.split('Bearer ')[1];
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    if (decodedToken.role !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden' });
+    // ユーザーを認証し、管理者か確認
+    const cookies = nookies.get({ req });
+    const token = await admin.auth().verifyIdToken(cookies.token);
+    if (!token.admin) {
+      return res.status(403).json({ error: '権限がありません。' });
     }
-    const listUsersResult = await admin.auth().listUsers(1000);
-    const usersData = listUsersResult.users.map(user => ({
-      uid: user.uid,
-      email: user.email,
-      emailVerified: user.emailVerified,
-      creationTime: user.metadata.creationTime,
-      lastSignInTime: user.metadata.lastSignInTime,
+
+    // 全ユーザーの情報をFirestoreから取得
+    const usersSnapshot = await admin.firestore().collection('users').get();
+    const users = usersSnapshot.docs.map(doc => ({
+      uid: doc.id,
+      ...doc.data(),
     }));
-    const csvData = convertToCSV(usersData);
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+
+    const csvData = convertToCSV(users);
+
+    // CSVファイルとしてダウンロードさせるためのヘッダーを設定
+    res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="users.csv"');
     res.status(200).send(csvData);
+
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('ユーザーのエクスポートに失敗:', error);
+    res.status(500).json({ error: 'サーバー側でエラーが発生しました。' });
   }
 }

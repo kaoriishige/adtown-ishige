@@ -1,33 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import admin from '../../../lib/firebase-admin';
+import nookies from 'nookies';
 
 type Data = {
-  role?: 'admin' | 'user' | null;
+  role: 'admin' | 'user';
   error?: string;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { authorization } = req.headers;
-
-  if (!authorization || !authorization.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const token = authorization.split('Bearer ')[1];
-
+export default async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    const role = (decodedToken.role as 'admin' | 'user') || 'user';
+    // ユーザーを認証
+    const cookies = nookies.get({ req });
+    const token = await admin.auth().verifyIdToken(cookies.token);
+    
+    // トークン内のカスタムクレイムを確認
+    const role = token.admin === true ? 'admin' : 'user';
+
     res.status(200).json({ role });
   } catch (error) {
-    console.error('Error verifying token:', error);
-    res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ role: 'user', error: '認証に失敗しました。' });
   }
 }

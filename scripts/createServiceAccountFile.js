@@ -1,45 +1,49 @@
-// scripts/createServiceAccountFile.js のコード（すべてコピーして貼り付けてください）
+// scripts/createServiceAccountFile.js
 const fs = require('fs');
 const path = require('path');
 
-// ★★★警告: これはセキュリティリスクが極めて高い方法です！本番運用しないでください。★★★
-// サービスアカウントキーをBase64エンコードされた文字列リテラルとしてコード内に直接記述
-// ↓↓↓ここに、ウェブツールで生成したBase64文字列（純粋な1行の文字列）が正確に埋め込まれています↓↓↓
-const FIREBASE_SA_FULL_JSON_BASE64_HARDCODED = "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAic3VwZXJzYXZlci1haSIsCiAgInByaXZhdGVfa2V5X2lkIjogIjNjYjQyNWRjZGQzN2Q2NjI3Mjc5Y2E4OWY4ODA3NTA3OGIwZWVlNTMiLAogICJwcml2YXRlX2tleSI6ICItLS0tLUJFR0lOIFBSSVZBVEUgS0VZLS0tLS1cbk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRREx2UUxGVnJPc081dldcbjhLZldiY0srMkJldGluUGJ3NnhLV1ZkcE5KQ05nWUhlKzNhYnZJWUZXTXZsTFdRSUZuVVBuOXRWcStSTTRtYXhcbjdOODFycEMwY1FTZ3JrUmdENTNDajhQcnMySmZidWJrNUpWMTVhZGp5eFlpS2JPNUhTcUxFenhWbmdDSFp2S3VcbkNoZnE1ZkJDRkRCL0Nlcm5udExORGQ0NklWZ0VlWGluUGxreDNQVjBodDhSSUMrNnNvY2FPVDA3RHJMS0tvc2NcbnlGYWx6M09BQnVOQ2hNb2hOV0ExVU9lUmJTMEJxcTlrTEprN1NBd0M2dGVETUtsOGNOcmFXUGZDWk55Wkd0YlNcbkJXb3dIeVpEak5XY2t0TVpvQ2JCS1lNRC9GRVd2RGZFbm1oMzJPYkU2cnhTdmV4ZDJuaVBUaFl2WGZsQnRJMnpcblZob1UxeHF2QWdNQkFBRUNnZ0VBVDJDWkcwUi81UnNtU05Sak44WjB5UUVOSEpaa05GdWtuU1Q0eXVycFpOQnZcbnhtNEhsSDZiWXFycGFhVkpJMk9JZ1NsaGZadm1hMVFMK2NkVllhZGRCb2cvNnRCcW9GaUZPUC9sTDhnb2pCRDdcbjBYTURqamNIQS9qa2F6UC9LeUNqYWlMNDcweUxYVFd0V0VSamRDZlk5dzNCcFVVNmFicDEyK0ZLMHpBWmlFZ1BcblU4MDUxS1BpOEQxZ3d3a3JIdSs3eUFHNWt4VUtaZkZ5N01FcmhBWjltcVNmQjNRYWtFbUJXcjNlQ3ZKUHNFam5cbm1JVE1FVzRta1g4WVZkZzM1NXR6UUxadFVrMjlPdUdMVG5IM1FLZEJlN0thU2xkNGd3YlJPbDFGdTNoRnRLUmdcbjVTQ0dmdU04Q1lMejA5ZG5xcW5oYk54SWdNTU9IdUM3MjBIcHUrYmJXUUtCZ1FEbXczdzdRVjRMYS9BU1RnTmtcblBnVzF5R1RrNzBDa3lFeWV1TzZWemdoT1ZXbHVrY3ZoVGY2OW54ZkZEbkVqOGRId3IxNWQ1ZlZFemVaaUdySk5cbnZSZE1KRXBCZ2U2d2pHemJiN0sxeTNwV3FBWlo2UmZjc3NoaWtGUEsxVWxPdlBqTjNrejdxcGtTYm1IY0U5Y2FcbmwxU2lqaUhEdEpjZTlkV3lPY0ZlN3lyWHh3S0JnUURpQk9zN2dLaDNZbXljT05CZFlVUHNTWXhEQ0dZT0JIbW1cbk5LZzA5bXJkT204VUlQVWdMMWpZK2NKd1NtSktKN0FLVi9EQUpXR3lhVjh0QzdvaGsvNWdnN2hNRHdNMmpqMEpcblpVU2JKc0RBanhPK3lubzZJSy8wVFNOcm15ZnJ6dFRqZ1dsbjlIMHNyMkFrU2g1UzB6U01oWE1jeU4vQ013NjZcbnRid0xFbFkxMlFLQmdEREkvUmVOM3pMczg4ajY0eTZyQ2d2L1BJMUZvMVh5M25mand0UzZ4UGpDaDlLUFVobmtcbm9razJQQkUxMTJkdzlTQThBdWc0K0Z3K1owa3dPYWZEcFF3ODA5SDdoUm1mNWxlUnlxY3lTRC9QcitBTUxqWkRcbk9hZWVtb2hVQlBaM2J1WWU3QWw4YkhZQURnSTMwNDdVbFZqMFVXRU5hYkZxNlcyUFZqa2F1T1Q3QW9HQWFVMnRcbnkwMndMOTgxaHh1WlNNaDJZdkpwWFJuZW9vMUhPRDYwVitpdkpWK0NQVGlWdkdjUzJCU1ZtTWV2UDZsNkJYZXZcbmZYWnRMRGlYMVY3dlc1R2VKTTE1NGtYa1UxaTE2MWk1UENnMENnTWZTZmNBTjNEZlNjMWV3VlhLcGJ6NXh2MldcblpJNnVlMUZDVStZTWRyNWNiMVFGcTlXVEd1RzY3UmFiQS9XSklSRUNnWUJ3clRNcG5hM2tWMVNaWW0wVVBQYjRcbmNjcWJHeU5CVHIrVDdxWTU1OXR2NGJrREg2bmhQazdMckRNWmVjQVU2KzNNM2s4SW43bHh6Z2F4aWRLRHlkcHlcbmhVaVJmVFZVRDBoT2pWMm0weDAyeEF2ZTlxM3JMeVpKR2dxaHlQQ3NBQlJZMkxZcUxwRjFVWnh3a3Q1NEVzVS9cbml1eUxyZzNjR2ZBeXNXVFdjS2ZHL0E9PVxuLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLVxuIgogIH0K";
+// --- 【ここが、あなたの提供した private_key の値が埋め込まれる場所です！】 ---
+// Netlifyの環境変数からではなく、ここに直接秘密鍵を埋め込みます
+// この値は、JSONファイルからコピーした private_key の値（両端の "" は不要）を、
+// バッククォート (`) で囲むことで、改行文字をそのまま扱えるようにしています。
+// ※ 注意: このコードは一時的なテスト用であり、本番環境では絶対にコミットしないでください！
+const privateKey = `-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC2q+ZfGaFnNPVp\nBXcxGJXt0X6Yq971iGDLxC6tHLXy43IOOpXBNjKTDo0WFnnp5fJGOooJHriQm96F\nwlaBvFKFgPo8qSXIBNQ+yN56MUPNDjfV1ran0PxtMJZYWzJvpr+FkCO16j/NIjug\nGfK7Dq1V66bbc+JF5m//dFQIokqZqZa9J5F+ylanj7Wym302uQIqtWVG52mhKg/W\nkGsKeWvgvYWSwS8Rx+SWYRiPdjL43sZb+oOfyiGKDIRz7BCrNo4GNx5ibMZiXy8d\nPlI4BeS68IM1DryDR2LOF4WUsYJ5KyYW6yI3yU1MsLArJ0kTlRPtXEo7NGAj6xO4\nYw3N8psfAgMBAAECggEACqcvwjAOd6RhA4TsFJLoe3wSM/kiAZO4gWmphzL7cXTO\nPAIypZfxjx30IGujJH7iiDH1xt5hyR0t9wMEZICFF4AUF+GNcILHlfnE779bwuOn\nYfMpp9PKRNvmiLSY1mYVGUb0rjFBE0eBzq50t2/9r9sUWgwCEC2GLpGsLOy6CQf/\nfpOnJlWNC/hlhReTq1Vu9xepVI7J3tSB2vfVfiAYBhjXXYR2e664TlAlgIFxYcQE\n6YraWhLNOeAEbe54xlMREOij1o8SpnsVwW/OfuD42ZN9bz9/wpDw/YjD+ZVynBpt\n2AzrACb1GDlpOuUl3LsIQX06VpIp689aD9ooiXraMQKBgQDx+X5ecnMUBeUpJpQ7\n7wAGgxPMQkNi8gUDw4uq27FzGS3nS4ZLeH4RaRGUsFYhOlk9q0Y4tS7xUP5cTVbP\nlhrSKlRQoS2Jy+lDNbzWtFVpRTmdPC8tFZEvi8A74Q125Lwi44I5dBGBSyOBBQG\nzma6vnyVtBZ9nmpmqs63xYc4tFQKBgQDBQnIGkuzNcoyTact1D+u7/Owvk298D025\nuSa++tT0v0OyjKIsVHxUPxjfDjdi2AOuGEWl0GgP5JOP1xVoaeqcYTJ17hDCo7lP\nnzxfnzeGNQxOd7cu9Vd+WTORwAIETnzidM6grvHYUFLfSRN530+BM91wfSuEGG/2\nRFMGeh18YwKBgQCgxMqQR+xrtkr+n1JHy9Cxgu9pe/E30WNBj+/BEnyA447bKRPO\nGv1v5eY3az2ekBzw21YpoT/SN6T4gK4X+DxTvKoOdDhEXsD5kWFTiNii1a7gO3wj\ndJII1G94aKrn+b5UMfSptr89dnyW0uDXcNVSZ/Nwp5l11H0arIz6XqhUzQKBgGKo\n+i8y+KMVlIB5JP35B75rq2PKX8K0yVhEFmyu/uKHdhcDxpLc+q/Dmn3c8xeJ8a8C\nAyRYVZeveEmZYvtv/u6gjDM6OuIy1Rq5zwd978ma8VJpuWHGrEj7XuFMZXsvWn/9\nY7MSPLLSpswIsWGpSBxMjwKrU/jWxOmzDbOjycPDAoGBANi5ymyUiO92LADSUJ0O\nST0rxE6p9OQTgIe4cgcREGMxuYaE5ZV7Q+I3+Qod+ScC0a1vtH59b7LRJ81NaDyw\noTeC0x16MgOJslImScsB/ukFe2iApa/aWInX+B4U8ASSwMYt0aKUKaoaUSswZOty\nUIlm+vh+eAbUMutpx6sb9scI\n-----END PRIVATE KEY-----\n`;
 
-async function createServiceAccountFile() {
-  console.log('--- Netlify Build Script: Creating Service Account Key File ---');
+// 環境変数は引き続き Netlify で設定する必要があります
+// FIREBASE_CLIENT_EMAIL は adtown-ishige のものを使います
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL; 
+// NEXT_PUBLIC_FIREBASE_PROJECT_ID も adtown-ishige のものを使います
+const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID; 
 
-  if (FIREBASE_SA_FULL_JSON_BASE64_HARDCODED === "YOUR_BASE64_ENCODED_SERVICE_ACCOUNT_JSON_HERE" || !FIREBASE_SA_FULL_JSON_BASE64_HARDCODED) {
-    console.error('FIREBASE_SA_FULL_JSON_BASE64_HARDCODED にサービスアカウントキーが設定されていません。');
-    process.exit(1); // ビルドを失敗させる
-  }
+const serviceAccount = {
+  "type": "service_account",
+  "project_id": projectId,
+  "private_key": privateKey,
+  "client_email": clientEmail,
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(clientEmail)}`,
+  "universe_domain": "googleapis.com"
+};
 
-  try {
-    const serviceAccountJsonString = Buffer.from(FIREBASE_SA_FULL_JSON_BASE64_HARDCODED, 'base64').toString('utf8');
-    
-    // JSON文字列が有効であることを確認（念のため）
-    JSON.parse(serviceAccountJsonString);
+// Netlify Functionsがアクセスできる場所に出力します
+const outputPath = path.resolve(process.cwd(), '.netlify', 'functions', 'serviceAccountKey.json');
+const outputDir = path.dirname(outputPath);
 
-    // Netlify Functionsのルートディレクトリ（/var/task/）直下にserviceAccountKey.jsonを作成
-    // このパスは、Netlify Functionsが実行時に参照するパスです。
-    const functionsOutputDir = path.join(process.cwd(), '.netlify', 'functions');
-    const serviceAccountKeyPath = path.join(functionsOutputDir, 'serviceAccountKey.json');
-    
-    // functionsディレクトリが存在しない場合は作成
-    await fs.promises.mkdir(functionsOutputDir, { recursive: true });
-    
-    // ファイルに書き込む
-    await fs.promises.writeFile(serviceAccountKeyPath, serviceAccountJsonString);
-
-    console.log(`Service Account Key file created at: ${serviceAccountKeyPath}`);
-
-  } catch (error) {
-    console.error('Failed to create service account key file:', error);
-    process.exit(1); // ビルドを失敗させる
-  }
-  console.log('--- End Service Account Key File Creation ---');
+// 出力ディレクトリが存在しない場合は作成
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
 }
 
-// スクリプトが直接実行された場合に実行
-createServiceAccountFile();
+try {
+  // JSONファイルとして書き出す
+  fs.writeFileSync(outputPath, JSON.stringify(serviceAccount, null, 2));
+  console.log('--- Netlify Build Script: Creating Service Account Key File ---');
+  console.log('Service Account Key file created at:', outputPath);
+  console.log('--- End Service Account Key File Creation ---');
+} catch (error) {
+  console.error('--- Netlify Build Script Error: Failed to create Service Account Key File ---');
+  console.error(error);
+  process.exit(1); // ビルドを失敗させる
+}
