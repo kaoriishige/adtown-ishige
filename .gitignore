@@ -14,6 +14,7 @@
 
 # Secret Keys (Firebase, etc.)
 *firebase-adminsdk*.json
+*serviceAccountKey.json
 
 
 

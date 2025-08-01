@@ -1,12 +1,11 @@
-// pages/admin/inquiry-list.tsx
-
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useState } from 'react';
-import admin from '../../lib/firebase-admin';
 import nookies from 'nookies';
+// ★ 変更点: 新しい関数をインポート
+import { getAdminAuth } from '../../lib/firebase-admin';
 
 type InquiryStatus = '新規' | '対応中' | '完了';
 
@@ -38,7 +37,6 @@ const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
         throw new Error('ステータスの更新に失敗しました。');
       }
       
-      // 画面上の表示を更新
       setInquiries(prevInquiries =>
         prevInquiries.map(inquiry =>
           inquiry.id === inquiryId ? { ...inquiry, status: newStatus } : inquiry
@@ -72,12 +70,10 @@ const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">{inquiry.createdAt}</td>
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">{inquiry.name}</td>
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">
-                  {/* ▼▼▼ メールアドレスをクリック可能に ▼▼▼ */}
                   <a href={`mailto:${inquiry.email}`} className="text-blue-600 hover:underline">{inquiry.email}</a>
                 </td>
                 <td className="px-6 py-4 border-b border-gray-200 text-sm">{inquiry.message.substring(0, 50)}...</td>
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">
-                  {/* ▼▼▼ ステータス変更ドロップダウンを追加 ▼▼▼ */}
                   <select
                     value={inquiry.status}
                     onChange={(e) => handleStatusChange(inquiry.id, e.target.value as InquiryStatus)}
@@ -98,19 +94,28 @@ const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
   );
 };
 
+// ★ 変更点: getServerSidePropsを新しい関数形式に修正
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  try {
-    // 管理者認証
-    const cookies = nookies.get(context);
-    await admin.auth().verifyIdToken(cookies.token);
+  const adminAuth = getAdminAuth();
+  if (!adminAuth) {
+    console.error("Firebase Admin on InquiryList failed to initialize.");
+    return { redirect: { destination: '/login', permanent: false } };
+  }
 
+  try {
+    const cookies = nookies.get(context);
+    await adminAuth.verifyIdToken(cookies.token);
+
+    // 問い合わせデータの取得はクライアント側と同じdbインスタンスでOK
+    // (サーバーサイドでFirestoreのルールをバイパスする必要がない場合)
     const inquiriesCollectionRef = collection(db, 'inquiries');
     const q = query(inquiriesCollectionRef, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
 
     const initialInquiries = querySnapshot.docs.map(doc => {
       const data = doc.data();
-      const createdAt = data.createdAt?.toDate();
+      // FirestoreのTimestamp型を安全に日付文字列に変換
+      const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : null;
       return {
         id: doc.id,
         name: data.name || '',
@@ -124,16 +129,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return { props: { initialInquiries } };
   } catch (error) {
     console.error("Error fetching inquiries:", error);
-    // 認証失敗時などはログインページへ
-    if ((error as any).code === 'auth/id-token-expired' || (error as any).code === 'auth/argument-error') {
-      return {
-        redirect: {
-          destination: '/login',
-          permanent: false,
-        },
-      };
-    }
-    return { props: { initialInquiries: [] } };
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
   }
 };
 
