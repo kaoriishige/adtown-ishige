@@ -13,7 +13,6 @@
 .env.local
 
 # Secret Keys (Firebase, etc.)
-serviceAccountKey.json
 *firebase-adminsdk*.json
 
 

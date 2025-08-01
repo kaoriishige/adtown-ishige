@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2015", // <<< この行を "es2015" に変更、または追加
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -9,20 +9,20 @@
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "baseUrl": ".", // これが重要！プロジェクトのルートを基準にする
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
-      "@/lib/*": ["lib/*"], // @/lib を lib/ ディレクトリにマッピング
-      "@/contexts/*": ["contexts/*"], // @/contexts を contexts/ ディレクトリにマッピング
-      "@/styles/*": ["styles/*"] // 新しく追加: @/styles を styles/ ディレクトリにマッピング
-      // もし他のトップレベルフォルダをエイリアスで使いたい場合はここに追加
-      // 例: "@/pages/*": ["pages/*"]
+      "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "pages/admin/get-rewards.ts.bak"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }
