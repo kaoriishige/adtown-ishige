@@ -1,58 +1,93 @@
 import { GetServerSideProps, NextPage } from 'next';
-import admin from '../../lib/firebase-admin';
+import Link from 'next/link';
+import nookies from 'nookies';
+import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
 
+// 型定義
 interface RewardSummary {
   totalRewardsCount: number;
   totalRewardsAmount: number;
-  // 必要に応じて他の概要データも追加
+  paidRewardsCount: number;
+  pendingRewardsCount: number;
 }
 
 interface RewardsPageProps {
   summary: RewardSummary;
-  error?: string;
 }
 
+const RewardsPage: NextPage<RewardsPageProps> = ({ summary }) => {
+  return (
+    <div className="p-5">
+      <Link href="/admin" className="text-blue-500 hover:underline">
+        ← 管理メニューに戻る
+      </Link>
+      <h1 className="text-3xl font-bold my-6 text-center">報酬サマリー</h1>
+      <div className="max-w-xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-lg font-semibold text-gray-600">報酬発生件数</h2>
+          <p className="text-3xl font-bold text-gray-900">{summary.totalRewardsCount} 件</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-lg font-semibold text-gray-600">報酬総額</h2>
+          <p className="text-3xl font-bold text-gray-900">{summary.totalRewardsAmount.toLocaleString()} 円</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-lg font-semibold text-gray-600">支払い済み件数</h2>
+          <p className="text-3xl font-bold text-green-600">{summary.paidRewardsCount} 件</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-lg font-semibold text-gray-600">未払い件数</h2>
+          <p className="text-3xl font-bold text-red-600">{summary.pendingRewardsCount} 件</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const getServerSideProps: GetServerSideProps = async (context) => {
+  const adminAuth = getAdminAuth();
+  const adminDb = getAdminDb();
+
+  if (!adminAuth || !adminDb) {
+    console.error("Firebase Admin on RewardsPage failed to initialize.");
+    return { redirect: { destination: '/login', permanent: false } };
+  }
+
   try {
-    const rewardsSnapshot = await admin.firestore().collection('rewards').get();
-    let totalAmount = 0;
-    rewardsSnapshot.forEach(doc => {
-      totalAmount += doc.data().amount || 0;
-    });
+    // 管理者認証
+    const cookies = nookies.get(context);
+    await adminAuth.verifyIdToken(cookies.token);
+
+    // 全ての報酬データを取得
+    const rewardsSnapshot = await adminDb.collection('referralRewards').get();
 
     const summary: RewardSummary = {
       totalRewardsCount: rewardsSnapshot.size,
-      totalRewardsAmount: totalAmount,
+      totalRewardsAmount: 0,
+      paidRewardsCount: 0,
+      pendingRewardsCount: 0,
     };
 
-    return {
-      props: {
-        summary: JSON.parse(JSON.stringify(summary)), // シリアライズ可能に変換
-      },
-    };
-  } catch (error: any) {
+    rewardsSnapshot.forEach(doc => {
+      const data = doc.data();
+      summary.totalRewardsAmount += data.rewardAmount || 0;
+      if (data.rewardStatus === 'paid') {
+        summary.paidRewardsCount++;
+      } else if (data.rewardStatus === 'pending') {
+        summary.pendingRewardsCount++;
+      }
+    });
+
+    return { props: { summary } };
+  } catch (error) {
     console.error("Error fetching rewards summary:", error);
     return {
-      props: {
-        summary: { totalRewardsCount: 0, totalRewardsAmount: 0 },
-        error: "報酬概要の取得に失敗しました。" + error.message,
+      redirect: {
+        destination: '/login',
+        permanent: false,
       },
     };
   }
-};
-
-const RewardsPage: NextPage<RewardsPageProps> = ({ summary, error }) => {
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">報酬概要</h1>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded mb-4">
-        <p>累計報酬数: {summary.totalRewardsCount}</p>
-        <p>累計報酬額: {summary.totalRewardsAmount.toLocaleString()} 円</p>
-      </div>
-      {/* 必要に応じて個別の報酬を表示するUIを追加 */}
-    </div>
-  );
 };
 
 export default RewardsPage;
