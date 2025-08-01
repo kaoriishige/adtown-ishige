@@ -1,74 +1,60 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import admin from '../../lib/firebase-admin'; // 修正済みのimport文
+import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin'; // 修正済みのimport
 import Stripe from 'stripe';
 import nookies from 'nookies';
 
-// Stripeの初期化
+// Stripe SDKの初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
+  apiVersion: '2024-06-20',
 });
 
-// レスポンスの型定義
-type Data = {
-  url?: string;
-  error?: string;
-};
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // 修正済みのFirebase Admin SDKの呼び出し
+  const adminAuth = getAdminAuth();
+  const adminDb = getAdminDb();
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
-  // POSTメソッド以外のリクエストは拒否
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).end('Method Not Allowed');
+  // 初期化に失敗した場合はエラーを返す
+  if (!adminAuth || !adminDb) {
+    console.error("Firebase Admin on create-connect-account failed to initialize.");
+    return res.status(500).json({ error: 'サーバーの初期化に失敗しました。' });
   }
 
   try {
-    // 1. Cookieからトークンを取得し、ユーザーを認証
+    // 1. ユーザー認証
     const cookies = nookies.get({ req });
-    if (!cookies.token) {
-      return res.status(401).json({ error: '認証されていません。' });
-    }
-    const token = await admin.auth().verifyIdToken(cookies.token);
+    const token = await adminAuth.verifyIdToken(cookies.token);
     const { uid, email } = token;
 
-    // 2. Firestoreからユーザーの情報を取得
-    const db = admin.firestore();
-    const userRef = db.collection('users').doc(uid);
-    const userDoc = await userRef.get();
-    let stripeAccountId = userDoc.data()?.stripeConnectAccountId;
+    // 2. Stripe Expressアカウントを作成
+    const account = await stripe.accounts.create({
+      type: 'express',
+      country: 'JP',
+      email: email,
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+    });
 
-    // 3. もしStripeアカウントIDがなければ、新しく作成
-    if (!stripeAccountId) {
-      const account = await stripe.accounts.create({
-        type: 'express',
-        email: email,
-        capabilities: {
-          transfers: { requested: true }, // 報酬の送金機能をリクエスト
-        },
-      });
-      stripeAccountId = account.id;
+    // 3. 作成したアカウントIDをFirestoreに保存
+    await adminDb.collection('users').doc(uid).set({
+      stripeAccountId: account.id,
+      stripeAccountEnabled: false, // 初期状態はfalse
+    }, { merge: true });
 
-      // 4. 作成したIDをFirestoreに保存
-      await userRef.set({ stripeConnectAccountId: stripeAccountId }, { merge: true });
-    }
-
-    // 5. ユーザーが口座情報を登録するための、特別なURL（アカウントリンク）を作成
-    const returnUrl = `${process.env.BASE_URL}/mypage`; // 登録完了後に戻ってくるURL
-
+    // 4. アカウント登録用のURL（アカウントリンク）を生成
     const accountLink = await stripe.accountLinks.create({
-      account: stripeAccountId,
-      refresh_url: returnUrl, // 無効になった場合のリダイレクト先
-      return_url: returnUrl,  // 登録完了後のリダイレクト先
+      account: account.id,
+      refresh_url: `${process.env.BASE_URL}/payout-settings?reauth=true`,
+      return_url: `${process.env.BASE_URL}/mypage`,
       type: 'account_onboarding',
     });
 
-    // 6. 作成したURLをクライアントに返す
+    // 5. URLをクライアントに返す
     res.status(200).json({ url: accountLink.url });
 
   } catch (error) {
-    console.error('Stripe Connectアカウントの作成に失敗しました:', error);
-    res.status(500).json({ error: 'サーバー側でエラーが発生しました。' });
+    console.error("Stripe Connect account creation failed:", error);
+    res.status(500).json({ error: 'Stripeアカウントの作成中にエラーが発生しました。' });
   }
 }

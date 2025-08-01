@@ -27,7 +27,7 @@
     "react-markdown": "^10.1.0",
     "react-qr-code": "^2.0.18",
     "sharp": "^0.33.0",
-    "stripe": "18.3.0",
+    "stripe": "^18.4.0",
     "styled-jsx": "^5.1.1"
   },
   "devDependencies": {
