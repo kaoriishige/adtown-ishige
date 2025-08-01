@@ -1,18 +1,27 @@
 import * as admin from 'firebase-admin';
 
+// すでに初期化されている場合は何もしない
 if (!admin.apps.length) {
   try {
+    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+    
+    if (!serviceAccountString) {
+      throw new Error('The FIREBASE_SERVICE_ACCOUNT_BASE64 environment variable is not set.');
+    }
+
+    // Base64でエンコードされたサービスアカウント情報をデコード
+    const serviceAccount = JSON.parse(Buffer.from(serviceAccountString, 'base64').toString('utf-8'));
+
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        // Netlifyの環境変数の改行を正しく読み込むための処理
-        privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      }),
+      credential: admin.credential.cert(serviceAccount)
     });
-  } catch (e) {
-    console.error('Firebase admin initialization error', e);
+
+    console.log('✅ Firebase Admin SDK initialized successfully.');
+
+  } catch (error) {
+    console.error('❌ Firebase Admin SDK initialization error', error);
   }
 }
 
+export const adminDb = admin.firestore();
 export default admin;
