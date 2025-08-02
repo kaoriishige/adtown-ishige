@@ -1,47 +1,64 @@
 import * as admin from 'firebase-admin';
+import fs from 'fs';
+import path from 'path';
 
-// Appが初期化済みかどうかを保持する変数
+// Appが初期化済みかどうかのフラグ
 let app: admin.app.App | null = null;
 
 // Firebase Admin SDKを初期化する関数
-function initializeFirebaseAdmin(): admin.app.App {
-  // すでに初期化されている場合は、既存のものを返す
+const initializeFirebaseAdmin = (): admin.app.App => {
+  // すでに初期化済みの場合は、既存のインスタンスを返す
   if (admin.apps.length > 0) {
     app = admin.app();
     return app;
   }
 
-  // 環境変数から認証情報を取得
-  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  if (!serviceAccountBase64) {
-    throw new Error('環境変数 FIREBASE_SERVICE_ACCOUNT_BASE64 が設定されていません。');
+  try {
+    // ★★★ ここからが修正点 ★★★
+    // まず、Netlifyのビルド時に生成される一時ファイルを試す
+    const serviceAccountPath = path.join(process.cwd(), 'serviceAccountKey.json');
+    if (fs.existsSync(serviceAccountPath)) {
+      console.log("serviceAccountKey.jsonファイルを使ってFirebase Adminを初期化します...");
+      app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccountPath),
+      });
+      return app;
+    }
+
+    // 次に、環境変数を試す（ローカル開発や実行時に使われる）
+    const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+    if (serviceAccountBase64) {
+      console.log("環境変数を使ってFirebase Adminを初期化します...");
+      const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      return app;
+    }
+    // ★★★ ここまでが修正点 ★★★
+
+    throw new Error('Firebase Admin SDKの認証情報が見つかりませんでした。');
+
+  } catch (error) {
+    console.error("Firebase Admin SDKの初期化に失敗しました:", error);
+    app = null; 
+    throw error;
   }
+};
 
-  // Base64形式の認証情報をデコードしてJSONに戻す
-  const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
-  const serviceAccount = JSON.parse(serviceAccountJson);
+// Authインスタンスを取得する関数
+export const getAdminAuth = (): admin.auth.Auth | null => {
+  try {
+    if (!app) initializeFirebaseAdmin();
+    return admin.auth(app!);
+  } catch (e) { return null; }
+};
 
-  // Firebase Adminを初期化
-  console.log("Firebase Admin SDKを初期化します...");
-  app = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  console.log("Firebase Admin SDKの初期化が完了しました。");
-  return app;
-}
-
-// Authインスタンスを取得するための関数
-export function getAdminAuth(): admin.auth.Auth {
-  if (!app) {
-    initializeFirebaseAdmin();
-  }
-  return admin.auth(app!);
-}
-
-// Firestoreインスタンスを取得するための関数
-export function getAdminDb(): admin.firestore.Firestore {
-  if (!app) {
-    initializeFirebaseAdmin();
-  }
-  return admin.firestore(app!);
-}
+// Firestoreインスタンスを取得する関数
+export const getAdminDb = (): admin.firestore.Firestore | null => {
+  try {
+    if (!app) initializeFirebaseAdmin();
+    return admin.firestore(app!);
+  } catch (e) { return null; }
+};
