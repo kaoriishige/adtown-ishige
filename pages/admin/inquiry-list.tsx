@@ -1,13 +1,11 @@
-// pages/admin/inquiry-list.tsx
-
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { useState } from 'react';
-import admin from '../../lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin'; // ★ 修正点1: 新しいインポート
 import nookies from 'nookies';
+import { Timestamp } from 'firebase-admin/firestore'; // FirestoreのTimestamp型をインポート
 
+// 型定義
 type InquiryStatus = '新規' | '対応中' | '完了';
 
 interface Inquiry {
@@ -16,13 +14,14 @@ interface Inquiry {
   email: string;
   message: string;
   status: InquiryStatus;
-  createdAt: string;
+  createdAt: string; // JSONで渡せるようにstring型に
 }
 
 interface InquiriesPageProps {
   initialInquiries: Inquiry[];
 }
 
+// ページコンポーネント
 const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
   const [inquiries, setInquiries] = useState(initialInquiries);
 
@@ -38,7 +37,6 @@ const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
         throw new Error('ステータスの更新に失敗しました。');
       }
       
-      // 画面上の表示を更新
       setInquiries(prevInquiries =>
         prevInquiries.map(inquiry =>
           inquiry.id === inquiryId ? { ...inquiry, status: newStatus } : inquiry
@@ -57,6 +55,7 @@ const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
       <h1 className="text-3xl font-bold my-6 text-center">問い合わせ管理</h1>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white shadow-md rounded-lg">
+          {/* ... テーブルのヘッダー部分は変更なし ... */}
           <thead className="bg-gray-100">
             <tr>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">日時</th>
@@ -69,15 +68,13 @@ const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
           <tbody className="divide-y divide-gray-200">
             {inquiries.map((inquiry) => (
               <tr key={inquiry.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">{inquiry.createdAt}</td>
+                <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">{new Date(inquiry.createdAt).toLocaleString('ja-JP')}</td>
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">{inquiry.name}</td>
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">
-                  {/* ▼▼▼ メールアドレスをクリック可能に ▼▼▼ */}
                   <a href={`mailto:${inquiry.email}`} className="text-blue-600 hover:underline">{inquiry.email}</a>
                 </td>
                 <td className="px-6 py-4 border-b border-gray-200 text-sm">{inquiry.message.substring(0, 50)}...</td>
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">
-                  {/* ▼▼▼ ステータス変更ドロップダウンを追加 ▼▼▼ */}
                   <select
                     value={inquiry.status}
                     onChange={(e) => handleStatusChange(inquiry.id, e.target.value as InquiryStatus)}
@@ -98,42 +95,50 @@ const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
   );
 };
 
+// サーバーサイドでのデータ取得
 export const getServerSideProps: GetServerSideProps = async (context) => {
+  // ★ 修正点2: 新しい方法でAuthとDBを呼び出す
+  const adminAuth = getAdminAuth();
+  const adminDb = getAdminDb();
+
+  // 初期化失敗時のガード
+  if (!adminAuth || !adminDb) {
+    console.error("Firebase Admin on inquiry-list failed to initialize.");
+    return { redirect: { destination: '/login', permanent: false } };
+  }
+
   try {
     // 管理者認証
     const cookies = nookies.get(context);
-    await admin.auth().verifyIdToken(cookies.token);
+    await adminAuth.verifyIdToken(cookies.token);
 
-    const inquiriesCollectionRef = collection(db, 'inquiries');
-    const q = query(inquiriesCollectionRef, orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+    // ★ 修正点3: Admin SDKを使ってFirestoreからデータを取得
+    const inquiriesSnapshot = await adminDb.collection('inquiries').orderBy('createdAt', 'desc').get();
 
-    const initialInquiries = querySnapshot.docs.map(doc => {
+    const initialInquiries = inquiriesSnapshot.docs.map(doc => {
       const data = doc.data();
-      const createdAt = data.createdAt?.toDate();
+      // Admin SDKのTimestampを、ページに渡せるように文字列に変換
+      const createdAtTimestamp = data.createdAt as Timestamp;
       return {
         id: doc.id,
         name: data.name || '',
         email: data.email || '',
         message: data.message || '',
         status: data.status || '新規',
-        createdAt: createdAt ? createdAt.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '日付不明',
+        createdAt: createdAtTimestamp.toDate().toISOString(), // ISO文字列に変換
       };
     });
 
     return { props: { initialInquiries } };
   } catch (error) {
     console.error("Error fetching inquiries:", error);
-    // 認証失敗時などはログインページへ
-    if ((error as any).code === 'auth/id-token-expired' || (error as any).code === 'auth/argument-error') {
-      return {
-        redirect: {
-          destination: '/login',
-          permanent: false,
-        },
-      };
-    }
-    return { props: { initialInquiries: [] } };
+    // 認証失敗時などはログインページへリダイレクト
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
   }
 };
 

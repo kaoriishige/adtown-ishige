@@ -1,9 +1,11 @@
 // pages/payout-settings.tsx
 
-// --- クライアント側で使われるライブラリ ---
+// --- ライブラリのインポート ---
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
+import nookies from 'nookies';
+import { getAdminAuth, getAdminDb } from '../lib/firebase-admin'; // ★ 新しい方法でインポート
 
 // --- 型定義 ---
 
@@ -16,7 +18,7 @@ interface PayoutInfo {
   accountHolderName: string;
 }
 
-// このページコンポーネントが受け取るpropsの型
+// ページコンポーネントが受け取るpropsの型
 interface PayoutSettingsPageProps {
   initialPayoutInfo: PayoutInfo | null;
 }
@@ -25,7 +27,7 @@ interface PayoutSettingsPageProps {
 // --- ページコンポーネント（ブラウザで動作） ---
 
 const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialPayoutInfo }) => {
-  // フォームの入力値を管理するstate
+  // フォームの入力値を管理
   const [formData, setFormData] = useState<PayoutInfo>(initialPayoutInfo || {
     bankName: '',
     branchName: '',
@@ -37,20 +39,20 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialPayoutIn
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // フォームの入力内容が変更されたときにstateを更新
+  // フォーム入力の変更をハンドル
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: PayoutInfo) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // フォームが送信されたときの処理
+  // フォーム送信時の処理
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage('');
 
     try {
-      // APIルートにデータを送信して保存を依頼
+      // APIにデータを送信して保存
       const response = await fetch('/api/payout/save-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,7 +74,7 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialPayoutIn
 
   // ページの見た目 (JSX)
   return (
-    <div className="p-5 max-w-2xl mx-auto my-10">
+    <div className="p-5 max-w-2xl mx-auto my-10 bg-gray-50">
       <Link href="/mypage" className="text-blue-500 hover:underline">
         ← マイページに戻る
       </Link>
@@ -87,26 +89,26 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialPayoutIn
 
         <div className="mb-4">
           <label htmlFor="bankName" className="block text-gray-700 text-sm font-bold mb-2">金融機関名</label>
-          <input id="bankName" type="text" name="bankName" value={formData.bankName} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3" required placeholder="例：那須信用金庫" />
+          <input id="bankName" type="text" name="bankName" value={formData.bankName} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required placeholder="例：那須信用金庫" />
         </div>
         <div className="mb-4">
           <label htmlFor="branchName" className="block text-gray-700 text-sm font-bold mb-2">支店名</label>
-          <input id="branchName" type="text" name="branchName" value={formData.branchName} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3" required placeholder="例：本店営業部" />
+          <input id="branchName" type="text" name="branchName" value={formData.branchName} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required placeholder="例：本店営業部" />
         </div>
         <div className="mb-4">
           <label htmlFor="accountType" className="block text-gray-700 text-sm font-bold mb-2">預金種目</label>
-          <select id="accountType" name="accountType" value={formData.accountType} onChange={handleChange} className="shadow border rounded w-full py-2 px-3">
+          <select id="accountType" name="accountType" value={formData.accountType} onChange={handleChange} className="shadow border rounded w-full py-2 px-3 bg-white">
             <option value="普通">普通</option>
             <option value="当座">当座</option>
           </select>
         </div>
         <div className="mb-4">
           <label htmlFor="accountNumber" className="block text-gray-700 text-sm font-bold mb-2">口座番号</label>
-          <input id="accountNumber" type="text" name="accountNumber" value={formData.accountNumber} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3" required placeholder="7桁の半角数字" pattern="\d{1,7}" title="7桁までの半角数字で入力してください" />
+          <input id="accountNumber" type="text" name="accountNumber" value={formData.accountNumber} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required placeholder="7桁の半角数字" pattern="\d{1,7}" title="7桁までの半角数字で入力してください" />
         </div>
         <div className="mb-6">
           <label htmlFor="accountHolderName" className="block text-gray-700 text-sm font-bold mb-2">口座名義（カナ）</label>
-          <input id="accountHolderName" type="text" name="accountHolderName" value={formData.accountHolderName} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3" required placeholder="例：ナス タロウ" />
+          <input id="accountHolderName" type="text" name="accountHolderName" value={formData.accountHolderName} onChange={handleChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required placeholder="例：ナス タロウ" />
         </div>
 
         <div className="text-center">
@@ -123,26 +125,31 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialPayoutIn
 // --- サーバーサイド処理（ページ表示前に実行） ---
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  // ✅ サーバー専用ライブラリは、この関数の中で import する
-  const admin = require('../lib/firebase-admin').default;
-  const nookies = require('nookies');
+  // ★ 新しい方法でAuthとDBを呼び出す
+  const adminAuth = getAdminAuth();
+  const adminDb = getAdminDb();
+
+  if (!adminAuth || !adminDb) {
+    console.error("Firebase Admin on PayoutSettings failed to initialize.");
+    return { redirect: { destination: '/login', permanent: false } };
+  }
 
   try {
     // Cookieからユーザー情報を取り出し、本人か確認
     const cookies = nookies.get(context);
-    const token = await admin.auth().verifyIdToken(cookies.token);
+    const token = await adminAuth.verifyIdToken(cookies.token);
     const { uid } = token;
 
     // Firestoreから、現在の口座設定を取得
-    const db = admin.firestore();
-    const userPayoutDoc = await db.collection('payouts').doc(uid).get();
+    const userPayoutDoc = await adminDb.collection('payouts').doc(uid).get();
     
     const existingInfo = userPayoutDoc.exists ? userPayoutDoc.data() : null;
 
     // ページコンポーネントに初期値として渡す
     return {
       props: {
-        initialPayoutInfo: existingInfo,
+        // JSONに変換できないTimestamp型などを安全に変換
+        initialPayoutInfo: JSON.parse(JSON.stringify(existingInfo)),
       },
     };
   } catch (error) {

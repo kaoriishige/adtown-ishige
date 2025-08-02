@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import admin from '../../lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
 import nookies from 'nookies';
 
 // データをCSV形式の文字列に変換するヘルパー関数

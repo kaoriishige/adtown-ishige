@@ -1,12 +1,14 @@
 import { GetServerSideProps, NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useState } from 'react'; // 状態管理のため追加
+import { useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase'; // クライアント用Firebase
 import nookies from 'nookies';
+import { getAdminAuth, getAdminDb } from '../lib/firebase-admin'; // ★ 新しいインポート
+import { Timestamp } from 'firebase-admin/firestore';
 
-// Propsの型定義 (変更なし)
+// Propsの型定義
 interface MyPageProps {
   user: {
     uid: string;
@@ -18,7 +20,7 @@ interface MyPageProps {
   };
 }
 
-// 【修正点②】ナビゲーションリンクを配列として定義し、管理しやすくする
+// ナビゲーションリンクの配列
 const navigationLinks = [
   { href: '/home', text: 'アプリページはこちら' },
   { href: '/payout-settings', text: '報酬受取口座を登録・編集する' },
@@ -27,28 +29,28 @@ const navigationLinks = [
   { href: '/cancel-subscription', text: '解約希望の方はこちら' },
 ];
 
+// ページコンポーネント
 const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
   const router = useRouter();
-  // 【修正点③】ログアウト処理中のローディング状態を管理
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    setIsLoggingOut(true); // 処理開始
+    setIsLoggingOut(true);
     try {
-      await fetch('/api/logout'); // Cookieを削除するAPIをコール
-      await signOut(auth);      // クライアント側でサインアウト
-      router.push('/');         // トップページへリダイレクト
+      await fetch('/api/logout');
+      await signOut(auth);
+      router.push('/');
     } catch (error) {
       console.error('Logout failed', error);
       alert('ログアウトに失敗しました。');
-      setIsLoggingOut(false); // エラー時にローディング状態を解除
+      setIsLoggingOut(false);
     }
   };
 
   const buttonStyle = "w-full max-w-lg p-4 mb-4 text-lg font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors";
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <main className="flex-grow">
         <div className="p-5 text-center my-10">
           <h1 className="text-3xl font-bold mb-4">マイページ</h1>
@@ -70,7 +72,6 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
           </div>
           
           <div className="flex flex-col items-center">
-            {/* 配列を元にリンクを自動生成 */}
             {navigationLinks.map((link) => (
               <Link key={link.href} href={link.href} className={buttonStyle}>
                 {link.text}
@@ -99,16 +100,24 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
   );
 };
 
+// サーバーサイドでのデータ取得
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { default: admin } = await import('../lib/firebase-admin');
+  // ★ 新しい方法でAuthとDBを呼び出す
+  const adminAuth = getAdminAuth();
+  const adminDb = getAdminDb();
+
+  if (!adminAuth || !adminDb) {
+    console.error("Firebase Admin on MyPage failed to initialize.");
+    return { redirect: { destination: '/login', permanent: false } };
+  }
+
   try {
     const cookies = nookies.get(context);
-    const token = await admin.auth().verifyIdToken(cookies.token);
+    const token = await adminAuth.verifyIdToken(cookies.token);
     const { uid, email } = token;
 
     // Firestoreから報酬データを取得
-    const db = admin.firestore();
-    const rewardsQuery = await db.collection('referralRewards')
+    const rewardsQuery = await adminDb.collection('referralRewards')
       .where('referrerUid', '==', uid)
       .get();
 
@@ -117,9 +126,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     rewardsQuery.forEach(doc => {
       const data = doc.data();
-      total += data.rewardAmount;
+      total += data.rewardAmount || 0;
       if (data.rewardStatus === 'pending') {
-        pending += data.rewardAmount;
+        pending += data.rewardAmount || 0;
       }
     });
 
@@ -130,7 +139,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (error) {
-    // 【修正点④】サーバー側でエラー内容をログに出力し、デバッグしやすくする
     console.error("MyPage Auth Error or Data Fetch Error:", error);
     // 認証失敗時やエラー時はログインページへリダイレクト
     return {

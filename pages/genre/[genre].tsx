@@ -1,20 +1,14 @@
 import { GetStaticPaths, GetStaticProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { adminDb } from '../../lib/firebase-admin';
+import { getAdminDb } from '../../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
-import AppCard from '../../components/AppCard'; // あなたのAppCardコンポーネントのパス
 
 // --- 型定義 ---
-// ページに渡される、安全に変換済みのアプリデータの型
 interface AppData {
   id: string;
   name: string;
-  description: string;
-  iconUrl: string;
-  // 他のフィールドがあればここに追加（日付はstring型に）
 }
-// ページコンポーネントが受け取るPropsの型
 interface GenrePageProps {
   apps: AppData[];
   genre: string;
@@ -24,26 +18,32 @@ interface GenrePageProps {
 const GenrePage: NextPage<GenrePageProps> = ({ apps, genre }) => {
   const pageTitle = `${genre}のアプリ一覧 | みんなの那須アプリ`;
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-blue-50 min-h-screen">
       <Head>
         <title>{pageTitle}</title>
       </Head>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 text-center mb-12">
+        <div className="mb-8">
+            <Link href="/home" className="text-blue-600 hover:underline">
+                ← アプリのジャンル選択に戻る
+            </Link>
+        </div>
+
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-900 text-center mb-12">
           {genre}のアプリ
         </h1>
         {apps.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          // ▼▼▼ ここからデザインを修正しました ▼▼▼
+          <div className="max-w-2xl mx-auto space-y-4">
             {apps.map((app) => (
-              <AppCard
-                key={app.id}
-                id={app.id}
-                name={app.name}
-                description={app.description}
-                iconUrl={app.iconUrl}
-              />
+              <Link key={app.id} href={`/app/${app.id}`} legacyBehavior>
+                <a className="block w-full bg-white rounded-lg shadow-md p-4 text-center text-blue-700 font-semibold transition-colors hover:bg-gray-100 text-lg">
+                  {app.name}
+                </a>
+              </Link>
             ))}
           </div>
+          // ▲▲▲ ここまで ▲▲▲
         ) : (
           <p className="text-center text-gray-500">このジャンルのアプリはまだありません。</p>
         )}
@@ -57,65 +57,56 @@ const GenrePage: NextPage<GenrePageProps> = ({ apps, genre }) => {
   );
 };
 
-// --- データ取得 (ビルド時) ---
+// --- ビルド時に有効なジャンルのパスを生成 ---
 export const getStaticPaths: GetStaticPaths = async () => {
+  const adminDb = getAdminDb();
+  if (!adminDb) {
+    return { paths: [], fallback: 'blocking' };
+  }
   try {
     const appsSnapshot = await adminDb.collection('apps').select('genre').get();
-    
-    // Firestoreから取得したデータから、有効なジャンル名の文字列だけを安全に抽出
-    const genres: string[] = [];
+    const genres = new Set<string>();
     appsSnapshot.forEach(doc => {
       const genre = doc.data().genre;
       if (typeof genre === 'string' && genre) {
-        genres.push(genre);
+        genres.add(genre);
       }
     });
-
-    const uniqueGenres = [...new Set(genres)];
-
-    const paths = uniqueGenres.map(genre => ({
+    const paths = Array.from(genres).map(genre => ({
       params: { genre },
     }));
-
-    return { paths, fallback: 'blocking' }; // fallbackを'blocking'にすると、新しいジャンルが追加されても表示できる
+    return { paths, fallback: 'blocking' };
   } catch (error) {
     console.error("Error in getStaticPaths for [genre]:", error);
     return { paths: [], fallback: false };
   }
 };
 
+// --- ビルド時に各ジャンルのページデータを取得 ---
 export const getStaticProps: GetStaticProps = async (context) => {
+  const adminDb = getAdminDb();
+  if (!adminDb) {
+    return { notFound: true };
+  }
   try {
     const genre = context.params?.genre as string;
-
     if (!genre) {
       return { notFound: true };
     }
-
     const appsSnapshot = await adminDb.collection('apps').where('genre', '==', genre).get();
-
-    // FirestoreのデータをJSONに変換可能な形式にシリアライズ（変換）する
     const apps = appsSnapshot.docs.map(doc => {
       const data = doc.data();
-      const appData: { [key: string]: any } = { id: doc.id };
-      for (const key in data) {
-        const value = data[key];
-        // TimestampオブジェクトはISO文字列に変換、それ以外はそのまま
-        if (value instanceof Timestamp) {
-          appData[key] = value.toDate().toISOString();
-        } else {
-          appData[key] = value;
-        }
-      }
-      return appData;
+      return {
+        id: doc.id,
+        name: data.name || '名称未設定',
+      };
     });
-
     return {
       props: {
-        apps: apps as AppData[],
+        apps: JSON.parse(JSON.stringify(apps)),
         genre,
       },
-      revalidate: 60, // 60秒ごとにデータを再検証
+      revalidate: 60,
     };
   } catch (error) {
     console.error(`Error in getStaticProps for genre "${context.params?.genre}":`, error);

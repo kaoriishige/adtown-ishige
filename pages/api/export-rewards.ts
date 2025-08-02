@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import admin from '../../lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
 
 const convertToCSV = (data: any[]) => {
   if (data.length === 0) return '';

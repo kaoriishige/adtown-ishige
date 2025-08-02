@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { GetServerSideProps, NextPage } from 'next';
+import { getAdminDb } from '../lib/firebase-admin';
 
 // ジャンル名の配列
 const genres = [
@@ -15,12 +16,12 @@ interface HomePageProps {
   }
 }
 
+// ページコンポーネント
 const HomePage: NextPage<HomePageProps> = ({ content }) => {
   return (
     <div className="bg-blue-50 min-h-screen p-5 text-center flex flex-col">
       <main className="flex-grow flex flex-col justify-center">
         <div className="max-w-4xl mx-auto">
-          {/* ボタンの追加やスタイルの変更は、この部分で行ってください */}
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{content.mainHeading}</h1>
           <p className="text-lg text-gray-600 mb-12">{content.subheading}</p>
 
@@ -36,7 +37,18 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
             ))}
           </div>
 
-          <div className="mt-16">
+          {/* ▼▼▼ ここに「店舗お得情報」ボタンを追加しました ▼▼▼ */}
+          <div className="mt-12">
+            <Link
+              href="/stores"
+              className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-12 py-5 rounded-full shadow-xl hover:scale-105 transition-all duration-300 transform text-lg"
+            >
+              店舗のお得情報はこちら
+            </Link>
+          </div>
+          {/* ▲▲▲ ここまで ▲▲▲ */}
+
+          <div className="mt-8">
             <Link
               href="/apps/all"
               className="inline-block bg-gradient-to-r from-blue-500 to-teal-400 text-white font-bold px-10 py-4 rounded-full shadow-xl hover:scale-105 transition-all duration-300 transform"
@@ -60,14 +72,17 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
   );
 };
 
-// サーバーサイドでデータを取得する正しい方法
+// サーバーサイドでデータを取得
 export const getServerSideProps: GetServerSideProps = async () => {
-  // ▼▼▼ ここをサーバー専用のFirebase Admin SDKを使うように修正 ▼▼▼
-  const admin = require('../lib/firebase-admin').default;
-  const db = admin.firestore();
+  const adminDb = getAdminDb();
+
+  if (!adminDb) {
+    const content = { mainHeading: 'ようこそ', subheading: 'コンテンツの読み込みに失敗しました。' };
+    return { props: { content } };
+  }
 
   try {
-    const docRef = db.collection('siteContent').doc('landing');
+    const docRef = adminDb.collection('siteContent').doc('landing');
     const docSnap = await docRef.get();
     
     const content = docSnap.exists
@@ -76,7 +91,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     return {
       props: {
-        // FirestoreのTimestamp型などを正しく変換
         content: JSON.parse(JSON.stringify(content)),
       },
     };

@@ -1,28 +1,47 @@
 import * as admin from 'firebase-admin';
-import path from 'path';
-import fs from 'fs';
 
-// ビルドスクリプトがキーファイルを作成する、決まったパス
-const SERVICE_ACCOUNT_PATH = path.join(process.cwd(), '.netlify/functions/serviceAccountKey.json');
+// Appが初期化済みかどうかを保持する変数
+let app: admin.app.App | null = null;
 
-if (!admin.apps.length) {
-  // Netlifyのビルド環境など、ファイルが存在する場合のみ初期化を試みる
-  if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
-    try {
-      console.log('Initializing Firebase Admin SDK from file...');
-      admin.initializeApp({
-        // ファイルパスから認証情報を読み込む
-        credential: admin.credential.cert(SERVICE_ACCOUNT_PATH)
-      });
-      console.log('✅ Firebase Admin SDK initialized successfully.');
-    } catch (error) {
-      console.error('❌ Firebase Admin SDK initialization error', error);
-    }
-  } else {
-    // ローカル開発などでファイルが存在しない場合は警告のみ出す
-    console.warn('⚠️ Firebase Admin SDK not initialized: serviceAccountKey.json not found in build output.');
+// Firebase Admin SDKを初期化する関数
+function initializeFirebaseAdmin(): admin.app.App {
+  // すでに初期化されている場合は、既存のものを返す
+  if (admin.apps.length > 0) {
+    app = admin.app();
+    return app;
   }
+
+  // 環境変数から認証情報を取得
+  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  if (!serviceAccountBase64) {
+    throw new Error('環境変数 FIREBASE_SERVICE_ACCOUNT_BASE64 が設定されていません。');
+  }
+
+  // Base64形式の認証情報をデコードしてJSONに戻す
+  const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
+  const serviceAccount = JSON.parse(serviceAccountJson);
+
+  // Firebase Adminを初期化
+  console.log("Firebase Admin SDKを初期化します...");
+  app = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log("Firebase Admin SDKの初期化が完了しました。");
+  return app;
 }
 
-export const adminDb = admin.firestore();
-export default admin;
+// Authインスタンスを取得するための関数
+export function getAdminAuth(): admin.auth.Auth {
+  if (!app) {
+    initializeFirebaseAdmin();
+  }
+  return admin.auth(app!);
+}
+
+// Firestoreインスタンスを取得するための関数
+export function getAdminDb(): admin.firestore.Firestore {
+  if (!app) {
+    initializeFirebaseAdmin();
+  }
+  return admin.firestore(app!);
+}

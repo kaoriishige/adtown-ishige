@@ -1,23 +1,22 @@
 import { GetStaticProps, NextPage } from 'next';
 import Head from 'next/head';
-import { adminDb } from '../lib/firebase-admin'; // あなたのfirebase-admin初期化ファイルのパス
-import { Timestamp } from 'firebase-admin/firestore'; // Timestampの型をインポート
+import { getAdminDb } from '../lib/firebase-admin'; // ★ 修正点1: getAdminDbをインポート
+import { Timestamp } from 'firebase-admin/firestore';
 
-// ページに渡されるdealデータの型定義
-// 日付はJSONに変換可能な `string` 型にしておきます
+// 型定義
 interface Deal {
   id: string;
   productName: string;
   price: number;
   shopName: string;
-  // 他にもフィールドがあればここに追加
-  updatedAt: string; // 日付は文字列として扱う
+  updatedAt: string;
 }
 
 interface DealsPageProps {
   deals: Deal[];
 }
 
+// ページコンポーネント
 const DealsPage: NextPage<DealsPageProps> = ({ deals }) => {
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -43,44 +42,41 @@ const DealsPage: NextPage<DealsPageProps> = ({ deals }) => {
   );
 };
 
+// データ取得
 export const getStaticProps: GetStaticProps = async () => {
+  // ★ 修正点2: 関数を呼び出してDBインスタンスを取得
+  const adminDb = getAdminDb();
+
+  if (!adminDb) {
+    console.error("Firebase Admin on DealsPage failed to initialize.");
+    return { props: { deals: [] } };
+  }
+
   try {
     const dealsRef = adminDb.collection('deals');
-    const querySnapshot = await dealsRef.orderBy('updatedAt', 'desc').get();
+    const querySnapshot = await dealsRef.orderBy('createdAt', 'desc').get(); // orderByをcreatedAtに変更
 
     const deals = querySnapshot.docs.map(doc => {
       const data = doc.data();
-
-      // エラーの原因だったFirestoreのTimestampオブジェクトを、
-      // Next.jsが理解できるISO形式の文字列に変換します。
-      const dealData: { [key: string]: any } = {
+      const createdAtTimestamp = data.createdAt as Timestamp; // createdAtをTimestampとして扱う
+      return {
         id: doc.id,
+        productName: data.productName || '商品名なし',
+        price: data.price || 0,
+        shopName: data.shopName || '店舗名なし',
+        updatedAt: createdAtTimestamp.toDate().toISOString(), // createdAtをupdatedAtとして使用
       };
-
-      for (const key in data) {
-        const value = data[key];
-        // 値がTimestampオブジェクトであれば文字列に変換、そうでなければそのまま使う
-        if (value instanceof Timestamp) {
-          dealData[key] = value.toDate().toISOString();
-        } else {
-          dealData[key] = value;
-        }
-      }
-      
-      return dealData;
     });
 
     return {
       props: {
         deals,
       },
-      // 60秒ごとにページを再生成（ISR）
-      revalidate: 60, 
+      revalidate: 60, // 60秒ごとにデータを再検証
     };
   } catch (error) {
     console.error("Error fetching deals for getStaticProps:", error);
     return {
-      // エラーが発生した場合は、空の配列を返す
       props: {
         deals: [],
       },

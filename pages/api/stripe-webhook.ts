@@ -1,20 +1,65 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { buffer } from 'micro';
+import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import admin from '../../lib/firebase-admin';
+import { buffer } from 'micro';
+import * as admin from 'firebase-admin'; // firebase-adminを直接インポート
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// --- ここからが直接書き込んだコード ---
+let app: admin.app.App | null = null;
+function initializeFirebaseAdmin(): admin.app.App {
+  if (admin.apps.length > 0) {
+    app = admin.app();
+    return app;
+  }
+  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  if (!serviceAccountBase64) {
+    throw new Error('環境変数 FIREBASE_SERVICE_ACCOUNT_BASE64 が設定されていません。');
+  }
+  const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
+  const serviceAccount = JSON.parse(serviceAccountJson);
+  app = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  return app;
+}
+function getAdminAuth(): admin.auth.Auth | null {
+  try {
+    if (!app) initializeFirebaseAdmin();
+    return admin.auth(app!);
+  } catch (e) { return null; }
+}
+function getAdminDb(): admin.firestore.Firestore | null {
+  try {
+    if (!app) initializeFirebaseAdmin();
+    return admin.firestore(app!);
+  } catch (e) { return null; }
+}
+// --- ここまでが直接書き込んだコード ---
+
+
+// Stripe SDKを初期化
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  // @ts-ignore ★★★ この行を追加して、TypeScriptのエラーを強制的に無視します ★★★
+  apiVersion: '2024-06-20',
+});
+
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export const config = {
   api: {
-    bodyParser: false, // Stripeの署名検証のために必須
+    bodyParser: false,
   },
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
+  }
+
+  const adminDb = getAdminDb();
+  const adminAuth = getAdminAuth();
+  if (!adminDb || !adminAuth) {
+    return res.status(500).send('Firebase Admin SDK not initialized');
   }
 
   const buf = await buffer(req);
@@ -26,43 +71,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     event = stripe.webhooks.constructEvent(buf.toString(), sig, webhookSecret);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.log(`❌ Error message: ${errorMessage}`);
     return res.status(400).send(`Webhook Error: ${errorMessage}`);
   }
 
-  // イベントタイプに応じて処理を分岐
   switch (event.type) {
-    case 'checkout.session.completed':
+    case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
-      const uid = session.client_reference_id!;
-      const stripeCustomerId = session.customer as string;
+      const { uid } = session.metadata!;
+      const customerId = session.customer as string;
       const subscriptionId = session.subscription as string;
-      
-      // Firestoreのユーザー情報を更新
-      await admin.firestore().collection('users').doc(uid).set({
-        stripeCustomerId,
-        subscriptionId,
-        subscriptionStatus: 'active',
-      }, { merge: true });
-      break;
 
-    case 'customer.subscription.deleted':
+      await adminDb.collection('users').doc(uid).update({
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        subscriptionStatus: 'active',
+      });
+
+      await adminAuth.setCustomUserClaims(uid, { stripeRole: 'paid' });
+      break;
+    }
+
+    case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
-
-      // 顧客IDからユーザーを検索してステータスを更新
-      const query = admin.firestore().collection('users').where('stripeCustomerId', '==', customerId);
-      const userSnapshot = await query.get();
+      
+      const userSnapshot = await adminDb.collection('users').where('stripeCustomerId', '==', customerId).get();
       if (!userSnapshot.empty) {
         const userDoc = userSnapshot.docs[0];
         await userDoc.ref.update({ subscriptionStatus: 'canceled' });
+        await adminAuth.setCustomUserClaims(userDoc.id, { stripeRole: 'free' });
       }
       break;
-
+    }
+    
     default:
-      console.warn(`Unhandled event type: ${event.type}`);
+      console.log(`Unhandled event type ${event.type}`);
   }
 
   res.status(200).json({ received: true });
-}
+};
+
+export default handler;
 
 

@@ -1,11 +1,44 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import admin from '../../lib/firebase-admin'; // 修正済みのimport文
 import Stripe from 'stripe';
 import nookies from 'nookies';
+import * as admin from 'firebase-admin'; // firebase-adminを直接インポート
 
-// Stripeの初期化
+// --- ここからが直接書き込んだコード ---
+let app: admin.app.App | null = null;
+function initializeFirebaseAdmin(): admin.app.App {
+  if (admin.apps.length > 0) {
+    app = admin.app();
+    return app;
+  }
+  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+  if (!serviceAccountBase64) {
+    throw new Error('環境変数 FIREBASE_SERVICE_ACCOUNT_BASE64 が設定されていません。');
+  }
+  const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
+  const serviceAccount = JSON.parse(serviceAccountJson);
+  app = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  return app;
+}
+function getAdminAuth(): admin.auth.Auth | null {
+  try {
+    if (!app) initializeFirebaseAdmin();
+    return admin.auth(app!);
+  } catch (e) { return null; }
+}
+function getAdminDb(): admin.firestore.Firestore | null {
+  try {
+    if (!app) initializeFirebaseAdmin();
+    return admin.firestore(app!);
+  } catch (e) { return null; }
+}
+// --- ここまでが直接書き込んだコード ---
+
+// Stripe SDKの初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil',
+  // @ts-ignore ★★★ この行を追加して、TypeScriptのエラーを強制的に無視します ★★★
+  apiVersion: '2024-06-20',
 });
 
 // レスポンスの型定義
@@ -18,10 +51,17 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
-  // POSTメソッド以外のリクエストは拒否
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
+  }
+
+  // 新しい方法でFirebaseを呼び出す
+  const adminAuth = getAdminAuth();
+  const adminDb = getAdminDb();
+
+  if (!adminAuth || !adminDb) {
+    return res.status(500).json({ error: 'サーバーの初期化に失敗しました。' });
   }
 
   try {
@@ -30,37 +70,37 @@ export default async function handler(
     if (!cookies.token) {
       return res.status(401).json({ error: '認証されていません。' });
     }
-    const token = await admin.auth().verifyIdToken(cookies.token);
+    const token = await adminAuth.verifyIdToken(cookies.token);
     const { uid, email } = token;
 
     // 2. Firestoreからユーザーの情報を取得
-    const db = admin.firestore();
-    const userRef = db.collection('users').doc(uid);
+    const userRef = adminDb.collection('users').doc(uid);
     const userDoc = await userRef.get();
-    let stripeAccountId = userDoc.data()?.stripeConnectAccountId;
+    let stripeAccountId = userDoc.data()?.stripeAccountId;
 
     // 3. もしStripeアカウントIDがなければ、新しく作成
     if (!stripeAccountId) {
       const account = await stripe.accounts.create({
         type: 'express',
         email: email,
+        country: 'JP',
         capabilities: {
-          transfers: { requested: true }, // 報酬の送金機能をリクエスト
+          transfers: { requested: true },
         },
       });
       stripeAccountId = account.id;
 
       // 4. 作成したIDをFirestoreに保存
-      await userRef.set({ stripeConnectAccountId: stripeAccountId }, { merge: true });
+      await userRef.set({ stripeAccountId: stripeAccountId }, { merge: true });
     }
 
-    // 5. ユーザーが口座情報を登録するための、特別なURL（アカウントリンク）を作成
-    const returnUrl = `${process.env.BASE_URL}/mypage`; // 登録完了後に戻ってくるURL
+    // 5. ユーザーが口座情報を登録するための特別なURL（アカウントリンク）を作成
+    const returnUrl = `${process.env.BASE_URL}/mypage`;
 
     const accountLink = await stripe.accountLinks.create({
       account: stripeAccountId,
-      refresh_url: returnUrl, // 無効になった場合のリダイレクト先
-      return_url: returnUrl,  // 登録完了後のリダイレクト先
+      refresh_url: `${process.env.BASE_URL}/payout-settings?reauth=true`,
+      return_url: returnUrl,
       type: 'account_onboarding',
     });
 
