@@ -1,6 +1,4 @@
 import * as admin from 'firebase-admin';
-import fs from 'fs';
-import path from 'path';
 
 // Appが初期化済みかどうかのフラグ
 let app: admin.app.App | null = null;
@@ -14,31 +12,27 @@ const initializeFirebaseAdmin = (): admin.app.App => {
   }
 
   try {
-    // ★★★ ここからが修正点 ★★★
-    // まず、Netlifyのビルド時に生成される一時ファイルを試す
-    const serviceAccountPath = path.join(process.cwd(), 'serviceAccountKey.json');
-    if (fs.existsSync(serviceAccountPath)) {
-      console.log("serviceAccountKey.jsonファイルを使ってFirebase Adminを初期化します...");
-      app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccountPath),
-      });
-      return app;
+    console.log("環境変数を使ってFirebase Adminを初期化します...");
+
+    // Netlifyの環境変数から直接サービスアカウント情報を構築します
+    const serviceAccount = {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      // Netlifyの環境変数では改行が `\\n` になるため、`\n` に置換します
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    };
+
+    // 必須の環境変数が設定されているか確認します
+    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+      throw new Error('Firebase Admin SDKの初期化に必要な環境変数が設定されていません。');
     }
 
-    // 次に、環境変数を試す（ローカル開発や実行時に使われる）
-    const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-    if (serviceAccountBase64) {
-      console.log("環境変数を使ってFirebase Adminを初期化します...");
-      const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
-      const serviceAccount = JSON.parse(serviceAccountJson);
-      app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      return app;
-    }
-    // ★★★ ここまでが修正点 ★★★
+    // 構築した情報を使って初期化します
+    app = admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
 
-    throw new Error('Firebase Admin SDKの認証情報が見つかりませんでした。');
+    return app;
 
   } catch (error) {
     console.error("Firebase Admin SDKの初期化に失敗しました:", error);
