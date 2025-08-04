@@ -1,14 +1,16 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore'; // Timestampをインポート
 import { db } from '../../lib/firebase'; // あなたのFirebase設定ファイルへのパス
 
 // ページのPropsの型を定義
+// createdAtを文字列として追加します
 interface AppProps {
   app: {
     id: string;
     name: string;
     genre: string;
     url: string;
+    createdAt: string; // 日付は文字列として受け取ります
   } | null;
 }
 
@@ -41,6 +43,10 @@ const AppPage: NextPage<AppProps> = ({ app }) => {
       >
         このアプリを使ってみる
       </a>
+      {/* 念のため、日付も表示してみましょう */}
+      <p style={{ marginTop: '20px', color: '#888' }}>
+        作成日: {new Date(app.createdAt).toLocaleDateString()}
+      </p>
     </div>
   );
 };
@@ -54,13 +60,25 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      // ドキュメントが存在する場合、そのデータをPropsとしてページに渡す
+      // ドキュメントが存在する場合
+      const data = docSnap.data();
+      
+      // ★★★★★ ここが修正ポイントです ★★★★★
+      // FirestoreのTimestampオブジェクトを、JSONで扱える文字列に変換します
+      const appData = {
+        id: docSnap.id,
+        name: data.name || '',
+        genre: data.genre || '',
+        url: data.url || '',
+        // createdAtが存在し、Timestampであれば文字列に変換、なければnullを設定
+        createdAt: data.createdAt instanceof Timestamp 
+          ? data.createdAt.toDate().toISOString() 
+          : new Date().toISOString(),
+      };
+
       return {
         props: {
-          app: {
-            id: docSnap.id,
-            ...docSnap.data(),
-          },
+          app: appData,
         },
       };
     } else {

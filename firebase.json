@@ -1,9 +1,16 @@
 {
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
+  },
   "hosting": {
     "public": "out",
-    "rewrites": [
-      { "source": "/landing-v2", "destination": "/landing-v2.html" }
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
     ]
   }
 }
+
 
