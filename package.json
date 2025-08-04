@@ -15,6 +15,7 @@
     "firebase-admin": "^11.11.1",
     "json2csv": "^5.0.7",
     "lucide-react": "^0.378.0",
+    "micro": "^10.0.1",
     "next": "14.2.3",
     "nookies": "^2.5.2",
     "react": "^18",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@types/json2csv": "^5.0.7",
+    "@types/micro": "^7.3.9",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
