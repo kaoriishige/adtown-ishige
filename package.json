@@ -13,6 +13,7 @@
     "axios": "^1.6.8",
     "firebase": "^10.7.1",
     "firebase-admin": "^11.11.1",
+    "json2csv": "^5.0.7",
     "lucide-react": "^0.378.0",
     "next": "14.2.3",
     "nookies": "^2.5.2",
@@ -22,6 +23,7 @@
     "stripe": "^14.5.0"
   },
   "devDependencies": {
+    "@types/json2csv": "^5.0.7",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
