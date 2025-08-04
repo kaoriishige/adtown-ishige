@@ -25,7 +25,6 @@
   },
   "devDependencies": {
     "@types/json2csv": "^5.0.7",
-    "@types/micro": "^7.3.9",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
