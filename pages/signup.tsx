@@ -14,6 +14,9 @@ const SignupPage = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // 氏名とフリガナの入力値を管理するstate
+  const [name, setName] = useState('');
+  const [furigana, setFurigana] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [referrerId, setReferrerId] = useState<string | null>(null);
@@ -34,8 +37,11 @@ const SignupPage = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Firestoreに保存するデータに氏名とフリガナを追加
       await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
+        name: name, // 氏名を追加
+        furigana: furigana, // フリガナを追加
         subscriptionStatus: 'incomplete',
         createdAt: new Date(),
         referrerId: referrerId,
@@ -60,7 +66,7 @@ const SignupPage = () => {
       if (stripe) {
         await stripe.redirectToCheckout({ sessionId });
       } else {
-         throw new Error('Stripe.jsの読み込みに失敗しました。');
+          throw new Error('Stripe.jsの読み込みに失敗しました。');
       }
 
     } catch (err: any) {
@@ -81,6 +87,17 @@ const SignupPage = () => {
       <h1 className="text-3xl font-bold mb-6 text-center">新規登録</h1>
       <form onSubmit={handleSignup} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
+        
+        {/* 氏名とフリガナの入力欄 */}
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">氏名</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">フリガナ</label>
+          <input type="text" value={furigana} onChange={(e) => setFurigana(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
+        </div>
+
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2">メールアドレス</label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
@@ -96,7 +113,6 @@ const SignupPage = () => {
         </div>
       </form>
       
-      {/* ▼▼▼ ここに注意書きを追加しました ▼▼▼ */}
       <p className="text-center text-xs text-gray-500 mt-4">
         ※7日間の無料体験期間中にいつでも解約可能です。料金は一切かかりません。
       </p>
@@ -109,4 +125,3 @@ const SignupPage = () => {
 };
 
 export default SignupPage;
-
