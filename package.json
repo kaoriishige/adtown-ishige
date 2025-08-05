@@ -18,6 +18,7 @@
     "micro": "^10.0.1",
     "next": "14.2.3",
     "nookies": "^2.5.2",
+    "qrcode.react": "^3.1.0",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^9.0.1",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@types/json2csv": "^5.0.7",
     "@types/node": "^20",
+    "@types/qrcode.react": "^1.0.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
@@ -36,4 +38,3 @@
     "typescript": "^5"
   }
 }
-
