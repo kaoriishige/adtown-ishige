@@ -11,7 +11,7 @@
   "dependencies": {
     "@stripe/stripe-js": "^2.1.11",
     "axios": "^1.6.8",
-    "firebase": "^1.0.7",
+    "firebase": "^10.7.1",
     "firebase-admin": "^11.11.1",
     "json2csv": "^5.0.7",
     "lucide-react": "^0.378.0",
