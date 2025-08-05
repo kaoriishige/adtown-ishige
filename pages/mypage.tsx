@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase'; // クライアント用Firebase
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../lib/firebase-admin'; // ★ 新しいインポート
+import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 
 // Propsの型定義
@@ -102,7 +102,6 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
 
 // サーバーサイドでのデータ取得
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  // ★ 新しい方法でAuthとDBを呼び出す
   const adminAuth = getAdminAuth();
   const adminDb = getAdminDb();
 
@@ -115,6 +114,21 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const cookies = nookies.get(context);
     const token = await adminAuth.verifyIdToken(cookies.token);
     const { uid, email } = token;
+
+    // ユーザーのサブスクリプション状態を確認
+    const userDoc = await adminDb.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+      throw new Error('User document not found.');
+    }
+    
+    const subscriptionStatus = userDoc.data()?.subscriptionStatus;
+
+    // 'active' または 'canceled' 状態のユーザーのみマイページにアクセスを許可
+    if (subscriptionStatus !== 'active' && subscriptionStatus !== 'canceled') {
+      console.log(`User ${uid} with status '${subscriptionStatus}' denied access to mypage.`);
+      // それ以外のステータス（incompleteなど）の場合はログインページに戻す
+      return { redirect: { destination: '/login', permanent: false } };
+    }
 
     // Firestoreから報酬データを取得
     const rewardsQuery = await adminDb.collection('referralRewards')
