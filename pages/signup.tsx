@@ -1,127 +1,150 @@
-import { useState, useEffect } from 'react';
+import { NextPage } from 'next';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
 import Link from 'next/link';
-import { doc, setDoc } from 'firebase/firestore';
-import { loadStripe } from '@stripe/stripe-js';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { auth } from '../lib/firebase'; // あなたのFirebaseクライアント設定
 
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
-
-const SignupPage = () => {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  // 氏名とフリガナの入力値を管理するstate
+const SignUpPage: NextPage = () => {
+  // ▼▼▼ 氏名・フリガナのStateを追加 ▼▼▼
   const [name, setName] = useState('');
   const [furigana, setFurigana] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [referrerId, setReferrerId] = useState<string | null>(null);
+  // ▲▲▲ 氏名・フリガナのStateを追加 ▲▲▲
+  const [email, setEmail] = useState('');
+  const [emailConfirmation, setEmailConfirmation] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  useEffect(() => {
-    const storedReferrerId = sessionStorage.getItem('referrerId');
-    if (storedReferrerId) {
-      setReferrerId(storedReferrerId);
-    }
-  }, []);
-
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
+    setLoading(true);
+    setError(null);
+
+    if (email !== emailConfirmation) {
+      setError('メールアドレスが一致しません。');
+      setLoading(false);
+      return;
+    }
 
     try {
+      // 1. Firebase Authenticationでユーザーを作成
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Firestoreに保存するデータに氏名とフリガナを追加
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
-        name: name, // 氏名を追加
-        furigana: furigana, // フリガナを追加
-        subscriptionStatus: 'incomplete',
-        createdAt: new Date(),
-        referrerId: referrerId,
-      });
-
-      const response = await fetch('/api/create-checkout-session', {
+      // 2. 確認メールを送信
+      await sendEmailVerification(user);
+      
+      // ▼▼▼ 3. Firestoreにユーザードキュメントを作成（氏名・フリガナも追加） ▼▼▼
+      // このAPIルートは別途作成・修正が必要です
+      await fetch('/api/user/create-doc', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ uid: user.uid }),
+        body: JSON.stringify({ 
+          uid: user.uid, 
+          email: user.email,
+          name: name, // 氏名を追加
+          furigana: furigana, // フリガナを追加
+        }),
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '決済ページの作成に失敗しました。');
-      }
+      // ▲▲▲ 3. Firestoreにユーザードキュメントを作成（氏名・フリガナも追加） ▲▲▲
 
-      const { sessionId } = await response.json();
-
-      const stripe = await stripePromise;
-      if (stripe) {
-        await stripe.redirectToCheckout({ sessionId });
-      } else {
-          throw new Error('Stripe.jsの読み込みに失敗しました。');
-      }
+      // 4. 「メールを確認して」ページに移動
+      router.push('/verify-email');
 
     } catch (err: any) {
-      let errorMessage = err.message || '登録に失敗しました。';
+      console.error("サインアップエラー:", err);
       if (err.code === 'auth/email-already-in-use') {
-        errorMessage = 'このメールアドレスは既に使用されています。';
+        setError('このメールアドレスは既に使用されています。');
       } else if (err.code === 'auth/weak-password') {
-        errorMessage = 'パスワードは6文字以上で入力してください。';
+        setError('パスワードは6文字以上で設定してください。');
+      } else {
+        setError('登録に失敗しました。しばらくしてから再度お試しください。');
       }
-      setError(errorMessage);
-      setIsLoading(false);
-      console.error(err);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-5 max-w-sm mx-auto my-10">
-      <h1 className="text-3xl font-bold mb-6 text-center">新規登録</h1>
-      <form onSubmit={handleSignup} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-        
-        {/* 氏名とフリガナの入力欄 */}
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">氏名</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">フリガナ</label>
-          <input type="text" value={furigana} onChange={(e) => setFurigana(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">メールアドレス</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
-        </div>
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2">パスワード</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
-        </div>
-        <div className="text-center">
-          <button type="submit" disabled={isLoading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400">
-            {isLoading ? '処理中...' : '登録して支払いへ進む'}
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+        <h1 className="text-3xl font-bold text-center">新規登録</h1>
+        <form onSubmit={handleSignUp} className="space-y-6">
+          {/* ▼▼▼ 氏名・フリガナの入力フィールドを追加 ▼▼▼ */}
+          <div>
+            <label className="block mb-2 text-sm font-medium">氏名</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md"
+              required
+              placeholder="山田 太郎"
+            />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">フリガナ</label>
+            <input
+              type="text"
+              value={furigana}
+              onChange={(e) => setFurigana(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md"
+              required
+              placeholder="ヤマダ タロウ"
+            />
+          </div>
+          {/* ▲▲▲ 氏名・フリガナの入力フィールドを追加 ▲▲▲ */}
+          <div>
+            <label className="block mb-2 text-sm font-medium">メールアドレス</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md"
+              required
+              placeholder="email@example.com"
+            />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">メールアドレス（確認用）</label>
+            <input
+              type="email"
+              value={emailConfirmation}
+              onChange={(e) => setEmailConfirmation(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md"
+              required
+              placeholder="もう一度入力してください"
+            />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">パスワード</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md"
+              required
+              placeholder="6文字以上"
+            />
+          </div>
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 px-4 text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:bg-gray-400"
+          >
+            {loading ? '登録中...' : '登録して確認メールを送信'}
           </button>
-        </div>
-      </form>
-      
-      <p className="text-center text-xs text-gray-500 mt-4">
-        ※7日間の無料体験期間中にいつでも解約可能です。料金は一切かかりません。
-      </p>
-
-      <p className="text-center text-sm mt-4">
-        すでにアカウントをお持ちですか？ <Link href="/login" className="text-blue-500 hover:underline">ログイン</Link>
-      </p>
+        </form>
+        <p className="text-sm text-center">
+          すでにアカウントをお持ちですか？ <Link href="/login" className="text-blue-500 hover:underline">ログイン</Link>
+        </p>
+      </div>
     </div>
   );
 };
 
-export default SignupPage;
+export default SignUpPage;

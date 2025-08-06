@@ -1,93 +1,87 @@
+import { NextPage } from 'next';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../lib/firebase';
 import Link from 'next/link';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
-const LoginPage = () => {
-  const router = useRouter();
+const LoginPage: NextPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-    
-    // ▼▼▼ デバッグ用の目印を追加 ▼▼▼
-    console.log('1. ログイン処理を開始します。');
-    console.log('入力されたメールアドレス:', email);
+    setLoading(true);
+    setError(null);
 
     try {
-      console.log('2. Firebaseに認証情報を送信します...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      console.log('3. Firebase認証に成功しました。');
-      
-      // 認証情報をサーバーサイドのCookieに保存
-      const token = await userCredential.user.getIdToken();
-      console.log('4. Cookie保存APIを呼び出します...');
-      await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
+      const user = userCredential.user;
 
-      console.log('5. Cookie保存完了。マイページに移動します。');
-      router.push('/mypage'); // Cookie保存後にマイページへ移動
+      // 最新のユーザー情報を再読み込み
+      await user.reload(); 
+
+      // 最新の情報に更新された user オブジェクトで認証済みかチェック
+      if (user.emailVerified) {
+        // メール認証済みの場合、決済ページへリダイレクト
+        router.push('/payment'); // ★ここを修正★
+      } else {
+        // メール認証がまだの場合
+        await auth.signOut(); // ログインさせずにサインアウトさせる
+        setError("メールアドレスの確認が完了していません。受信したメールをご確認ください。");
+      }
 
     } catch (err: any) {
-      console.log('6. 認証またはAPI呼び出しで失敗しました。エラー:', err); // エラー内容をコンソールに表示
-      setError('メールアドレスまたはパスワードが間違っています。');
-      console.error(err);
-
-    } finally {
-      console.log('7. ログイン処理を終了します。');
-      setIsLoading(false);
+      console.error("ログインエラー:", err);
+      setError("メールアドレスまたはパスワードが間違っています。");
+      setLoading(false);
     }
-  };
-
-  const handlePasswordReset = async () => {
-    const email = prompt('パスワードをリセットしたいメールアドレスを入力してください。');
-    if (email) {
-      try {
-        await sendPasswordResetEmail(auth, email);
-        alert('パスワードリセット用のメールを送信しました。受信箱をご確認ください。');
-      } catch (err) {
-        alert('メールの送信に失敗しました。');
-      }
-    }
+    
+    // ログイン処理が終わったら（成功・失敗問わず）ローディングを解除
+    setLoading(false);
   };
 
   return (
-    <div className="p-5 max-w-sm mx-auto my-10">
-      <h1 className="text-3xl font-bold mb-6 text-center">ログイン</h1>
-      <form onSubmit={handleLogin} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">メールアドレス</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
-        </div>
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-bold mb-2">パスワード</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="shadow appearance-none border rounded w-full py-2 px-3" required />
-        </div>
-        <div className="text-center">
-          <button type="submit" disabled={isLoading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400">
-            {isLoading ? 'ログイン中...' : 'ログイン'}
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+        <h1 className="text-3xl font-bold text-center">ログイン</h1>
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label className="block mb-2 text-sm font-medium">メールアドレス</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md"
+              required
+            />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">パスワード</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md"
+              required
+            />
+          </div>
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 px-4 text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:bg-gray-400"
+          >
+            {loading ? 'ログイン中...' : 'ログイン'}
           </button>
-        </div>
-        <div className="text-center mt-4">
-          <a onClick={handlePasswordReset} className="text-xs text-blue-500 hover:underline cursor-pointer">
-            パスワードをお忘れですか？
-          </a>
-        </div>
-      </form>
-      <p className="text-center text-sm">
-        アカウントをお持ちでないですか？ <Link href="/signup" className="text-blue-500 hover:underline">新規登録</Link>
-      </p>
+        </form>
+        <p className="text-sm text-center">
+          アカウントをお持ちでないですか？ <Link href="/signup" className="text-blue-500 hover:underline">新規登録</Link>
+        </p>
+      </div>
     </div>
   );
 };

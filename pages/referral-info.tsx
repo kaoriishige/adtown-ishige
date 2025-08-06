@@ -1,26 +1,32 @@
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/router';
+import { useState, useEffect, useRef } from 'react';
+import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
-import { useAuth } from '../contexts/AuthContext';
-import { signOut } from 'firebase/auth';
-import { auth } from '../lib/firebase';
-import { QRCodeCanvas } from 'qrcode.react'; // QRコードライブラリをインポート
+import nookies from 'nookies';
+import { QRCodeCanvas } from 'qrcode.react';
+import { getAdminAuth } from '../lib/firebase-admin';
 
-const ReferralInfoPage = () => {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+// --- 型定義 ---
+interface User {
+  uid: string;
+  email: string;
+}
+
+interface ReferralInfoPageProps {
+  user: User;
+}
+
+// --- ページコンポーネント ---
+const ReferralInfoPage: NextPage<ReferralInfoPageProps> = ({ user }) => {
   const [referralLink, setReferralLink] = useState('');
   const qrCodeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    } else if (user) {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      // ▼▼▼ リンクの行き先をランディングページ('/')に変更 ▼▼▼
+    // サーバーから渡されたuser情報を使って紹介リンクを生成
+    if (user) {
+      const origin = window.location.origin;
       setReferralLink(`${origin}/?ref=${user.uid}`);
     }
-  }, [user, loading, router]);
+  }, [user]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
@@ -37,10 +43,6 @@ const ReferralInfoPage = () => {
       a.click();
     }
   };
-
-  if (loading || !user) {
-    return <p>読み込み中...</p>;
-  }
 
   return (
     <div className="p-5 max-w-3xl mx-auto my-10">
@@ -66,7 +68,7 @@ const ReferralInfoPage = () => {
         <h2 className="text-xl font-bold mb-4 text-gray-800">専用QRコード</h2>
         <div className="text-center p-4 bg-gray-50 rounded">
           <div ref={qrCodeRef} className="inline-block p-4 bg-white border">
-            <QRCodeCanvas value={referralLink} size={160} />
+            {referralLink && <QRCodeCanvas value={referralLink} size={160} />}
           </div>
           <button onClick={downloadQRCode} className="mt-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
             QRコードを保存
@@ -77,15 +79,15 @@ const ReferralInfoPage = () => {
       <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 mt-8">
         <h2 className="text-xl font-bold mb-4 text-gray-800">紹介制度のルール</h2>
         <ul className="list-disc list-inside text-gray-700 space-y-2">
-        <li>上記のURL,QRコードから紹介用ページの閲覧と登録をすることができます。</li>
-          <li>あなたの紹介リンク経由でご友人が有料会員登録（月額980円）されると、紹介が成立します。</li>
-          <li>紹介が成立すると、ご友人の月額利用料の一部があなたに報酬として継続的に還元されます。</li>
-          <li>8月末までに紹介した方には → 紹介報酬【30%】ずっと継続!!</li>
-          <li>9月から紹介を始めた方は→紹介報酬【20%】</li>
-          <li>報酬は即時あなたのアカウントに反映されます。（管理画面で確認できます）</li>
-          <li>月4人～紹介すれば、あなたの月額利用料（980円）は実質無料以上になります。</li>
-          <li>100人紹介で月額約30,000円の紹介料を毎月継続でGET！</li>
-          <li>紹介料は3,000円を超えると、月末締の翌月15日に口座に振り込まれます。</li>
+            <li>上記のURL,QRコードから紹介用ページの閲覧と登録をすることができます。</li>
+            <li>あなたの紹介リンク経由でご友人が有料会員登録（月額980円）されると、紹介が成立します。</li>
+            <li>紹介が成立すると、ご友人の月額利用料の一部があなたに報酬として継続的に還元されます。</li>
+            <li>8月末までに紹介した方には → 紹介報酬【30%】ずっと継続!!</li>
+            <li>9月から紹介を始めた方は→紹介報酬【20%】</li>
+            <li>報酬は即時あなたのアカウントに反映されます。（管理画面で確認できます）</li>
+            <li>月4人～紹介すれば、あなたの月額利用料（980円）は実質無料以上になります。</li>
+            <li>100人紹介で月額約30,000円の紹介料を毎月継続でGET！</li>
+            <li>紹介料は3,000円を超えると、月末締の翌月15日に口座に振り込まれます。</li>
         </ul>
         <p className="text-xs text-gray-500 mt-4">※紹介報酬は、紹介された方が980円で継続課金した場合の計算です。</p>
       </div>
@@ -93,5 +95,28 @@ const ReferralInfoPage = () => {
   );
 };
 
-export default ReferralInfoPage;
+// --- サーバーサイドでの認証チェック ---
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  try {
+    const cookies = nookies.get(context);
+    const token = await getAdminAuth().verifyIdToken(cookies.token);
+    const { uid, email } = token;
 
+    // ユーザー情報をpropsとしてページに渡す
+    return {
+      props: {
+        user: { uid, email: email || '' },
+      },
+    };
+  } catch (error) {
+    // 認証に失敗した場合はログインページにリダイレクト
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
+  }
+};
+
+export default ReferralInfoPage;

@@ -7,7 +7,7 @@ import { useRouter } from 'next/router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
-// (型定義やページコンポーネントは変更ありません)
+// (型定義は変更ありません)
 type InquiryStatus = '新規' | '対応中' | '完了';
 interface Inquiry {
   id: string;
@@ -20,6 +20,8 @@ interface Inquiry {
 interface InquiriesPageProps {
   initialInquiries: Inquiry[];
 }
+
+// (ページコンポーネントは変更ありません)
 const InquiriesPage: NextPage<InquiriesPageProps> = ({ initialInquiries }) => {
   const [inquiries, setInquiries] = useState(initialInquiries);
   const router = useRouter();
