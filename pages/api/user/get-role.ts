@@ -22,9 +22,8 @@ export default async function handler(
       return res.status(200).json({ role: null });
     }
     
-    // トークンを検証
-    const token = await adminAuth.verifyIdToken(cookies.token);
-    
+   const checkRevoked = true; // セッションが無効になっていないか確認する
+   const token = await adminAuth.verifySessionCookie(cookies.token, checkRevoked);
     // カスタムクレームからadminロールがあるか判断
     const role = token.admin === true ? 'admin' : 'user';
 
