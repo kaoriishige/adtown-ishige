@@ -75,22 +75,6 @@ const ReferralInfoPage: NextPage<ReferralInfoPageProps> = ({ user }) => {
           </button>
         </div>
       </div>
-
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 mt-8">
-        <h2 className="text-xl font-bold mb-4 text-gray-800">紹介制度のルール</h2>
-        <ul className="list-disc list-inside text-gray-700 space-y-2">
-            <li>上記のURL,QRコードから紹介用ページの閲覧と登録をすることができます。</li>
-            <li>あなたの紹介リンク経由でご友人が有料会員登録（月額980円）されると、紹介が成立します。</li>
-            <li>紹介が成立すると、ご友人の月額利用料の一部があなたに報酬として継続的に還元されます。</li>
-            <li>8月末までに紹介した方には → 紹介報酬【30%】ずっと継続!!</li>
-            <li>9月から紹介を始めた方は→紹介報酬【20%】</li>
-            <li>報酬は即時あなたのアカウントに反映されます。（管理画面で確認できます）</li>
-            <li>月4人～紹介すれば、あなたの月額利用料（980円）は実質無料以上になります。</li>
-            <li>100人紹介で月額約30,000円の紹介料を毎月継続でGET！</li>
-            <li>紹介料は3,000円を超えると、月末締の翌月15日に口座に振り込まれます。</li>
-        </ul>
-        <p className="text-xs text-gray-500 mt-4">※紹介報酬は、紹介された方が980円で継続課金した場合の計算です。</p>
-      </div>
     </div>
   );
 };
@@ -99,17 +83,17 @@ const ReferralInfoPage: NextPage<ReferralInfoPageProps> = ({ user }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await getAdminAuth().verifyIdToken(cookies.token);
-    const { uid, email } = token;
-
-    // ユーザー情報をpropsとしてページに渡す
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    
     return {
       props: {
-        user: { uid, email: email || '' },
+        user: { 
+          uid: token.uid, 
+          email: token.email || '' 
+        },
       },
     };
   } catch (error) {
-    // 認証に失敗した場合はログインページにリダイレクト
     return {
       redirect: {
         destination: '/login',
