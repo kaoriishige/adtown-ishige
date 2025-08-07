@@ -1,29 +1,33 @@
-import Link from 'next/link';
 import { GetServerSideProps, NextPage } from 'next';
-import { getAdminDb } from '../lib/firebase-admin';
+import Link from 'next/link';
+import nookies from 'nookies';
+import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
 
-// ジャンル名の配列
-const genres = [
-  '生活情報', '健康支援', '節約・特売', '人間関係', '教育・学習',
-  '子育て', '防災・安全', '診断・運勢', 'エンタメ', '趣味・文化'
-];
-
-// ページが受け取るデータの型
+// --- Type Definitions ---
 interface HomePageProps {
   content: {
     mainHeading: string;
     subheading: string;
-  }
+  };
+  user: {
+    email: string;
+  };
 }
 
-// ページコンポーネント
-const HomePage: NextPage<HomePageProps> = ({ content }) => {
+// --- Page Component ---
+const HomePage: NextPage<HomePageProps> = ({ content, user }) => {
+  const genres = [
+    '生活情報', '健康支援', '節約・特売', '人間関係', '教育・学習',
+    '子育て', '防災・安全', '診断・運勢', 'エンタメ', '趣味・文化'
+  ];
+
   return (
     <div className="bg-blue-50 min-h-screen p-5 text-center flex flex-col">
       <main className="flex-grow flex flex-col justify-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">{content.mainHeading}</h1>
           <p className="text-lg text-gray-600 mb-12">{content.subheading}</p>
+          <p className="mb-12">ようこそ、{user.email}さん</p>
 
           <div className="flex flex-wrap justify-center gap-4">
             {genres.map(genre => (
@@ -37,7 +41,6 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
             ))}
           </div>
 
-          {/* ▼▼▼ ここに「店舗お得情報」ボタンを追加しました ▼▼▼ */}
           <div className="mt-12">
             <Link
               href="/stores"
@@ -46,7 +49,6 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
               店舗のお得情報はこちら
             </Link>
           </div>
-          {/* ▲▲▲ ここまで ▲▲▲ */}
 
           <div className="mt-8">
             <Link
@@ -72,16 +74,16 @@ const HomePage: NextPage<HomePageProps> = ({ content }) => {
   );
 };
 
-// サーバーサイドでデータを取得
-export const getServerSideProps: GetServerSideProps = async () => {
-  const adminDb = getAdminDb();
-
-  if (!adminDb) {
-    const content = { mainHeading: 'ようこそ', subheading: 'コンテンツの読み込みに失敗しました。' };
-    return { props: { content } };
-  }
-
+// --- Server-Side Data Fetching and Authentication ---
+export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
+    // --- Authentication Check ---
+    const cookies = nookies.get(context);
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const { email } = token;
+    // --- End Authentication Check ---
+
+    const adminDb = getAdminDb();
     const docRef = adminDb.collection('siteContent').doc('landing');
     const docSnap = await docRef.get();
     
@@ -91,18 +93,22 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     return {
       props: {
+        user: { email: email || '' },
         content: JSON.parse(JSON.stringify(content)),
       },
     };
   } catch (error) {
-    console.error("Error fetching landing page content:", error);
-    const content = { mainHeading: 'エラー', subheading: 'コンテンツの読み込みに失敗しました' };
-    return { props: { content } };
+    // If authentication fails, redirect to the login page
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
   }
 };
 
 export default HomePage;
-
 
 
 
