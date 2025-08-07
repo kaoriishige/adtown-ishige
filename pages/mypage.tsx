@@ -112,7 +112,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
   try {
     const cookies = nookies.get(context);
-    const token = await adminAuth.verifyIdToken(cookies.token);
+    const checkRevoked = true; // セッションが無効になっていないか確認する
+    const token = await adminAuth.verifySessionCookie(cookies.token, checkRevoked);
     const { uid, email } = token;
 
     // ユーザーのサブスクリプション状態を確認
