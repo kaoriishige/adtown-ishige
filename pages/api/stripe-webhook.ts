@@ -10,44 +10,35 @@ function initializeFirebaseAdmin(): admin.app.App {
     app = admin.app();
     return app;
   }
-  
   const serviceAccount = {
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
   };
-
   if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
     throw new Error('Firebaseの環境変数（PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY）が設定されていません。');
   }
-
   app = admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
   return app;
 }
-
 function getAdminDb(): admin.firestore.Firestore {
   if (!app) initializeFirebaseAdmin();
   return admin.firestore(app!);
 }
-
 function getAdminAuth(): admin.auth.Auth {
   if (!app) initializeFirebaseAdmin();
   return admin.auth(app!);
 }
 // --- ここまでFirebase初期化コード ---
 
-
-// Stripe SDKを初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   // @ts-ignore
   apiVersion: '2024-06-20',
 });
-
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// Next.jsのBody-parserを無効化
 export const config = {
   api: {
     bodyParser: false,
@@ -62,10 +53,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   const adminDb = getAdminDb();
   const adminAuth = getAdminAuth();
-
   const buf = await buffer(req);
   const sig = req.headers['stripe-signature']!;
-
   let event: Stripe.Event;
 
   try {
@@ -76,7 +65,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(400).send(`Webhook Error: ${errorMessage}`);
   }
 
-  // イベントタイプに応じて処理を分岐
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -85,11 +73,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const subscriptionId = session.subscription as string;
 
       try {
-        await adminDb.collection('users').doc(uid).update({
+        // ★★★ ここが修正点です ★★★
+        // .update() から .set({ merge: true }) に変更し、ドキュメントがなくてもエラーにならないようにします
+        await adminDb.collection('users').doc(uid).set({
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
           subscriptionStatus: 'active',
-        });
+        }, { merge: true });
+        // ★★★ ここまで ★★★
+
         await adminAuth.setCustomUserClaims(uid, { stripeRole: 'paid' });
         console.log(`User ${uid} subscription activated.`);
       } catch (error) {
@@ -99,9 +91,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     case 'customer.subscription.deleted': {
+      // ... (変更なし)
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
-      
       try {
         const userSnapshot = await adminDb.collection('users').where('stripeCustomerId', '==', customerId).get();
         if (!userSnapshot.empty) {

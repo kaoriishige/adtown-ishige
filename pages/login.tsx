@@ -18,30 +18,17 @@ const LoginPage: NextPage = () => {
     setError(null);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // 最新のユーザー情報を再読み込み
-      await user.reload(); 
-
-      // 最新の情報に更新された user オブジェクトで認証済みかチェック
-      if (user.emailVerified) {
-        // メール認証済みの場合、決済ページへリダイレクト
-        router.push('/payment'); // ★ここを修正★
-      } else {
-        // メール認証がまだの場合
-        await auth.signOut(); // ログインさせずにサインアウトさせる
-        setError("メールアドレスの確認が完了していません。受信したメールをご確認ください。");
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      
+      // ★★★ 修正点：メール認証チェックを削除 ★★★
+      // ログインに成功したら、常にマイページへ移動させる
+      router.push('/mypage');
 
     } catch (err: any) {
       console.error("ログインエラー:", err);
       setError("メールアドレスまたはパスワードが間違っています。");
       setLoading(false);
     }
-    
-    // ログイン処理が終わったら（成功・失敗問わず）ローディングを解除
-    setLoading(false);
   };
 
   return (
@@ -69,7 +56,7 @@ const LoginPage: NextPage = () => {
               required
             />
           </div>
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
