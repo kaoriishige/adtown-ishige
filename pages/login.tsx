@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { auth } from '../lib/firebase'; // あなたのFirebaseクライアント設定
 
 const LoginPage: NextPage = () => {
   const [email, setEmail] = useState('');
@@ -18,15 +18,33 @@ const LoginPage: NextPage = () => {
     setError(null);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // 1. Firebaseにクライアントサイドでログイン
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // ★★★ 修正点：メール認証チェックを削除 ★★★
-      // ログインに成功したら、常にマイページへ移動させる
+      // 2. サーバーに送るためのIDトークンを取得
+      const idToken = await userCredential.user.getIdToken();
+
+      // 3. サーバーサイドでセッションクッキーを作成・設定するAPIを呼び出す
+      const response = await fetch('/api/auth/session-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('セッションの作成に失敗しました。');
+      }
+
+      // 4. セッション設定後、マイページへ移動
       router.push('/mypage');
 
     } catch (err: any) {
       console.error("ログインエラー:", err);
-      setError("メールアドレスまたはパスワードが間違っています。");
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError("メールアドレスまたはパスワードが間違っています。");
+      } else {
+        setError("ログインに失敗しました。しばらくしてから再度お試しください。");
+      }
       setLoading(false);
     }
   };
@@ -37,8 +55,9 @@ const LoginPage: NextPage = () => {
         <h1 className="text-3xl font-bold text-center">ログイン</h1>
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
-            <label className="block mb-2 text-sm font-medium">メールアドレス</label>
+            <label htmlFor="email" className="block mb-2 text-sm font-medium">メールアドレス</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -47,8 +66,9 @@ const LoginPage: NextPage = () => {
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium">パスワード</label>
+            <label htmlFor="password" className="block mb-2 text-sm font-medium">パスワード</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -56,7 +76,7 @@ const LoginPage: NextPage = () => {
               required
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           <button
             type="submit"
             disabled={loading}
