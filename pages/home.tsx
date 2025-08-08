@@ -43,19 +43,17 @@ const HomePage: NextPage<HomePageProps> = ({ content, user }) => {
             ))}
           </div>
 
-          {/* ▼▼▼ このブロックを修正しました ▼▼▼ */}
           <div className="mt-12 flex flex-wrap justify-center gap-4">
-  <Link href="ここに「店舗お得情報アプリ」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
-    店舗のお得情報はこちら
-  </Link>
-  <Link href="ここに「美容室マッチングアプリ」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
-    那須の美容室・美容師を探す
-  </Link>
-  <Link href="ここに「求人情報アプリ」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
-    那須エリアの求人情報
-  </Link>
-</div>
-          {/* ▲▲▲ ここまで ▲▲▲ */}
+            <Link href="ここに「店舗お得情報アプリ」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
+              店舗のお得情報はこちら
+            </Link>
+            <Link href="ここに「https://studio--nasu-style-finder.us-central1.hosted.app」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
+              那須の美容室・美容師を探す
+            </Link>
+            <Link href="ここに「求人情報アプリ」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
+              那須エリアの求人情報
+            </Link>
+          </div>
 
           <div className="mt-8">
             <Link
@@ -94,7 +92,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     
     const content = docSnap.exists
       ? docSnap.data()
-      // Firestoreにデータがない場合のデフォルト値
       : { mainHeading: 'みんなの那須アプリ', subheading: '下記のジャンルからお選びください。' };
 
     return {
@@ -104,7 +101,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (error) {
-    // 認証に失敗した場合はログインページにリダイレクト
     return {
       redirect: {
         destination: '/login',
@@ -115,7 +111,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 };
 
 export default HomePage;
-
 
 
 
