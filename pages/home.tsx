@@ -45,16 +45,16 @@ const HomePage: NextPage<HomePageProps> = ({ content, user }) => {
 
           {/* ▼▼▼ このブロックを修正しました ▼▼▼ */}
           <div className="mt-12 flex flex-wrap justify-center gap-4">
-            <Link href="/stores" className={primaryButtonClasses}>
-              店舗のお得情報はこちら
-            </Link>
-            <Link href="/hair-salons" className={primaryButtonClasses}>
-              那須の美容室・美容師を探す
-            </Link>
-            <Link href="/jobs" className={primaryButtonClasses}>
-              那須エリアの求人情報
-            </Link>
-          </div>
+  <Link href="ここに「店舗お得情報アプリ」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
+    店舗のお得情報はこちら
+  </Link>
+  <Link href="ここに「美容室マッチングアプリ」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
+    那須の美容室・美容師を探す
+  </Link>
+  <Link href="ここに「求人情報アプリ」のURL" target="_blank" rel="noopener noreferrer" className={primaryButtonClasses}>
+    那須エリアの求人情報
+  </Link>
+</div>
           {/* ▲▲▲ ここまで ▲▲▲ */}
 
           <div className="mt-8">
