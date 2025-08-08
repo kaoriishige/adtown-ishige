@@ -3,7 +3,7 @@ import Link from 'next/link';
 import nookies from 'nookies';
 import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
 
-// --- Type Definitions ---
+// --- 型定義 ---
 interface HomePageProps {
   content: {
     mainHeading: string;
@@ -14,12 +14,14 @@ interface HomePageProps {
   };
 }
 
-// --- Page Component ---
+// --- ページコンポーネント ---
 const HomePage: NextPage<HomePageProps> = ({ content, user }) => {
   const genres = [
     '生活情報', '健康支援', '節約・特売', '人間関係', '教育・学習',
     '子育て', '防災・安全', '診断・運勢', 'エンタメ', '趣味・文化'
   ];
+  
+  const primaryButtonClasses = "inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-8 py-4 rounded-full shadow-xl hover:scale-105 transition-all duration-300 transform text-md md:text-lg";
 
   return (
     <div className="bg-blue-50 min-h-screen p-5 text-center flex flex-col">
@@ -41,14 +43,19 @@ const HomePage: NextPage<HomePageProps> = ({ content, user }) => {
             ))}
           </div>
 
-          <div className="mt-12">
-            <Link
-              href="/stores"
-              className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-12 py-5 rounded-full shadow-xl hover:scale-105 transition-all duration-300 transform text-lg"
-            >
+          {/* ▼▼▼ このブロックを修正しました ▼▼▼ */}
+          <div className="mt-12 flex flex-wrap justify-center gap-4">
+            <Link href="/stores" className={primaryButtonClasses}>
               店舗のお得情報はこちら
             </Link>
+            <Link href="/hair-salons" className={primaryButtonClasses}>
+              那須の美容室・美容師を探す
+            </Link>
+            <Link href="/jobs" className={primaryButtonClasses}>
+              那須エリアの求人情報
+            </Link>
           </div>
+          {/* ▲▲▲ ここまで ▲▲▲ */}
 
           <div className="mt-8">
             <Link
@@ -74,14 +81,12 @@ const HomePage: NextPage<HomePageProps> = ({ content, user }) => {
   );
 };
 
-// --- Server-Side Data Fetching and Authentication ---
+// --- サーバーサイドでのデータ取得と認証 ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    // --- Authentication Check ---
     const cookies = nookies.get(context);
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
     const { email } = token;
-    // --- End Authentication Check ---
 
     const adminDb = getAdminDb();
     const docRef = adminDb.collection('siteContent').doc('landing');
@@ -89,6 +94,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     
     const content = docSnap.exists
       ? docSnap.data()
+      // Firestoreにデータがない場合のデフォルト値
       : { mainHeading: 'みんなの那須アプリ', subheading: '下記のジャンルからお選びください。' };
 
     return {
@@ -98,7 +104,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (error) {
-    // If authentication fails, redirect to the login page
+    // 認証に失敗した場合はログインページにリダイレクト
     return {
       redirect: {
         destination: '/login',
@@ -109,7 +115,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 };
 
 export default HomePage;
-
 
 
 
