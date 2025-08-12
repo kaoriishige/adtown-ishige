@@ -5,21 +5,21 @@ import { Timestamp } from 'firebase-admin/firestore';
 
 // --- 型定義 ---
 
-// 報酬データの型
+// ★変更点(1): 報酬データの方に氏名を追加★
 interface Reward {
   id: string;
+  referrerName: string; // 紹介者の氏名
   referrerEmail: string;
+  referredName: string; // 被紹介者の氏名
   referredEmail: string;
   rewardAmount: number;
   rewardStatus: '支払い済み' | '未払い';
-  createdAt: string; // JSONで渡せるように文字列にする
+  createdAt: string;
 }
 
-// ページコンポーネントが受け取るPropsの型
 interface ReferralRewardsPageProps {
   rewards: Reward[];
 }
-
 
 // --- ページコンポーネント ---
 
@@ -43,7 +43,9 @@ const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ rewards }) =>
               <thead className="bg-gray-100">
                 <tr>
                   <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">発生日時</th>
-                  <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">紹介者</th>
+                  {/* ★変更点(2): テーブルのヘッダーに氏名列を追加★ */}
+                  <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">紹介者（氏名）</th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">紹介者（メール）</th>
                   <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">被紹介者</th>
                   <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">報酬額</th>
                   <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">ステータス</th>
@@ -54,8 +56,10 @@ const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ rewards }) =>
                   rewards.map((reward) => (
                     <tr key={reward.id} className="hover:bg-gray-50">
                       <td className="py-4 px-4 whitespace-nowrap">{new Date(reward.createdAt).toLocaleString('ja-JP')}</td>
+                      {/* ★変更点(3): 取得した氏名とメールアドレスをそれぞれの列に表示★ */}
+                      <td className="py-4 px-4 whitespace-nowrap">{reward.referrerName}</td>
                       <td className="py-4 px-4 whitespace-nowrap">{reward.referrerEmail}</td>
-                      <td className="py-4 px-4 whitespace-nowrap">{reward.referredEmail}</td>
+                      <td className="py-4 px-4 whitespace-nowrap">{reward.referredName}</td>
                       <td className="py-4 px-4 whitespace-nowrap">{reward.rewardAmount.toLocaleString()} 円</td>
                       <td className="py-4 px-4 text-center">
                         <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -68,7 +72,8 @@ const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ rewards }) =>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="text-center py-10 text-gray-500">報酬データはありません。</td>
+                    {/* ★変更点(4): colSpanを6に変更★ */}
+                    <td colSpan={6} className="text-center py-10 text-gray-500">報酬データはありません。</td>
                   </tr>
                 )}
               </tbody>
@@ -80,53 +85,55 @@ const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ rewards }) =>
   );
 };
 
-
 // --- サーバーサイドでのデータ取得 ---
 
 export const getServerSideProps: GetServerSideProps = async () => {
   const adminAuth = getAdminAuth();
   const adminDb = getAdminDb();
 
-  // Firebase Admin SDKが初期化できない場合は、空のデータを返す
   if (!adminAuth || !adminDb) {
     console.error("Firebase Admin SDK for referral-rewards failed to initialize.");
     return { props: { rewards: [] } };
   }
 
   try {
-    // 認証チェックは一時的にすべて削除しています
-
     const rewardsSnapshot = await adminDb.collection('referralRewards').orderBy('createdAt', 'desc').get();
     
-    // ユーザー情報を効率的に取得するためのキャッシュ
-    const usersCache = new Map<string, string>();
-    const getUserEmail = async (uid: string): Promise<string> => {
-        if (!uid) return 'UIDなし';
+    // ★変更点(5): ユーザー情報を取得するヘルパー関数を、氏名も返すように変更★
+    const usersCache = new Map<string, { name: string; email: string }>();
+    const getUserInfo = async (uid: string): Promise<{ name: string; email: string }> => {
+        if (!uid) return { name: 'UIDなし', email: '' };
         if (usersCache.has(uid)) return usersCache.get(uid)!;
         try {
             const userRecord = await adminAuth.getUser(uid);
-            const email = userRecord.email || 'メールアドレス不明';
-            usersCache.set(uid, email);
-            return email;
+            const userInfo = {
+                name: userRecord.displayName || '氏名未登録',
+                email: userRecord.email || 'メール不明',
+            };
+            usersCache.set(uid, userInfo);
+            return userInfo;
         } catch (e) {
-            usersCache.set(uid, 'ユーザー取得失敗');
-            return 'ユーザー取得失敗';
+            const errorInfo = { name: 'ユーザー取得失敗', email: ''};
+            usersCache.set(uid, errorInfo);
+            return errorInfo;
         }
     };
 
-    // 取得した報酬データとユーザー情報を組み合わせる
     const rewards = await Promise.all(
       rewardsSnapshot.docs.map(async (doc) => {
         const data = doc.data();
         const createdAt = data.createdAt as Timestamp;
         
-        const referrerEmail = await getUserEmail(data.referrerUid);
-        const referredEmail = await getUserEmail(data.referredUid);
+        // ★変更点(6): getUserInfoを使って、氏名とメールアドレスを両方取得★
+        const referrerInfo = await getUserInfo(data.referrerUid);
+        const referredInfo = await getUserInfo(data.referredUid);
         
         const reward: Reward = {
           id: doc.id,
-          referrerEmail,
-          referredEmail,
+          referrerName: referrerInfo.name,
+          referrerEmail: referrerInfo.email,
+          referredName: referredInfo.name, // 被紹介者も氏名を表示
+          referredEmail: referredInfo.email,
           rewardAmount: data.rewardAmount || 0,
           rewardStatus: data.rewardStatus === 'paid' ? '支払い済み' : '未払い',
           createdAt: createdAt.toDate().toISOString(),

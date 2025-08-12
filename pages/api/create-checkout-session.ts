@@ -14,29 +14,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { uid } = req.body;
+    const { uid, referrerUid } = req.body;
     if (!uid) {
       return res.status(400).json({ error: 'User ID is missing' });
     }
 
+    // コードに直接IDを書き込む
+    const priceId = "price_1RjUSHJlUiZ4txnKk6ftUqUS";
+
+    // Stripeの決済セッションを作成
     const session = await stripe.checkout.sessions.create({
-      line_items: [
-        {
-          price: process.env.STRIPE_PRICE_ID,
-          quantity: 1,
-        },
-      ],
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
-      subscription_data: {
-        trial_period_days: 7,
-      },
-      metadata: {
-        uid: uid,
-      },
-      // ▼▼▼ ここを修正しました ▼▼▼
-      // 決済完了後に、セッションID付きで新しい「ようこそ」ページへ移動させる
-      success_url: `${req.headers.origin}/welcome?session_id={CHECKOUT_SESSION_ID}`,
-      // ▲▲▲ ここまで ▲▲▲
+      subscription_data: { trial_period_days: 7 },
+      metadata: { uid: uid, referrerUid: referrerUid },
+      success_url: `${req.headers.origin}/login?signup=success`,
       cancel_url: `${req.headers.origin}/signup?canceled=true`,
     });
 

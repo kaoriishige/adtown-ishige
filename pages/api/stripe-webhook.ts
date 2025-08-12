@@ -3,7 +3,8 @@ import Stripe from 'stripe';
 import { buffer } from 'micro';
 import * as admin from 'firebase-admin';
 
-// --- Firebase初期化コード ---
+// --- Firebase Admin SDKの初期化 ---
+// この部分は、ご自身の環境に合わせて lib/firebase-admin.ts などからインポートしてください
 let app: admin.app.App | null = null;
 function initializeFirebaseAdmin(): admin.app.App {
   if (admin.apps.length > 0) {
@@ -65,24 +66,90 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(400).send(`Webhook Error: ${errorMessage}`);
   }
 
+  // --- イベントタイプに応じた処理 ---
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
-      const { uid } = session.metadata!;
-      const customerId = session.customer as string;
-      const subscriptionId = session.subscription as string;
+      const { metadata } = session;
 
-      try {
-        await adminDb.collection('users').doc(uid).set({
-          stripeCustomerId: customerId,
-          stripeSubscriptionId: subscriptionId,
-          subscriptionStatus: 'active',
-        }, { merge: true });
+      // ★★★ パートナー登録の決済かを判断 ★★★
+      if (metadata?.user_type === 'partner') {
+        // --- パートナー登録の処理 ---
+        const { uid, storeName, contactPerson, email } = metadata;
+        const customerId = session.customer as string;
+        const subscriptionId = session.subscription as string;
+        
+        try {
+          // Firestoreにパートナー情報を正式に保存
+          await adminDb.collection('users').doc(uid).set({
+            email: email,
+            role: 'partner',
+            partnerInfo: {
+              storeName: storeName,
+              contactPerson: contactPerson,
+              address: '',
+            },
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+            subscriptionStatus: 'active',
+            totalRewards: 0,
+            unpaidRewards: 0,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
 
-        await adminAuth.setCustomUserClaims(uid, { stripeRole: 'paid' });
-        console.log(`User ${uid} subscription activated.`);
-      } catch (error) {
-        console.error('Failed to update user after checkout:', error);
+          // カスタムクレームを設定
+          await adminAuth.setCustomUserClaims(uid, { role: 'partner' });
+          console.log(`SUCCESS: Partner ${uid} created and subscription activated.`);
+
+        } catch (error) {
+          console.error('Failed to save partner info after checkout:', error);
+        }
+      } else {
+        // --- 一般ユーザーのサブスクリプション処理 ---
+        const { uid, referrerUid } = metadata!;
+        const customerId = session.customer as string;
+        const subscriptionId = session.subscription as string;
+        const amountTotal = session.amount_total;
+
+        try {
+          // 支払いをしたユーザーのステータスを更新
+          await adminDb.collection('users').doc(uid).set({
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+            subscriptionStatus: 'active',
+            referrer: referrerUid || null,
+          }, { merge: true });
+
+          await adminAuth.setCustomUserClaims(uid, { stripeRole: 'paid' });
+          console.log(`SUCCESS: User ${uid} subscription activated.`);
+
+          // 紹介者がいる場合、報酬を発生させる
+          if (referrerUid && amountTotal) {
+            const rewardRate = 0.2; // 報酬率 (20%)
+            const rewardAmount = Math.floor(amountTotal * rewardRate);
+
+            // 1. 報酬履歴を作成 (管理者用)
+            await adminDb.collection('referralRewards').add({
+              referrerUid: referrerUid,
+              referredUid: uid,
+              rewardAmount: rewardAmount,
+              rewardStatus: 'unpaid',
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              sourceCheckoutId: session.id,
+            });
+            
+            // 2. 紹介者の報酬額を更新 (マイページ用)
+            const referrerRef = adminDb.collection('users').doc(referrerUid);
+            await referrerRef.update({
+              unpaidRewards: admin.firestore.FieldValue.increment(rewardAmount),
+              totalRewards: admin.firestore.FieldValue.increment(rewardAmount)
+            });
+
+            console.log(`SUCCESS: Referrer ${referrerUid} received a reward of ${rewardAmount} yen.`);
+          }
+        } catch (error) {
+          console.error('Webhook Error (user checkout.session.completed):', error);
+        }
       }
       break;
     }
@@ -95,11 +162,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         if (!userSnapshot.empty) {
           const userDoc = userSnapshot.docs[0];
           await userDoc.ref.update({ subscriptionStatus: 'canceled' });
-          await adminAuth.setCustomUserClaims(userDoc.id, { stripeRole: 'free' });
-          console.log(`User ${userDoc.id} subscription canceled.`);
+          // roleに応じてカスタムクレームをリセット
+          const userRole = userDoc.data().role;
+          if (userRole === 'partner') {
+             await adminAuth.setCustomUserClaims(userDoc.id, { role: null });
+          } else {
+             await adminAuth.setCustomUserClaims(userDoc.id, { stripeRole: 'free' });
+          }
+          console.log(`SUCCESS: User ${userDoc.id} subscription canceled.`);
         }
       } catch (error) {
-        console.error('Failed to update user after cancellation:', error);
+        console.error('Webhook Error (customer.subscription.deleted):', error);
       }
       break;
     }
