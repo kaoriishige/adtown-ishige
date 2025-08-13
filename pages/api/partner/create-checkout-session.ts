@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
+// ★★★ 修正点(1): getAdminAuth をインポート ★★★
 import { getAdminAuth } from '../../../lib/firebase-admin';
 
 // Stripeの初期化
@@ -24,6 +25,7 @@ export default async function handler(
   }
 
   try {
+    // ★★★ 修正点(2): getAdminAuth() を関数として呼び出す ★★★
     const adminAuth = getAdminAuth();
 
     // 先にFirebase Authenticationにユーザーを仮作成し、UIDを取得する
@@ -39,7 +41,6 @@ export default async function handler(
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
-      // ★★★ ここを変更します ★★★
       success_url: `${req.headers.origin}/login?signup=success`, // 成功したらログインページへ
       cancel_url: `${req.headers.origin}/partner/signup?status=cancel`,     
       metadata: {
