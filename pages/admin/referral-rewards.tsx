@@ -1,157 +1,209 @@
-import { GetServerSideProps, NextPage } from 'next';
+import { useEffect, useState } from 'react';
+import { NextPage } from 'next';
 import Link from 'next/link';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { app } from '../../lib/firebase'; // FirebaseクライアントSDKの初期化に合わせてパスを調整
 
 // --- 型定義 ---
-
-// ★変更点(1): 報酬データの方に氏名を追加★
 interface Reward {
   id: string;
-  referrerName: string; // 紹介者の氏名
+  referrerName: string;
   referrerEmail: string;
-  referredName: string; // 被紹介者の氏名
-  referredEmail: string;
+  referrerRole: string;
+  referredName: string;
   rewardAmount: number;
   rewardStatus: '支払い済み' | '未払い';
-  createdAt: string;
+  createdAt: string; // ISO形式の文字列を期待
 }
 
-interface ReferralRewardsPageProps {
-  rewards: Reward[];
+interface UserInfo {
+  name: string;
+  email: string;
+  role: string;
+}
+
+// 月次サマリー用の型
+interface MonthlySummary {
+  month: string; // "YYYY-MM"形式
+  partnerTotal: number;
+  generalTotal: number;
+  totalAmount: number;
 }
 
 // --- ページコンポーネント ---
+const ReferralRewardsPage: NextPage = () => {
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // 'summary' または 'details' を管理
+  const [view, setView] = useState<'summary' | 'details'>('summary'); 
+  // 詳細表示する月 ("YYYY-MM") を管理
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null); 
 
-const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ rewards }) => {
+  useEffect(() => {
+    const fetchRewards = async () => {
+      try {
+        setLoading(true);
+        const db = getFirestore(app);
+
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const usersMap = new Map<string, UserInfo>();
+        usersSnapshot.forEach(doc => {
+          const data = doc.data();
+          usersMap.set(doc.id, {
+            name: data.partnerInfo?.storeName || data.name || 'N/A',
+            email: data.email || 'N/A',
+            role: data.role || 'general',
+          });
+        });
+
+        const rewardsSnapshot = await getDocs(collection(db, 'referralRewards'));
+        const rewardsData: Reward[] = rewardsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const referrerInfo = usersMap.get(data.referrerUid) || { name: '不明', email: '不明', role: 'general' };
+          const referredInfo = usersMap.get(data.referredUid) || { name: '不明', email: '不明', role: 'general' };
+          return {
+            id: doc.id,
+            referrerName: referrerInfo.name,
+            referrerEmail: referrerInfo.email,
+            referrerRole: referrerInfo.role,
+            referredName: referredInfo.name,
+            rewardAmount: data.rewardAmount || 0,
+            rewardStatus: data.rewardStatus === 'paid' ? '支払い済み' : '未払い',
+            createdAt: data.createdAt?.toDate()?.toISOString() || new Date().toISOString(),
+          };
+        });
+
+        setRewards(rewardsData);
+
+        // 月次サマリーを作成
+        const summary = rewardsData.reduce((acc, reward) => {
+          const month = reward.createdAt.substring(0, 7); // "YYYY-MM"
+          if (!acc[month]) {
+            acc[month] = { month, partnerTotal: 0, generalTotal: 0, totalAmount: 0 };
+          }
+          if (reward.referrerRole === 'partner') {
+            acc[month].partnerTotal += reward.rewardAmount;
+          } else {
+            acc[month].generalTotal += reward.rewardAmount;
+          }
+          acc[month].totalAmount += reward.rewardAmount;
+          return acc;
+        }, {} as Record<string, MonthlySummary>);
+        
+        const summaryArray = Object.values(summary).sort((a, b) => b.month.localeCompare(a.month));
+        setMonthlySummary(summaryArray);
+
+      } catch (err) {
+        console.error("Error fetching referral rewards:", err);
+        setError("報酬履歴の取得に失敗しました。");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRewards();
+  }, []);
+
+  // 詳細表示に切り替える関数
+  const handleViewDetails = (month: string) => {
+    setSelectedMonth(month);
+    setView('details');
+  };
+
+  // サマリー表示に戻る関数
+  const handleViewSummary = () => {
+    setSelectedMonth(null);
+    setView('summary');
+  };
+
+  // 詳細表示用のフィルタリングされた報酬リスト
+  const detailedRewards = selectedMonth
+    ? rewards.filter(r => r.createdAt.startsWith(selectedMonth))
+    : [];
+
   return (
-    <div className="bg-gray-50 min-h-screen p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Link href="/admin" className="text-blue-600 hover:underline">
-            ← 管理メニューに戻る
-          </Link>
-        </div>
+    <div className="container mx-auto p-4 bg-gray-50 min-h-screen">
+      <Link href="/admin" className="text-blue-600 hover:underline">
+        &larr; 管理メニューに戻る
+      </Link>
+      <h1 className="text-3xl font-bold my-6 text-gray-800">紹介報酬管理</h1>
 
-        <h1 className="text-3xl font-bold text-gray-800 text-center mb-8">
-          紹介報酬履歴
-        </h1>
+      {loading && <p>読み込み中...</p>}
+      {error && <p className="text-red-500 bg-red-100 p-3 rounded-md">{error}</p>}
 
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">発生日時</th>
-                  {/* ★変更点(2): テーブルのヘッダーに氏名列を追加★ */}
-                  <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">紹介者（氏名）</th>
-                  <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">紹介者（メール）</th>
-                  <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">被紹介者</th>
-                  <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase">報酬額</th>
-                  <th className="py-3 px-4 text-center text-xs font-semibold text-gray-600 uppercase">ステータス</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {rewards.length > 0 ? (
-                  rewards.map((reward) => (
-                    <tr key={reward.id} className="hover:bg-gray-50">
-                      <td className="py-4 px-4 whitespace-nowrap">{new Date(reward.createdAt).toLocaleString('ja-JP')}</td>
-                      {/* ★変更点(3): 取得した氏名とメールアドレスをそれぞれの列に表示★ */}
-                      <td className="py-4 px-4 whitespace-nowrap">{reward.referrerName}</td>
-                      <td className="py-4 px-4 whitespace-nowrap">{reward.referrerEmail}</td>
-                      <td className="py-4 px-4 whitespace-nowrap">{reward.referredName}</td>
-                      <td className="py-4 px-4 whitespace-nowrap">{reward.rewardAmount.toLocaleString()} 円</td>
-                      <td className="py-4 px-4 text-center">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          reward.rewardStatus === '支払い済み' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {reward.rewardStatus}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
+      {!loading && !error && (
+        <>
+          {/* --- 月次サマリー表示 --- */}
+          {view === 'summary' && (
+            <div className="overflow-x-auto bg-white rounded-lg shadow">
+              <table className="min-w-full border-collapse">
+                <thead className="bg-gray-100">
                   <tr>
-                    {/* ★変更点(4): colSpanを6に変更★ */}
-                    <td colSpan={6} className="text-center py-10 text-gray-500">報酬データはありません。</td>
+                    <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">月</th>
+                    <th className="py-3 px-4 border-b text-right text-sm font-semibold text-gray-600">企業・店舗 合計</th>
+                    <th className="py-3 px-4 border-b text-right text-sm font-semibold text-gray-600">一般 合計</th>
+                    <th className="py-3 px-4 border-b text-right text-sm font-semibold text-gray-600">総合計</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+                </thead>
+                <tbody>
+                  {monthlySummary.map(summary => (
+                    <tr key={summary.month} onClick={() => handleViewDetails(summary.month)} className="hover:bg-blue-50 cursor-pointer">
+                      <td className="py-3 px-4 border-b text-sm font-medium text-blue-700">{summary.month.replace('-', '年')}月</td>
+                      <td className="py-3 px-4 border-b text-sm text-gray-700 text-right">{summary.partnerTotal.toLocaleString()} 円</td>
+                      <td className="py-3 px-4 border-b text-sm text-gray-700 text-right">{summary.generalTotal.toLocaleString()} 円</td>
+                      <td className="py-3 px-4 border-b text-sm text-gray-900 font-bold text-right">{summary.totalAmount.toLocaleString()} 円</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* --- 詳細表示 --- */}
+          {view === 'details' && selectedMonth && (
+            <div>
+              <button onClick={handleViewSummary} className="mb-4 bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition">
+                &larr; 月次サマリーに戻る
+              </button>
+              <h2 className="text-2xl font-bold mb-4">{selectedMonth.replace('-', '年')}月 の明細</h2>
+              <div className="overflow-x-auto bg-white rounded-lg shadow">
+                <table className="min-w-full border-collapse">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">発生日時</th>
+                      <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">紹介者</th>
+                      <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">種別</th>
+                      <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">被紹介者</th>
+                      <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">報酬額</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detailedRewards.map(reward => (
+                       <tr key={reward.id} className="hover:bg-gray-50">
+                         <td className="py-3 px-4 border-b text-sm text-gray-700">{new Date(reward.createdAt).toLocaleString('ja-JP')}</td>
+                         <td className="py-3 px-4 border-b text-sm text-gray-700">{reward.referrerName}</td>
+                         <td className="py-3 px-4 border-b text-sm text-center">
+                           {reward.referrerRole === 'partner' ? (
+                             <span className="bg-green-200 text-green-800 font-semibold py-1 px-3 rounded-full text-xs">企業・店舗</span>
+                           ) : (
+                             <span className="bg-blue-200 text-blue-800 font-semibold py-1 px-3 rounded-full text-xs">一般</span>
+                           )}
+                         </td>
+                         <td className="py-3 px-4 border-b text-sm text-gray-700">{reward.referredName}</td>
+                         <td className="py-3 px-4 border-b text-sm text-gray-700">{reward.rewardAmount.toLocaleString()} 円</td>
+                       </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
-};
-
-// --- サーバーサイドでのデータ取得 ---
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  const adminAuth = getAdminAuth();
-  const adminDb = getAdminDb();
-
-  if (!adminAuth || !adminDb) {
-    console.error("Firebase Admin SDK for referral-rewards failed to initialize.");
-    return { props: { rewards: [] } };
-  }
-
-  try {
-    const rewardsSnapshot = await adminDb.collection('referralRewards').orderBy('createdAt', 'desc').get();
-    
-    // ★変更点(5): ユーザー情報を取得するヘルパー関数を、氏名も返すように変更★
-    const usersCache = new Map<string, { name: string; email: string }>();
-    const getUserInfo = async (uid: string): Promise<{ name: string; email: string }> => {
-        if (!uid) return { name: 'UIDなし', email: '' };
-        if (usersCache.has(uid)) return usersCache.get(uid)!;
-        try {
-            const userRecord = await adminAuth.getUser(uid);
-            const userInfo = {
-                name: userRecord.displayName || '氏名未登録',
-                email: userRecord.email || 'メール不明',
-            };
-            usersCache.set(uid, userInfo);
-            return userInfo;
-        } catch (e) {
-            const errorInfo = { name: 'ユーザー取得失敗', email: ''};
-            usersCache.set(uid, errorInfo);
-            return errorInfo;
-        }
-    };
-
-    const rewards = await Promise.all(
-      rewardsSnapshot.docs.map(async (doc) => {
-        const data = doc.data();
-        const createdAt = data.createdAt as Timestamp;
-        
-        // ★変更点(6): getUserInfoを使って、氏名とメールアドレスを両方取得★
-        const referrerInfo = await getUserInfo(data.referrerUid);
-        const referredInfo = await getUserInfo(data.referredUid);
-        
-        const reward: Reward = {
-          id: doc.id,
-          referrerName: referrerInfo.name,
-          referrerEmail: referrerInfo.email,
-          referredName: referredInfo.name, // 被紹介者も氏名を表示
-          referredEmail: referredInfo.email,
-          rewardAmount: data.rewardAmount || 0,
-          rewardStatus: data.rewardStatus === 'paid' ? '支払い済み' : '未払い',
-          createdAt: createdAt.toDate().toISOString(),
-        };
-        return reward;
-      })
-    );
-
-    return { 
-      props: { 
-        rewards: JSON.parse(JSON.stringify(rewards)) 
-      } 
-    };
-
-  } catch (error) {
-    console.error("Error fetching referral rewards:", error);
-    return { props: { rewards: [] } };
-  }
 };
 
 export default ReferralRewardsPage;
