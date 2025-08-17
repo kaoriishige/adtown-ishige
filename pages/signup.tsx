@@ -2,8 +2,6 @@ import { NextPage } from 'next';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../lib/firebase';
 import { loadStripe } from '@stripe/stripe-js';
 
 const SignUpPage: NextPage = () => {
@@ -30,31 +28,40 @@ const SignUpPage: NextPage = () => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      await fetch('/api/user/create-doc', {
+      // --- ★★★ ここを修正 ★★★ ---
+      // 1. 新しい登録APIを呼び出し、ユーザー作成と同時にFirestoreに役割('user')を記録
+      const signupResponse = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          uid: user.uid,
-          email: user.email,
+          email: email,
+          password: password,
           name: name,
           kana: kana,
         }),
       });
 
-      const response = await fetch('/api/create-checkout-session', {
+      const signupData = await signupResponse.json();
+      if (!signupResponse.ok) {
+        // APIからのエラーメッセージをそのまま表示
+        throw new Error(signupData.error || '登録に失敗しました。');
+      }
+      
+      const uid = signupData.uid; // APIから返されたuidを使用
+
+      // 2. Stripeの決済セッション作成APIを呼び出す
+      const checkoutResponse = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid }),
+        body: JSON.stringify({ uid: uid }), // 取得したuidを渡す
       });
 
-      const session = await response.json();
+      const session = await checkoutResponse.json();
       if (session.error) {
         throw new Error(session.error.message || '決済セッションの作成に失敗しました。');
       }
 
+      // 3. Stripeの決済ページへリダイレクト
       const stripe = await stripePromise;
       if (stripe) {
         await stripe.redirectToCheckout({ sessionId: session.sessionId });
@@ -64,13 +71,7 @@ const SignUpPage: NextPage = () => {
 
     } catch (err: any) {
       console.error("サインアップ処理のエラー:", err);
-      if (err.code === 'auth/email-already-in-use') {
-        setError('このメールアドレスは既に使用されています。');
-      } else if (err.code === 'auth/weak-password') {
-        setError('パスワードは6文字以上で設定してください。');
-      } else {
-        setError(err.message || '登録に失敗しました。');
-      }
+      setError(err.message || '登録に失敗しました。');
       setLoading(false);
     }
   };
