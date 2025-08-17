@@ -66,8 +66,8 @@ const PartnerDemoPage: NextPage = () => {
             <div className="max-w-2xl bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-6 my-8 rounded-lg text-left">
               <h2 className="text-2xl font-bold mb-4 text-yellow-800">紹介制度で“実質無料”どころか、副収入に！</h2>
               <ul className="list-disc list-inside space-y-2">
-                <li>8月末までに紹介した方には → 紹介報酬[30%]ずっと継続!!</li>
-                <li>9月より初めて紹介された方は→紹介報酬[20%]</li>
+                <li>9月末までに紹介した方には → 紹介報酬[30%]ずっと継続!!</li>
+                <li>10月より初めて紹介された方は→紹介報酬[20%]</li>
               </ul>
             </div>
 
