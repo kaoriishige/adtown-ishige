@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import Link from 'next/link';
 
-// 元の正常に動作していたジャンル選択肢です
+// ジャンル選択肢
 const genres = [
   '生活情報', '健康支援', '節約・特売', '人間関係',
   '教育・学習', '子育て', '防災・安全', '診断・運勢',
   'エンタメ', '趣味・文化', 'その他'
 ];
 
-// 「新規アプリ追加」ページの、完成していたときの、正常なコードです。
 const AddAppPage = () => {
   const router = useRouter();
   const [name, setName] = useState('');
@@ -32,16 +31,32 @@ const AddAppPage = () => {
     }
     setIsLoading(true);
     try {
+      // --- ★★★ ここからが重要な修正点 ★★★ ---
+      // 1. 現在の最大のappNumberを取得する
+      const appsRef = collection(db, 'apps');
+      const q = query(appsRef, orderBy('appNumber', 'desc'), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      let newAppNumber = 1; // デフォルトは1番から
+      if (!querySnapshot.empty) {
+        const lastApp = querySnapshot.docs[0].data();
+        newAppNumber = (lastApp.appNumber || 0) + 1;
+      }
+
+      // 2. 新しいアプリのデータに、自動計算した番号を追加して保存する
       await addDoc(collection(db, 'apps'), {
         name: name,
         genre: genreToSave,
         url: url,
+        appNumber: newAppNumber, // 自動採番した番号を保存
         createdAt: new Date(),
       });
+      // --- ★★★ ここまでが重要な修正点 ★★★ ---
+
       alert('新しいアプリを登録しました。');
-      // 登録後、元の「アプリ管理」ページに戻るように修正しました
       router.push('/admin/manageApps'); 
     } catch (error) {
+      console.error("登録エラー:", error);
       alert('登録中にエラーが発生しました。');
       setIsLoading(false);
     }
@@ -49,7 +64,6 @@ const AddAppPage = () => {
 
   return (
     <div className="p-5 max-w-2xl mx-auto">
-      {/* リンク先も元のファイル名に戻しました */}
       <Link href="/admin/manageApps" className="text-blue-500 hover:underline">
         ← アプリ管理に戻る
       </Link>

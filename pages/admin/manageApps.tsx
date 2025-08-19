@@ -9,6 +9,7 @@ interface App {
   id: string;
   name: string;
   genre: string;
+  appNumber: number; // --- ★★★ ここを修正 ★★★ ---
 }
 
 // ページが受け取るpropsの型
@@ -50,7 +51,6 @@ const ManageAppsPage: NextPage<ManageAppsProps> = ({ apps }) => {
         <table className="min-w-full bg-white">
           <thead className="bg-gray-100">
             <tr>
-              {/* --- ★★★ ここを修正 ★★★ --- */}
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16 text-center">番号</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">アプリ名</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ジャンル</th>
@@ -58,10 +58,10 @@ const ManageAppsPage: NextPage<ManageAppsProps> = ({ apps }) => {
             </tr>
           </thead>
           <tbody>
-            {apps.map((app, index) => (
+            {apps.map((app) => (
               <tr key={app.id} className="hover:bg-gray-50">
                 {/* --- ★★★ ここを修正 ★★★ --- */}
-                <td className="px-6 py-4 border-b border-gray-200 text-center">{index + 1}</td>
+                <td className="px-6 py-4 border-b border-gray-200 text-center font-bold">{app.appNumber}</td>
                 <td className="px-6 py-4 border-b border-gray-200">{app.name}</td>
                 <td className="px-6 py-4 border-b border-gray-200">{app.genre}</td>
                 <td className="px-6 py-4 border-b border-gray-200">
@@ -83,7 +83,8 @@ const ManageAppsPage: NextPage<ManageAppsProps> = ({ apps }) => {
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
     const appsCollectionRef = collection(db, 'apps');
-    const q = query(appsCollectionRef, orderBy('name'));
+    // --- ★★★ ここを修正 ★★★ ---
+    const q = query(appsCollectionRef, orderBy('appNumber', 'asc')); // appNumberで並び替え
     const querySnapshot = await getDocs(q);
 
     const apps = querySnapshot.docs.map(doc => {
@@ -92,6 +93,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
         id: doc.id,
         name: data.name || '',
         genre: data.genre || '',
+        appNumber: data.appNumber || 0, // appNumberを取得
       };
     });
 

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext'; // 既存のAuthContextに合わせてパスを調整してください
-import { collection, getDocs, getFirestore, query, where, orderBy, limit } from 'firebase/firestore'; // limit をインポート
-import { app } from '@/lib/firebase'; // 既存のFirebase初期化ファイルに合わせてパスを調整してください
+import { useAuth } from '@/contexts/AuthContext';
+import { collection, getDocs, getFirestore, query, where, orderBy, limit } from 'firebase/firestore';
+import { app } from '@/lib/firebase';
 
 // --- 型定義 ---
 interface Ad {
@@ -26,9 +26,7 @@ const HomePage: NextPage = () => {
       try {
         const db = getFirestore(app);
         const adsCollection = collection(db, 'advertisements');
-        // --- ここから変更: limit(5) を追加して取得件数を5件に制限 ---
         const q = query(adsCollection, where('isActive', '==', true), orderBy('order', 'asc'), limit(5));
-        // --- ここまで変更 ---
         const adSnapshot = await getDocs(q);
         
         const adsData = adSnapshot.docs.map(doc => ({
@@ -79,7 +77,7 @@ const HomePage: NextPage = () => {
             </Link>
           </section>
 
-          {/* --- ★★★ ここから広告カード ★★★ --- */}
+          {/* --- 広告カード --- */}
           {isClient && (
             <section className="mb-8">
               <h2 className="text-lg font-bold text-gray-700 text-center mb-4">
@@ -87,11 +85,9 @@ const HomePage: NextPage = () => {
               </h2>
               {loadingAds ? (
                 <div className="grid grid-cols-2 gap-3">
-                  {/* --- ここから変更: プレースホルダーを5つ表示 --- */}
                   {[...Array(5)].map((_, i) => (
                     <div key={i} className="rounded-lg bg-gray-200 animate-pulse w-full h-24"></div>
                   ))}
-                  {/* --- ここまで変更 --- */}
                 </div>
               ) : ads.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3">
@@ -110,11 +106,11 @@ const HomePage: NextPage = () => {
               )}
             </section>
           )}
-          {/* --- ★★★ ここまで広告カード ★★★ --- */}
 
           {/* --- 主要機能ボタン (すべてのアプリ) --- */}
           <section className="space-y-3">
-            <Link href="/apps" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #22d3ee, #3b82f6)' }}>
+            {/* --- ★★★ ここを修正 ★★★ --- */}
+            <Link href="/apps/all" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #22d3ee, #3b82f6)' }}>
               すべてのアプリを見る
             </Link>
           </section>
