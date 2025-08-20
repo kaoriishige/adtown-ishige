@@ -3,12 +3,11 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useState } from 'react';
 import { signOut } from 'firebase/auth';
-import { auth } from '../lib/firebase'; // クライアント用Firebase
+import { auth } from '@/lib/firebase';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
-// Propsの型定義
+// Propsの型定義に、契約状況を追加
 interface MyPageProps {
   user: {
     uid: string;
@@ -18,34 +17,28 @@ interface MyPageProps {
     total: number;
     pending: number;
   };
+  subscriptionStatus: 'active' | 'trial' | 'canceled' | null; // 契約状況
 }
 
-// ナビゲーションリンクの配列
-const navigationLinks = [
-  { href: '/home', text: 'アプリページはこちら' },
-  { href: '/payout-settings', text: '報酬受取口座を登録・編集する' },
-  { href: '/referral-info', text: '紹介用URLとQRコード' },
-  { href: '/contact', text: 'お問い合わせ・アプリ希望' },
-  { href: '/cancel-subscription', text: '解約希望の方はこちら' },
-];
-
-// ページコンポーネント
-const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
+const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) => {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await fetch('/api/logout');
+      await fetch('/api/auth/sessionLogout', { method: 'POST' });
       await signOut(auth);
-      router.push('/');
+      router.push('/login');
     } catch (error) {
       console.error('Logout failed', error);
       alert('ログアウトに失敗しました。');
       setIsLoggingOut(false);
     }
   };
+
+  // ★★★ 契約状況が 'active' の場合のみ、紹介機能が有効であると判断 ★★★
+  const isReferralActive = subscriptionStatus === 'active';
 
   const buttonStyle = "w-full max-w-lg p-4 mb-4 text-lg font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors";
 
@@ -56,6 +49,7 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
           <h1 className="text-3xl font-bold mb-4">マイページ</h1>
           <p className="mb-8">ようこそ、{user.email}さん</p>
 
+          {/* --- 紹介報酬セクション --- */}
           <div className="max-w-2xl mx-auto bg-green-100 border border-green-300 text-green-800 p-6 my-8 rounded-lg text-left shadow">
             <h2 className="text-2xl font-bold mb-4 text-green-900">あなたの紹介報酬 💰</h2>
             <div className="space-y-2 text-lg">
@@ -71,17 +65,45 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
             <p className="text-xs mt-4 text-gray-600">※未払い報酬額が3,000円以上になると、翌月15日にご登録の口座へ自動で振り込まれます。</p>
           </div>
           
+          {/* --- 注意書き --- */}
+          <div className="max-w-2xl mx-auto bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-md mb-8 text-left">
+            <h3 className="font-bold">紹介制度のご利用について</h3>
+            <ul className="list-disc list-inside text-sm mt-2 space-y-1">
+              <li>紹介機能は、有料プラン（月額980円）をご利用中のお客様のみお使いいただけます。</li>
+              <li>無料トライアル期間中は、紹介機能をご利用になれません。</li>
+              <li>有料プランを解約された場合、解約時点をもって紹介料のお支払いは停止されます。</li>
+            </ul>
+          </div>
+          
           <div className="flex flex-col items-center">
-            {navigationLinks.map((link) => (
-              <Link key={link.href} href={link.href} className={buttonStyle}>
-                {link.text}
-              </Link>
-            ))}
+            {/* --- ボタンのリスト --- */}
+            <Link href="/home" className={buttonStyle}>アプリページはこちら</Link>
+            <Link href="/payout-settings" className={buttonStyle}>報酬受取口座を登録・編集する</Link>
             
+            {isReferralActive ? (
+              // 有料会員の場合：クリックできるボタンを表示
+              <Link href="/referral-info" className={buttonStyle}>
+                紹介用URLとQRコード
+              </Link>
+            ) : (
+              // それ以外の場合：クリックできない説明付きのグレーのボタンを表示
+              <div className="w-full max-w-lg p-4 mb-4 text-center bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed">
+                <h3 className="font-bold text-lg">紹介用URLとQRコード</h3>
+                <p className="text-sm mt-1">
+                  (有料プランで利用可能)
+                </p>
+              </div>
+            )}
+
+            <Link href="/contact" className={buttonStyle}>お問い合わせ・アプリ希望</Link>
+            {/* --- ★★★ ここを修正 ★★★ --- */}
+            <Link href="/cancel-subscription" className={buttonStyle}>解約希望の方はこちら</Link>
+            
+            {/* --- 紹介制度の文章 --- */}
             <div className="max-w-2xl bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-6 my-8 rounded-lg text-left">
               <h2 className="text-2xl font-bold mb-4 text-yellow-800">紹介制度で“実質無料”どころか、副収入に！</h2>
               <ul className="list-disc list-inside space-y-2">
-                <li>9月より初めて紹介された方は→紹介報酬月末までに紹介した方には → 紹介報酬[30%]ずっと継続!!</li>
+                <li>9月末までに紹介した方には → 紹介報酬[30%]ずっと継続!!</li>
                 <li>10月より初めて紹介された方は→紹介報酬[20%]</li>
               </ul>
             </div>
@@ -100,68 +122,34 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards }) => {
   );
 };
 
-// サーバーサイドでのデータ取得
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const adminAuth = getAdminAuth();
-  const adminDb = getAdminDb();
-
-  if (!adminAuth || !adminDb) {
-    console.error("Firebase Admin on MyPage failed to initialize.");
-    return { redirect: { destination: '/login', permanent: false } };
-  }
-
   try {
+    const adminAuth = getAdminAuth();
+    const adminDb = getAdminDb();
     const cookies = nookies.get(context);
-    const checkRevoked = true; // セッションが無効になっていないか確認する
-    const token = await adminAuth.verifySessionCookie(cookies.token, checkRevoked);
+    
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid, email } = token;
 
-    // ユーザーのサブスクリプション状態を確認
     const userDoc = await adminDb.collection('users').doc(uid).get();
-    if (!userDoc.exists) {
-      throw new Error('User document not found.');
+    if (!userDoc.exists || userDoc.data()?.role === 'partner') {
+        return { redirect: { destination: '/login', permanent: false } };
     }
     
-    const subscriptionStatus = userDoc.data()?.subscriptionStatus;
-
-    // 'active' または 'canceled' 状態のユーザーのみマイページにアクセスを許可
-    if (subscriptionStatus !== 'active' && subscriptionStatus !== 'canceled') {
-      console.log(`User ${uid} with status '${subscriptionStatus}' denied access to mypage.`);
-      // それ以外のステータス（incompleteなど）の場合はログインページに戻す
-      return { redirect: { destination: '/login', permanent: false } };
-    }
-
-    // Firestoreから報酬データを取得
-    const rewardsQuery = await adminDb.collection('referralRewards')
-      .where('referrerUid', '==', uid)
-      .get();
-
-    let total = 0;
-    let pending = 0;
-
-    rewardsQuery.forEach(doc => {
-      const data = doc.data();
-      total += data.rewardAmount || 0;
-      if (data.rewardStatus === 'pending') {
-        pending += data.rewardAmount || 0;
-      }
-    });
+    // データベースから契約状況を取得します
+    const subscriptionStatus = userDoc.data()?.subscriptionStatus || null;
+    
+    const rewards = { total: 0, pending: 0 };
 
     return {
       props: {
-        user: { uid, email: email || '' },
-        rewards: { total, pending },
+        user: JSON.parse(JSON.stringify({ uid, email: email || '' })),
+        rewards,
+        subscriptionStatus, // ページに契約状況を渡す
       },
     };
   } catch (error) {
-    console.error("MyPage Auth Error or Data Fetch Error:", error);
-    // 認証失敗時やエラー時はログインページへリダイレクト
-    return {
-      redirect: {
-        destination: '/login',
-        permanent: false,
-      },
-    };
+    return { redirect: { destination: '/login', permanent: false } };
   }
 };
 
