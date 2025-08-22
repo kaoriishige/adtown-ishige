@@ -25,13 +25,14 @@ const PartnerSignupPage: NextPage = () => {
   const router = useRouter();
   const [storeName, setStoreName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(''); // ▼▼▼ 電話番号のstateを追加 ▼▼▼
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState('');
   const [category, setCategory] = useState(categories[0].slug);
   const [customGenre, setCustomGenre] = useState('');
-  const [area, setArea] = useState(areas[0].slug); // エリア用のstateを追加
-  const [customArea, setCustomArea] = useState(''); // 「その他」エリア用のstateを追加
+  const [area, setArea] = useState(areas[0].slug);
+  const [customArea, setCustomArea] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +63,6 @@ const PartnerSignupPage: NextPage = () => {
       categoryToSave = customGenre.trim();
     }
     
-    // --- ★★★ ここからエリアの処理を追加 ★★★ ---
     let areaToSave = area;
     if (area === 'other') {
       if (!customArea.trim()) {
@@ -72,13 +72,13 @@ const PartnerSignupPage: NextPage = () => {
       }
       areaToSave = customArea.trim();
     }
-    // --- ★★★ ここまでエリアの処理 ★★★ ---
 
     try {
       const signupResponse = await fetch('/api/partner/create-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeName, contactPerson, email, password, category: categoryToSave, area: areaToSave }),
+        // ▼▼▼ 送信するデータに電話番号を追加 ▼▼▼
+        body: JSON.stringify({ storeName, contactPerson, phoneNumber, email, password, category: categoryToSave, area: areaToSave }),
       });
 
       const signupData = await signupResponse.json();
@@ -116,7 +116,6 @@ const PartnerSignupPage: NextPage = () => {
               <input type="text" value={customGenre} onChange={(e) => setCustomGenre(e.target.value)} placeholder="例：ペットショップ" className="w-full px-4 py-2 border rounded-lg"/>
             </div>
           )}
-          {/* --- ★★★ ここからエリア選択を追加 ★★★ --- */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">エリア</label>
             <select value={area} onChange={(e) => setArea(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white">
@@ -129,11 +128,17 @@ const PartnerSignupPage: NextPage = () => {
               <input type="text" value={customArea} onChange={(e) => setCustomArea(e.target.value)} placeholder="例：那珂川町" className="w-full px-4 py-2 border rounded-lg"/>
             </div>
           )}
-          {/* --- ★★★ ここまでエリア選択 ★★★ --- */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">ご担当者名</label>
             <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
           </div>
+          
+          {/* ▼▼▼ 電話番号の入力フォームを追加 ▼▼▼ */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">電話番号</label>
+            <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg"/>
+          </div>
+
           <div>
             <label className="block text-gray-700 font-medium mb-2">メールアドレス</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
@@ -157,7 +162,7 @@ const PartnerSignupPage: NextPage = () => {
           </div>
           
           {error && <p className="text-red-500 text-sm text-center pt-2">{error}</p>}
-          <button type="submit" disabled={isLoading} className="w-full py-3 mt-4 text-white bg-blue-600 rounded-lg">
+          <button type="submit" disabled={isLoading} className="w-full py-3 mt-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-400">
             {isLoading ? '登録処理中...' : '登録する'}
           </button>
         </form>

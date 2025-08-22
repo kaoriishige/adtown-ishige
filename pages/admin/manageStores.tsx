@@ -6,14 +6,15 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // 削除処理のためにクライアント用も必要
 
-// 店舗データの型定義に登録日を追加
+// 店舗データの型定義に電話番号を追加
 interface Store {
   id: string;
   name: string;
   category: string;
   area: string;
   ownerUid: string;
-  createdAt: string; // 登録日を追加
+  createdAt: string;
+  phoneNumber: string; // 電話番号を追加
 }
 
 interface ManageStoresProps {
@@ -40,7 +41,6 @@ const ManageStoresPage: NextPage<ManageStoresProps> = ({ stores }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleDelete = async (storeId: string, storeName: string) => {
-    // confirmはブラウザの標準機能ですが、より良いUIのためにはカスタムモーダルの実装を推奨します
     if (confirm(`本当に店舗「${storeName}」を削除しますか？この操作は元に戻せません。`)) {
       try {
         await deleteDoc(doc(db, 'stores', storeId));
@@ -93,7 +93,8 @@ const ManageStoresPage: NextPage<ManageStoresProps> = ({ stores }) => {
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">店舗名</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">カテゴリ</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">エリア</th>
-              {/* ▼▼▼ 変更点 1: 登録日の列ヘッダーを追加 ▼▼▼ */}
+              {/* ▼▼▼ 電話番号の列ヘッダーを追加 ▼▼▼ */}
+              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">電話番号</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">登録日</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">紹介URL</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">操作</th>
@@ -105,7 +106,8 @@ const ManageStoresPage: NextPage<ManageStoresProps> = ({ stores }) => {
                 <td className="px-6 py-4 border-b border-gray-200">{store.name}</td>
                 <td className="px-6 py-4 border-b border-gray-200">{store.category}</td>
                 <td className="px-6 py-4 border-b border-gray-200">{store.area}</td>
-                {/* ▼▼▼ 変更点 2: 登録日を表示するセルを追加 ▼▼▼ */}
+                {/* ▼▼▼ 電話番号を表示するセルを追加 ▼▼▼ */}
+                <td className="px-6 py-4 border-b border-gray-200">{store.phoneNumber}</td>
                 <td className="px-6 py-4 border-b border-gray-200">{store.createdAt}</td>
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">
                   <button 
@@ -139,13 +141,11 @@ export const getServerSideProps: GetServerSideProps = async () => {
   try {
     const adminDb = getAdminDb();
     const storesCollectionRef = adminDb.collection('stores');
-    // ▼▼▼ 変更点 3: 登録日の降順で並び替え ▼▼▼
     const querySnapshot = await storesCollectionRef.orderBy('createdAt', 'desc').get();
 
     const stores = querySnapshot.docs.map(doc => {
       const data = doc.data();
       
-      // ▼▼▼ 変更点 4: 登録日(createdAt)を取得し、日付形式にフォーマット ▼▼▼
       const createdAtTimestamp = data.createdAt;
       const formattedDate = createdAtTimestamp 
         ? new Date(createdAtTimestamp.seconds * 1000).toLocaleDateString('ja-JP') 
@@ -157,7 +157,9 @@ export const getServerSideProps: GetServerSideProps = async () => {
         category: categoryNames[data.category] || data.category,
         area: areaNames[data.area] || data.area,
         ownerUid: data.ownerUid || '',
-        createdAt: formattedDate, // フォーマットした日付を渡す
+        createdAt: formattedDate,
+        // ▼▼▼ 電話番号を取得 ▼▼▼
+        phoneNumber: data.phoneNumber || '未登録',
       };
     });
 
