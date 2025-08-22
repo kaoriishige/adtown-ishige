@@ -25,6 +25,8 @@ const PayoutSettingsPage: NextPage<PayoutSettingsProps> = ({ user, payoutInfo })
   const router = useRouter();
   const [formData, setFormData] = useState(payoutInfo);
   const [isLoading, setIsLoading] = useState(false);
+  // ▼▼▼ メッセージ表示用のstateを追加 ▼▼▼
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -34,16 +36,21 @@ const PayoutSettingsPage: NextPage<PayoutSettingsProps> = ({ user, payoutInfo })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    try {
-      // 'payouts'コレクションに、ユーザーIDをドキュメントIDとして口座情報を保存
-      const payoutRef = doc(db, 'payouts', user.uid);
-      await setDoc(payoutRef, formData, { merge: true }); // merge:trueで既存のフィールドを上書き
+    setMessage(null); // メッセージをリセット
 
-      alert('口座情報を保存しました。');
-      router.push('/partner/dashboard');
+    try {
+      const payoutRef = doc(db, 'payouts', user.uid);
+      await setDoc(payoutRef, formData, { merge: true });
+
+      // ▼▼▼ alertの代わりにメッセージを設定 ▼▼▼
+      setMessage({ type: 'success', text: '口座情報を保存しました！' });
+      // router.push('/partner/dashboard'); // 保存後、ページ遷移しないようにコメントアウト
+
     } catch (error) {
       console.error("口座情報の保存エラー:", error);
-      alert('保存中にエラーが発生しました。');
+      // ▼▼▼ alertの代わりにエラーメッセージを設定 ▼▼▼
+      setMessage({ type: 'error', text: '保存中にエラーが発生しました。' });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -65,7 +72,7 @@ const PayoutSettingsPage: NextPage<PayoutSettingsProps> = ({ user, payoutInfo })
         </div>
         <div>
           <label className="block text-gray-700 text-sm font-bold mb-2">預金種別</label>
-          <select name="accountType" value={formData.accountType} onChange={handleChange} required className="shadow appearance-none border rounded w-full py-2 px-3">
+          <select name="accountType" value={formData.accountType} onChange={handleChange} required className="shadow appearance-none border rounded w-full py-2 px-3 bg-white">
             <option>普通</option>
             <option>当座</option>
           </select>
@@ -78,8 +85,16 @@ const PayoutSettingsPage: NextPage<PayoutSettingsProps> = ({ user, payoutInfo })
           <label className="block text-gray-700 text-sm font-bold mb-2">口座名義（カタカナ）</label>
           <input name="accountHolder" type="text" value={formData.accountHolder} onChange={handleChange} required className="shadow appearance-none border rounded w-full py-2 px-3"/>
         </div>
+        
+        {/* ▼▼▼ メッセージ表示エリアを追加 ▼▼▼ */}
+        {message && (
+          <div className={`p-3 rounded text-center my-4 ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {message.text}
+          </div>
+        )}
+
         <div className="text-center pt-4">
-          <button type="submit" disabled={isLoading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+          <button type="submit" disabled={isLoading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-blue-300">
             {isLoading ? '保存中...' : 'この内容で保存する'}
           </button>
         </div>
@@ -108,6 +123,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       accountHolder: '',
     };
 
+    // ▼▼▼ エラー修正: .exists() を .exists に変更 ▼▼▼
     if (docSnap.exists) {
       payoutInfo = docSnap.data() as typeof payoutInfo;
     }
