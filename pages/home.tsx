@@ -88,11 +88,15 @@ const HomePage: NextPage = () => {
             </button>
           </section>
 
-          {/* --- ★★★ ここを修正 ★★★ --- */}
-          {/* --- 主要機能ボタン (店舗情報) --- */}
+          {/* --- 主要機能ボタン --- */}
           <section className="mb-8 space-y-3">
             <Link href="/deals" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #ef4444, #f97316)' }}>
-              店舗のお得情報はこちら
+              🛍️ 店舗のお得情報はこちら
+            </Link>
+            
+            {/* ▼▼▼ ここに新しいボタンを追加します ▼▼▼ */}
+            <Link href="/food-loss" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #22c55e, #10b981)' }}>
+              🥗 フードロス情報はこちら
             </Link>
           </section>
 
@@ -109,7 +113,7 @@ const HomePage: NextPage = () => {
           {/* --- 主要機能ボタン (すべてのアプリ) --- */}
           <section className="space-y-3">
             <Link href="/apps/all" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #22d3ee, #3b82f6)' }}>
-              すべてのアプリを見る
+              📱 すべてのアプリを見る
             </Link>
           </section>
 
@@ -155,5 +159,6 @@ const HomePage: NextPage = () => {
 };
 
 export default HomePage;
+
 
 
