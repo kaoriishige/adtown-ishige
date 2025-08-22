@@ -25,7 +25,8 @@ const PartnerSignupPage: NextPage = () => {
   const router = useRouter();
   const [storeName, setStoreName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState(''); // ▼▼▼ 電話番号のstateを追加 ▼▼▼
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [qrStandCount, setQrStandCount] = useState(1); // ▼▼▼ QRスタンド個数のstateを追加 ▼▼▼
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -77,8 +78,17 @@ const PartnerSignupPage: NextPage = () => {
       const signupResponse = await fetch('/api/partner/create-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ▼▼▼ 送信するデータに電話番号を追加 ▼▼▼
-        body: JSON.stringify({ storeName, contactPerson, phoneNumber, email, password, category: categoryToSave, area: areaToSave }),
+        // ▼▼▼ 送信するデータにqrStandCountを追加 ▼▼▼
+        body: JSON.stringify({ 
+          storeName, 
+          contactPerson, 
+          phoneNumber, 
+          qrStandCount, // 追加
+          email, 
+          password, 
+          category: categoryToSave, 
+          area: areaToSave 
+        }),
       });
 
       const signupData = await signupResponse.json();
@@ -133,10 +143,22 @@ const PartnerSignupPage: NextPage = () => {
             <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
           </div>
           
-          {/* ▼▼▼ 電話番号の入力フォームを追加 ▼▼▼ */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">電話番号</label>
             <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg"/>
+          </div>
+
+          {/* ▼▼▼ QRコードスタンド個数の入力フォームを追加 ▼▼▼ */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数</label>
+            <input 
+              type="number" 
+              value={qrStandCount} 
+              onChange={(e) => setQrStandCount(Number(e.target.value))} 
+              required 
+              min="1"
+              className="w-full px-4 py-2 border rounded-lg"
+            />
           </div>
 
           <div>

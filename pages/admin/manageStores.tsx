@@ -6,7 +6,7 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // 削除処理のためにクライアント用も必要
 
-// 店舗データの型定義に電話番号を追加
+// 店舗データの型定義にQRスタンド個数を追加
 interface Store {
   id: string;
   name: string;
@@ -14,7 +14,8 @@ interface Store {
   area: string;
   ownerUid: string;
   createdAt: string;
-  phoneNumber: string; // 電話番号を追加
+  phoneNumber: string;
+  qrStandCount: number; // QRスタンド個数を追加
 }
 
 interface ManageStoresProps {
@@ -93,8 +94,9 @@ const ManageStoresPage: NextPage<ManageStoresProps> = ({ stores }) => {
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">店舗名</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">カテゴリ</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">エリア</th>
-              {/* ▼▼▼ 電話番号の列ヘッダーを追加 ▼▼▼ */}
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">電話番号</th>
+              {/* ▼▼▼ QRスタンド個数の列ヘッダーを追加 ▼▼▼ */}
+              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">QR個数</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">登録日</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">紹介URL</th>
               <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">操作</th>
@@ -106,8 +108,9 @@ const ManageStoresPage: NextPage<ManageStoresProps> = ({ stores }) => {
                 <td className="px-6 py-4 border-b border-gray-200">{store.name}</td>
                 <td className="px-6 py-4 border-b border-gray-200">{store.category}</td>
                 <td className="px-6 py-4 border-b border-gray-200">{store.area}</td>
-                {/* ▼▼▼ 電話番号を表示するセルを追加 ▼▼▼ */}
                 <td className="px-6 py-4 border-b border-gray-200">{store.phoneNumber}</td>
+                {/* ▼▼▼ QRスタンド個数を表示するセルを追加 ▼▼▼ */}
+                <td className="px-6 py-4 border-b border-gray-200 text-center">{store.qrStandCount}</td>
                 <td className="px-6 py-4 border-b border-gray-200">{store.createdAt}</td>
                 <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">
                   <button 
@@ -158,8 +161,9 @@ export const getServerSideProps: GetServerSideProps = async () => {
         area: areaNames[data.area] || data.area,
         ownerUid: data.ownerUid || '',
         createdAt: formattedDate,
-        // ▼▼▼ 電話番号を取得 ▼▼▼
         phoneNumber: data.phoneNumber || '未登録',
+        // ▼▼▼ QRスタンド個数を取得 ▼▼▼
+        qrStandCount: data.qrStandCount || 1, // 未登録の場合はデフォルトで1を表示
       };
     });
 
