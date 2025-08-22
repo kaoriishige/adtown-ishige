@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-// 管理者ページのメニューです。すべてのリンクをあなたのファイル構成に合わせて修正しました。
+// 管理者ページのメニューです。
 const AdminPage = () => {
   const linkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-gray-700 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-gray-600 transition-transform transform hover:scale-105 text-center";
 
@@ -9,10 +9,15 @@ const AdminPage = () => {
       <h1 className="text-4xl font-extrabold mb-10 text-center text-gray-800">管理メニュー</h1>
       <nav className="space-y-5">
         
-        {/* すべてのリンクを、あなたの正しいファイル名に修正しました */}
         <Link href="/admin/manageApps" className={linkStyle}>
           アプリ管理 (CRUD)
         </Link>
+
+        {/* --- ★★★ ここに追加 ★★★ --- */}
+        <Link href="/admin/manageStores" className={linkStyle}>
+          店舗管理
+        </Link>
+        
         <Link href="/admin/user-management" className={linkStyle}>
           ユーザー管理
         </Link>
@@ -40,7 +45,6 @@ const AdminPage = () => {
 };
 
 export default AdminPage;
-
 
 
 

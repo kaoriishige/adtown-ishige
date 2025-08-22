@@ -50,8 +50,6 @@ const HomePage: NextPage = () => {
     '防災・安全', '診断・運勢', 'エンタメ', '趣味・文化'
   ];
 
-  // --- ★★★ ここからが重要な変更点 ★★★ ---
-  // 各連絡先に、クリックして情報が見られる公式URLを追加しました
   const emergencyContacts = [
     { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/' },
     { name: '救急安心センター', number: '#7119', description: '急な病気やケガで救急車を呼ぶか迷った時', url: 'https://www.fdma.go.jp/publication/portal/post2.html' },
@@ -90,6 +88,7 @@ const HomePage: NextPage = () => {
             </button>
           </section>
 
+          {/* --- ★★★ ここを修正 ★★★ --- */}
           {/* --- 主要機能ボタン (店舗情報) --- */}
           <section className="mb-8 space-y-3">
             <Link href="/deals" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #ef4444, #f97316)' }}>
@@ -124,7 +123,7 @@ const HomePage: NextPage = () => {
         </main>
       </div>
 
-      {/* --- ★★★ ここからポップアップ（モーダル）を修正 ★★★ --- */}
+      {/* --- ポップアップ（モーダル） --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
@@ -133,7 +132,6 @@ const HomePage: NextPage = () => {
             </div>
             <div className="p-4 space-y-4">
               {emergencyContacts.map(contact => (
-                // --- aタグのhrefをURLに変更し、電話番号は別のaタグで囲む ---
                 <a key={contact.name} href={contact.url} target="_blank" rel="noopener noreferrer" className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <p className="font-bold text-blue-600">{contact.name}</p>
                   <a href={`tel:${contact.number.replace('#', '')}`} className="text-2xl font-bold text-gray-800 hover:underline">{contact.number}</a>
@@ -152,8 +150,6 @@ const HomePage: NextPage = () => {
           </div>
         </div>
       )}
-      {/* --- ★★★ ここまでポップアップ ★★★ --- */}
-
     </div>
   );
 };

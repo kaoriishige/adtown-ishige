@@ -7,7 +7,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { storeName, contactPerson, email, password } = req.body;
+  // --- ★★★ ここを修正 ★★★ ---
+  // 登録フォームから 'category' を受け取る
+  const { storeName, contactPerson, email, password, category } = req.body;
+
+  // categoryが送られてこなかった場合のエラーハンドリング
+  if (!category) {
+    return res.status(400).json({ error: 'カテゴリが選択されていません。' });
+  }
 
   try {
     const adminAuth = getAdminAuth();
@@ -25,9 +32,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: email,
       storeName: storeName,
       contactPerson: contactPerson,
-      role: 'partner', // パートナーの役割を割り当てる
+      role: 'partner',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // --- ★★★ ここからが重要な変更点 ★★★ ---
+    // 'stores'コレクションに、登録フォームで選択されたカテゴリを正しく保存します
+    await adminDb.collection('stores').doc().set({
+      name: storeName,
+      ownerUid: uid,
+      category: category, // ★★★ ハードコーディングではなく、受け取ったcategoryを保存 ★★★
+      area: 'nasushiobara', // デフォルトのエリア
+      address: '',
+      phone: '',
+      hours: '',
+      menu: '',
+      recommend: '',
+      coupon: '',
+      googleMap: '',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    // --- ★★★ ここまでが重要な変更点 ★★★ ---
 
     res.status(200).json({ uid: uid });
 
