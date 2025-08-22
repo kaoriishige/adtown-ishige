@@ -7,13 +7,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // --- ★★★ ここを修正 ★★★ ---
-  // 登録フォームから 'category' を受け取る
-  const { storeName, contactPerson, email, password, category } = req.body;
+  // 登録フォームから 'area' を受け取る
+  const { storeName, contactPerson, email, password, category, area } = req.body;
 
-  // categoryが送られてこなかった場合のエラーハンドリング
-  if (!category) {
-    return res.status(400).json({ error: 'カテゴリが選択されていません。' });
+  if (!category || !area) {
+    return res.status(400).json({ error: 'カテゴリとエリアは必須です。' });
   }
 
   try {
@@ -37,12 +35,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // --- ★★★ ここからが重要な変更点 ★★★ ---
-    // 'stores'コレクションに、登録フォームで選択されたカテゴリを正しく保存します
+    // 'stores'コレクションに、エリア情報も正しく保存します
     await adminDb.collection('stores').doc().set({
       name: storeName,
       ownerUid: uid,
-      category: category, // ★★★ ハードコーディングではなく、受け取ったcategoryを保存 ★★★
-      area: 'nasushiobara', // デフォルトのエリア
+      category: category,
+      area: area, // ★★★ デフォルト値ではなく、受け取ったareaを保存 ★★★
       address: '',
       phone: '',
       hours: '',

@@ -3,8 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-// --- ★★★ ここを修正 ★★★ ---
-// カテゴリデータに「その他」を追加
+// --- ★★★ データ ★★★ ---
 const categories = [
   { name: '飲食店', slug: 'restaurant' },
   { name: '美容室', slug: 'hair-salon' },
@@ -12,7 +11,14 @@ const categories = [
   { name: 'Health (整体, ヨガなど)', slug: 'health' },
   { name: '暮らし', slug: 'living' },
   { name: 'レジャー', slug: 'leisure' },
-  { name: 'その他', slug: 'other' }, // 「その他」を追加
+  { name: 'その他', slug: 'other' },
+];
+
+const areas = [
+  { name: '那須塩原市', slug: 'nasushiobara' },
+  { name: '大田原市', slug: 'ohtawara' },
+  { name: '那須町', slug: 'nasu' },
+  { name: 'その他', slug: 'other' },
 ];
 
 const PartnerSignupPage: NextPage = () => {
@@ -23,7 +29,9 @@ const PartnerSignupPage: NextPage = () => {
   const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState('');
   const [category, setCategory] = useState(categories[0].slug);
-  const [customGenre, setCustomGenre] = useState(''); // 「その他」用のstateを追加
+  const [customGenre, setCustomGenre] = useState('');
+  const [area, setArea] = useState(areas[0].slug); // エリア用のstateを追加
+  const [customArea, setCustomArea] = useState(''); // 「その他」エリア用のstateを追加
   const [agreed, setAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,25 +52,33 @@ const PartnerSignupPage: NextPage = () => {
       return;
     }
 
-    // --- ★★★ ここからが重要な変更点 ★★★ ---
-    // 「その他」が選択された場合の処理を追加
     let categoryToSave = category;
     if (category === 'other') {
       if (!customGenre.trim()) {
-        setError('「その他」を選択した場合は、新しいジャンル名を入力してください。');
+        setError('カテゴリで「その他」を選択した場合は、ジャンル名を入力してください。');
         setIsLoading(false);
         return;
       }
-      // 「その他」の場合は、入力されたカスタムジャンル名を保存対象とする
       categoryToSave = customGenre.trim();
     }
-    // --- ★★★ ここまでが重要な変更点 ★★★ ---
+    
+    // --- ★★★ ここからエリアの処理を追加 ★★★ ---
+    let areaToSave = area;
+    if (area === 'other') {
+      if (!customArea.trim()) {
+        setError('エリアで「その他」を選択した場合は、エリア名を入力してください。');
+        setIsLoading(false);
+        return;
+      }
+      areaToSave = customArea.trim();
+    }
+    // --- ★★★ ここまでエリアの処理 ★★★ ---
 
     try {
       const signupResponse = await fetch('/api/partner/create-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeName, contactPerson, email, password, category: categoryToSave }),
+        body: JSON.stringify({ storeName, contactPerson, email, password, category: categoryToSave, area: areaToSave }),
       });
 
       const signupData = await signupResponse.json();
@@ -91,19 +107,29 @@ const PartnerSignupPage: NextPage = () => {
           <div>
             <label className="block text-gray-700 font-medium mb-2">カテゴリ</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white">
-              {categories.map(cat => (
-                <option key={cat.slug} value={cat.slug}>{cat.name}</option>
-              ))}
+              {categories.map(cat => <option key={cat.slug} value={cat.slug}>{cat.name}</option>)}
             </select>
           </div>
-          {/* --- ★★★ 「その他」が選択された時だけ表示される入力欄 ★★★ --- */}
           {category === 'other' && (
             <div className="pl-4">
               <label className="block text-gray-700 font-medium mb-2">新しいジャンル名</label>
               <input type="text" value={customGenre} onChange={(e) => setCustomGenre(e.target.value)} placeholder="例：ペットショップ" className="w-full px-4 py-2 border rounded-lg"/>
             </div>
           )}
-          {/* --- ★★★ ここまで ★★★ --- */}
+          {/* --- ★★★ ここからエリア選択を追加 ★★★ --- */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">エリア</label>
+            <select value={area} onChange={(e) => setArea(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white">
+              {areas.map(ar => <option key={ar.slug} value={ar.slug}>{ar.name}</option>)}
+            </select>
+          </div>
+          {area === 'other' && (
+            <div className="pl-4">
+              <label className="block text-gray-700 font-medium mb-2">新しいエリア名</label>
+              <input type="text" value={customArea} onChange={(e) => setCustomArea(e.target.value)} placeholder="例：那珂川町" className="w-full px-4 py-2 border rounded-lg"/>
+            </div>
+          )}
+          {/* --- ★★★ ここまでエリア選択 ★★★ --- */}
           <div>
             <label className="block text-gray-700 font-medium mb-2">ご担当者名</label>
             <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
