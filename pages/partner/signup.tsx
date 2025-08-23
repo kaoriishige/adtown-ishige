@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-// --- データ ---
+// --- ★★★ データ ★★★ ---
 const categories = [
   { name: '飲食店', slug: 'restaurant' },
   { name: '美容室', slug: 'hair-salon' },
@@ -37,7 +37,7 @@ const PartnerSignupPage: NextPage = () => {
   const [agreed, setAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSuccess, setIsSuccess] = useState(false); // ▼▼▼ 登録成功の状態を管理 ▼▼▼
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +96,6 @@ const PartnerSignupPage: NextPage = () => {
         throw new Error(signupData.error || '登録に失敗しました。');
       }
 
-      // ▼▼▼ 変更点: リダイレクトせず、成功状態にする ▼▼▼
       setIsSuccess(true);
 
     } catch (err: any) {
@@ -110,7 +109,6 @@ const PartnerSignupPage: NextPage = () => {
     <div className="min-h-screen bg-gray-100 py-10 flex flex-col justify-center items-center">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
         
-        {/* ▼▼▼ 登録成功時はメッセージ、そうでなければフォームを表示 ▼▼▼ */}
         {isSuccess ? (
           <div className="text-center">
             <svg className="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -138,7 +136,6 @@ const PartnerSignupPage: NextPage = () => {
           <>
             <h1 className="text-2xl font-bold text-center mb-6">パートナー無料登録</h1>
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* (フォームの中身は変更なしのため省略) */}
               <div>
                 <label className="block text-gray-700 font-medium mb-2">店舗名・企業名</label>
                 <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
