@@ -46,15 +46,11 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialSettings
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || '保存に失敗しました。');
       }
-
       setMessage({ type: 'success', text: '口座情報を保存しました！' });
-
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     } finally {
@@ -76,36 +72,26 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialSettings
           
           <form onSubmit={handleSave}>
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="bankName">
-                金融機関名
-              </label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="bankName">金融機関名</label>
               <input id="bankName" value={settings.bankName} onChange={handleChange} className="w-full p-2 border rounded shadow-sm" type="text" placeholder="例：楽天銀行" required />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="branchName">
-                支店名
-              </label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="branchName">支店名</label>
               <input id="branchName" value={settings.branchName} onChange={handleChange} className="w-full p-2 border rounded shadow-sm" type="text" placeholder="例：第一営業支店" required />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="accountType">
-                預金種目
-              </label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="accountType">預金種目</label>
               <select id="accountType" value={settings.accountType} onChange={handleChange} className="w-full p-2 border rounded bg-white shadow-sm">
                 <option value="ordinary">普通</option>
                 <option value="checking">当座</option>
               </select>
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="accountNumber">
-                口座番号
-              </label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="accountNumber">口座番号</label>
               <input id="accountNumber" value={settings.accountNumber} onChange={handleChange} className="w-full p-2 border rounded shadow-sm" type="text" placeholder="7桁の半角数字" required pattern="\d{7}" />
             </div>
             <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="accountName">
-                口座名義（カナ）
-              </label>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="accountName">口座名義（カナ）</label>
               <input id="accountName" value={settings.accountName} onChange={handleChange} className="w-full p-2 border rounded shadow-sm" type="text" placeholder="例：スズキ タロウ" required />
             </div>
             
@@ -115,7 +101,11 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialSettings
               </div>
             )}
 
-            <div className="text-center mt-8">
+            <div className="text-center mt-6 text-xs text-gray-500">
+              <p>🔒 お客様の口座情報は暗号化され、安全に保管されます。</p>
+            </div>
+
+            <div className="text-center mt-4">
               <button type="submit" disabled={isLoading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg disabled:bg-blue-300">
                 {isLoading ? '保存中...' : '保存する'}
               </button>
@@ -132,13 +122,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const cookies = nookies.get(context);
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
     
-    // サーバーサイドでユーザーの既存の口座情報を取得
     const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
     const payoutSettings = userDoc.data()?.payoutSettings || null;
 
     return { 
       props: {
-        // JSONシリアライズ可能な形式に変換
         initialSettings: JSON.parse(JSON.stringify(payoutSettings)),
       } 
     };
