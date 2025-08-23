@@ -33,7 +33,11 @@ const initializeStripe = () => {
 // ========================================================================
 // 1. 紹介報酬の自動集計プログラム
 // ========================================================================
-export const aggregateReferralRewards = onDocumentCreated("referralRewards/{rewardId}", async (event) => {
+// ▼▼▼ タイムアウト時間を30秒に延長 ▼▼▼
+export const aggregateReferralRewards = onDocumentCreated({
+  document: "referralRewards/{rewardId}",
+  timeoutSeconds: 30
+}, async (event) => {
   const snapshot = event.data;
   if (!snapshot) {
     logger.log("No data associated with the event");
@@ -88,7 +92,8 @@ export const aggregateReferralRewards = onDocumentCreated("referralRewards/{rewa
 // ========================================================================
 // 2. 返金処理（クローバック）プログラム
 // ========================================================================
-export const handleStripeRefund = onRequest(async (req, res) => {
+// ▼▼▼ タイムアウト時間を30秒に延長 ▼▼▼
+export const handleStripeRefund = onRequest({ timeoutSeconds: 30 }, async (req, res) => {
   try {
     const stripeClient = initializeStripe();
     const sig = req.headers["stripe-signature"] as string;
@@ -155,7 +160,8 @@ export const handleStripeRefund = onRequest(async (req, res) => {
 // ========================================================================
 // 3. プッシュ通知送信プログラム
 // ========================================================================
-export const sendPushNotification = onCall(async (request) => {
+// ▼▼▼ タイムアウト時間を30秒に延長 ▼▼▼
+export const sendPushNotification = onCall({ timeoutSeconds: 30 }, async (request) => {
   const { title, body, uid, allUsers } = request.data;
   
   if (!title || !body) {
