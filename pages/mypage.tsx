@@ -38,6 +38,7 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) =>
   };
 
   const buttonStyle = "w-full max-w-lg p-4 mb-4 text-lg font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors";
+  const secondaryButtonStyle = "w-full max-w-lg p-4 mb-4 text-lg font-bold text-white bg-teal-500 rounded-lg hover:bg-teal-600 transition-colors";
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -66,9 +67,11 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) =>
             {/* --- ボタンのリスト --- */}
             <Link href="/home" className={buttonStyle}>アプリページはこちら</Link>
             <Link href="/payout-settings" className={buttonStyle}>報酬受取口座を登録・編集する</Link>
+            <Link href="/referral-info" className={buttonStyle}>紹介用URLとQRコード</Link>
             
-            <Link href="/referral-info" className={buttonStyle}>
-              紹介用URLとQRコード
+            {/* ▼▼▼ FAQページへのリンクを追加 ▼▼▼ */}
+            <Link href="/faq" className={secondaryButtonStyle}>
+              よくある質問 (FAQ) はこちら
             </Link>
 
             <Link href="/contact" className={buttonStyle}>お問い合わせ・アプリ希望</Link>
@@ -108,15 +111,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     const userDoc = await adminDb.collection('users').doc(uid).get();
     
-    // ▼▼▼ 変更点 ▼▼▼
-    // パートナーアカウントがアクセスできないように、元のロジックに戻しました。
     if (!userDoc.exists || userDoc.data()?.role === 'partner') {
         return { redirect: { destination: '/login', permanent: false } };
     }
     
     const subscriptionStatus = userDoc.data()?.subscriptionStatus || null;
     
-    // 報酬額をデータベースから取得するように変更（サンプル）
     const rewards = { 
       total: userDoc.data()?.totalRewards || 0,
       pending: userDoc.data()?.unpaidRewards || 0,
@@ -130,7 +130,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (error) {
-    return { redirect: { destination: '/login', permanent: false } };
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
   }
 };
 

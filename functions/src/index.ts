@@ -1,5 +1,5 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import Stripe from "stripe";
@@ -8,6 +8,7 @@ import Stripe from "stripe";
 // Firestoreの初期化は一度だけ行う
 admin.initializeApp();
 const db = admin.firestore();
+const messaging = admin.messaging();
 
 // Stripeの初期化は、実際に必要になるまで遅延させるための変数
 let stripe: Stripe | null = null;
@@ -33,55 +34,55 @@ const initializeStripe = () => {
 // 1. 紹介報酬の自動集計プログラム
 // ========================================================================
 export const aggregateReferralRewards = onDocumentCreated("referralRewards/{rewardId}", async (event) => {
-    const snapshot = event.data;
-    if (!snapshot) {
-      logger.log("No data associated with the event");
-      return;
-    }
-    const reward = snapshot.data();
-    if (!reward) {
-      logger.log("No data in snapshot");
-      return;
-    }
-    const { referrerUid, rewardAmount, createdAt } = reward;
-    if (!referrerUid || typeof rewardAmount !== 'number' || !createdAt) {
-      logger.error("Missing or invalid fields in reward document.", { reward });
-      return;
-    }
-    const userDoc = await db.collection("users").doc(referrerUid).get();
-    if (!userDoc.exists) {
-      logger.warn(`Referrer user ${referrerUid} not found.`);
-      return;
-    }
-    const userRole = userDoc.data()?.role || "user";
-    const date = (createdAt as admin.firestore.Timestamp).toDate();
-    const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}`;
-    const summaryRef = db.collection("referralSummaries").doc(monthKey);
+  const snapshot = event.data;
+  if (!snapshot) {
+    logger.log("No data associated with the event");
+    return;
+  }
+  const reward = snapshot.data();
+  if (!reward) {
+    logger.log("No data in snapshot");
+    return;
+  }
+  const { referrerUid, rewardAmount, createdAt } = reward;
+  if (!referrerUid || typeof rewardAmount !== 'number' || !createdAt) {
+    logger.error("Missing or invalid fields in reward document.", { reward });
+    return;
+  }
+  const userDoc = await db.collection("users").doc(referrerUid).get();
+  if (!userDoc.exists) {
+    logger.warn(`Referrer user ${referrerUid} not found.`);
+    return;
+  }
+  const userRole = userDoc.data()?.role || "user";
+  const date = (createdAt as admin.firestore.Timestamp).toDate();
+  const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+  const summaryRef = db.collection("referralSummaries").doc(monthKey);
 
-    return db.runTransaction(async (transaction) => {
-      const summaryDoc = await transaction.get(summaryRef);
-      if (!summaryDoc.exists) {
-        transaction.set(summaryRef, {
-          month: monthKey,
-          partnerTotal: userRole === "partner" ? rewardAmount : 0,
-          userTotal: userRole !== "partner" ? rewardAmount : 0,
-          grandTotal: rewardAmount,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+  return db.runTransaction(async (transaction) => {
+    const summaryDoc = await transaction.get(summaryRef);
+    if (!summaryDoc.exists) {
+      transaction.set(summaryRef, {
+        month: monthKey,
+        partnerTotal: userRole === "partner" ? rewardAmount : 0,
+        userTotal: userRole !== "partner" ? rewardAmount : 0,
+        grandTotal: rewardAmount,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      const increment = admin.firestore.FieldValue.increment(rewardAmount);
+      const updateData: { [key: string]: any } = {
+        grandTotal: increment,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      if (userRole === "partner") {
+        updateData.partnerTotal = increment;
       } else {
-        const increment = admin.firestore.FieldValue.increment(rewardAmount);
-        const updateData: { [key: string]: any } = {
-          grandTotal: increment,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-        if (userRole === "partner") {
-          updateData.partnerTotal = increment;
-        } else {
-          updateData.userTotal = increment;
-        }
-        transaction.update(summaryRef, updateData);
+        updateData.userTotal = increment;
       }
-    });
+      transaction.update(summaryRef, updateData);
+    }
+  });
 });
 
 // ========================================================================
@@ -89,7 +90,6 @@ export const aggregateReferralRewards = onDocumentCreated("referralRewards/{rewa
 // ========================================================================
 export const handleStripeRefund = onRequest(async (req, res) => {
   try {
-    // この関数が呼び出された時に初めてStripeを初期化する
     const stripeClient = initializeStripe();
     const sig = req.headers["stripe-signature"] as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -150,3 +150,66 @@ export const handleStripeRefund = onRequest(async (req, res) => {
     res.status(400).send(`Webhook Error: ${err.message}`);
   }
 });
+
+
+// ========================================================================
+// 3. プッシュ通知送信プログラム
+// ========================================================================
+export const sendPushNotification = onCall(async (request) => {
+  const { title, body, uid, allUsers } = request.data;
+  
+  if (!title || !body) {
+    logger.error("Missing required fields: title or body.");
+    return { success: false, error: "Missing title or body." };
+  }
+
+  try {
+    let tokens: string[] = [];
+
+    if (allUsers) {
+      // 全ユーザーに送信する場合、すべてのデバイストークンを取得
+      const snapshot = await db.collection("fcmTokens").get();
+      snapshot.forEach(doc => {
+        tokens.push(doc.id); // doc.idがトークン
+      });
+    } else if (uid) {
+      // 特定のユーザーに送信する場合、そのユーザーのトークンを取得
+      const doc = await db.collection("fcmTokens").doc(uid).get();
+      if (doc.exists) {
+        tokens.push(doc.id);
+      }
+    }
+
+    if (tokens.length === 0) {
+      logger.info("No tokens to send notification to.");
+      return { success: true, message: "No tokens found." };
+    }
+
+    const message = {
+      notification: {
+        title: title,
+        body: body,
+      },
+      tokens: tokens,
+    };
+
+    const response = await messaging.sendEachForMulticast(message);
+    logger.log("Successfully sent messages:", response);
+    
+    // 送信に失敗したトークンをログに記録
+    if (response.failureCount > 0) {
+      response.responses.forEach(async (resp, idx) => {
+        if (!resp.success) {
+          logger.error(`Failed to send message to token ${tokens[idx]}: ${resp.error}`);
+        }
+      });
+    }
+    
+    return { success: true, response: response };
+
+  } catch (error) {
+    logger.error("Error sending push notification:", error);
+    return { success: false, error: "Internal server error." };
+  }
+});
+
