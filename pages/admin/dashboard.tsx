@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
-import { getAdminDb } from '../../lib/firebase-admin';
 
 ChartJS.register(
   CategoryScale,
@@ -24,60 +23,14 @@ interface DashboardData {
   recentInquiries: { id: string; name: string; createdAt: string }[];
 }
 
-// ▼▼▼ 実際のデータを取得する関数に修正 ▼▼▼
+// APIからダッシュボードのデータを取得する関数
 async function fetchDashboardData(): Promise<DashboardData> {
-  const db = getAdminDb();
-  
-  // ユーザー数とパートナー数を取得
-  const usersSnapshot = await db.collection('users').get();
-  const totalUsers = usersSnapshot.size;
-  const totalPartners = usersSnapshot.docs.filter(doc => doc.data().role === 'partner').length;
-
-  // 月間売上と支払い報酬額を取得 (今回は紹介報酬のデータから計算)
-  // 実際の売上データはStripeのAPIなどから取得するのがより正確
-  const referralRewardsSnapshot = await db.collection('referralRewards').get();
-  let monthlyPayouts = 0;
-  referralRewardsSnapshot.forEach(doc => {
-    monthlyPayouts += doc.data().rewardAmount;
-  });
-
-  // トップ紹介者を取得
-  const referrerCounts: { [key: string]: number } = {};
-  referralRewardsSnapshot.forEach(doc => {
-    const referrerUid = doc.data().referrerUid;
-    if (referrerUid) {
-      referrerCounts[referrerUid] = (referrerCounts[referrerUid] || 0) + 1;
-    }
-  });
-
-  const topReferrers: { name: string; count: number }[] = [];
-  const uids = Object.keys(referrerCounts).sort((a, b) => referrerCounts[b] - referrerCounts[a]).slice(0, 3);
-  for (const uid of uids) {
-    const userDoc = await db.collection('users').doc(uid).get();
-    const userName = userDoc.exists ? (userDoc.data()?.storeName || '匿名') : '不明';
-    topReferrers.push({ name: userName, count: referrerCounts[uid] });
+  const response = await fetch('/api/admin/get-dashboard-data');
+  if (!response.ok) {
+    throw new Error('Failed to fetch dashboard data');
   }
-
-  // 最新の問い合わせを取得
-  const inquiriesSnapshot = await db.collection('inquiries').orderBy('createdAt', 'desc').limit(5).get();
-  const recentInquiries = inquiriesSnapshot.docs.map(doc => {
-    const data = doc.data();
-    const createdAt = data.createdAt.toDate().toLocaleDateString('ja-JP');
-    return {
-      id: doc.id,
-      name: data.name,
-      createdAt,
-    };
-  });
-
-  return {
-    totalUsers,
-    totalPartners,
-    monthlyRevenue: 0, // 仮の売上。Stripeなどから別途取得が必要
-    monthlyPayouts,
-    topReferrers,
-    recentInquiries,
-  };
+  const data = await response.json();
+  return data;
 }
 
 const Dashboard = () => {
@@ -85,10 +38,15 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData().then(d => {
-      setData(d);
-      setLoading(false);
-    });
+    fetchDashboardData()
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching dashboard data:', error);
+        setLoading(false);
+      });
   }, []);
 
   // ▼▼▼ 削除機能の追加 ▼▼▼
