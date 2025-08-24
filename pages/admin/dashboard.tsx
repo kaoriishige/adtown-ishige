@@ -1,169 +1,195 @@
-import { GetServerSideProps, NextPage } from 'next';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
+import { Bar, Pie } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 // --- 型定義 ---
-interface DashboardStats {
+interface DashboardData {
   totalUsers: number;
   totalPartners: number;
-  monthlyRevenue: number; // 今月の売上（仮）
-  monthlyPayouts: number; // 今月の支払い報酬額
+  monthlyRevenue: number;
+  monthlyPayouts: number;
+  topReferrers: { name: string; count: number }[];
+  recentInquiries: { id: string; name: string; createdAt: string }[];
 }
 
-interface TopPartner {
-  id: string;
-  name: string;
-  referralCount: number;
+// ダッシュボードのモックデータ取得APIを呼び出す関数
+async function fetchDashboardData(): Promise<DashboardData> {
+  // 実際のプロジェクトでは、Firebase Functionsでデータを集計するAPIを呼び出します
+  // 例: const response = await fetch('/api/admin/get-dashboard-data');
+  // const data = await response.json();
+  // return data;
+
+  // 今回は開発用にモックデータを返します
+  return {
+    totalUsers: 154,
+    totalPartners: 25,
+    monthlyRevenue: 154000,
+    monthlyPayouts: 30800,
+    topReferrers: [
+      { name: '山田 太郎', count: 12 },
+      { name: '那須観光協会', count: 8 },
+      { name: 'みんなの那須商店', count: 5 },
+    ],
+    recentInquiries: [
+      { id: 'inquiry-1', name: '佐藤さん', createdAt: '2025/08/20' },
+      { id: 'inquiry-2', name: '那須高原牧場', createdAt: '2025/08/19' },
+      { id: 'inquiry-3', name: '鈴木さん', createdAt: '2025/08/18' },
+    ],
+  };
 }
 
-interface RecentInquiry {
-  id: string;
-  name: string;
-  category: string;
-  createdAt: string;
-}
+const Dashboard = () => {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-interface DashboardPageProps {
-  stats: DashboardStats;
-  topPartners: TopPartner[];
-  recentInquiries: RecentInquiry[];
-}
+  useEffect(() => {
+    fetchDashboardData().then(d => {
+      setData(d);
+      setLoading(false);
+    });
+  }, []);
 
-// --- ページコンポーネント ---
-const AdminDashboardPage: NextPage<DashboardPageProps> = ({ stats, topPartners, recentInquiries }) => {
+  // ▼▼▼ 削除機能の追加 ▼▼▼
+  const handleDeleteInquiry = async (inquiryId: string) => {
+    if (window.confirm('この問い合わせを削除してもよろしいですか？')) {
+      try {
+        const response = await fetch('/api/admin/delete-inquiry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: inquiryId }),
+        });
+
+        if (response.ok) {
+          // UIから削除
+          setData(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              recentInquiries: prev.recentInquiries.filter(i => i.id !== inquiryId)
+            };
+          });
+          alert('問い合わせを削除しました。');
+        } else {
+          alert('削除に失敗しました。');
+        }
+      } catch (error) {
+        console.error('Failed to delete inquiry:', error);
+        alert('削除中にエラーが発生しました。');
+      }
+    }
+  };
+
+  const chartData = {
+    labels: data?.topReferrers.map(r => r.name) || [],
+    datasets: [{
+      label: '紹介成功数',
+      data: data?.topReferrers.map(r => r.count) || [],
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.5)',
+        'rgba(54, 162, 235, 0.5)',
+        'rgba(255, 206, 86, 0.5)',
+      ],
+      borderColor: [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 206, 86, 1)',
+      ],
+      borderWidth: 1,
+    }],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'トップ紹介パートナー',
+      },
+    },
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-xl font-semibold">データを読み込み中...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-gray-100 min-h-screen p-4 sm:p-8">
+    <div className="p-5 bg-gray-100 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">運営ダッシュボード</h1>
-          <Link href="/admin" className="text-sm text-blue-600 hover:underline">← 管理メニューに戻る</Link>
-        </header>
+        <div className="mb-6">
+          <Link href="/admin" className="text-blue-500 hover:underline">
+            ← 管理メニューに戻る
+          </Link>
+        </div>
+        <h1 className="text-4xl font-extrabold mb-8 text-center text-gray-800">運営ダッシュボード</h1>
+        
+        {/* 主要なKPIカード */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+            <p className="text-sm text-gray-500 font-medium">総ユーザー数</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{data?.totalUsers}人</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
+            <p className="text-sm text-gray-500 font-medium">総パートナー数</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{data?.totalPartners}社</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+            <p className="text-sm text-gray-500 font-medium">今月の売上（仮）</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">¥{data?.monthlyRevenue?.toLocaleString()}</p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
+            <p className="text-sm text-gray-500 font-medium">今月の支払い報酬額</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">¥{data?.monthlyPayouts?.toLocaleString()}</p>
+          </div>
+        </div>
 
-        {/* --- KPIカード --- */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-sm font-medium text-gray-500">総ユーザー数</h2>
-            <p className="text-3xl font-bold text-gray-800">{stats.totalUsers.toLocaleString()}</p>
+        {/* グラフとリスト */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-bold mb-4">トップパートナー（紹介成功数）</h2>
+            <Bar data={chartData} options={chartOptions} />
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-sm font-medium text-gray-500">総パートナー数</h2>
-            <p className="text-3xl font-bold text-gray-800">{stats.totalPartners.toLocaleString()}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-sm font-medium text-gray-500">今月の売上 (仮)</h2>
-            <p className="text-3xl font-bold text-green-600">{stats.monthlyRevenue.toLocaleString()} 円</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-sm font-medium text-gray-500">今月の支払い報酬</h2>
-            <p className="text-3xl font-bold text-red-600">{stats.monthlyPayouts.toLocaleString()} 円</p>
-          </div>
-        </section>
-
-        {/* --- 2カラムレイアウト --- */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* --- トップパートナーランキング --- */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-bold mb-4">トップパートナー (紹介成功数)</h2>
-            <ul className="space-y-4">
-              {topPartners.map((partner, index) => (
-                <li key={partner.id} className="flex items-center">
-                  <span className="text-lg font-bold text-gray-400 w-8">{index + 1}.</span>
-                  <div className="flex-grow">
-                    <p className="font-semibold text-gray-800">{partner.name}</p>
-                  </div>
-                  <p className="text-lg font-bold">{partner.referralCount.toLocaleString()} <span className="text-sm font-normal">件</span></p>
-                </li>
-              ))}
-               {topPartners.length === 0 && <p className="text-gray-500">まだ紹介データがありません。</p>}
-            </ul>
-          </div>
-
-          {/* --- 最近の問い合わせ --- */}
-          <div className="bg-white p-6 rounded-lg shadow">
+          <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-bold mb-4">最近の問い合わせ</h2>
-            <ul className="space-y-3">
-              {recentInquiries.map(inquiry => (
-                <li key={inquiry.id} className="border-b pb-2">
-                  <p className="font-semibold text-gray-700">{inquiry.name}様</p>
-                  <p className="text-sm text-gray-500">{inquiry.category} - {inquiry.createdAt}</p>
+            <ul className="divide-y divide-gray-200">
+              {data?.recentInquiries.map((inquiry) => (
+                <li key={inquiry.id} className="py-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-lg font-semibold text-gray-800">{inquiry.name}様</p>
+                    <p className="text-sm text-gray-500">{inquiry.createdAt}</p>
+                  </div>
+                  {/* ▼▼▼ 削除ボタンを追加 ▼▼▼ */}
+                  <button
+                    onClick={() => handleDeleteInquiry(inquiry.id)}
+                    className="text-red-500 hover:text-red-700 font-medium text-sm"
+                  >
+                    削除
+                  </button>
                 </li>
               ))}
-              {recentInquiries.length === 0 && <p className="text-gray-500">最近の問い合わせはありません。</p>}
             </ul>
-            <Link href="/admin/inquiry-list" className="text-blue-600 hover:underline mt-4 block text-right">すべて表示 →</Link>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );
 };
 
-// --- サーバーサイドでのデータ集計 ---
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  try {
-    const cookies = nookies.get(context);
-    await getAdminAuth().verifySessionCookie(cookies.token, true);
-
-    const adminDb = getAdminDb();
-    
-    // --- KPIデータの集計 ---
-    const usersSnapshot = await adminDb.collection('users').get();
-    const totalUsers = usersSnapshot.docs.filter(doc => doc.data().role !== 'partner').length;
-    const totalPartners = usersSnapshot.docs.filter(doc => doc.data().role === 'partner').length;
-
-    const now = new Date();
-    const monthKey = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    const summaryDoc = await adminDb.collection('referralSummaries').doc(monthKey).get();
-    const monthlyPayouts = summaryDoc.exists ? summaryDoc.data()!.grandTotal : 0;
-    const monthlyRevenue = 0; // TODO: Stripeから売上データを取得するロジックが必要
-
-    // --- トップパートナーの集計 ---
-    const rewardsSnapshot = await adminDb.collection('referralRewards').where('rewardAmount', '>', 0).get();
-    const referralCounts: { [uid: string]: number } = {};
-    rewardsSnapshot.forEach(doc => {
-      const uid = doc.data().referrerUid;
-      referralCounts[uid] = (referralCounts[uid] || 0) + 1;
-    });
-    
-    const partnerUids = usersSnapshot.docs
-      .filter(doc => doc.data().role === 'partner')
-      .map(doc => ({ id: doc.id, name: doc.data().partnerInfo?.storeName || '名称未設定' }));
-
-    const topPartners = partnerUids
-      .map(p => ({ ...p, referralCount: referralCounts[p.id] || 0 }))
-      .sort((a, b) => b.referralCount - a.referralCount)
-      .slice(0, 5); // 上位5件
-
-    // --- 最近の問い合わせの取得 ---
-    const inquiriesSnapshot = await adminDb.collection('inquiries').orderBy('createdAt', 'desc').limit(5).get();
-    const recentInquiries = inquiriesSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name,
-        category: data.category,
-        createdAt: (data.createdAt as Timestamp).toDate().toLocaleDateString('ja-JP'),
-      };
-    });
-
-    return {
-      props: {
-        stats: { totalUsers, totalPartners, monthlyRevenue, monthlyPayouts },
-        topPartners: JSON.parse(JSON.stringify(topPartners)),
-        recentInquiries: JSON.parse(JSON.stringify(recentInquiries)),
-      },
-    };
-
-  } catch (err) {
-    return {
-      redirect: {
-        destination: '/admin/login',
-        permanent: false,
-      },
-    };
-  }
-};
-
-export default AdminDashboardPage;
+export default Dashboard;
