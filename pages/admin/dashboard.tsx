@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
+import { getAdminDb } from '../../lib/firebase-admin';
 
 ChartJS.register(
   CategoryScale,
@@ -23,29 +24,59 @@ interface DashboardData {
   recentInquiries: { id: string; name: string; createdAt: string }[];
 }
 
-// ダッシュボードのモックデータ取得APIを呼び出す関数
+// ▼▼▼ 実際のデータを取得する関数に修正 ▼▼▼
 async function fetchDashboardData(): Promise<DashboardData> {
-  // 実際のプロジェクトでは、Firebase Functionsでデータを集計するAPIを呼び出します
-  // 例: const response = await fetch('/api/admin/get-dashboard-data');
-  // const data = await response.json();
-  // return data;
+  const db = getAdminDb();
+  
+  // ユーザー数とパートナー数を取得
+  const usersSnapshot = await db.collection('users').get();
+  const totalUsers = usersSnapshot.size;
+  const totalPartners = usersSnapshot.docs.filter(doc => doc.data().role === 'partner').length;
 
-  // 今回は開発用にモックデータを返します
+  // 月間売上と支払い報酬額を取得 (今回は紹介報酬のデータから計算)
+  // 実際の売上データはStripeのAPIなどから取得するのがより正確
+  const referralRewardsSnapshot = await db.collection('referralRewards').get();
+  let monthlyPayouts = 0;
+  referralRewardsSnapshot.forEach(doc => {
+    monthlyPayouts += doc.data().rewardAmount;
+  });
+
+  // トップ紹介者を取得
+  const referrerCounts: { [key: string]: number } = {};
+  referralRewardsSnapshot.forEach(doc => {
+    const referrerUid = doc.data().referrerUid;
+    if (referrerUid) {
+      referrerCounts[referrerUid] = (referrerCounts[referrerUid] || 0) + 1;
+    }
+  });
+
+  const topReferrers: { name: string; count: number }[] = [];
+  const uids = Object.keys(referrerCounts).sort((a, b) => referrerCounts[b] - referrerCounts[a]).slice(0, 3);
+  for (const uid of uids) {
+    const userDoc = await db.collection('users').doc(uid).get();
+    const userName = userDoc.exists ? (userDoc.data()?.storeName || '匿名') : '不明';
+    topReferrers.push({ name: userName, count: referrerCounts[uid] });
+  }
+
+  // 最新の問い合わせを取得
+  const inquiriesSnapshot = await db.collection('inquiries').orderBy('createdAt', 'desc').limit(5).get();
+  const recentInquiries = inquiriesSnapshot.docs.map(doc => {
+    const data = doc.data();
+    const createdAt = data.createdAt.toDate().toLocaleDateString('ja-JP');
+    return {
+      id: doc.id,
+      name: data.name,
+      createdAt,
+    };
+  });
+
   return {
-    totalUsers: 154,
-    totalPartners: 25,
-    monthlyRevenue: 154000,
-    monthlyPayouts: 30800,
-    topReferrers: [
-      { name: '山田 太郎', count: 12 },
-      { name: '那須観光協会', count: 8 },
-      { name: 'みんなの那須商店', count: 5 },
-    ],
-    recentInquiries: [
-      { id: 'inquiry-1', name: '佐藤さん', createdAt: '2025/08/20' },
-      { id: 'inquiry-2', name: '那須高原牧場', createdAt: '2025/08/19' },
-      { id: 'inquiry-3', name: '鈴木さん', createdAt: '2025/08/18' },
-    ],
+    totalUsers,
+    totalPartners,
+    monthlyRevenue: 0, // 仮の売上。Stripeなどから別途取得が必要
+    monthlyPayouts,
+    topReferrers,
+    recentInquiries,
   };
 }
 
