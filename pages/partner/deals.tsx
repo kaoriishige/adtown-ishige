@@ -14,6 +14,9 @@ interface Deal {
   imageUrl?: string;
   linkUrl?: string;
   createdAt: string;
+  storeName?: string;
+  address?: string;
+  phoneNumber?: string;
 }
 
 interface PartnerDealsPageProps {
@@ -147,13 +150,20 @@ const PartnerDealsPage: NextPage<PartnerDealsPageProps> = ({ initialDeals }) => 
               <ul className="divide-y divide-gray-200">
                 {deals.map(deal => (
                   <li key={deal.id} className="p-4 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                    {deal.imageUrl && (
+                      <div className="sm:mr-4">
+                        <img src={deal.imageUrl} alt={deal.title} className="w-24 h-24 object-cover rounded-md" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-lg">{deal.title}</p>
+                      <p className="text-sm text-gray-700 mt-1">{deal.storeName}</p>
+                      <p className="text-sm text-gray-700 mt-1">{deal.address}</p>
+                      <p className="text-sm text-gray-700 mt-1">{deal.phoneNumber}</p>
                       <p className="text-sm text-gray-500 mt-1 truncate">{deal.description}</p>
                       <p className="text-xs text-gray-400 mt-1">登録日時: {deal.createdAt}</p>
                     </div>
                     <div className="flex space-x-2">
-                      {/* TODO: 編集機能ボタン */}
                       <button onClick={() => handleEndDeal(deal.id)} className="bg-red-500 text-white font-bold py-1 px-3 rounded text-sm hover:bg-red-600 transition-colors">
                         掲載終了
                       </button>
@@ -190,11 +200,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         imageUrl: data.imageUrl || null,
         linkUrl: data.linkUrl || null,
         createdAt: (data.createdAt as Timestamp).toDate().toLocaleString('ja-JP'),
+        storeName: data.storeName || null,
+        address: data.address || null,
+        phoneNumber: data.phoneNumber || null,
       };
     });
     
     return { props: { initialDeals: JSON.parse(JSON.stringify(deals)) } };
   } catch (err) {
+    console.error("getServerSidePropsでエラーが発生しました:", err);
     return { redirect: { destination: '/partner/login', permanent: false } };
   }
 };

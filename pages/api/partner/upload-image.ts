@@ -1,11 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import nookies from 'nookies';
 import admin from 'firebase-admin';
 import { IncomingForm } from 'formidable';
 import { promises as fs } from 'fs';
 
-// formidableの設定: Next.jsのAPIルートではbodyParserを無効にする必要がある
 export const config = {
   api: {
     bodyParser: false,
@@ -18,12 +17,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // ユーザー認証
     const cookies = nookies.get({ req });
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
-    // 画像ファイルのパース
     const form = new IncomingForm();
     const { files } = await new Promise<{ files: any }>((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
@@ -37,8 +34,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: '画像ファイルが見つかりません。' });
     }
 
-    // Firebase Storageにアップロード
-    const bucket = admin.storage().bucket(process.env.FIREBASE_STORAGE_BUCKET);
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+    if (!bucketName) throw new Error("FIREBASE_STORAGE_BUCKET is not set");
+
+    const bucket = admin.storage().bucket(bucketName);
     const filePath = imageFile.filepath;
     const fileName = `storeDeals/${uid}/${Date.now()}-${imageFile.originalFilename}`;
     
@@ -47,14 +46,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: { contentType: imageFile.mimetype },
     });
     
-    // アップロード後に一時ファイルを削除
     await fs.unlink(filePath);
     
-    // 公開URLを取得
     const file = bucket.file(fileName);
     const [publicUrl] = await file.getSignedUrl({
         action: 'read',
-        expires: '03-17-2030', // 遠い未来の日付を設定
+        expires: '03-17-2030',
     });
 
     return res.status(200).json({ imageUrl: publicUrl });
