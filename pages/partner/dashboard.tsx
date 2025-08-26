@@ -1,4 +1,9 @@
-import type { NextPage } from 'next';
+// ★★★ 追加するインポート文 ★★★
+import type { NextPage, GetServerSideProps } from 'next';
+import nookies from 'nookies';
+import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+// ★★★★★★★★★★★★★★★★★★
+
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -35,29 +40,22 @@ const PartnerDashboardPage: NextPage = () => {
           </div>
 
           <div className="space-y-3">
-            {/* このボタンの色をフードロスと同じグリーンにしました */}
             <Link href="/partner/deals" className={secondaryButtonStyle}>
               店舗お得情報を登録・管理
             </Link>
-
             <Link href="/partner/food-loss" className={secondaryButtonStyle}>
               フードロス情報を登録＆管理
             </Link>
-            
             <hr className="my-2 border-gray-200" />
-            
             <Link href="/partner/account" className={primaryButtonStyle}>
               報酬受取口座を登録・編集する
             </Link>
-            
             <Link href="/partner/referral" className={primaryButtonStyle}>
               紹介用URLとQRコード
             </Link>
-            
             <Link href="/contact" className={primaryButtonStyle}>
               お問い合わせ
             </Link>
-
             <div className="pt-4">
               <button 
                 onClick={handleLogout} 
@@ -73,5 +71,36 @@ const PartnerDashboardPage: NextPage = () => {
     </>
   );
 };
+
+// ★★★ 追加する認証チェック関数 ★★★
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  try {
+    const cookies = nookies.get(context);
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+
+    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    if (!userDoc.exists || userDoc.data()?.role !== 'partner') {
+      return {
+        redirect: {
+          destination: '/partner/login',
+          permanent: false,
+        },
+      };
+    }
+
+    return {
+      props: {},
+    };
+
+  } catch (error) {
+    return {
+      redirect: {
+        destination: '/partner/login',
+        permanent: false,
+      },
+    };
+  }
+};
+// ★★★★★★★★★★★★★★★★★★★★★★★
 
 export default PartnerDashboardPage;

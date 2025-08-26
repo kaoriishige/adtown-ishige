@@ -1,13 +1,19 @@
 import { GetServerSideProps, NextPage } from 'next';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import Link from 'next/link';
 import { useState } from 'react';
+
+// Firebase Client SDK (ログアウト処理で使用)
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase'; // firebase.tsのパスは適宜修正してください
+
+// Firebase Admin SDK (サーバーサイドの認証で使用)
 import nookies from 'nookies';
+// ★★★ ファイル名をハイフン区切りに修正 ★★★
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
-// Propsの型定義
+// --- このページが受け取るデータの型定義 ---
 interface MyPageProps {
   user: {
     uid: string;
@@ -24,6 +30,7 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) =>
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // 安全なログアウト処理
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -42,6 +49,9 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) =>
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
+      <Head>
+        <title>マイページ - みんなの那須アプリ</title>
+      </Head>
       <main className="flex-grow">
         <div className="p-5 text-center my-10">
           <h1 className="text-3xl font-bold mb-4">マイページ</h1>
@@ -68,12 +78,7 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) =>
             <Link href="/home" className={buttonStyle}>アプリページはこちら</Link>
             <Link href="/payout-settings" className={buttonStyle}>報酬受取口座を登録・編集する</Link>
             <Link href="/referral-info" className={buttonStyle}>紹介用URLとQRコード</Link>
-            
-            {/* ▼▼▼ FAQページへのリンクを追加 ▼▼▼ */}
-            <Link href="/faq" className={secondaryButtonStyle}>
-              よくある質問 (FAQ) はこちら
-            </Link>
-
+            <Link href="/faq" className={secondaryButtonStyle}>よくある質問 (FAQ) はこちら</Link>
             <Link href="/contact" className={buttonStyle}>お問い合わせ・アプリ希望</Link>
             <Link href="/cancel-subscription" className={buttonStyle}>解約希望の方はこちら</Link>
             
@@ -100,6 +105,7 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) =>
   );
 };
 
+// --- サーバーサイドでの認証チェック ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const adminAuth = getAdminAuth();
@@ -111,15 +117,16 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     const userDoc = await adminDb.collection('users').doc(uid).get();
     
-    if (!userDoc.exists || userDoc.data()?.role === 'partner') {
-        return { redirect: { destination: '/login', permanent: false } };
+    // ★★★ 役割が'user'でない場合はアクセスを拒否（より安全な記述） ★★★
+    if (!userDoc.exists || userDoc.data()?.role !== 'user') {
+      return { redirect: { destination: '/login', permanent: false } };
     }
     
-    const subscriptionStatus = userDoc.data()?.subscriptionStatus || null;
-    
+    const userData = userDoc.data() || {};
+    const subscriptionStatus = userData.subscriptionStatus || null;
     const rewards = { 
-      total: userDoc.data()?.totalRewards || 0,
-      pending: userDoc.data()?.unpaidRewards || 0,
+      total: userData.totalRewards || 0,
+      pending: userData.unpaidRewards || 0,
     };
 
     return {

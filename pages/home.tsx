@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { NextPage } from 'next';
+import { NextPage, GetServerSideProps } from 'next';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
 import { collection, getDocs, getFirestore, query, where, orderBy, limit } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
+import nookies from 'nookies';
+import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
 
 // --- 型定義 ---
 interface Ad {
@@ -13,16 +14,20 @@ interface Ad {
   altText: string;
 }
 
-const HomePage: NextPage = () => {
-  const { user } = useAuth();
+// ページに渡されるPropsの型
+interface HomePageProps {
+  user: {
+    uid: string;
+    email: string | null;
+  };
+}
+
+const HomePage: NextPage<HomePageProps> = ({ user }) => {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
-  const [isClient, setIsClient] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
-
     const fetchAds = async () => {
       try {
         const db = getFirestore(app);
@@ -63,11 +68,11 @@ const HomePage: NextPage = () => {
         <header className="text-center py-6">
           <h1 className="text-2xl font-bold text-gray-800">みんなの那須アプリ</h1>
           <p className="text-sm text-gray-500 mt-2">下記のジャンルからお選びください。</p>
-          {user && <p className="text-sm text-gray-600 mt-4">ようこそ、{user.email}さん</p>}
+          {/* user情報はサーバーから渡されたものを使用します */}
+          <p className="text-sm text-gray-600 mt-4">ようこそ、{user.email}さん</p>
         </header>
 
         <main>
-          {/* --- ジャンル選択ボタン --- */}
           <section className="mb-8">
             <div className="flex flex-wrap justify-center gap-2">
               {genres.map(genre => (
@@ -78,7 +83,6 @@ const HomePage: NextPage = () => {
             </div>
           </section>
 
-          {/* --- 緊急連絡先ボタン --- */}
           <section className="mb-4">
             <button 
               onClick={() => setIsModalOpen(true)}
@@ -88,36 +92,29 @@ const HomePage: NextPage = () => {
             </button>
           </section>
 
-          {/* --- 主要機能ボタン --- */}
           <section className="mb-8 space-y-3">
             <Link href="/deals" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #ef4444, #f97316)' }}>
               🛍️ 店舗のお得情報はこちら
             </Link>
             
-            {/* ▼▼▼ ここに新しいボタンを追加します ▼▼▼ */}
             <Link href="/food-loss" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #22c55e, #10b981)' }}>
               🥗 フードロス情報はこちら
             </Link>
           </section>
 
-          {/* --- 広告カード --- */}
-          {isClient && (
-            <section className="mb-8">
-              <h2 className="text-lg font-bold text-gray-700 text-center mb-4">
-                地域を応援する企業
-              </h2>
-              {/* ... 広告表示ロジック ... */}
-            </section>
-          )}
+          <section className="mb-8">
+            <h2 className="text-lg font-bold text-gray-700 text-center mb-4">
+              地域を応援する企業
+            </h2>
+            {/* ... 広告表示ロジック ... */}
+          </section>
 
-          {/* --- 主要機能ボタン (すべてのアプリ) --- */}
           <section className="space-y-3">
             <Link href="/apps/all" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #22d3ee, #3b82f6)' }}>
               📱 すべてのアプリを見る
             </Link>
           </section>
 
-          {/* --- フッターリンク --- */}
           <footer className="text-center mt-12 pb-4">
             <Link href="/mypage" className="text-sm text-gray-500 hover:underline">
               マイページに戻る
@@ -127,7 +124,6 @@ const HomePage: NextPage = () => {
         </main>
       </div>
 
-      {/* --- ポップアップ（モーダル） --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
@@ -156,6 +152,37 @@ const HomePage: NextPage = () => {
       )}
     </div>
   );
+};
+
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ この関数を追加して、ページをサーバーサイドで保護します ★★★
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  try {
+    const cookies = nookies.get(context);
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+
+    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    
+    // 役割が 'user' でない場合はアクセスを拒否
+    if (!userDoc.exists || userDoc.data()?.role !== 'user') {
+      return { redirect: { destination: '/login', permanent: false } };
+    }
+
+    // チェックを通過したら、ユーザー情報をページに渡して表示
+    return { 
+      props: { 
+        user: {
+          uid: token.uid,
+          email: token.email || null,
+        }
+      } 
+    };
+
+  } catch (err) {
+    // 未ログインの場合はログインページへ
+    return { redirect: { destination: '/login', permanent: false } };
+  }
 };
 
 export default HomePage;
