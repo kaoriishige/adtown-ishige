@@ -1,65 +1,62 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import * as admin from 'firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // 登録フォームから 'area' を受け取る
-  const { storeName, contactPerson, email, password, category, area } = req.body;
+  const { 
+    email, 
+    password, 
+    storeName, 
+    address, 
+    contactPerson, 
+    phoneNumber, 
+    qrStandCount, 
+    category 
+  } = req.body;
 
-  if (!category || !area) {
-    return res.status(400).json({ error: 'カテゴリとエリアは必須です。' });
+  // バリデーション
+  if (!email || !password || !storeName || !address || !contactPerson || !phoneNumber || qrStandCount == null || !category) {
+    return res.status(400).json({ error: 'すべての必須項目を入力してください。' });
+  }
+
+  if (qrStandCount < 0) {
+    return res.status(400).json({ error: 'QRコードスタンドの個数は0以上の数値を入力してください。' });
   }
 
   try {
-    const adminAuth = getAdminAuth();
-    const adminDb = getAdminDb();
-    
-    const userRecord = await adminAuth.createUser({
+    // 1. Firebase Authenticationにユーザーを作成
+    const userRecord = await getAdminAuth().createUser({
       email: email,
       password: password,
       displayName: storeName,
     });
 
-    const uid = userRecord.uid;
-
-    await adminDb.collection('users').doc(uid).set({
+    // 2. Firestoreの'users'コレクションに追加情報を保存
+    await getAdminDb().collection('users').doc(userRecord.uid).set({
       email: email,
       storeName: storeName,
+      address: address,
       contactPerson: contactPerson,
-      role: 'partner',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // --- ★★★ ここからが重要な変更点 ★★★ ---
-    // 'stores'コレクションに、エリア情報も正しく保存します
-    await adminDb.collection('stores').doc().set({
-      name: storeName,
-      ownerUid: uid,
+      phoneNumber: phoneNumber,
+      qrStandCount: Number(qrStandCount),
       category: category,
-      area: area, // ★★★ デフォルト値ではなく、受け取ったareaを保存 ★★★
-      address: '',
-      phone: '',
-      hours: '',
-      menu: '',
-      recommend: '',
-      coupon: '',
-      googleMap: '',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      role: 'partner',
+      createdAt: new Date().toISOString(),
     });
-    // --- ★★★ ここまでが重要な変更点 ★★★ ---
 
-    res.status(200).json({ uid: uid });
+    return res.status(201).json({ success: true, uid: userRecord.uid });
 
   } catch (error: any) {
-    console.error('Partner account creation error:', error);
-    let errorMessage = '登録に失敗しました。';
+    console.error('Partner creation error:', error);
+    let errorMessage = '登録中にエラーが発生しました。';
     if (error.code === 'auth/email-already-exists') {
       errorMessage = 'このメールアドレスは既に使用されています。';
+    } else if (error.code === 'auth/invalid-password') {
+      errorMessage = 'パスワードは6文字以上で入力してください。';
     }
-    res.status(400).json({ error: errorMessage });
+    return res.status(500).json({ error: errorMessage });
   }
 }

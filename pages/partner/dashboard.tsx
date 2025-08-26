@@ -1,145 +1,77 @@
-import { GetServerSideProps, NextPage } from 'next';
-import { useRouter } from 'next/router';
+import type { NextPage } from 'next';
+import Head from 'next/head';
 import Link from 'next/link';
-import { useState } from 'react';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { useRouter } from 'next/router';
 
-interface PartnerDashboardProps {
-  user: {
-    uid: string;
-    email: string;
-    storeName: string;
-  };
-  rewards: {
-    total: number;
-    pending: number;
-  };
-}
-
-// --- ★★★ ナビゲーションリンクを定義 ★★★ ---
-const navigationLinks = [
-  { href: '/partner/payout-settings', text: '報酬受取口座を登録・編集する' },
-  { href: '/partner/referral-info', text: '紹介用URLとQRコード' },
-  { href: '/contact', text: 'お問い合わせ' }, // テキストを修正
-];
-
-const PartnerDashboard: NextPage<PartnerDashboardProps> = ({ user, rewards }) => {
+const PartnerDashboardPage: NextPage = () => {
   const router = useRouter();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const buttonStyle = "block w-full text-center text-white font-bold py-3 px-4 rounded-lg transition-colors";
+  const primaryButtonStyle = `${buttonStyle} bg-blue-500 hover:bg-blue-600`;
+  const secondaryButtonStyle = `${buttonStyle} bg-green-500 hover:bg-green-600`;
 
   const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      // サーバーサイドのセッションを破棄するAPIを呼び出す
-      await fetch('/api/auth/sessionLogout', { method: 'POST' });
-      // クライアントサイドの認証状態をクリア
-      await signOut(auth);
-      // ログインページへリダイレクト
-      router.push('/partner/login');
-    } catch (error) {
-      console.error('Logout failed', error);
-      setIsLoggingOut(false);
-    }
+    // ここにログアウト処理を記述します（例: Firebaseのログアウト処理）
+    // await firebaseClient.auth().signOut();
+    router.push('/partner/login');
   };
 
-  const buttonStyle = "block w-full max-w-lg text-center bg-blue-600 text-white font-bold py-4 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-transform transform hover:scale-105";
-
-  // --- ★★★ 表示部分のJSXを修正 ★★★ ---
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
-      <div className="w-full max-w-lg">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-4">
-          パートナーマイページ
-        </h1>
-        <p className="text-center text-gray-600 mb-8">
-          ようこそ、{user.storeName}様
-        </p>
-
-        {/* --- 紹介報酬セクション --- */}
-        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-6 rounded-lg shadow-md mb-8">
-          <h2 className="font-bold text-xl mb-4">あなたの紹介報酬 💰</h2>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-lg">累計報酬額:</span>
-              <span className="text-2xl font-bold">
-                {rewards.total.toLocaleString()} 円
-              </span>
+    <>
+      <Head>
+        <title>パートナーダッシュボード</title>
+      </Head>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          
+          <div className="bg-green-100 border border-green-200 text-green-800 p-4 rounded-lg mb-6 text-left">
+            <h2 className="font-bold text-lg mb-2">あなたの紹介報酬 💰</h2>
+            <div className="space-y-1">
+              <p><span className="font-semibold">累計報酬額:</span> 0円</p>
+              <p><span className="font-semibold">未払い報酬額:</span> 0円</p>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-lg">未払い報酬額:</span>
-              <span className="text-2xl font-bold">
-                {rewards.pending.toLocaleString()} 円
-              </span>
+            <p className="text-xs mt-3 text-green-700">
+              ※未払い報酬額が3,000円以上になると、翌月15日にご登録の口座へ自動で振り込まれます。
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {/* このボタンの色をフードロスと同じグリーンにしました */}
+            <Link href="/partner/deals" className={secondaryButtonStyle}>
+              店舗お得情報を登録・管理
+            </Link>
+
+            <Link href="/partner/food-loss" className={secondaryButtonStyle}>
+              フードロス情報を登録＆管理
+            </Link>
+            
+            <hr className="my-2 border-gray-200" />
+            
+            <Link href="/partner/account" className={primaryButtonStyle}>
+              報酬受取口座を登録・編集する
+            </Link>
+            
+            <Link href="/partner/referral" className={primaryButtonStyle}>
+              紹介用URLとQRコード
+            </Link>
+            
+            <Link href="/contact" className={primaryButtonStyle}>
+              お問い合わせ
+            </Link>
+
+            <div className="pt-4">
+              <button 
+                onClick={handleLogout} 
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg transition-colors"
+              >
+                ログアウト
+              </button>
             </div>
           </div>
-          <p className="text-xs text-green-600 mt-4">
-            ※未払い報酬額が3,000円以上になると、翌月15日にご登録の口座へ自動で振り込まれます。
-          </p>
-        </div>
 
-        {/* --- メニューボタンセクション --- */}
-        <div className="space-y-4">
-          {navigationLinks.map((link) => (
-            <Link key={link.href} href={link.href} className={buttonStyle}>
-              {link.text}
-            </Link>
-          ))}
-        </div>
-
-        {/* --- ログアウトボタン --- */}
-        <div className="text-center mt-12">
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="bg-gray-200 text-gray-700 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300"
-          >
-            {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
-          </button>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  try {
-    const adminAuth = getAdminAuth();
-    const adminDb = getAdminDb();
-    const cookies = nookies.get(context);
-    
-    // Cookieからセッショントークンを検証
-    const token = await adminAuth.verifySessionCookie(cookies.token, true);
-    const { uid, email } = token;
-
-    const userDoc = await adminDb.collection('users').doc(uid).get();
-    // パートナーでなければログインページに追い返す
-    if (!userDoc.exists || userDoc.data()?.role !== 'partner') {
-        return { redirect: { destination: '/partner/login', permanent: false } };
-    }
-    
-    const storeName = userDoc.data()?.storeName || 'パートナー';
-
-    // (報酬データの取得ロジックはひとまず固定値)
-    const rewards = { total: 0, pending: 0 };
-
-    return {
-      props: {
-        user: JSON.parse(JSON.stringify({ uid, email: email || '', storeName })),
-        rewards,
-      },
-    };
-  } catch (error) {
-    // エラーがあれば問答無用でログインページへ
-    return {
-      redirect: {
-        destination: '/partner/login',
-        permanent: false,
-      },
-    };
-  }
-};
-
-export default PartnerDashboard;
+export default PartnerDashboardPage;

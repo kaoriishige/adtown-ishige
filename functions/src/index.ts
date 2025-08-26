@@ -5,18 +5,12 @@ import * as logger from "firebase-functions/logger";
 import Stripe from "stripe";
 
 // --- 初期化処理 ---
-// Firestoreの初期化は一度だけ行う
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-// Stripeの初期化は、実際に必要になるまで遅延させるための変数
 let stripe: Stripe | null = null;
 
-/**
- * Stripe SDKを安全に初期化する関数
- * 環境変数が設定されていない場合はエラーを投げる
- */
 const initializeStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error("STRIPE_SECRET_KEY environment variable not set.");
@@ -29,11 +23,9 @@ const initializeStripe = () => {
   return stripe;
 };
 
-
 // ========================================================================
 // 1. 紹介報酬の自動集計プログラム
 // ========================================================================
-// ▼▼▼ タイムアウト時間を30秒に延長 ▼▼▼
 export const aggregateReferralRewards = onDocumentCreated({
   document: "referralRewards/{rewardId}",
   timeoutSeconds: 30
@@ -92,7 +84,6 @@ export const aggregateReferralRewards = onDocumentCreated({
 // ========================================================================
 // 2. 返金処理（クローバック）プログラム
 // ========================================================================
-// ▼▼▼ タイムアウト時間を30秒に延長 ▼▼▼
 export const handleStripeRefund = onRequest({ timeoutSeconds: 30 }, async (req, res) => {
   try {
     const stripeClient = initializeStripe();
@@ -160,7 +151,6 @@ export const handleStripeRefund = onRequest({ timeoutSeconds: 30 }, async (req, 
 // ========================================================================
 // 3. プッシュ通知送信プログラム
 // ========================================================================
-// ▼▼▼ タイムアウト時間を30秒に延長 ▼▼▼
 export const sendPushNotification = onCall({ timeoutSeconds: 30 }, async (request) => {
   const { title, body, uid, allUsers } = request.data;
   
@@ -173,13 +163,11 @@ export const sendPushNotification = onCall({ timeoutSeconds: 30 }, async (reques
     let tokens: string[] = [];
 
     if (allUsers) {
-      // 全ユーザーに送信する場合、すべてのデバイストークンを取得
       const snapshot = await db.collection("fcmTokens").get();
       snapshot.forEach(doc => {
-        tokens.push(doc.id); // doc.idがトークン
+        tokens.push(doc.id);
       });
     } else if (uid) {
-      // 特定のユーザーに送信する場合、そのユーザーのトークンを取得
       const doc = await db.collection("fcmTokens").doc(uid).get();
       if (doc.exists) {
         tokens.push(doc.id);
@@ -202,7 +190,6 @@ export const sendPushNotification = onCall({ timeoutSeconds: 30 }, async (reques
     const response = await messaging.sendEachForMulticast(message);
     logger.log("Successfully sent messages:", response);
     
-    // 送信に失敗したトークンをログに記録
     if (response.failureCount > 0) {
       response.responses.forEach(async (resp, idx) => {
         if (!resp.success) {
@@ -216,6 +203,45 @@ export const sendPushNotification = onCall({ timeoutSeconds: 30 }, async (reques
   } catch (error) {
     logger.error("Error sending push notification:", error);
     return { success: false, error: "Internal server error." };
+  }
+});
+
+// ========================================================================
+// 4. Googleフォームからのデータ受信プログラム
+// ========================================================================
+export const receiveFormData = onRequest({ timeoutSeconds: 30 }, async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).send('Method Not Allowed');
+    return;
+  }
+
+  const formData = req.body;
+  logger.info("Received data from Google Form:", formData);
+
+  try {
+    const deal = {
+      storeName: formData['店舗名'],
+      address: formData['住所'],
+      phoneNumber: formData['電話番号'],
+      businessHours: formData['営業時間'],
+      regularHoliday: formData['定休日'],
+      menu: formData['メニュー（主なもの）'],
+      recommendedPoint: formData['お店のおすすめポイント'],
+      dealType: formData['フードロス割引の種類'],
+      discountInfo: formData['割引内容・割引率'],
+      availableTime: formData['割引対象時間'],
+      notes: formData['備考'],
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection('deals').add(deal);
+    logger.info("Deal added to Firestore:", deal);
+
+    res.status(200).send("OK");
+  } catch (error) {
+    logger.error("Error processing form data:", error);
+    res.status(500).send("Internal Server Error");
   }
 });
 

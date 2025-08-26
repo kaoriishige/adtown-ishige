@@ -1,9 +1,8 @@
 import { NextPage } from 'next';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 
-// --- ★★★ データ ★★★ ---
+// --- カテゴリデータ ---
 const categories = [
   { name: '飲食店', slug: 'restaurant' },
   { name: '美容室', slug: 'hair-salon' },
@@ -14,31 +13,24 @@ const categories = [
   { name: 'その他', slug: 'other' },
 ];
 
-const areas = [
-  { name: '那須塩原市', slug: 'nasushiobara' },
-  { name: '大田原市', slug: 'ohtawara' },
-  { name: '那須町', slug: 'nasu' },
-  { name: 'その他', slug: 'other' },
-];
-
 const PartnerSignupPage: NextPage = () => {
-  const router = useRouter();
+  // --- State定義 ---
   const [storeName, setStoreName] = useState('');
+  const [address, setAddress] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [qrStandCount, setQrStandCount] = useState(1);
+  const [qrStandCount, setQrStandCount] = useState(0);
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState('');
   const [category, setCategory] = useState(categories[0].slug);
   const [customGenre, setCustomGenre] = useState('');
-  const [area, setArea] = useState(areas[0].slug);
-  const [customArea, setCustomArea] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // --- 送信処理 ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -65,29 +57,19 @@ const PartnerSignupPage: NextPage = () => {
       categoryToSave = customGenre.trim();
     }
     
-    let areaToSave = area;
-    if (area === 'other') {
-      if (!customArea.trim()) {
-        setError('エリアで「その他」を選択した場合は、エリア名を入力してください。');
-        setIsLoading(false);
-        return;
-      }
-      areaToSave = customArea.trim();
-    }
-
     try {
       const signupResponse = await fetch('/api/partner/create-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           storeName, 
+          address,
           contactPerson, 
           phoneNumber, 
           qrStandCount,
           email, 
           password, 
-          category: categoryToSave, 
-          area: areaToSave 
+          category: categoryToSave,
         }),
       });
 
@@ -141,6 +123,10 @@ const PartnerSignupPage: NextPage = () => {
                 <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
               </div>
               <div>
+                <label className="block text-gray-700 font-medium mb-2">住所</label>
+                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg"/>
+              </div>
+              <div>
                 <label className="block text-gray-700 font-medium mb-2">カテゴリ</label>
                 <select value={category} onChange={(e) => setCategory(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white">
                   {categories.map(cat => <option key={cat.slug} value={cat.slug}>{cat.name}</option>)}
@@ -153,18 +139,6 @@ const PartnerSignupPage: NextPage = () => {
                 </div>
               )}
               <div>
-                <label className="block text-gray-700 font-medium mb-2">エリア</label>
-                <select value={area} onChange={(e) => setArea(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white">
-                  {areas.map(ar => <option key={ar.slug} value={ar.slug}>{ar.name}</option>)}
-                </select>
-              </div>
-              {area === 'other' && (
-                <div className="pl-4">
-                  <label className="block text-gray-700 font-medium mb-2">新しいエリア名</label>
-                  <input type="text" value={customArea} onChange={(e) => setCustomArea(e.target.value)} placeholder="例：那珂川町" className="w-full px-4 py-2 border rounded-lg"/>
-                </div>
-              )}
-              <div>
                 <label className="block text-gray-700 font-medium mb-2">ご担当者名</label>
                 <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
               </div>
@@ -174,7 +148,7 @@ const PartnerSignupPage: NextPage = () => {
               </div>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数</label>
-                <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="1" className="w-full px-4 py-2 border rounded-lg"/>
+                <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="0" className="w-full px-4 py-2 border rounded-lg"/>
               </div>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">メールアドレス</label>

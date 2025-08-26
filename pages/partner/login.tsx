@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
+import axios from 'axios';
 
 const PartnerLoginPage: NextPage = () => {
   const router = useRouter();
@@ -30,10 +31,12 @@ const PartnerLoginPage: NextPage = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
       
+      // ▼▼▼ 修正箇所：credentials: 'include' を追加 ▼▼▼
       const response = await fetch('/api/auth/sessionLogin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
+        credentials: 'include',
       });
 
       if (!response.ok) {

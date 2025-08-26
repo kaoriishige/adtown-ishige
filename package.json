@@ -11,10 +11,12 @@
   "dependencies": {
     "@stripe/stripe-js": "^7.8.0",
     "@tailwindcss/typography": "^0.5.16",
+    "@types/formidable": "^3.4.5",
     "axios": "^1.11.0",
     "chart.js": "^4.5.0",
     "firebase": "^10.0.0",
     "firebase-functions": "^6.4.0",
+    "formidable": "^3.5.4",
     "json2csv": "^6.0.0-alpha.2",
     "lucide-react": "^0.541.0",
     "micro": "^10.0.1",
@@ -29,6 +31,7 @@
     "stripe": "^15.0.0"
   },
   "devDependencies": {
+    "@types/cookie": "^0.6.0",
     "@types/json2csv": "^5.0.7",
     "@types/node": "^20",
     "@types/react": "^18",
