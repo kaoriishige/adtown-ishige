@@ -1,24 +1,29 @@
-// ★★★ 追加するインポート文 ★★★
 import type { NextPage, GetServerSideProps } from 'next';
-import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
-// ★★★★★★★★★★★★★★★★★★
-
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import nookies from 'nookies';
+import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin'; // パスは環境に合わせて修正
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const PartnerDashboardPage: NextPage = () => {
   const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/sessionLogout', { method: 'POST' });
+      await signOut(auth);
+      router.push('/partner/login');
+    } catch (error) {
+      console.error('Logout failed', error);
+      alert('ログアウトに失敗しました。');
+    }
+  };
+
   const buttonStyle = "block w-full text-center text-white font-bold py-3 px-4 rounded-lg transition-colors";
   const primaryButtonStyle = `${buttonStyle} bg-blue-500 hover:bg-blue-600`;
   const secondaryButtonStyle = `${buttonStyle} bg-green-500 hover:bg-green-600`;
-
-  const handleLogout = async () => {
-    // ここにログアウト処理を記述します（例: Firebaseのログアウト処理）
-    // await firebaseClient.auth().signOut();
-    router.push('/partner/login');
-  };
 
   return (
     <>
@@ -40,22 +45,28 @@ const PartnerDashboardPage: NextPage = () => {
           </div>
 
           <div className="space-y-3">
-            <Link href="/partner/deals" className={secondaryButtonStyle}>
+            <Link href="/partner/deals" className={primaryButtonStyle}>
               店舗お得情報を登録・管理
             </Link>
             <Link href="/partner/food-loss" className={secondaryButtonStyle}>
               フードロス情報を登録＆管理
             </Link>
+            
             <hr className="my-2 border-gray-200" />
-            <Link href="/partner/account" className={primaryButtonStyle}>
+            
+            {/* ★★★ ここのリンク先を、実際のファイル名に合わせて修正しました ★★★ */}
+            <Link href="/partner/payout-settings" className={primaryButtonStyle}>
               報酬受取口座を登録・編集する
             </Link>
-            <Link href="/partner/referral" className={primaryButtonStyle}>
+            <Link href="/partner/referral-info" className={primaryButtonStyle}>
               紹介用URLとQRコード
             </Link>
+            {/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */}
+
             <Link href="/contact" className={primaryButtonStyle}>
               お問い合わせ
             </Link>
+
             <div className="pt-4">
               <button 
                 onClick={handleLogout} 
@@ -72,37 +83,25 @@ const PartnerDashboardPage: NextPage = () => {
   );
 };
 
-// ★★★ 追加する認証チェック関数 ★★★
+// --- ★★★ サーバーサイドでの認証保護を、確実に動作する形で再実装しました ★★★ ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    const userRole = userDoc.data()?.role;
 
-    // pages/partner/dashboard.tsx の getServerSideProps
-
-// ...
-const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
-const userRole = userDoc.data()?.role;
-
-// ★★★ 役割が 'partner' または 'admin' でない場合はアクセスを拒否 ★★★
-if (!userDoc.exists || (userRole !== 'partner' && userRole !== 'admin')) {
-  return { redirect: { destination: '/partner/login', permanent: false } };
-}
-// ...
-
-    return {
-      props: {},
-    };
+    // 役割が 'partner' または 'admin' でない場合はアクセスを拒否
+    if (!userDoc.exists || (userRole !== 'partner' && userRole !== 'admin')) {
+      return { redirect: { destination: '/partner/login', permanent: false } };
+    }
+    // 許可されたユーザーであればページを表示
+    return { props: {} };
 
   } catch (error) {
-    return {
-      redirect: {
-        destination: '/partner/login',
-        permanent: false,
-      },
-    };
+    // 未ログインの場合はログインページへ
+    return { redirect: { destination: '/partner/login', permanent: false } };
   }
 };
-// ★★★★★★★★★★★★★★★★★★★★★★★
 
 export default PartnerDashboardPage;

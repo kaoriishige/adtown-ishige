@@ -28,32 +28,25 @@ const SignUpPage: NextPage = () => {
     }
 
     try {
-      // --- ★★★ ここを修正 ★★★ ---
-      // 1. 新しい登録APIを呼び出し、ユーザー作成と同時にFirestoreに役割('user')を記録
+      // 1. ユーザー作成APIを呼び出す
       const signupResponse = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-          name: name,
-          kana: kana,
-        }),
+        body: JSON.stringify({ email, password, name, kana }),
       });
 
       const signupData = await signupResponse.json();
       if (!signupResponse.ok) {
-        // APIからのエラーメッセージをそのまま表示
         throw new Error(signupData.error || '登録に失敗しました。');
       }
       
-      const uid = signupData.uid; // APIから返されたuidを使用
+      const { uid } = signupData;
 
-      // 2. Stripeの決済セッション作成APIを呼び出す
+      // 2. Stripe決済セッション作成APIを呼び出す
       const checkoutResponse = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: uid }), // 取得したuidを渡す
+        body: JSON.stringify({ uid }),
       });
 
       const session = await checkoutResponse.json();
@@ -61,7 +54,7 @@ const SignUpPage: NextPage = () => {
         throw new Error(session.error.message || '決済セッションの作成に失敗しました。');
       }
 
-      // 3. Stripeの決済ページへリダイレクト
+      // 3. Stripe決済ページへリダイレクト
       const stripe = await stripePromise;
       if (stripe) {
         await stripe.redirectToCheckout({ sessionId: session.sessionId });
@@ -70,44 +63,32 @@ const SignUpPage: NextPage = () => {
       }
 
     } catch (err: any) {
-      console.error("サインアップ処理のエラー:", err);
       setError(err.message || '登録に失敗しました。');
       setLoading(false);
     }
   };
+  
+  const inputStyle = "w-full px-3 py-2 border rounded-md";
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
         <h1 className="text-3xl font-bold text-center">新規登録</h1>
         <form onSubmit={handleSignUp} className="space-y-4">
-          <div>
-            <label className="block mb-1 text-sm font-medium">氏名</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-3 py-2 border rounded-md" placeholder="山田 太郎" required />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium">フリガナ</label>
-            <input type="text" value={kana} onChange={(e) => setKana(e.target.value)} className="w-full px-3 py-2 border rounded-md" placeholder="ヤマダ タロウ" required />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium">メールアドレス</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded-md" placeholder="email@example.com" required />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium">メールアドレス（確認用）</label>
-            <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} className="w-full px-3 py-2 border rounded-md" placeholder="もう一度入力してください" required />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium">パスワード (6文字以上)</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border rounded-md" required minLength={6} />
-          </div>
+          <div><label className="block mb-1 text-sm font-medium">氏名</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputStyle} placeholder="山田 太郎" required /></div>
+          <div><label className="block mb-1 text-sm font-medium">フリガナ</label><input type="text" value={kana} onChange={(e) => setKana(e.target.value)} className={inputStyle} placeholder="ヤマダ タロウ" required /></div>
+          <div><label className="block mb-1 text-sm font-medium">メールアドレス</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputStyle} placeholder="email@example.com" required /></div>
+          <div><label className="block mb-1 text-sm font-medium">メールアドレス（確認用）</label><input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} className={inputStyle} placeholder="もう一度入力してください" required /></div>
+          <div><label className="block mb-1 text-sm font-medium">パスワード (6文字以上)</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputStyle} required minLength={6} /></div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          <button type="submit" disabled={loading} className="w-full py-2 px-4 text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:bg-gray-400">
-            {loading ? '処理中...' : '登録して決済に進む'}
-          </button>
+          <button type="submit" disabled={loading} className="w-full py-2 px-4 text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:bg-gray-400">{loading ? '処理中...' : '登録して決済に進む'}</button>
         </form>
+        {/* ★★★ ここの部分を修正しました ★★★ */}
         <p className="text-sm text-center">
-          すでにアカウントをお持ちですか？ <Link href="/login" className="text-blue-500 hover:underline">ログイン</Link>
+          すでにアカウントをお持ちですか？ 
+          <Link href="/login" className="text-blue-500 hover:underline">
+            ログイン
+          </Link>
         </p>
       </div>
     </div>

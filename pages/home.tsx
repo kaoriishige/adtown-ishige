@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { collection, getDocs, getFirestore, query, where, orderBy, limit } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '../lib/firebase-admin'; // パスは環境に合わせて修正
+
+// アイコン用のライブラリをインポート
+import { FcGoogle } from 'react-icons/fc';
+import { FaYahoo } from 'react-icons/fa';
+import { IoSparklesSharp } from 'react-icons/io5';
 
 // --- 型定義 ---
 interface Ad {
@@ -14,7 +19,6 @@ interface Ad {
   altText: string;
 }
 
-// ページに渡されるPropsの型
 interface HomePageProps {
   user: {
     uid: string;
@@ -22,24 +26,47 @@ interface HomePageProps {
   };
 }
 
+// --- 検索ツールのデータ ---
+const searchTools = [
+  {
+    name: 'Google 検索',
+    href: 'https://www.google.co.jp',
+    Icon: FcGoogle,
+    bgColor: 'bg-white',
+    textColor: 'text-gray-800',
+  },
+  {
+    name: 'Yahoo! JAPAN',
+    href: 'https://www.yahoo.co.jp',
+    Icon: FaYahoo,
+    bgColor: 'bg-red-600',
+    textColor: 'text-white',
+  },
+  {
+    name: 'AI検索', // Perplexityは「AI検索」と表示
+    href: 'https://www.perplexity.ai',
+    Icon: IoSparklesSharp,
+    bgColor: 'bg-black',
+    textColor: 'text-white',
+  },
+];
+
+
 const HomePage: NextPage<HomePageProps> = ({ user }) => {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const fetchAds = async () => {
       try {
         const db = getFirestore(app);
         const adsCollection = collection(db, 'advertisements');
         const q = query(adsCollection, where('isActive', '==', true), orderBy('order', 'asc'), limit(5));
         const adSnapshot = await getDocs(q);
-        
-        const adsData = adSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Ad));
-        
+        const adsData = adSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad));
         setAds(adsData);
       } catch (error) {
         console.error("広告データの取得に失敗しました:", error);
@@ -68,7 +95,6 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
         <header className="text-center py-6">
           <h1 className="text-2xl font-bold text-gray-800">みんなの那須アプリ</h1>
           <p className="text-sm text-gray-500 mt-2">下記のジャンルからお選びください。</p>
-          {/* user情報はサーバーから渡されたものを使用します */}
           <p className="text-sm text-gray-600 mt-4">ようこそ、{user.email}さん</p>
         </header>
 
@@ -83,32 +109,46 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             </div>
           </section>
 
+          {/* ★★★ ここに「便利な検索ツール」のセクションを追加しました ★★★ */}
+          <section className="mb-8">
+            <h2 className="text-lg font-bold text-gray-700 text-center mb-4">便利な検索ツール</h2>
+            <div className="grid grid-cols-3 gap-3">
+              {searchTools.map((tool) => (
+                <a
+                  key={tool.name}
+                  href={tool.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 ${tool.bgColor}`}
+                >
+                  <div className={`text-3xl ${tool.textColor}`}><tool.Icon /></div>
+                  <span className={`mt-2 text-xs font-bold text-center ${tool.textColor}`}>{tool.name}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+
           <section className="mb-4">
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="w-full text-center text-gray-800 font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105 bg-yellow-300 hover:bg-yellow-400"
-            >
+            <button onClick={() => setIsModalOpen(true)} className="w-full text-center text-gray-800 font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105 bg-yellow-300 hover:bg-yellow-400">
               <span className="mr-2">⚠️</span> お困りのときは (緊急連絡先)
             </button>
           </section>
-
+          
           <section className="mb-8 space-y-3">
             <Link href="/deals" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #ef4444, #f97316)' }}>
               🛍️ 店舗のお得情報はこちら
             </Link>
-            
             <Link href="/food-loss" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #22c55e, #10b981)' }}>
               🥗 フードロス情報はこちら
             </Link>
           </section>
 
-          <section className="mb-8">
-            <h2 className="text-lg font-bold text-gray-700 text-center mb-4">
-              地域を応援する企業
-            </h2>
-            {/* ... 広告表示ロジック ... */}
-          </section>
-
+          {isClient && (
+            <section className="mb-8">
+              <h2 className="text-lg font-bold text-gray-700 text-center mb-4">地域を応援する企業</h2>
+              {/* ... 広告表示ロジック ... */}
+            </section>
+          )}
           <section className="space-y-3">
             <Link href="/apps/all" className="block text-center text-white font-bold py-4 px-6 rounded-full shadow-md transition transform hover:scale-105" style={{ background: 'linear-gradient(to right, #22d3ee, #3b82f6)' }}>
               📱 すべてのアプリを見る
@@ -116,9 +156,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
           </section>
 
           <footer className="text-center mt-12 pb-4">
-            <Link href="/mypage" className="text-sm text-gray-500 hover:underline">
-              マイページに戻る
-            </Link>
+            <Link href="/mypage" className="text-sm text-gray-500 hover:underline">マイページに戻る</Link>
             <p className="text-xs text-gray-400 mt-4">© 2025 株式会社adtown</p>
           </footer>
         </main>
@@ -127,9 +165,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-4 border-b">
-              <h2 className="text-xl font-bold text-center">緊急連絡先</h2>
-            </div>
+            <div className="p-4 border-b"><h2 className="text-xl font-bold text-center">緊急連絡先</h2></div>
             <div className="p-4 space-y-4">
               {emergencyContacts.map(contact => (
                 <a key={contact.name} href={contact.url} target="_blank" rel="noopener noreferrer" className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
@@ -139,14 +175,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 </a>
               ))}
             </div>
-            <div className="p-4 border-t text-center">
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg"
-              >
-                閉じる
-              </button>
-            </div>
+            <div className="p-4 border-t text-center"><button onClick={() => setIsModalOpen(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">閉じる</button></div>
           </div>
         </div>
       )}
@@ -154,22 +183,24 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
   );
 };
 
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-// ★★★ この関数を追加して、ページをサーバーサイドで保護します ★★★
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-
     const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
     
-    // 役割が 'user' でない場合はアクセスを拒否
-    if (!userDoc.exists || userDoc.data()?.role !== 'user') {
+    const userData = userDoc.data() || {};
+    const userRole = userData.role;
+    const subscriptionStatus = userData.subscriptionStatus;
+
+    if (!userDoc.exists || (userRole !== 'user' && userRole !== 'admin')) {
       return { redirect: { destination: '/login', permanent: false } };
     }
+    
+    if (userRole === 'user' && subscriptionStatus !== 'active' && subscriptionStatus !== 'trial') {
+      return { redirect: { destination: '/subscribe', permanent: false } };
+    }
 
-    // チェックを通過したら、ユーザー情報をページに渡して表示
     return { 
       props: { 
         user: {
@@ -178,14 +209,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }
       } 
     };
-
   } catch (err) {
-    // 未ログインの場合はログインページへ
     return { redirect: { destination: '/login', permanent: false } };
   }
 };
 
 export default HomePage;
-
-
-
