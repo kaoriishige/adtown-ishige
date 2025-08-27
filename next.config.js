@@ -1,12 +1,14 @@
+const withPWA = require('next-pwa')({
+  dest: 'public'
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // 以前ここにあった experimental: { runtime: '...' } は
-  // 現在のNext.jsでは不要なため削除しました。
+  // ... 他の設定
 };
 
-module.exports = nextConfig;
-
+module.exports = withPWA(nextConfig);
 
 
 

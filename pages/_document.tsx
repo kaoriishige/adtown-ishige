@@ -4,7 +4,8 @@ export default function Document() {
   return (
     <Html lang="ja">
       <Head>
-        <link rel="stylesheet" href="/output.css" />
+        {/* ★★★ この行を追加します ★★★ */}
+        <link rel="manifest" href="/manifest.json" />
       </Head>
       <body>
         <Main />
