@@ -3,17 +3,12 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useState } from 'react';
-
-// Firebase Client SDK (ログアウト処理で使用)
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase'; // firebase.tsのパスは適宜修正してください
-
-// Firebase Admin SDK (サーバーサイドの認証で使用)
+import { auth } from '@/lib/firebase';
 import nookies from 'nookies';
-// ★★★ ファイル名をハイフン区切りに修正 ★★★
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
-// --- このページが受け取るデータの型定義 ---
+// Propsの型定義
 interface MyPageProps {
   user: {
     uid: string;
@@ -30,7 +25,6 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) =>
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // 安全なログアウト処理
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -108,21 +102,26 @@ const MyPage: NextPage<MyPageProps> = ({ user, rewards, subscriptionStatus }) =>
 // --- サーバーサイドでの認証チェック ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const adminAuth = getAdminAuth();
-    const adminDb = getAdminDb();
     const cookies = nookies.get(context);
-    
-    const token = await adminAuth.verifySessionCookie(cookies.token, true);
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
     const { uid, email } = token;
 
-    const userDoc = await adminDb.collection('users').doc(uid).get();
+    const userDoc = await getAdminDb().collection('users').doc(uid).get();
     
-    // ★★★ 役割が'user'でない場合はアクセスを拒否（より安全な記述） ★★★
-    if (!userDoc.exists || userDoc.data()?.role !== 'user') {
-      return { redirect: { destination: '/login', permanent: false } };
+    if (!userDoc.exists) {
+        return { redirect: { destination: '/login', permanent: false } };
     }
     
     const userData = userDoc.data() || {};
+    const userRole = userData.role;
+
+    // ★★★ 管理者(admin)であれば、無条件でアクセスを許可する ★★★
+    if (userRole !== 'admin' && userRole !== 'user') {
+        // パートナーなど、許可されていない役割の場合はリダイレクト
+        return { redirect: { destination: '/login', permanent: false } };
+    }
+
+    // ページに必要な情報を取得
     const subscriptionStatus = userData.subscriptionStatus || null;
     const rewards = { 
       total: userData.totalRewards || 0,
