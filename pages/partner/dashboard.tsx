@@ -78,15 +78,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const cookies = nookies.get(context);
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
 
-    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
-    if (!userDoc.exists || userDoc.data()?.role !== 'partner') {
-      return {
-        redirect: {
-          destination: '/partner/login',
-          permanent: false,
-        },
-      };
-    }
+    // pages/partner/dashboard.tsx の getServerSideProps
+
+// ...
+const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+const userRole = userDoc.data()?.role;
+
+// ★★★ 役割が 'partner' または 'admin' でない場合はアクセスを拒否 ★★★
+if (!userDoc.exists || (userRole !== 'partner' && userRole !== 'admin')) {
+  return { redirect: { destination: '/partner/login', permanent: false } };
+}
+// ...
 
     return {
       props: {},
