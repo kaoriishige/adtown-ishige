@@ -1,14 +1,13 @@
 import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
-import { AuthProvider } from '../contexts/AuthContext'; // AuthProviderをインポート
+import { PWAProvider } from '../contexts/PWAContext'; // ★ インポート
 
-function MyApp({ Component, pageProps }: AppProps) {
+export default function App({ Component, pageProps }: AppProps) {
   return (
-    <AuthProvider> {/* このAuthProviderで全体を囲む */}
+    // ★ PWAProviderで全体を囲む
+    <PWAProvider>
       <Component {...pageProps} />
-    </AuthProvider>
+    </PWAProvider>
   );
 }
-
-export default MyApp;
 
