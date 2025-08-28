@@ -1,6 +1,6 @@
 import Head from 'next/head';
 import Image from 'next/image';
-import Link from 'next/link'; // ← Linkコンポーネントをインポート
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds } from 'date-fns';
 
@@ -79,13 +79,31 @@ export default function LandingV5Page() {
 
         <section className="py-16 bg-white text-center">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              那須地域で**テスト配信**で、<br/>**{realtimeUsers}名**
-              地域スーパーチラシ比較アプリ/食費の損!!年間 約36,000円＋α
-              地域の割引クーポン大集合アプリ/外食費などの支払いの損!!年間 約24,000円＋α
-              地域フードロスアプリ/フードロス（廃棄食料）の情報不足の損!!年間 約15,000円＋α
-              情報収集の時間と不足の損!!年間 約18,000円＋α
+            {/* 以下の内容をh2からpタグに修正し、レイアウトを整えました */}
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8">
+              那須地域で**テスト配信**で、**{realtimeUsers}名**が実践中!!
             </h2>
+            <div className="grid md:grid-cols-2 gap-8 mb-8 text-left max-w-4xl mx-auto">
+              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+                <h3 className="text-xl font-bold text-red-600 mb-2">食費の損!!年間 約36,000円＋α</h3>
+                <p className="text-sm">地域スーパーチラシ比較アプリ</p>
+              </div>
+              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+                <h3 className="text-xl font-bold text-red-600 mb-2">外食費などの支払いの損!!年間 約24,000円＋α</h3>
+                <p className="text-sm">地域の割引クーポン大集合アプリ</p>
+              </div>
+              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+                <h3 className="text-xl font-bold text-red-600 mb-2">フードロス（廃棄食料）の情報不足の損!!年間 約15,000円＋α</h3>
+                <p className="text-sm">地域フードロスアプリ</p>
+              </div>
+              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+                <h3 className="text-xl font-bold text-red-600 mb-2">情報収集の時間と不足の損!!年間 約18,000円＋α</h3>
+                <p className="text-sm">地域を知ってるアプリ</p>
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 mb-8">
+              「損」から「得」へ、アプリ実践中!!
+            </p>
             <Image src="/images/map-chart.png" alt="那須地域アプリ利用者数の成長イメージ" width={800} height={450} className="mx-auto my-8 rounded-xl shadow-md" />
             <p className="text-gray-600 mb-8">
               ※この数字は、テストモニターの現在のアクティブユーザー数です。
@@ -152,7 +170,7 @@ export default function LandingV5Page() {
             </p>
 
             <div className="p-6 bg-lime-50 rounded-lg shadow-inner">
-              <h3 className="text-xl font-bold text-lime-800 mb-2">■ みんなの那須アプリ</h3>
+              <h3 className="font-bold text-xl text-lime-800 mb-2">■ みんなの那須アプリ</h3>
               <p className="text-4xl font-black text-lime-600">980円/月</p>
               <p className="mt-4 text-lg">
                 → 実際に年間**93,000円**のお金を生み出す**価値創出**✨
@@ -204,9 +222,9 @@ export default function LandingV5Page() {
               <br />
               それとも、この**秘密の武器**を手に入れて**得**をし、さらに**収入**さえも生み出す新しい毎日か。
             </p>
-            <a href="/signup" className="mt-8 inline-block px-16 py-5 bg-lime-500 text-white font-extrabold text-xl sm:text-2xl rounded-full shadow-2xl hover:bg-lime-600 transition-transform transform hover:scale-110">
+            <Link href="/signup" className="mt-8 inline-block px-16 py-5 bg-lime-500 text-white font-extrabold text-xl sm:text-2xl rounded-full shadow-2xl hover:bg-lime-600 transition-transform transform hover:scale-110">
               今すぐ7日間、無料で未来を体験する！
-            </a>
+            </Link>
             
             <div className="mt-8 p-4 bg-red-600 rounded-lg shadow-inner animate-pulse-fast">
               <p className="text-xl sm:text-2xl md:text-3xl font-bold">
@@ -227,16 +245,15 @@ export default function LandingV5Page() {
         </p>
         <div className="space-y-2">
           <div className="flex justify-center space-x-6 mb-4">
-            <a href="/legal" className="hover:underline">特定商取引法に基づく表記</a>
+            <Link href="/legal" className="hover:underline">特定商取引法に基づく表記</Link>
           </div>
           <div>
             <p>みんなの那須アプリ運営</p>
             <p>株式会社adtown</p>
             <p>〒329-2711 栃木県那須塩原市石林698-35</p>
-            <p>TEL:0287-39-7577</p>
           </div>
         </div>
       </footer>
     </div>
   );
-  }
+}
