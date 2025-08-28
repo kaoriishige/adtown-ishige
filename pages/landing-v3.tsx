@@ -1,257 +1,242 @@
 import Head from 'next/head';
 import Image from 'next/image';
+import Link from 'next/link'; // ← Linkコンポーネントをインポート
 import { useState, useEffect } from 'react';
 import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds } from 'date-fns';
 
-
 const deadline = new Date('2025-09-30T23:59:59');
 
-
 export default function LandingV5Page() {
-  const [timeLeft, setTimeLeft] = useState('');
-  const [realtimeUsers, setRealtimeUsers] = useState(156);
+  const [timeLeft, setTimeLeft] = useState('');
+  const [realtimeUsers, setRealtimeUsers] = useState(156);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const days = differenceInDays(deadline, now);
+      const hours = differenceInHours(deadline, now) % 24;
+      const minutes = differenceInMinutes(deadline, now) % 60;
+      const seconds = differenceInSeconds(deadline, now) % 60;
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const days = differenceInDays(deadline, now);
-      const hours = differenceInHours(deadline, now) % 24;
-      const minutes = differenceInMinutes(deadline, now) % 60;
-      const seconds = differenceInSeconds(deadline, now) % 60;
+      setTimeLeft(`${days}日 ${hours}時間 ${minutes}分 ${seconds}秒`);
+    }, 1000);
 
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
 
-      setTimeLeft(`${days}日 ${hours}時間 ${minutes}分 ${seconds}秒`);
-    }, 1000);
+  return (
+    <div className="bg-white text-gray-800 font-sans antialiased">
+      <Head>
+        <title>【那須限定】知らなきゃ損する！家計が-9.3万円の衝撃</title>
+        <meta name="description" content="7日間無料体験。月額980円で那須の暮らしが劇的に変わる。那須地域の主婦が笑顔を取り戻した秘密のストーリー" />
+      </Head>
 
+      <main>
+        <section className="relative text-white text-center py-20 sm:py-24 overflow-hidden"
+          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/images/hero-bg.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+          <div className="container mx-auto px-4 relative z-10">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight drop-shadow-lg animate-fade-in-up">
+              <span className="bg-red-500 rounded-full px-4 py-1 inline-block mb-4 animate-pulse-fast">衝撃の事実！</span>
+              <br className="sm:hidden" />
+              那須地域の主婦は、知らずに年間
+              <span className="text-yellow-300">93,000円</span>
+              <br className="sm:hidden" />
+              も**損**しています。
+            </h1>
+            <p className="mt-4 text-xl sm:text-2xl md:text-3xl font-bold mb-4 drop-shadow-md animate-fade-in-up delay-200">
+              キャンペーン終了まで残り: <span className="text-yellow-300">{timeLeft}</span>
+            </p>
+            <p className="mt-4 text-lg sm:text-xl md:text-2xl font-medium drop-shadow-md animate-fade-in-up delay-300">
+              その93,000円があれば、諦めていた家族の未来が今すぐ手に入ります。
+            </p>
+            {/* aタグをLinkコンポーネントに修正 */}
+            <Link href="/signup" className="mt-8 inline-block px-12 py-4 bg-yellow-400 text-gray-900 font-bold text-lg sm:text-xl rounded-full shadow-lg hover:bg-yellow-300 transition-transform transform hover:scale-105 animate-bounce-in">
+              ▶︎ 7日間無料体験で損失額をチェック！
+            </Link>
+          </div>
+        </section>
 
-    return () => {
-      clearInterval(timer);
-    };
-  }, []);
+        <section className="py-16 sm:py-24 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-gray-900">
+                「みんなの那須アプリ」で家計の悩みが消えた物語
+              </h2>
+              <Image src="/images/family-smile.jpg" alt="笑顔の家族写真" width={600} height={400} className="rounded-xl shadow-lg mx-auto mb-8" fetchPriority="high" />
+              <div className="p-6 bg-white rounded-xl shadow-lg border-l-4 border-lime-500 text-left">
+                <p className="text-lg italic text-gray-700 leading-relaxed">
+                  「毎月の家計簿を見るたび、ため息ばかりでした...。そんな時、友人から教えてもらったのが**『みんなの那須アプリ』**でした。<br /><br />最初は半信半疑でしたが、たった1週間で4,400円も節約できて驚きました！夫も『美香の笑顔が戻ったね。それが一番の節約だよ』と言ってくれて...。今では、アプリを開くのが毎日の楽しみです。」
+                </p>
+                <p className="mt-4 font-semibold text-gray-800 text-right">
+                  - 佐藤美香さん（那須塩原市・主婦・35歳）
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
+        <section className="py-16 bg-white text-center">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              那須地域で**テスト配信**で、<br/>**{realtimeUsers}名**
+              地域スーパーチラシ比較アプリ/食費の損!!年間 約36,000円＋α
+              地域の割引クーポン大集合アプリ/外食費などの支払いの損!!年間 約24,000円＋α
+              地域フードロスアプリ/フードロス（廃棄食料）の情報不足の損!!年間 約15,000円＋α
+              情報収集の時間と不足の損!!年間 約18,000円＋α
+            </h2>
+            <Image src="/images/map-chart.png" alt="那須地域アプリ利用者数の成長イメージ" width={800} height={450} className="mx-auto my-8 rounded-xl shadow-md" />
+            <p className="text-gray-600 mb-8">
+              ※この数字は、テストモニターの現在のアクティブユーザー数です。
+            </p>
+            <div className="grid md:grid-cols-2 gap-8 text-left">
+              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+                <p className="text-lg italic text-gray-600">
+                  「最初は半信半疑でしたが、3ヶ月で本当に3万円浮きました。念願の家族旅行に行けて、みんなで最高の思い出が作れました。」
+                </p>
+                <p className="mt-2 font-semibold text-gray-800">- 田中さん（大田原市・主婦）</p>
+              </div>
+              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+                <p className="text-lg italic text-gray-600">
+                  「毎日の買い物が楽しくなりました。知らずに損していたと思うと、この**秘密の武器**に出会えて良かったです。」
+                </p>
+                <p className="mt-2 font-semibold text-gray-800">- 山田さん（那須町・会社員）</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-  return (
-    <div className="bg-white text-gray-800 font-sans antialiased">
-      <Head>
-        <title>【那須限定】知らなきゃ損する！家計が-9.3万円の衝撃</title>
-        <meta name="description" content="7日間無料体験。月額980円で那須の暮らしが劇的に変わる。那須地域の主婦が笑顔を取り戻した秘密のストーリー" />
-      </Head>
+        <section className="py-16 bg-blue-700 text-white text-center">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <p className="text-2xl font-medium mb-2">他社類似サービス：<s className="text-gray-400">月額4,000円～</s></p>
+              <h2 className="text-5xl font-extrabold mb-4">
+                <span className="text-yellow-300">みんなの那須</span>
+                は...
+              </h2>
+              <Image src="/images/service-comparison.jpg" alt="他社サービスとの価格比較" width={700} height={350} className="mx-auto my-8 rounded-lg shadow-md" />
+              <div className="p-6 bg-yellow-400 text-gray-900 rounded-lg shadow-xl inline-block">
+                <p className="text-3xl font-extrabold">月額たったの</p>
+                <p className="text-6xl font-black mt-1">980円</p>
+                <p className="text-lg mt-1 font-bold">（1日あたり、たったの33円！）</p>
+              </div>
+              <p className="mt-6 text-lg">
+                年間117,600円の節約効果が見込めるサービスへの投資額は、たったの**11,760円**です。
+              </p>
+            </div>
+          </div>
+        </section>
 
+        <section className="py-16 bg-gray-100 text-gray-800 text-center">
+          <div className="container mx-auto px-4 max-w-2xl">
+            <h2 className="text-3xl font-bold mb-8">
+              🏠【家計診断】あなたの家計、間違ってませんか？🏠
+            </h2>
+            <div className="bg-white p-8 rounded-lg shadow-md border-t-4 border-blue-500">
+              <h3 className="text-xl font-bold mb-4 text-blue-800">■ 一般家庭の月額固定費（平均）</h3>
+              <ul className="text-lg space-y-2 mb-6 text-left">
+                <li className="flex justify-between"><span>電気代</span><span>10,000円</span></li>
+                <li className="flex justify-between"><span>ガス代</span><span>5,000円</span></li>
+                <li className="flex justify-between"><span>水道代</span><span>3,000円</span></li>
+                <li className="flex justify-between"><span>携帯代</span><span>8,000円</span></li>
+                <li className="flex justify-between"><span>NHK</span><span>1,100円</span></li>
+                <li className="flex justify-between"><span>ネット代</span><span>5,000円</span></li>
+                <li className="border-t pt-2 mt-2 flex justify-between font-bold"><span>合計</span><span>約32,000円/月</span></li>
+              </ul>
+              <p className="mt-4 text-sm text-gray-600">※これらは生活に必要な費用ですが、見直しの余地がある項目も多数</p>
+            </div>
+            
+            <p className="mt-8 mb-4 text-2xl font-bold text-gray-700 leading-relaxed">
+              「固定費を削るより、<br/>価値を生む固定費を追加する」
+            </p>
 
-      <main>
-        <section className="relative text-white text-center py-20 sm:py-24 overflow-hidden"
-          style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/images/hero-bg.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-          <div className="container mx-auto px-4 relative z-10">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight drop-shadow-lg animate-fade-in-up">
-              <span className="bg-red-500 rounded-full px-4 py-1 inline-block mb-4 animate-pulse-fast">衝撃の事実！</span>
-              <br className="sm:hidden" />
-              那須地域の主婦は、知らずに年間
-              <span className="text-yellow-300">93,000円</span>
-              <br className="sm:hidden" />
-              も**損**しています。
-            </h1>
-            <p className="mt-4 text-xl sm:text-2xl md:text-3xl font-bold mb-4 drop-shadow-md animate-fade-in-up delay-200">
-              キャンペーン終了まで残り: <span className="text-yellow-300">{timeLeft}</span>
-            </p>
-            <p className="mt-4 text-lg sm:text-xl md:text-2xl font-medium drop-shadow-md animate-fade-in-up delay-300">
-              その93,000円があれば、諦めていた家族の未来が今すぐ手に入ります。
-            </p>
-            <a href="/signup" className="mt-8 inline-block px-12 py-4 bg-yellow-400 text-gray-900 font-bold text-lg sm:text-xl rounded-full shadow-lg hover:bg-yellow-300 transition-transform transform hover:scale-105 animate-bounce-in">
-              ▶︎ 7日間無料体験で損失額をチェック！
-            </a>
-          </div>
-        </section>
+            <div className="p-6 bg-lime-50 rounded-lg shadow-inner">
+              <h3 className="text-xl font-bold text-lime-800 mb-2">■ みんなの那須アプリ</h3>
+              <p className="text-4xl font-black text-lime-600">980円/月</p>
+              <p className="mt-4 text-lg">
+                → 実際に年間**93,000円**のお金を生み出す**価値創出**✨
+              </p>
+            </div>
 
+            <p className="mt-8 text-2xl font-bold text-gray-700 leading-relaxed">
+              これこそが**令和時代の家計術**！💡
+            </p>
+            <p className="mt-4 text-sm text-gray-500">#家計診断 #固定費革命 #価値創出型支出</p>
+          </div>
+        </section>
 
-        <section className="py-16 sm:py-24 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-gray-900">
-                「みんなの那須アプリ」で家計の悩みが消えた物語
-              </h2>
-              <Image src="/images/family-smile.jpg" alt="笑顔の家族写真" width={600} height={400} className="rounded-xl shadow-lg mx-auto mb-8" fetchPriority="high" />
-              <div className="p-6 bg-white rounded-xl shadow-lg border-l-4 border-lime-500 text-left">
-                <p className="text-lg italic text-gray-700 leading-relaxed">
-                  「毎月の家計簿を見るたび、ため息ばかりでした...。そんな時、友人から教えてもらったのが**『みんなの那須アプリ』**でした。<br /><br />最初は半信半疑でしたが、たった1週間で4,400円も節約できて驚きました！夫も『美香の笑顔が戻ったね。それが一番の節約だよ』と言ってくれて...。今では、アプリを開くのが毎日の楽しみです。」
-                </p>
-                <p className="mt-4 font-semibold text-gray-800 text-right">
-                  - 佐藤美香さん（那須塩原市・主婦・35歳）
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <section className="py-16 bg-green-50 text-gray-800 text-center">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              月額料金が**実質無料**どころか、**毎月お小遣い**に！
+            </h2>
+            <p className="text-lg mb-8">
+              このアプリの価値を実感したら、ぜひ**秘密の特権**を友人や周りの方に教えてあげてください。
+              紹介手数料が入ってきます!!
+            </p>
+            <Image src="/images/friends-talking.png"alt="楽しそうに会話する友人たち" width={700} height={400} className="mx-auto my-8 rounded-lg shadow-md" />
+            <div className="grid md:grid-cols-2 gap-8 text-left">
+              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+                <h3 className="font-bold text-xl text-yellow-800">【超先行者限定】9月末までにご紹介した方</h3>
+                <p className="mt-2 text-lg">
+                  紹介報酬**30%**が、この先ずっと継続！
+                </p>
+              </div>
+              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+                <h3 className="font-bold text-xl text-gray-700">【通常特典】10月1日以降に初めてご紹介された方には…</h3>
+                <p className="mt-2 text-lg">
+                  紹介報酬**20%**が適用されます。
+                </p>
+              </div>
+            </div>
+            <p className="mt-8 text-sm text-gray-500">※紹介報酬は、紹介された方が継続課金した場合からの計算です。</p>
+          </div>
+        </section>
 
+        <section className="py-20 bg-gray-800 text-white text-center">
+          <div className="max-w-4xl mx-auto px-6">
+            <h2 className="text-3xl font-bold mb-4">
+              さあ、あなたはどちらの未来を選びますか？
+            </h2>
+            <p className="mb-8 text-lg md:text-xl whitespace-pre-wrap">
+              これまで通り、年間**93,000円**を**損**し続ける日常か。
+              <br />
+              それとも、この**秘密の武器**を手に入れて**得**をし、さらに**収入**さえも生み出す新しい毎日か。
+            </p>
+            <a href="/signup" className="mt-8 inline-block px-16 py-5 bg-lime-500 text-white font-extrabold text-xl sm:text-2xl rounded-full shadow-2xl hover:bg-lime-600 transition-transform transform hover:scale-110">
+              今すぐ7日間、無料で未来を体験する！
+            </a>
+            
+            <div className="mt-8 p-4 bg-red-600 rounded-lg shadow-inner animate-pulse-fast">
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold">
+                残り: <span className="text-yellow-300">{timeLeft}</span>
+              </p>
+            </div>
 
-        <section className="py-16 bg-white text-center">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              那須地域で**テスト配信＊＊＊
-              食費の損!!年間 約36,000円＋α＊＊＊
-              外食費などの支払いの損!!年間 約24,000円＋α＊＊＊
-              フードロス（廃棄食料）の情報不足の損!!年間 約15,000円＋α＊＊＊
-              情報収集の時間と不足の損!!年間 約18,000円＋α
-          
-            </h2>
-            <Image src="/images/map-chart.png" alt="那須地域アプリ利用者数の成長イメージ" width={800} height={450} className="mx-auto my-8 rounded-xl shadow-md" />
-            <p className="text-gray-600 mb-8">
-              ※この数字は、テストモニターの現在のアクティブユーザー数です。
-            </p>
-            <div className="grid md:grid-cols-2 gap-8 text-left">
-              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
-                <p className="text-lg italic text-gray-600">
-                  「最初は半信半疑でしたが、3ヶ月で本当に3万円浮きました。念願の家族旅行に行けて、みんなで最高の思い出が作れました。」
-                </p>
-                <p className="mt-2 font-semibold text-gray-800">- 田中さん（大田原市・主婦）</p>
-              </div>
-              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
-                <p className="text-lg italic text-gray-600">
-                  「毎日の買い物が楽しくなりました。知らずに損していたと思うと、この**秘密の武器**に出会えて良かったです。」
-                </p>
-                <p className="mt-2 font-semibold text-gray-800">- 山田さん（那須町・会社員）</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
-        <section className="py-16 bg-blue-700 text-white text-center">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto">
-              <p className="text-2xl font-medium mb-2">他社類似サービス：<s className="text-gray-400">月額4,000円～</s></p>
-              <h2 className="text-5xl font-extrabold mb-4">
-                <span className="text-yellow-300">みんなの那須</span>
-                は...
-              </h2>
-              <Image src="/images/service-comparison.jpg" alt="他社サービスとの価格比較" width={700} height={350} className="mx-auto my-8 rounded-lg shadow-md" />
-              <div className="p-6 bg-yellow-400 text-gray-900 rounded-lg shadow-xl inline-block">
-                <p className="text-3xl font-extrabold">月額たったの</p>
-                <p className="text-6xl font-black mt-1">980円</p>
-                <p className="text-lg mt-1 font-bold">（1日あたり、たったの33円！）</p>
-              </div>
-              <p className="mt-6 text-lg">
-                年間117,600円の節約効果が見込めるサービスへの投資額は、たったの**11,760円**です。
-              </p>
-            </div>
-          </div>
-        </section>
-
-
-        <section className="py-16 bg-gray-100 text-gray-800 text-center">
-          <div className="container mx-auto px-4 max-w-2xl">
-            <h2 className="text-3xl font-bold mb-8">
-              🏠【家計診断】あなたの家計、間違ってませんか？🏠
-            </h2>
-            <div className="bg-white p-8 rounded-lg shadow-md border-t-4 border-blue-500">
-              <h3 className="text-xl font-bold mb-4 text-blue-800">■ 一般家庭の月額固定費（平均）</h3>
-              <ul className="text-lg space-y-2 mb-6 text-left">
-                <li className="flex justify-between"><span>電気代</span><span>10,000円</span></li>
-                <li className="flex justify-between"><span>ガス代</span><span>5,000円</span></li>
-                <li className="flex justify-between"><span>水道代</span><span>3,000円</span></li>
-                <li className="flex justify-between"><span>携帯代</span><span>8,000円</span></li>
-                <li className="flex justify-between"><span>NHK</span><span>1,100円</span></li>
-                <li className="flex justify-between"><span>ネット代</span><span>5,000円</span></li>
-                <li className="border-t pt-2 mt-2 flex justify-between font-bold"><span>合計</span><span>約32,000円/月</span></li>
-              </ul>
-              <p className="mt-4 text-sm text-gray-600">※これらは生活に必要な費用ですが、見直しの余地がある項目も多数</p>
-            </div>
-           
-            <p className="mt-8 mb-4 text-2xl font-bold text-gray-700 leading-relaxed">
-              「固定費を削るより、<br/>価値を生む固定費を追加する」
-            </p>
-
-
-            <div className="p-6 bg-lime-50 rounded-lg shadow-inner">
-              <h3 className="text-xl font-bold text-lime-800 mb-2">■ みんなの那須アプリ</h3>
-              <p className="text-4xl font-black text-lime-600">980円/月</p>
-              <p className="mt-4 text-lg">
-                → 実際に年間**93,000円**のお金を生み出す**価値創出**✨
-              </p>
-            </div>
-
-
-            <p className="mt-8 text-2xl font-bold text-gray-700 leading-relaxed">
-              これこそが**令和時代の家計術**！💡
-            </p>
-            <p className="mt-4 text-sm text-gray-500">#家計診断 #固定費革命 #価値創出型支出</p>
-          </div>
-        </section>
-
-
-        <section className="py-16 bg-green-50 text-gray-800 text-center">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              月額料金が**実質無料**どころか、**毎月お小遣い**に！
-            </h2>
-            <p className="text-lg mb-8">
-              このアプリの価値を実感したら、ぜひ**秘密の特権**を友人や周りの方に教えてあげてください。
-              紹介手数料が入ってきます!!
-            </p>
-            <Image src="/images/friends-talking.png"alt="楽しそうに会話する友人たち" width={700} height={400} className="mx-auto my-8 rounded-lg shadow-md" />
-            <div className="grid md:grid-cols-2 gap-8 text-left">
-              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
-                <h3 className="font-bold text-xl text-yellow-800">【超先行者限定】9月末までにご紹介した方</h3>
-                <p className="mt-2 text-lg">
-                  紹介報酬**30%**が、この先ずっと継続！
-                </p>
-              </div>
-              <div className="p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
-                <h3 className="font-bold text-xl text-gray-700">【通常特典】10月1日以降に初めてご紹介された方には…</h3>
-                <p className="mt-2 text-lg">
-                  紹介報酬**20%**が適用されます。
-                </p>
-              </div>
-            </div>
-            <p className="mt-8 text-sm text-gray-500">※紹介報酬は、紹介された方が継続課金した場合からの計算です。</p>
-          </div>
-        </section>
-
-
-        <section className="py-20 bg-gray-800 text-white text-center">
-          <div className="max-w-4xl mx-auto px-6">
-            <h2 className="text-3xl font-bold mb-4">
-              さあ、あなたはどちらの未来を選びますか？
-            </h2>
-            <p className="mb-8 text-lg md:text-xl whitespace-pre-wrap">
-              これまで通り、年間**93,000円**を**損**し続ける日常か。
-              <br />
-              それとも、この**秘密の武器**を手に入れて**得**をし、さらに**収入**さえも生み出す新しい毎日か。
-            </p>
-            <a href="/signup" className="mt-8 inline-block px-16 py-5 bg-lime-500 text-white font-extrabold text-xl sm:text-2xl rounded-full shadow-2xl hover:bg-lime-600 transition-transform transform hover:scale-110">
-              今すぐ7日間、無料で未来を体験する！
-            </a>
-           
-            <div className="mt-8 p-4 bg-red-600 rounded-lg shadow-inner animate-pulse-fast">
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold">
-                残り: <span className="text-yellow-300">{timeLeft}</span>
-              </p>
-            </div>
-
-
-            <p className="text-xs text-gray-400 mt-4">
-              ※無料体験期間中にいつでも解約可能です。料金は一切かかりません。
-            </p>
-          </div>
-        </section>
-      </main>
-     
-      <footer className="bg-gray-200 text-center text-sm text-gray-600 py-8 px-4">
-        <p className="max-w-4xl mx-auto mb-6 text-xs">
-          ※年間損失額93,000円＋αの算出根拠について：食費の節約(月3,000円)、外食費などの割引(月2,000円)、情報収集にかかる時間の価値(時給1,000円×月1.5h)、フードロス削減による節約(月1,250円)等の合計を元にした参考金額です。効果を保証するものではありません。
-        </p>
-        <div className="space-y-2">
-          <div className="flex justify-center space-x-6 mb-4">
-            <a href="/legal" className="hover:underline">特定商取引法に基づく表記</a>
-          </div>
-          <div>
-            <p>みんなの那須アプリ運営</p>
-            <p>株式会社adtown</p>
-            <p>〒329-2711 栃木県那須塩原市石林698-35</p>
-            <p>TEL:0287-39-7577</p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-  }
+            <p className="text-xs text-gray-400 mt-4">
+              ※無料体験期間中にいつでも解約可能です。料金は一切かかりません。
+            </p>
+          </div>
+        </section>
+      </main>
+      
+      <footer className="bg-gray-200 text-center text-sm text-gray-600 py-8 px-4">
+        <p className="max-w-4xl mx-auto mb-6 text-xs">
+          ※年間損失額93,000円＋αの算出根拠について：食費の節約(月3,000円)、外食費などの割引(月2,000円)、情報収集にかかる時間の価値(時給1,000円×月1.5h)、フードロス削減による節約(月1,250円)等の合計を元にした参考金額です。効果を保証するものではありません。
+        </p>
+        <div className="space-y-2">
+          <div className="flex justify-center space-x-6 mb-4">
+            <a href="/legal" className="hover:underline">特定商取引法に基づく表記</a>
+          </div>
+          <div>
+            <p>みんなの那須アプリ運営</p>
+            <p>株式会社adtown</p>
+            <p>〒329-2711 栃木県那須塩原市石林698-35</p>
+            <p>TEL:0287-39-7577</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+  }
