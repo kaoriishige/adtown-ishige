@@ -94,17 +94,15 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
           </button>
 
           {/* 2. LINE登録の案内とボタン */}
-          <div className="mt-6 text-center">
+          {/* ▼▼▼ 中央寄せのためクラスを変更 ▼▼▼ */}
+          <div className="mt-6 flex flex-col items-center">
             <p className="mb-4 text-lg font-semibold text-white" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7)' }}>
               オープン告知はLINE公式アカウントでお知らせします！
             </p>
             
-            {/* ▼▼▼ 修正箇所 ▼▼▼ */}
             <a href="https://lin.ee/MWUVGFr">
               <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" />
             </a>
-            {/* ▲▲▲ 修正ここまで ▲▲▲ */}
-
           </div>
         </div>
       </header>
@@ -207,17 +205,15 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 </button>
 
                 {/* 2. LINE登録の案内とボタン */}
-                <div className="mt-6 text-center">
+                {/* ▼▼▼ 中央寄せのためクラスを変更 ▼▼▼ */}
+                <div className="mt-6 flex flex-col items-center">
                   <p className="mb-4 text-lg font-semibold text-white">
                     オープン告知はLINE公式アカウントでお知らせします！
                   </p>
 
-                  {/* ▼▼▼ 修正箇所 ▼▼▼ */}
                   <a href="https://lin.ee/MWUVGFr">
                     <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" />
                   </a>
-                  {/* ▲▲▲ 修正ここまで ▲▲▲ */}
-
                 </div>
             </div>
             <p className="text-xs text-gray-400 mt-4">{data.finalCtaNote}</p>
@@ -260,7 +256,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     problemItem2_Desc: '「あ、あそこのテーブル、クーポン使ってる…うちは定価だ…」\nお会計の時、隣の席の人がスマホ画面を見せてスマートに会計している。あなたは何も知らずに、定価で支払う…。その「知らなかった」というだけで、あなたは他の会員より毎月2,000円、年間で24,000円も「多く」支払っているのです。このアプリは、あなたが訪れるほぼ全ての場所で「会員だけの特別待遇」を用意しています。',
     problemItem3_Title: '情報収集の時間の損',
     problemItem3_Amount: '年間 18,000円',
-    problemItem3_Desc: '「土曜の午後、急な子供の熱… 今から診てくれる病院はどこ！？」\n休日の夕方、突然のトラブル。『エアコンが壊れた！』『鍵をなくした！』。スマホを片手に焦って検索するも、出てくるのは古い情報や広告ばかり。このアプリは、那須エリアのあらゆる生活サービス（休日当番医、水道修理、習い事など）の正確な情報を網羅した、あなたの家族だけの「お守り電話帳」です。',
+    problemItem3_Desc: '「土曜の午後、急な子供の熱… 今から診てくれる病院はどこ！？」\n休日の夕方、突然のトラブル。『エアコンが壊れた！』『鍵をなくした！』。スマホを片手に焦って検索するも、出てくるのは古い情報や広告ばかり。このアプリは、那須エリアのあらゆる生活サービス（休日当行医、水道修理、習い事など）の正確な情報を網羅した、あなたの家族だけの「お守り電話帳」です。',
     problemItem4_Title: 'ガソリン代・補助金の損',
     problemItem4_Amount: '年間 12,000円＋α',
     problemItem4_Desc: '「とりあえず、いつものスタンドで満タンに」「市役所のお知らせ、よく読んでないな…」\nその「とりあえず」の給油が、実は一番高い選択肢かもしれません。アプリが教える「1円でも安いスタンド」を選び、「レシートを登録するだけ」で、年間12,000円は確実に節約できます。さらに、あなたが読み飛ばしている市役所からのお知らせの中に、数万円単位の補助金情報が眠っているのです。このアプリは、その「知らなくても仕方ない損」を、根こそぎ「得」に変えます。',
