@@ -55,12 +55,14 @@ interface IndexPageProps {
   data: LandingData;
 }
 
-// 共通のCTAボタンコンポーネント
+// 修正：元のCtaButtonは使わないため、コメントアウトまたは削除します。
+/*
 const CtaButton = ({ text, href }: { text: string, href: string }) => (
   <Link href={href} className="inline-block bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg hover:scale-105 transform transition-all duration-300">
     {text}
   </Link>
 );
+*/
 
 const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   const router = useRouter();
@@ -77,9 +79,9 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   return (
     <div className="bg-gray-50 text-gray-800">
       {/* --- ファーストビュー --- */}
-      <header 
+      <header
         className="relative text-white text-center py-24 px-4"
-        style={{ 
+        style={{
           backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://placehold.co/1200x800/6366f1/FFFFFF?text=那須の美しい風景')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center'
@@ -91,7 +93,37 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         <p className="text-lg md:text-2xl mb-8" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7)' }}>
           {data.heroSubheadline.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
         </p>
-        <CtaButton text={data.heroCta} href="/signup" />
+
+        {/* ▼▼▼ ここからボタンセクションを変更 ▼▼▼ */}
+        <div className="space-y-6">
+          {/* 1. 「まもなくオープン」ボタン */}
+          <button 
+            className="bg-gray-400 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed" 
+            disabled
+          >
+            まもなくオープン
+          </button>
+
+          {/* 2. LINE登録の案内とボタン */}
+          <div className="mt-6 text-center">
+            <p className="mb-4 text-lg font-semibold text-white" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7)' }}>
+              オープン告知はLINE公式アカウントでお知らせします！
+            </p>
+            <a 
+              href="https://lin.ee/ngffQcE"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-green-500 hover:bg-green-600 shadow-lg transform transition-all duration-300 hover:scale-105"
+            >
+              <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.9,8.2h-2.1c-0.1,0-0.2-0.1-0.2-0.2V6.3c0-0.6,0.5-1.1,1.1-1.1h1.2c0.1,0,0.2-0.1,0.2-0.2V2.8c0-0.1-0.1-0.2-0.2-0.2h-2.1c-2.2,0-4,1.8-4,4v1.8c0,0.1-0.1,0.2-0.2,0.2H9.2c-0.1,0-0.2,0.1-0.2,0.2v2.1c0,0.1,0.1,0.2,0.2,0.2h1.2v6.5c0,0.1,0.1,0.2,0.2,0.2h2.5c0.1,0,0.2-0.1,0.2-0.2V11.1h1.9c0.1,0,0.2-0.1,0.2-0.2V8.9C17.1,8.3,17,8.2,16.9,8.2z M22,12c0,5.5-4.5,10-10,10S2,17.5,2,12S6.5,2,12,2S22,6.5,22,12z" />
+              </svg>
+              LINEで友だち登録してお知らせを受け取る
+            </a>
+          </div>
+        </div>
+        {/* ▲▲▲ ここまでボタンセクションを変更 ▲▲▲ */}
+
       </header>
 
       <main>
@@ -159,20 +191,20 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             <h2 className="text-3xl font-bold mb-4">{data.referralTitle}</h2>
             <p className="text-gray-600 mb-8">{data.referralIntro}</p>
             <div className="grid md:grid-cols-2 gap-8 text-left">
-                <div className="bg-yellow-100 border-l-4 border-yellow-400 p-6 rounded">
-                    <h3 className="font-bold text-lg">{data.referralBonus1_Title}</h3>
-                    <p>{data.referralBonus1_Desc}</p>
-                </div>
-                <div className="bg-gray-100 border-l-4 border-gray-400 p-6 rounded">
-                    <h3 className="font-bold text-lg">{data.referralBonus2_Title}</h3>
-                    <p>{data.referralBonus2_Desc}</p>
-                </div>
+              <div className="bg-yellow-100 border-l-4 border-yellow-400 p-6 rounded">
+                <h3 className="font-bold text-lg">{data.referralBonus1_Title}</h3>
+                <p>{data.referralBonus1_Desc}</p>
+              </div>
+              <div className="bg-gray-100 border-l-4 border-gray-400 p-6 rounded">
+                <h3 className="font-bold text-lg">{data.referralBonus2_Title}</h3>
+                <p>{data.referralBonus2_Desc}</p>
+              </div>
             </div>
             <div className="mt-8 text-left max-w-2xl mx-auto">
-                <ul className="list-disc list-inside space-y-2">
-                    {data.referralPoints.map((point, i) => <li key={i}>{point}</li>)}
-                </ul>
-                <p className="text-xs text-gray-500 mt-4">{data.referralCaution}</p>
+              <ul className="list-disc list-inside space-y-2">
+                {data.referralPoints.map((point, i) => <li key={i}>{point}</li>)}
+              </ul>
+              <p className="text-xs text-gray-500 mt-4">{data.referralCaution}</p>
             </div>
           </div>
         </section>
@@ -182,7 +214,37 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
           <div className="max-w-4xl mx-auto px-6 text-center">
             <h2 className="text-3xl font-bold mb-4">{data.finalCtaTitle}</h2>
             <p className="mb-8 whitespace-pre-wrap">{data.finalCtaText}</p>
-            <CtaButton text={data.finalCtaButton} href="/signup" />
+            
+            {/* ▼▼▼ フッターのCTAも変更 ▼▼▼ */}
+            <div className="space-y-6">
+                {/* 1. 「まもなくオープン」ボタン */}
+                <button 
+                  className="bg-gray-400 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed" 
+                  disabled
+                >
+                  {data.finalCtaButton.replace('今すぐ7日間、','').replace('を無料で体験する','')}
+                </button>
+
+                {/* 2. LINE登録の案内とボタン */}
+                <div className="mt-6 text-center">
+                  <p className="mb-4 text-lg font-semibold text-white">
+                    オープン告知はLINE公式アカウントでお知らせします！
+                  </p>
+                  <a 
+                    href="https://lin.ee/ngffQcE"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-green-500 hover:bg-green-600 shadow-lg transform transition-all duration-300 hover:scale-105"
+                  >
+                    <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M16.9,8.2h-2.1c-0.1,0-0.2-0.1-0.2-0.2V6.3c0-0.6,0.5-1.1,1.1-1.1h1.2c0.1,0,0.2-0.1,0.2-0.2V2.8c0-0.1-0.1-0.2-0.2-0.2h-2.1c-2.2,0-4,1.8-4,4v1.8c0,0.1-0.1,0.2-0.2,0.2H9.2c-0.1,0-0.2,0.1-0.2,0.2v2.1c0,0.1,0.1,0.2,0.2,0.2h1.2v6.5c0,0.1,0.1,0.2,0.2,0.2h2.5c0.1,0,0.2-0.1,0.2-0.2V11.1h1.9c0.1,0,0.2-0.1,0.2-0.2V8.9C17.1,8.3,17,8.2,16.9,8.2z M22,12c0,5.5-4.5,10-10,10S2,17.5,2,12S6.5,2,12,2S22,6.5,22,12z" />
+                    </svg>
+                    LINEで友だち登録してお知らせを受け取る
+                  </a>
+                </div>
+            </div>
+            {/* ▲▲▲ フッターのCTAも変更 ▲▲▲ */}
+
             <p className="text-xs text-gray-400 mt-4">{data.finalCtaNote}</p>
           </div>
         </section>
@@ -192,12 +254,12 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
       <footer className="bg-gray-200 text-center text-sm text-gray-600 py-8 px-4">
         <p className="max-w-4xl mx-auto mb-6 text-xs">{data.footerNote}</p>
         <div className="space-y-2">
-            <div className="flex justify-center space-x-6 mb-4">
-              <Link href="/legal" className="hover:underline">特定商取引法に基づく表記</Link>
-            </div>
-            <div>
-              <p>みんなの那須アプリ運営</p><p>株式会社adtown</p><p>〒329-2711 栃木県那須塩原市石林698-35</p><p>TEL:0287-39-7577</p>
-            </div>
+          <div className="flex justify-center space-x-6 mb-4">
+            <Link href="/legal" className="hover:underline">特定商取引法に基づく表記</Link>
+          </div>
+          <div>
+            <p>みんなの那須アプリ運営</p><p>株式会社adtown</p><p>〒329-2711 栃木県那須塩原市石林698-35</p><p>TEL:0287-39-7577</p>
+          </div>
         </div>
       </footer>
     </div>
@@ -208,8 +270,8 @@ export const getServerSideProps: GetServerSideProps = async () => {
   const docRef = doc(db, 'settings', 'landingV2');
   const docSnap = await getDoc(docRef);
   const dbData = docSnap.exists() ? docSnap.data() : {};
-  
-  const fallbackData: LandingData = { 
+
+  const fallbackData: LandingData = {
     heroHeadline: '那須で暮らすあなた、\nもしかして、年間91,400円「損」していませんか？',
     heroSubheadline: 'その「損」、この地域で賢く暮らす人たちは、\nみんなの那須アプリで「得」に変えています。',
     heroCta: '▶︎ 私が「損」している理由を確かめる（7日間無料）',
@@ -252,7 +314,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     finalCtaNote: '※無料体験期間中にいつでも解約可能です。料金は一切かかりません。',
     footerNote: '※年間損失額91,400円の算出根拠について：食費の節約(月2,000円)、レジャー・外食費の割引(月2,000円)、情報収集にかかる時間の価値(月1,500円)、ガソリン代の節約(月1,000円)、フードロス削減による節約(月1,250円)等の合計を元にした参考金額です。効果を保証するものではありません。',
   };
-  
+
   const data = { ...fallbackData, ...dbData };
 
   return { props: { data: JSON.parse(JSON.stringify(data)) } };
