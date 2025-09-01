@@ -118,7 +118,7 @@ const PartnerSignupPage: NextPage = () => {
           <>
             <h1 className="text-2xl font-bold text-center mb-6">パートナー無料登録</h1>
 
-            {/* ▼▼▼ ここにボタンを追加しました ▼▼▼ */}
+            {/* ▼▼▼ 修正点 ▼▼▼ */}
             <div className="text-center mb-8">
               <a 
                 href="https://disguised-cat-noakl5d.gamma.site/" 
