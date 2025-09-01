@@ -17,7 +17,8 @@ const initializeStripe = () => {
   }
   if (!stripe) {
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2024-04-10",
+      // ▼▼▼ エラーの原因だったこの行を削除しました ▼▼▼
+      // apiVersion: "2024-04-10",
     });
   }
   return stripe;
@@ -244,4 +245,3 @@ export const receiveFormData = onRequest({ timeoutSeconds: 30 }, async (req, res
     res.status(500).send("Internal Server Error");
   }
 });
-
