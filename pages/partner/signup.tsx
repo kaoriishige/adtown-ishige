@@ -118,12 +118,12 @@ const PartnerSignupPage: NextPage = () => {
           <>
             <h1 className="text-2xl font-bold text-center mb-6">パートナー無料登録</h1>
 
-            {/* ▼▼▼ ここにボタンを追加 ▼▼▼ */}
+            {/* ▼▼▼ ここにボタンを追加しました ▼▼▼ */}
             <div className="text-center mb-8">
               <a 
                 href="https://disguised-cat-noakl5d.gamma.site/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
+                target="_blank" // これで新しいタブでページが開きます
+                rel="noopener noreferrer" // セキュリティ上のお作法です
                 className="inline-block bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
               >
                 とってもお得なご案内はこちら
