@@ -117,6 +117,20 @@ const PartnerSignupPage: NextPage = () => {
         ) : (
           <>
             <h1 className="text-2xl font-bold text-center mb-6">パートナー無料登録</h1>
+
+            {/* ▼▼▼ ここにボタンを追加 ▼▼▼ */}
+            <div className="text-center mb-8">
+              <a 
+                href="https://disguised-cat-noakl5d.gamma.site/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-block bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+              >
+                とってもお得なご案内はこちら
+              </a>
+            </div>
+            {/* ▲▲▲ ここまで ▲▲▲ */}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-gray-700 font-medium mb-2">店舗名・企業名</label>
