@@ -47,7 +47,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       collection_method: 'charge_automatically', 
     });
 
-    // ▼▼▼ 【重要】Firestoreに保存する情報にステータスと役割を追加 ▼▼▼
     await adminDb.collection('users').doc(uid).set({
         name,
         furigana,
@@ -55,18 +54,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         createdAt: new Date().toISOString(),
         stripeCustomerId: stripeCustomerId,
         stripeSubscriptionId: subscription.id,
-        subscriptionStatus: 'trialing', // 'trialing' ステータスを記録
-        role: 'user', // 'user' ロールを記録
+        subscriptionStatus: 'trialing',
+        role: 'user',
     }, { merge: true });
-    // ▲▲▲ ここまで ▲▲▲
 
     const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
-    const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent;
 
+    let paymentIntentId: string | null = null;
+
+    if (typeof latestInvoice.payment_intent === 'string') {
+        paymentIntentId = latestInvoice.payment_intent;
+    } else if (latestInvoice.payment_intent?.id) {
+        paymentIntentId = latestInvoice.payment_intent.id;
+    }
+
+    if (!paymentIntentId) {
+        throw new Error('Could not find Payment Intent ID on the invoice.');
+    }
+    
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    // ▼▼▼ ここを修正しました ▼▼▼
     res.status(200).json({
       subscriptionId: subscription.id,
-      clientSecret: paymentIntent?.client_secret,
+      clientSecret: paymentIntent.client_secret,
     });
+    // ▲▲▲ ここまで修正 ▲▲▲
 
   } catch (error: any) {
     console.error('Subscription creation error:', error);
