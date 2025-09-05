@@ -58,28 +58,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         role: 'user',
     }, { merge: true });
 
-    const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
+    // ▼▼▼ ここからが修正箇所です ▼▼▼
+    const latestInvoice = subscription.latest_invoice;
 
-    let paymentIntentId: string | null = null;
-
-    if (typeof latestInvoice.payment_intent === 'string') {
-        paymentIntentId = latestInvoice.payment_intent;
-    } else if (latestInvoice.payment_intent?.id) {
-        paymentIntentId = latestInvoice.payment_intent.id;
+    // latest_invoiceが取得できたか、またそれがオブジェクトであるかを確認
+    if (!latestInvoice || typeof latestInvoice === 'string') {
+      throw new Error('The latest_invoice was not expanded correctly or is missing.');
     }
 
-    if (!paymentIntentId) {
-        throw new Error('Could not find Payment Intent ID on the invoice.');
+    const paymentIntent = latestInvoice.payment_intent;
+
+    // payment_intentが取得できたかを確認
+    if (!paymentIntent) {
+      throw new Error('Could not find Payment Intent on the invoice.');
     }
     
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    // payment_intentからIDを取得（文字列でもオブジェクトでも対応）
+    const paymentIntentId = typeof paymentIntent === 'string' ? paymentIntent : paymentIntent.id;
 
-    // ▼▼▼ ここを修正しました ▼▼▼
+    const retrievedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
     res.status(200).json({
       subscriptionId: subscription.id,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret: retrievedPaymentIntent.client_secret,
     });
-    // ▲▲▲ ここまで修正 ▲▲▲
+    // ▲▲▲ ここまでが修正箇所です ▲▲▲
 
   } catch (error: any) {
     console.error('Subscription creation error:', error);
