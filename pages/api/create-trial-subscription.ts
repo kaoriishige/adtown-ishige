@@ -66,17 +66,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw new Error('The latest_invoice was not expanded correctly or is missing.');
     }
 
-    const paymentIntent = latestInvoice.payment_intent;
-
-    // payment_intentが取得できたかを確認
-    if (!paymentIntent) {
+    // `payment_intent`プロパティが `latestInvoice` オブジェクト内に存在するかを安全にチェック
+    if (!('payment_intent' in latestInvoice) || !latestInvoice.payment_intent) {
       throw new Error('Could not find Payment Intent on the invoice.');
     }
+    
+    const paymentIntent = latestInvoice.payment_intent;
     
     // payment_intentからIDを取得（文字列でもオブジェクトでも対応）
     const paymentIntentId = typeof paymentIntent === 'string' ? paymentIntent : paymentIntent.id;
 
+    // 取得したIDを元にPaymentIntentオブジェクトをStripeから取得
     const retrievedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    // 最後にclient_secretが存在するかを確認
+    if (!retrievedPaymentIntent.client_secret) {
+        throw new Error('Could not find client_secret in the Payment Intent.');
+    }
 
     res.status(200).json({
       subscriptionId: subscription.id,
