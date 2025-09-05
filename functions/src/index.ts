@@ -4,6 +4,7 @@ import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import Stripe from "stripe";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { randomUUID } from "crypto";
 
 // --- 初期化処理 ---
 admin.initializeApp();
@@ -47,6 +48,7 @@ export const initializeNewUser = onCall(async (request) => {
             usableBalance: 0,
             pendingBalance: 1000,
             activationStatus: activationStatus,
+            expiredAmount: 0,
         },
         tree: {
             level: 1,
@@ -111,22 +113,47 @@ export const handleStripeWebhooks = onRequest({ timeoutSeconds: 60 }, async (req
             }
             break;
         }
+
+        // ▼▼▼ エラー箇所を完全に修正したブロック ▼▼▼
         case 'invoice.payment_succeeded': {
             const invoice = event.data.object as Stripe.Invoice;
-            const subscriptionId = invoice.subscription as string;
             const customerId = invoice.customer as string;
+        
+            // invoiceオブジェクトの最初の明細(line item)からsubscription情報を取得
+            const subscriptionIdOrObject = invoice.lines.data[0]?.subscription;
+        
+            if (!subscriptionIdOrObject) {
+                logger.error(`Subscription ID or object not found on invoice ${invoice.id}`);
+                break; // switch文を抜ける
+            }
+        
+            let subscription: Stripe.Subscription;
+        
             try {
-                const subscription = await stripeClient.subscriptions.retrieve(subscriptionId);
+                // subscription情報が文字列(ID)かオブジェクトかを確認して処理を分岐
+                if (typeof subscriptionIdOrObject === 'string') {
+                    // IDの場合は、Stripe APIで完全なSubscriptionオブジェクトを取得
+                    subscription = await stripeClient.subscriptions.retrieve(subscriptionIdOrObject);
+                } else {
+                    // オブジェクトの場合は、それをそのまま使用
+                    subscription = subscriptionIdOrObject;
+                }
+        
                 const userUid = subscription.metadata.uid;
                 if (!userUid) {
                     logger.warn(`UID not in metadata for customer: ${customerId}`);
                     break;
                 }
+        
                 const userRef = db.collection("users").doc(userUid);
                 await db.runTransaction(async (transaction) => {
                     const userDoc = await transaction.get(userRef);
                     if (!userDoc.exists) return;
-                    const points = userDoc.data()?.points || {};
+                    
+                    const data = userDoc.data();
+                    if (!data) return;
+
+                    const points = data.points || {};
                     if (points.pendingBalance > 0 && points.activationStatus !== 'activated') {
                         transaction.update(userRef, {
                             "points.usableBalance": admin.firestore.FieldValue.increment(points.pendingBalance),
@@ -138,10 +165,12 @@ export const handleStripeWebhooks = onRequest({ timeoutSeconds: 60 }, async (req
                     }
                 });
             } catch (error) {
-                logger.error(`Failed to activate points for customer ${customerId}`, error);
+                logger.error(`Failed to process subscription for customer ${customerId}`, error);
             }
             break;
         }
+        // ▲▲▲ 修正ブロックここまで ▲▲▲
+
         case 'charge.refunded': {
             const charge = event.data.object as Stripe.Charge;
             const checkoutSessionId = charge.metadata.checkout_session_id;
@@ -214,17 +243,17 @@ export const aggregateReferralRewards = onDocumentCreated({
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     } else {
-      const increment = admin.firestore.FieldValue.increment(rewardAmount);
-      const updateData: { [key: string]: any } = {
-        grandTotal: increment,
+      const summaryData = summaryDoc.data();
+      if (!summaryData) return;
+      const partnerTotal = (summaryData.partnerTotal || 0) + (userRole === "partner" ? rewardAmount : 0);
+      const userTotal = (summaryData.userTotal || 0) + (userRole !== "partner" ? rewardAmount : 0);
+      
+      transaction.update(summaryRef, {
+        grandTotal: admin.firestore.FieldValue.increment(rewardAmount),
+        partnerTotal: partnerTotal,
+        userTotal: userTotal,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      if (userRole === "partner") {
-        updateData.partnerTotal = increment;
-      } else {
-        updateData.userTotal = increment;
-      }
-      transaction.update(summaryRef, updateData);
+      });
     }
   });
 });
@@ -233,49 +262,51 @@ export const aggregateReferralRewards = onDocumentCreated({
 // 4. プッシュ通知送信プログラム
 // ========================================================================
 export const sendPushNotification = onCall({ timeoutSeconds: 30 }, async (request) => {
-  const { title, body, uid, allUsers } = request.data;
-  if (!title || !body) {
-    logger.error("Missing required fields: title or body.");
-    return { success: false, error: "Missing title or body." };
-  }
-  try {
-    let tokens: string[] = [];
-    if (allUsers) {
-      const snapshot = await db.collection("fcmTokens").get();
-      snapshot.forEach(doc => {
-        tokens.push(doc.id);
-      });
-    } else if (uid) {
-      const doc = await db.collection("fcmTokens").doc(uid).get();
-      if (doc.exists) {
-        tokens.push(doc.id);
-      }
+    const { title, body, uid, allUsers } = request.data;
+    if (!title || !body) {
+        logger.error("Missing required fields: title or body.");
+        return { success: false, error: "Missing title or body." };
     }
-    if (tokens.length === 0) {
-      logger.info("No tokens to send notification to.");
-      return { success: true, message: "No tokens found." };
-    }
-    const message = {
-      notification: {
-        title: title,
-        body: body,
-      },
-      tokens: tokens,
-    };
-    const response = await messaging.sendEachForMulticast(message);
-    logger.log("Successfully sent messages:", response);
-    if (response.failureCount > 0) {
-      response.responses.forEach(async (resp, idx) => {
-        if (!resp.success) {
-          logger.error(`Failed to send message to token ${tokens[idx]}: ${resp.error}`);
+    try {
+        let tokens: string[] = [];
+        if (allUsers) {
+            const snapshot = await db.collection("fcmTokens").get();
+            snapshot.forEach(doc => {
+                if (doc.data().token) {
+                    tokens.push(doc.data().token);
+                }
+            });
+        } else if (uid) {
+            const doc = await db.collection("fcmTokens").doc(uid).get();
+            if (doc.exists && doc.data()?.token) {
+                tokens.push(doc.data()!.token);
+            }
         }
-      });
+        if (tokens.length === 0) {
+            logger.info("No tokens to send notification to.");
+            return { success: true, message: "No tokens found." };
+        }
+        const message = {
+            notification: {
+                title: title,
+                body: body,
+            },
+            tokens: tokens,
+        };
+        const response = await messaging.sendEachForMulticast(message);
+        logger.log("Successfully sent messages:", response);
+        if (response.failureCount > 0) {
+            response.responses.forEach(async (resp, idx) => {
+                if (!resp.success) {
+                    logger.error(`Failed to send message to token ${tokens[idx]}: ${resp.error}`);
+                }
+            });
+        }
+        return { success: true, response: response };
+    } catch (error) {
+        logger.error("Error sending push notification:", error);
+        return { success: false, error: "Internal server error." };
     }
-    return { success: true, response: response };
-  } catch (error) {
-    logger.error("Error sending push notification:", error);
-    return { success: false, error: "Internal server error." };
-  }
 });
 
 // ========================================================================
@@ -316,7 +347,7 @@ export const receiveFormData = onRequest({ timeoutSeconds: 30 }, async (req, res
 // ======================================================================
 // 6. ポイントの有効期限をチェックし失効させる自動処理
 // ======================================================================
-export const expirePoints = onSchedule("every day 03:00", async (event) => {
+export const expirePoints = onSchedule("every day 03:00", async () => {
     logger.info("ポイント有効期限チェックを開始します。");
     const now = admin.firestore.Timestamp.now();
     const twoMonthsAgo = new Date(now.toDate());
@@ -357,7 +388,7 @@ export const expirePoints = onSchedule("every day 03:00", async (event) => {
 // ======================================================================
 // 7. 年間管理費を徴収する自動処理
 // ======================================================================
-export const collectAnnualPointFee = onSchedule("0 4 1 1 *", async (event) => {
+export const collectAnnualPointFee = onSchedule("0 4 1 1 *", async () => {
     logger.info("年間ポイント管理費の徴収処理を開始します。");
     const now = admin.firestore.Timestamp.now();
     const usersRef = db.collection("users");
@@ -409,6 +440,8 @@ export const interactWithTree = onCall(async (request) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists) { throw new HttpsError('not-found', 'User not found.'); }
             const tree = userDoc.data()?.tree;
+            if (!tree) { throw new HttpsError('internal', 'Tree data not found.'); }
+
             const lastWatered = (tree.lastWatered as admin.firestore.Timestamp)?.toDate();
             if (lastWatered && (now.toDate().getTime() - lastWatered.getTime()) < 23 * 60 * 60 * 1000) {
                 throw new HttpsError('failed-precondition', 'You can only water the tree once a day.');
@@ -424,7 +457,7 @@ export const interactWithTree = onCall(async (request) => {
                 newExpToNextLevel = Math.floor(newLevel * 100 * 1.2);
                 const rewardPoints = 10 + Math.floor(Math.random() * (newLevel * 10));
                 newFruits.push({
-                    id: crypto.randomUUID(),
+                    id: randomUUID(),
                     rewardType: 'points',
                     amount: rewardPoints,
                     createdAt: now,
@@ -446,14 +479,18 @@ export const interactWithTree = onCall(async (request) => {
             const userDoc = await transaction.get(userRef);
             if (!userDoc.exists) { throw new HttpsError('not-found', 'User not found.'); }
             const tree = userDoc.data()?.tree;
+            if (!tree || !tree.fruits) { throw new HttpsError('internal', 'Tree data not found.'); }
+
             const fruitToHarvest = tree.fruits.find((f: any) => f.id === fruitId);
             if (!fruitToHarvest) { throw new HttpsError('not-found', 'Fruit not found.'); }
+            
             transaction.update(userRef, {
                 "points.usableBalance": admin.firestore.FieldValue.increment(fruitToHarvest.amount),
                 "lastTransactionAt": now
             });
             const remainingFruits = tree.fruits.filter((f: any) => f.id !== fruitId);
             transaction.update(userRef, { "tree.fruits": remainingFruits });
+
             const historyRef = userRef.collection("pointHistory").doc();
             transaction.set(historyRef, {
                 amount: fruitToHarvest.amount,
