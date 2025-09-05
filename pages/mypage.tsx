@@ -158,10 +158,12 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
 
         <section className="mb-8">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <a href="/home" className="bg-blue-500 text-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-blue-600 transition-all">
+                {/* ▼▼▼ ここが修正箇所です ▼▼▼ */}
+                <Link href="/home" className="bg-blue-500 text-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-blue-600 transition-all">
                     <RiHome2Line size={32} className="text-white mb-2" />
                     <span className="font-semibold text-sm">アプリトップ</span>
-                </a>
+                </Link>
+                {/* ▲▲▲ ここが修正箇所です ▲▲▲ */}
                 <Link href="/referral-info" className="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-gray-100 transition-all">
                     <RiGiftLine size={32} className="text-pink-500 mb-2" />
                     <span className="font-semibold text-sm text-gray-800">紹介用URL</span>
