@@ -6,6 +6,8 @@ const secretKey = process.env.STRIPE_SECRET_KEY;
 if (!secretKey) {
   throw new Error('STRIPE_SECRET_KEY is not set in environment variables.');
 }
+
+// Stripe インスタンス作成（apiVersion 指定は不要）
 const stripe = new Stripe(secretKey);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const adminDb = getAdminDb();
     const adminAuth = getAdminAuth();
-    
+
     const user = await adminAuth.getUser(uid);
     let stripeCustomerId = user.customClaims?.stripeCustomerId as string | undefined;
 
@@ -34,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       stripeCustomerId = customer.id;
       await adminAuth.setCustomUserClaims(uid, { stripeCustomerId });
     }
-    
+
     const standardPriceId = process.env.STRIPE_STANDARD_PRICE_ID;
     if (!standardPriceId) throw new Error('STRIPE_STANDARD_PRICE_ID is not set');
 
@@ -44,10 +46,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       trial_period_days: 7,
       payment_behavior: 'default_incomplete',
       expand: ['latest_invoice.payment_intent'],
-      collection_method: 'charge_automatically', 
+      collection_method: 'charge_automatically',
     });
 
-    await adminDb.collection('users').doc(uid).set({
+    await adminDb.collection('users').doc(uid).set(
+      {
         name,
         furigana,
         email,
@@ -56,49 +59,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         stripeSubscriptionId: subscription.id,
         subscriptionStatus: 'trialing',
         role: 'user',
-    }, { merge: true });
+      },
+      { merge: true }
+    );
 
-    // ▼▼▼ ここからが修正箇所です ▼▼▼
+    // ▼ 修正版ここから ▼
     const latestInvoice = subscription.latest_invoice;
 
     if (!latestInvoice || typeof latestInvoice === 'string') {
       throw new Error('The latest_invoice was not expanded correctly or is missing.');
     }
 
-    // `payment_intent`プロパティが `latestInvoice` オブジェクト内に存在するかを安全にチェック
-    if (!('payment_intent' in latestInvoice) || !latestInvoice.payment_intent) {
-      throw new Error('Could not find Payment Intent on the invoice.');
-    }
-    
     const paymentIntent = latestInvoice.payment_intent;
-    
     let paymentIntentId: string;
 
-    // paymentIntentが文字列か、または'id'プロパティを持つオブジェクトかを確認
     if (typeof paymentIntent === 'string') {
-        paymentIntentId = paymentIntent;
-    } else if (paymentIntent && 'id' in paymentIntent && typeof paymentIntent.id === 'string') {
-        paymentIntentId = paymentIntent.id;
+      // 文字列ならそのままID
+      paymentIntentId = paymentIntent;
+    } else if (paymentIntent && typeof paymentIntent === 'object' && 'id' in paymentIntent) {
+      // PaymentIntent オブジェクト
+      paymentIntentId = (paymentIntent as Stripe.PaymentIntent).id;
     } else {
-        throw new Error('Payment Intent ID is not in the expected format.');
+      throw new Error('Payment Intent ID is not in the expected format.');
     }
 
     const retrievedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (!retrievedPaymentIntent.client_secret) {
-        throw new Error('Could not find client_secret in the Payment Intent.');
+      throw new Error('Could not find client_secret in the Payment Intent.');
     }
 
     res.status(200).json({
       subscriptionId: subscription.id,
       clientSecret: retrievedPaymentIntent.client_secret,
     });
-    // ▲▲▲ ここまでが修正箇所です ▲▲▲
+    // ▲ 修正版ここまで ▲
 
   } catch (error: any) {
     console.error('Subscription creation error:', error);
     res.status(500).json({ error: error.message });
   }
 }
+
 
 
