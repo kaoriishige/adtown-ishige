@@ -19,6 +19,7 @@
     "firebase": "^10.0.0",
     "firebase-functions": "^6.4.0",
     "formidable": "^3.5.4",
+    "html5-qrcode": "^2.3.8",
     "json2csv": "^6.0.0-alpha.2",
     "lucide-react": "^0.541.0",
     "micro": "^10.0.1",

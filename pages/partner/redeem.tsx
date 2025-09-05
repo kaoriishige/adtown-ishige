@@ -1,117 +1,172 @@
 import { NextPage } from 'next';
 import Head from 'next/head';
-import { useState } from 'react';
-import QrScanner from 'react-qr-scanner';
+import { useEffect, useState, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { RiArrowLeftLine, RiCheckboxCircleFill, RiCloseCircleFill, RiLoader4Line } from 'react-icons/ri';
 import Link from 'next/link';
-// ▼▼▼【修正点】アイコン名を RiCheckboxCircleLine に修正 ▼▼▼
-import { RiCheckboxCircleLine, RiCloseCircleLine } from 'react-icons/ri';
+import nookies from 'nookies';
+import { GetServerSideProps } from 'next';
+import { getAdminAuth } from '../../lib/firebase-admin';
 
 const RedeemPage: NextPage = () => {
-    const [scanResult, setScanResult] = useState<string | null>(null);
+    const [scanResult, setScanResult] = useState<{ message: string; dealTitle: string; storeName: string; } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [message, setMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const readerRef = useRef<HTMLDivElement>(null);
 
-    const handleScan = async (result: any) => {
-        if (result && !isLoading) {
-            setIsLoading(true);
-            setStatus('idle');
-            setMessage('QRコードを検証中...');
-            
+    useEffect(() => {
+        if (!readerRef.current) return;
+
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true,
+        };
+        
+        const html5QrCode = new Html5Qrcode(readerRef.current.id);
+        scannerRef.current = html5QrCode;
+
+        const startScanner = async () => {
             try {
-                const scannedData = JSON.parse(result.text);
-                const { userId, purchasedDealId } = scannedData;
-
-                if (!userId || !purchasedDealId) {
-                    throw new Error('無効なQRコードです。');
-                }
-                
-                const response = await fetch('/api/deals/redeem', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, purchasedDealId }),
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || 'チケットの交換に失敗しました。');
-                }
-                
-                setStatus('success');
-                setMessage('チケットの交換が完了しました。');
-
-            } catch (err: any) {
-                setStatus('error');
-                setMessage(err.message || 'エラーが発生しました。');
-            } finally {
-                setIsLoading(false);
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    onScanError
+                );
+            } catch (err) {
+                console.error("Failed to start scanner", err);
+                setError("カメラの起動に失敗しました。カメラのアクセス許可を確認してください。");
             }
+        };
+
+        startScanner();
+
+        return () => {
+            if (scannerRef.current && scannerRef.current.isScanning) {
+                scannerRef.current.stop().catch(err => console.error("Failed to stop scanner", err));
+            }
+        };
+    }, []);
+
+    const onScanSuccess = async (decodedText: string) => {
+        if (isLoading) return;
+
+        setIsLoading(true);
+        setError(null);
+        setScanResult(null);
+
+        try {
+            if (scannerRef.current && scannerRef.current.isScanning) {
+                await scannerRef.current.stop();
+            }
+
+            const ticketData = JSON.parse(decodedText);
+            if (!ticketData.uid || !ticketData.ticketId) {
+                throw new Error("無効なQRコード形式です。");
+            }
+
+            const response = await fetch('/api/partner/redeem-ticket', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(ticketData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setScanResult({
+                    message: data.message,
+                    dealTitle: data.dealTitle,
+                    storeName: data.storeName
+                });
+            } else {
+                throw new Error(data.error || 'エラーが発生しました。');
+            }
+        } catch (err: any) {
+            setError(err.message || '無効なQRコード、または通信エラーが発生しました。');
+            if (scannerRef.current && !scannerRef.current.isScanning) {
+                scannerRef.current.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanError)
+                    .catch(e => console.error("Failed to restart scanner", e));
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
-  
-    const handleError = (err: any) => {
-        console.error(err);
-        setStatus('error');
-        setMessage('カメラの読み込みに失敗しました。ページの再読み込みや、カメラのアクセス許可を確認してください。');
-    }
 
-    const resetScanner = () => {
-        setStatus('idle');
-        setMessage('');
-    }
-
+    const onScanError = (errorMessage: string) => {
+        // スキャンエラーは通常無視します
+    };
+    
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-900 text-white">
             <Head>
-                <title>チケットを交換する</title>
+                <title>QRコード読み取り - パートナー</title>
             </Head>
-            <div className="max-w-md mx-auto p-4 pt-10">
-                <h1 className="text-3xl font-bold text-center mb-6">チケットを交換する</h1>
 
-                {status === 'idle' && (
-                    <div>
-                        <p className="text-center text-gray-600 mb-4">お客様の提示したQRコードをスキャンしてください</p>
-                        <div className="border-4 border-gray-300 rounded-lg overflow-hidden">
-                            <QrScanner
-                                delay={500}
-                                onError={handleError}
-                                onScan={handleScan}
-                                style={{ width: '100%' }}
-                            />
-                        </div>
-                        {isLoading && <p className="text-center mt-4">{message}</p>}
-                    </div>
-                )}
-
-                {status === 'success' && (
-                    <div className="text-center p-8 bg-white rounded-lg shadow-md">
-                        {/* ▼▼▼【修正点】アイコン名を RiCheckboxCircleLine に修正 ▼▼▼ */}
-                        <RiCheckboxCircleLine size={64} className="text-green-500 mx-auto mb-4" />
-                        <p className="text-2xl font-bold text-green-600">{message}</p>
-                        <button onClick={resetScanner} className="mt-6 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">
-                            次のチケットをスキャン
-                        </button>
-                    </div>
-                )}
-                
-                {status === 'error' && (
-                    <div className="text-center p-8 bg-white rounded-lg shadow-md">
-                        <RiCloseCircleLine size={64} className="text-red-500 mx-auto mb-4" />
-                        <p className="text-xl font-bold text-red-600">{message}</p>
-                        <button onClick={resetScanner} className="mt-6 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">
-                            再試行
-                        </button>
-                    </div>
-                )}
-
-                 <div className="text-center mt-8">
-                    <Link href="/partner/dashboard" className="text-blue-600 hover:underline">
-                        パートナーダッシュボードへ戻る
+            <header className="bg-gray-800 shadow-md">
+                <div className="max-w-xl mx-auto p-4 flex items-center">
+                    <Link href="/partner/dashboard" className="mr-4">
+                        <RiArrowLeftLine size={24} />
                     </Link>
+                    <h1 className="text-xl font-bold">チケットを認証</h1>
                 </div>
-            </div>
+            </header>
+
+            <main className="max-w-xl mx-auto p-4 sm:p-6 text-center">
+                <div id="qr-reader-container" className="relative w-full max-w-sm mx-auto aspect-square rounded-lg overflow-hidden border-4 border-gray-700">
+                    <div id="qr-reader" ref={readerRef} className="w-full h-full"></div>
+                </div>
+
+                <div className="mt-6 min-h-[100px]">
+                    {isLoading && (
+                        <div className="flex flex-col items-center justify-center text-lg">
+                            <RiLoader4Line className="animate-spin text-4xl mb-2" />
+                            <p>認証中...</p>
+                        </div>
+                    )}
+                    {error && (
+                        <div className="bg-red-500/20 border border-red-500 text-red-300 p-4 rounded-lg flex flex-col items-center">
+                            <RiCloseCircleFill className="text-4xl mb-2" />
+                            <p className="font-bold">認証エラー</p>
+                            <p className="text-sm mt-1">{error}</p>
+                        </div>
+                    )}
+                    {scanResult && (
+                         <div className="bg-green-500/20 border border-green-500 text-green-300 p-4 rounded-lg flex flex-col items-center">
+                            <RiCheckboxCircleFill className="text-4xl mb-2" />
+                            <p className="font-bold">{scanResult.message}</p>
+                            <div className="mt-2 text-sm text-left w-full bg-gray-800 p-3 rounded-md">
+                                <p><span className="font-semibold">店舗:</span> {scanResult.storeName}</p>
+                                <p><span className="font-semibold">内容:</span> {scanResult.dealTitle}</p>
+                            </div>
+                        </div>
+                    )}
+                     {!isLoading && !error && !scanResult && (
+                        <p className="text-gray-400">枠内にQRコードをかざしてください</p>
+                    )}
+                </div>
+            </main>
         </div>
     );
+};
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+    try {
+        const cookies = nookies.get(ctx);
+        if (!cookies.token) {
+            return { redirect: { destination: '/partner/login', permanent: false } };
+        }
+        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+        const userDoc = await getAdminAuth().getUser(token.uid);
+        if (userDoc.customClaims?.role !== 'partner') {
+             return { redirect: { destination: '/partner/login', permanent: false } };
+        }
+        return { props: {} };
+    } catch (error) {
+        return { redirect: { destination: '/partner/login', permanent: false } };
+    }
 };
 
 export default RedeemPage;
