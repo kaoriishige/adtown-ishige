@@ -40,7 +40,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   // --- 運営設定をデータベースから取得する ---
-  // 報酬率を動的に取得するために、settingsコレクションからデータを取得します
   let referralRewardRate = 0.2; // デフォルト値
   try {
     const settingsDoc = await adminDb.collection('settings').doc('appSettings').get();
@@ -56,13 +55,56 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   // --- イベントタイプに応じた処理 ---
   switch (event.type) {
+    // ▼▼▼ 【重要】エラー箇所をsubscriptionSchedulesを使用するロジックに修正 ▼▼▼
+    case 'customer.subscription.trial_will_end': {
+      const subscription = event.data.object as Stripe.Subscription;
+      
+      const initialPriceId = process.env.STRIPE_CAMPAIGN_PRICE_ID!;
+      const standardPriceId = process.env.STRIPE_STANDARD_PRICE_ID!; // 通常プランのIDも必要
+      
+      if (!initialPriceId || !standardPriceId) {
+        console.error('Stripe Price ID is not set in environment variables.');
+        break;
+      }
+
+      try {
+        // 既存のサブスクリプションからスケジュールを作成する
+        const schedule = await stripe.subscriptionSchedules.create({
+          from_subscription: subscription.id,
+        });
+
+        // 作成したスケジュールを更新して、トライアル後の料金プランを定義する
+        await stripe.subscriptionSchedules.update(schedule.id, {
+          end_behavior: 'release', // スケジュール完了後は、最後のフェーズの設定でサブスクリプションを継続
+          proration_behavior: 'none',
+          // トライアル後に追加するフェーズを定義
+          phases: [
+            // フェーズ1: トライアル終了後の最初の1ヶ月間は480円プラン
+            {
+              items: [{ price: initialPriceId }],
+              iterations: 1, // このフェーズは1回（1ヶ月）で終了
+            },
+            // フェーズ2: その後は980円プランで無期限に継続
+            {
+              items: [{ price: standardPriceId }],
+            },
+          ],
+        });
+        
+        console.log(`SUCCESS: Subscription ${subscription.id} scheduled to transition to initial price plan after trial.`);
+      } catch (error) {
+        console.error('Webhook Error (customer.subscription.trial_will_end):', error);
+      }
+      break;
+    }
+    // ▲▲▲ ここまで ▲▲▲
+
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
       const { metadata } = session;
 
       if (metadata?.user_type === 'partner') {
-        // パートナー登録の処理 (この部分は変更なし)
-        // ...
+        // パートナー登録の処理
       } else {
         // 一般ユーザーのサブスクリプション処理
         const { uid, referrerUid } = metadata!;
@@ -84,7 +126,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           await adminAuth.setCustomUserClaims(uid, { stripeRole: 'paid' });
           console.log(`SUCCESS: User ${uid} subscription created with status: ${initialStatus}.`);
 
-          // 紹介者がいる場合、報酬を発生させる
           if (referrerUid && amountTotal) {
             const referrerRef = adminDb.collection('users').doc(referrerUid);
             const referrerDoc = await referrerRef.get();
@@ -94,9 +135,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               const referrerStatus = referrerData.subscriptionStatus;
 
               if (referrerStatus === 'active' || referrerStatus === 'trialing') {
-                // ▼▼▼ 変更点: データベースから取得した報酬率を使用する ▼▼▼
                 const rewardAmount = Math.floor(amountTotal * referralRewardRate);
-
                 const rewardStatus = referrerStatus === 'active' ? 'unpaid' : 'pending';
 
                 await adminDb.collection('referralRewards').add({
@@ -133,8 +172,21 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const subscription = event.data.object as Stripe.Subscription;
       const previousAttributes = event.data.previous_attributes;
 
+      // Firestoreのステータスを更新する汎用ロジック
+      const customerId = subscription.customer as string;
+      try {
+          const usersQuery = await getAdminDb().collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
+          if (!usersQuery.empty) {
+              const userDoc = usersQuery.docs[0];
+              await userDoc.ref.update({ subscriptionStatus: subscription.status });
+              console.log(`SUCCESS: Updated subscription status for user ${userDoc.id} to ${subscription.status}.`);
+          }
+      } catch (error) {
+          console.error('Webhook Error (customer.subscription.updated - status sync):', error);
+      }
+      
+      // トライアルから本課金に移行した際の報酬アクティベート処理
       if (previousAttributes?.status === 'trialing' && subscription.status === 'active') {
-        const customerId = subscription.customer as string;
         try {
           const usersQuery = await adminDb.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
           if (usersQuery.empty) {
@@ -143,8 +195,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           }
           const userDoc = usersQuery.docs[0];
           const userId = userDoc.id;
-
-          await userDoc.ref.update({ subscriptionStatus: 'active' });
 
           const rewardsQuery = await adminDb.collection('referralRewards')
               .where('referrerUid', '==', userId)
@@ -161,7 +211,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           await adminDb.runTransaction(async (transaction) => {
               rewardsQuery.docs.forEach(doc => {
                   transaction.update(doc.ref, { rewardStatus: 'unpaid' });
-                  // ▼▼▼ 変更点: ここも報酬率を動的に取得するように修正 ▼▼▼
                   const rewardAmount = doc.data().rewardAmount;
                   totalActivatedReward += rewardAmount;
               });
@@ -175,7 +224,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           console.log(`SUCCESS: Activated ${rewardsQuery.size} pending rewards for user ${userId} totaling ${totalActivatedReward} yen.`);
 
         } catch (error) {
-            console.error('Webhook Error (customer.subscription.updated):', error);
+            console.error('Webhook Error (customer.subscription.updated - reward activation):', error);
         }
       }
       break;
@@ -202,6 +251,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
       break;
     }
+
+    default:
+        console.log(`Unhandled event type: ${event.type}`);
   }
 
   res.status(200).json({ received: true });

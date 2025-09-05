@@ -1,12 +1,13 @@
 import { NextPage } from 'next';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+// useRouterはリダイレクトに使わなくなるため、削除してもOKです
+// import { useRouter } from 'next/router'; 
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 
 const LoginPage: NextPage = () => {
-  const router = useRouter();
+  // const router = useRouter(); // 不要
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,9 +22,19 @@ const LoginPage: NextPage = () => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'ログインに失敗しました。');
     
-    if (data.role === 'admin') router.push('/admin/dashboard');
-    else if (data.role === 'partner') router.push('/partner/dashboard');
-    else router.push('/mypage');
+    console.log('APIから返された役割:', data.role);
+
+    // ▼▼▼ ここからが修正箇所です ▼▼▼
+    // router.pushではなく、window.location.assignでフルページリロードを強制します
+    // これにより、サーバーで設定されたセッションクッキーが有効になります。
+    if (data.role === 'admin') {
+      window.location.assign('/admin/dashboard');
+    } else if (data.role === 'partner') {
+      window.location.assign('/partner/dashboard');
+    } else {
+      window.location.assign('/mypage');
+    }
+    // ▲▲▲ ここまで ▲▲▲
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -67,7 +78,6 @@ const LoginPage: NextPage = () => {
         </button>
         <div className="relative flex py-2 items-center"><div className="flex-grow border-t border-gray-300"></div><span className="flex-shrink mx-4 text-gray-400 text-sm">または</span><div className="flex-grow border-t border-gray-300"></div></div>
         <form onSubmit={handleEmailLogin} className="space-y-6">
-          {/* ★★★ ここのタイプミスを修正しました ★★★ */}
           <div><label className="block mb-2 text-sm font-medium">メールアドレス</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded-md" required /></div>
           <div><label className="block mb-2 text-sm font-medium">パスワード</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border rounded-md" required /></div>
           <button type="submit" disabled={isLoading} className="w-full py-2 px-4 text-white bg-blue-500 rounded-md hover:bg-blue-600 disabled:bg-gray-400">{isLoading ? 'ログイン中...' : 'ログイン'}</button>
@@ -78,7 +88,5 @@ const LoginPage: NextPage = () => {
     </div>
   );
 };
-
-// getServerSidePropsを削除しました
 
 export default LoginPage;

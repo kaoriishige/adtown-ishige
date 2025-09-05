@@ -1,5 +1,5 @@
 import { NextPage } from 'next';
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // useEffectを追加
 import Link from 'next/link';
 
 // --- カテゴリデータ ---
@@ -17,6 +17,7 @@ const PartnerSignupPage: NextPage = () => {
   // --- State定義 ---
   const [storeName, setStoreName] = useState('');
   const [address, setAddress] = useState('');
+  const [area, setArea] = useState(''); // ★ 新しく追加 ★
   const [contactPerson, setContactPerson] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [qrStandCount, setQrStandCount] = useState(0);
@@ -29,6 +30,17 @@ const PartnerSignupPage: NextPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // --- 住所からエリアを抽出するロジック ---
+  useEffect(() => {
+    // 栃木県那須塩原市や那須郡那須町のようなパターンを抽出
+    const match = address.match(/(那須塩原市|那須郡那須町|那須町)/);
+    if (match) {
+      setArea(match[1]);
+    } else {
+      setArea('');
+    }
+  }, [address]);
 
   // --- 送信処理 ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +55,11 @@ const PartnerSignupPage: NextPage = () => {
     }
     if (!agreed) {
       setError('利用規約への同意が必要です。');
+      setIsLoading(false);
+      return;
+    }
+    if (!area) { // ★ エリアが空の場合はエラー ★
+      setError('住所から那須地域のエリアを特定できませんでした。住所を正しく入力してください。');
       setIsLoading(false);
       return;
     }
@@ -64,6 +81,7 @@ const PartnerSignupPage: NextPage = () => {
         body: JSON.stringify({ 
           storeName, 
           address,
+          area, // ★ areaを送信データに追加 ★
           contactPerson, 
           phoneNumber, 
           qrStandCount,
