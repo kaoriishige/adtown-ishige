@@ -1,13 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import stripe from '@/lib/stripe'; // { }を削除
-import { getAdminDb } from '@/lib/firebase-admin'; // 仮の関数名。実際のexportに合わせてください。
+import stripe from '@/lib/stripe';
+// ★ 修正点: getAdminDb関数をインポートするように変更
+import { getAdminDb } from '@/lib/firebase-admin';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
     return res.status(405).setHeader('Allow', 'POST').json({ error: 'Method Not Allowed' });
   }
-  
-  const db = getAdminDb(); // DBインスタンスを取得
+
+  // ★ 修正点: getAdminDb関数を呼び出してdbインスタンスを取得
+  const db = getAdminDb();
 
   const { name, furigana, email, uid, paymentMethodId, referrerId } = req.body;
 
@@ -19,13 +21,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     let isValidReferrer = false;
     let referrerType: 'user' | 'partner' | null = null;
     
+    // 紹介IDの検証ロジック
     if (referrerId) {
+      // 1. usersコレクションを検索
       const userRef = db.collection('users').doc(referrerId);
       const userDoc = await userRef.get();
       if (userDoc.exists) {
         isValidReferrer = true;
         referrerType = 'user';
       } else {
+        // 2. partnersコレクションを検索 (ご自身のコレクション名に合わせてください)
         const partnerRef = db.collection('partners').doc(referrerId); 
         const partnerDoc = await partnerRef.get();
         if (partnerDoc.exists) {
@@ -35,6 +40,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     }
 
+    // Stripe顧客を作成
     const customer = await stripe.customers.create({
       email,
       name,
@@ -45,6 +51,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       },
     });
 
+    // トライアル付きサブスクリプションを作成
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
       items: [{ price: process.env.STRIPE_PRICE_ID }],
@@ -52,6 +59,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       metadata: { uid },
     });
 
+    // Firestoreにユーザー情報を保存
     const userDocData = {
       name,
       furigana,
@@ -78,6 +86,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 };
 
 export default handler;
-
 
 
