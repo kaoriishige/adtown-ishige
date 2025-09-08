@@ -20,7 +20,7 @@ const categories = [
     name: '教育・習い事', 
     emoji: '🎓', 
     slug: 'education', 
-    description: '学習塾、ピアノ、英会話' 
+    description: '学習塾、ピアノ、英会話、Web、AI、その他' 
   },
   { 
     name: 'グルメ・カフェ', 
@@ -32,13 +32,13 @@ const categories = [
     name: '美容・健康', 
     emoji: '💅', 
     slug: 'beauty-health', 
-    description: '美容室、エステ、整体' 
+    description: '美容室、エステ、整体、その他' 
   },
   { 
     name: '産直・専門店', 
     emoji: '🌿', 
     slug: 'local-products', 
-    description: '農産物、お土産、個人商店' 
+    description: '農産物、お土産、個人商店、その他' 
   },
   { 
     name: '宿泊・温泉', 
@@ -50,7 +50,7 @@ const categories = [
     name: '専門サービス', 
     emoji: '🛠️', 
     slug: 'professional-services', 
-    description: '修理、クリーニング、士業' 
+    description: '修理、クリーニング、士業、その他' 
   },
 ];
 
