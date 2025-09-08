@@ -1,30 +1,32 @@
 import { NextPage } from 'next';
-import { useState, useEffect } from 'react'; // useEffectを追加
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-// --- カテゴリデータ ---
+// --- カテゴリデータを「地元資本」を軸に更新 ---
 const categories = [
-  { name: '飲食店', slug: 'restaurant' },
-  { name: '美容室', slug: 'hair-salon' },
-  { name: 'Beauty (エステ, ネイルなど)', slug: 'beauty' },
-  { name: 'Health (整体, ヨガなど)', slug: 'health' },
-  { name: '暮らし', slug: 'living' },
-  { name: 'レジャー', slug: 'leisure' },
-  { name: 'その他', slug: 'other' },
+  { name: '住まい・リフォーム', slug: 'housing' },
+  { name: '車・バイク', slug: 'automotive' },
+  { name: '教育・習い事', slug: 'education' },
+  { name: 'グルメ・カフェ', slug: 'gourmet' },
+  { name: '美容・健康', slug: 'beauty-health' },
+  { name: '産直・専門店', slug: 'local-products' },
+  { name: '宿泊・温泉', slug: 'lodging-onsen' },
+  { name: '専門サービス', slug: 'professional-services' },
+  { name: 'その他', slug: 'other' }, // 「その他」は残して、カスタム入力を可能にします
 ];
 
 const PartnerSignupPage: NextPage = () => {
   // --- State定義 ---
   const [storeName, setStoreName] = useState('');
   const [address, setAddress] = useState('');
-  const [area, setArea] = useState(''); // ★ 新しく追加 ★
+  const [area, setArea] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [qrStandCount, setQrStandCount] = useState(0);
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [category, setCategory] = useState(categories[0].slug);
+  const [category, setCategory] = useState(categories[0].slug); // 初期値を新しいリストの先頭に設定
   const [customGenre, setCustomGenre] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,10 +35,9 @@ const PartnerSignupPage: NextPage = () => {
 
   // --- 住所からエリアを抽出するロジック ---
   useEffect(() => {
-    // 栃木県那須塩原市や那須郡那須町のようなパターンを抽出
-    const match = address.match(/(那須塩原市|那須郡那須町|那須町)/);
+    const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/); // 大田原市も対象に追加
     if (match) {
-      setArea(match[1]);
+      setArea(match[0]); // マッチした市町村名をそのままセット
     } else {
       setArea('');
     }
@@ -58,8 +59,8 @@ const PartnerSignupPage: NextPage = () => {
       setIsLoading(false);
       return;
     }
-    if (!area) { // ★ エリアが空の場合はエラー ★
-      setError('住所から那須地域のエリアを特定できませんでした。住所を正しく入力してください。');
+    if (!area) { 
+      setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。');
       setIsLoading(false);
       return;
     }
@@ -75,13 +76,14 @@ const PartnerSignupPage: NextPage = () => {
     }
     
     try {
-      const signupResponse = await fetch('/api/partner/create-account', {
+      // APIエンドポイントは /api/partner/signup に変更する想定
+      const signupResponse = await fetch('/api/partner/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           storeName, 
           address,
-          area, // ★ areaを送信データに追加 ★
+          area, 
           contactPerson, 
           phoneNumber, 
           qrStandCount,
@@ -93,7 +95,7 @@ const PartnerSignupPage: NextPage = () => {
 
       const signupData = await signupResponse.json();
       if (!signupResponse.ok) {
-        throw new Error(signupData.error || '登録に失敗しました。');
+        throw new Error(signupData.message || '登録に失敗しました。');
       }
 
       setIsSuccess(true);
@@ -118,12 +120,12 @@ const PartnerSignupPage: NextPage = () => {
               ご登録ありがとうございます
             </h1>
             <p className="text-gray-600 mt-4 text-lg">
-              パートナー登録が完了しました。
+              パートナー登録の申請を受け付けました。
             </p>
             <div className="mt-8 bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-md text-left">
               <h2 className="font-bold">今後の流れについて</h2>
               <p className="mt-2">
-                QRコードスタンドは、後日担当者よりご連絡の上、お届けに伺います。
+                運営者による承認後、本登録完了となります。QRコードスタンドは、後日担当者よりご連絡の上、お届けに伺います。
               </p>
             </div>
             <div className="mt-8">
@@ -136,18 +138,16 @@ const PartnerSignupPage: NextPage = () => {
           <>
             <h1 className="text-2xl font-bold text-center mb-6">パートナー無料登録</h1>
 
-            {/* ▼▼▼ 修正点 ▼▼▼ */}
             <div className="text-center mb-8">
               <a 
                 href="https://disguised-cat-noakl5d.gamma.site/" 
-                target="_blank" // これで新しいタブでページが開きます
-                rel="noopener noreferrer" // セキュリティ上のお作法です
+                target="_blank" 
+                rel="noopener noreferrer" 
                 className="inline-block bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
               >
                 とってもお得なご案内はこちら
               </a>
             </div>
-            {/* ▲▲▲ ここまで ▲▲▲ */}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
