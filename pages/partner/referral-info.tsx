@@ -13,8 +13,9 @@ interface ReferralInfoProps {
 }
 
 const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
-    // サーバーから渡されたユニークIDを元に、正しいランディングページへの紹介URLを生成
-    const referralUrl = `https://minna-no-nasu-app.com/?ref=${user.uid}`;
+    // ★★★ ここが修正箇所です ★★★
+    // 正しいランディングページのURLに修正しました
+    const referralUrl = `https://minna-no-nasu-app.netlify.app/?ref=${user.uid}`;
 
     const [copied, setCopied] = useState(false);
 
@@ -93,6 +94,7 @@ const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
     );
 }
 
+// サーバーサイドでログイン状態をチェックし、ユーザーIDを取得する
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const adminAuth = getAdminAuth();
