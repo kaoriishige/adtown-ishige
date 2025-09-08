@@ -21,7 +21,10 @@ const ProfilePage: NextPage = () => {
         description: '',
         hours: '月〜金: 10:00-20:00\n土日祝: 11:00-22:00',
         website: '',
-        instagram: '',
+        // ★★★ 変更点(1): Instagramを汎用的なSNSに修正 ★★★
+        sns1: '',
+        sns2: '',
+        sns3: '',
     });
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -50,40 +53,39 @@ const ProfilePage: NextPage = () => {
                         <FormLabel>店舗名 <span className="text-red-500">*</span></FormLabel>
                         <Input type="text" name="storeName" value={formData.storeName} onChange={handleChange} required />
                     </div>
-                    {/* ... その他のフォーム要素は省略 ... */}
                     <div>
                         <FormLabel>住所 <span className="text-red-500">*</span></FormLabel>
                         <Input type="text" name="address" value={formData.address} onChange={handleChange} required />
                     </div>
-
                     <div>
                         <FormLabel>電話番号 <span className="text-red-500">*</span></FormLabel>
                         <Input type="tel" name="phone" value={formData.phone} onChange={handleChange} required />
                     </div>
-                    
                     <div>
                         <FormLabel>店舗紹介文</FormLabel>
                         <Textarea name="description" value={formData.description} onChange={handleChange} placeholder="お店のこだわりやお客様へのメッセージを記入してください。" />
                     </div>
-                    
                     <div>
                         <FormLabel>営業時間</FormLabel>
                         <Textarea name="hours" value={formData.hours} onChange={handleChange} />
                     </div>
-                    
                     <div>
                         <FormLabel>店舗写真 (複数可)</FormLabel>
                         <Input type="file" name="photos" multiple accept="image/*" className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                     </div>
-
                     <div>
                         <FormLabel>公式ウェブサイトURL</FormLabel>
                         <Input type="url" name="website" value={formData.website} onChange={handleChange} placeholder="https://..." />
                     </div>
                     
+                    {/* ★★★ 変更点(2): Instagramの入力欄をSNS URL x3に変更 ★★★ */}
                     <div>
-                        <FormLabel>Instagram URL</FormLabel>
-                        <Input type="url" name="instagram" value={formData.instagram} onChange={handleChange} placeholder="https://www.instagram.com/..." />
+                        <FormLabel>SNS URL</FormLabel>
+                        <div className="space-y-2">
+                            <Input type="url" name="sns1" value={formData.sns1} onChange={handleChange} placeholder="https://..." />
+                            <Input type="url" name="sns2" value={formData.sns2} onChange={handleChange} placeholder="https://..." />
+                            <Input type="url" name="sns3" value={formData.sns3} onChange={handleChange} placeholder="https://..." />
+                        </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-4">
@@ -100,5 +102,4 @@ const ProfilePage: NextPage = () => {
     );
 };
 
-// ★★★ おそらくこの行がファイルから欠落しています ★★★
 export default ProfilePage;
