@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import { useState } from 'react';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { getAdminAuth } from '../../../lib/firebase-admin';
 import { RiUserSearchLine } from 'react-icons/ri';
 import Link from 'next/link';
 
@@ -45,11 +45,8 @@ const UserManagementPage: NextPage = () => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '検索に失敗しました。');
-            
             if (data.users.length === 0) {
                 setError('該当するユーザーが見つかりませんでした。');
-            } else {
-              setError(null);
             }
             setUsers(data.users);
         } catch (err: any) {
@@ -82,7 +79,7 @@ const UserManagementPage: NextPage = () => {
             setSelectedUser(null);
             setPointsToAdd(0);
             setReason('');
-            handleSearch();
+            handleSearch(); // 最新の情報に更新
         } catch (err: any) {
             alert(`エラー: ${err.message}`);
         }
@@ -101,8 +98,6 @@ const UserManagementPage: NextPage = () => {
                     </Link>
                 </div>
             </header>
-            
-            {/* ▼▼▼【ここからが復元されたUI部分です】▼▼▼ */}
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
                 <div className="bg-white p-4 rounded-lg shadow mb-6">
                     <form onSubmit={handleSearch} className="flex gap-4">
@@ -121,7 +116,6 @@ const UserManagementPage: NextPage = () => {
                 </div>
 
                 {error && <p className="text-red-500 text-center py-4">{error}</p>}
-                
                 <div className="bg-white shadow overflow-hidden sm:rounded-lg">
                     <ul role="list" className="divide-y divide-gray-200">
                         {users.map((user) => (
@@ -180,7 +174,6 @@ const UserManagementPage: NextPage = () => {
                     </div>
                 </div>
             )}
-            {/* ▲▲▲【復元されたUI部分はここまでです】▲▲▲ */}
         </div>
     );
 };
@@ -192,10 +185,9 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
         const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-        
-        const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
-        if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
-            return { redirect: { destination: '/admin/login', permanent: false } };
+        const user = await getAdminAuth().getUser(token.uid);
+        if (user.customClaims?.role !== 'admin') {
+             return { redirect: { destination: '/admin/login', permanent: false } };
         }
         return { props: {} };
     } catch (error) {
@@ -204,6 +196,3 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 };
 
 export default UserManagementPage;
-
-
-

@@ -1,11 +1,9 @@
-import { GetServerSideProps, NextPage } from 'next';
+import type { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
-import { useEffect, useState, useRef } from 'react';
+import { useState } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
 import nookies from 'nookies';
-import { getAdminAuth } from '@/lib/firebase-admin';
-
-// TypeScriptが'QRCode'を認識できるようにするための型定義
-declare const QRCode: any;
+import { getAdminAuth } from '@/lib/firebase-admin'; // Firebase Adminのインポートパスはご自身の環境に合わせてください
 
 // Propsの型定義
 interface ReferralInfoProps {
@@ -14,105 +12,94 @@ interface ReferralInfoProps {
   };
 }
 
-const QRCodeCanvas: React.FC<{ text: string }> = ({ text }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const scriptId = 'qrcode-script';
-    let script = document.getElementById(scriptId) as HTMLScriptElement;
-
-    const generateQrCode = () => {
-      if (canvasRef.current && typeof QRCode !== 'undefined') {
-        QRCode.toCanvas(canvasRef.current, text, { width: 256, margin: 2 }, (error: any) => {
-          if (error) console.error('QRコードの生成に失敗しました:', error);
-        });
-      }
-    };
-
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = "https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js";
-      script.async = true;
-      script.onload = generateQrCode;
-      document.body.appendChild(script);
-    } else if (typeof QRCode !== 'undefined') {
-      generateQrCode();
-    } else {
-      script.addEventListener('load', generateQrCode);
-    }
-
-    return () => {
-      if (script) {
-        script.removeEventListener('load', generateQrCode);
-      }
-    };
-  }, [text]);
-
-  return <canvas ref={canvasRef} id="qrcode-canvas"></canvas>;
-};
-
-
 const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
-  const [copied, setCopied] = useState(false);
-  // --- ★★★ ここを修正 ★★★ ---
-  // 紹介用URLのリンク先を、新規登録ページ(/signup)からランディングページ(/)に修正しました
-  const referralUrl = `https://minna-no-nasu-app.netlify.app/?ref=${user.uid}`;
+    // サーバーから渡されたユニークIDを元に、正しいランディングページへの紹介URLを生成
+    const referralUrl = `https://minna-no-nasu-app.com/?ref=${user.uid}`;
 
-  const handleCopyUrl = () => {
-    navigator.clipboard.writeText(referralUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+    const [copied, setCopied] = useState(false);
 
-  const handleDownloadQr = () => {
-    const canvas = document.getElementById('qrcode-canvas') as HTMLCanvasElement;
-    if (canvas) {
-      const link = document.createElement('a');
-      link.download = 'referral-qrcode.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    }
-  };
+    // URLをクリップボードにコピーする関数
+    const handleCopy = () => {
+        navigator.clipboard.writeText(referralUrl).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000); // 2秒後に表示を元に戻す
+        });
+    };
 
-  return (
-    <div className="p-5 max-w-2xl mx-auto font-sans">
-      <Link href="/partner/dashboard" className="text-blue-500 hover:underline">
-        ← マイページに戻る
-      </Link>
-      <h1 className="text-3xl font-bold my-6 text-center">紹介用URLとQRコード</h1>
-      
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 text-center">
-        <p className="text-gray-600 mb-4">以下のURLまたはQRコードを使って、新しいユーザー様をご紹介ください。</p>
-        
-        {/* 紹介用URL */}
-        <div className="mb-8">
-          <label className="block text-gray-700 text-sm font-bold mb-2">あなたの紹介用URL</label>
-          <div className="flex items-center justify-center">
-            <input type="text" value={referralUrl} readOnly className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"/>
-            <button onClick={handleCopyUrl} className="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-              {copied ? 'コピーしました！' : 'コピー'}
-            </button>
-          </div>
+    // QRコードをダウンロードする関数
+    const handleDownload = () => {
+        const canvas = document.getElementById('qrcode-canvas') as HTMLCanvasElement;
+        if (canvas) {
+            const pngUrl = canvas
+                .toDataURL("image/png")
+                .replace("image/png", "image/octet-stream");
+            
+            const downloadLink = document.createElement("a");
+            downloadLink.href = pngUrl;
+            downloadLink.download = "referral-qrcode.png";
+            
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <header className="bg-white shadow-sm">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <h1 className="text-2xl font-bold text-gray-900">紹介用URLとQRコード</h1>
+                </div>
+            </header>
+             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="bg-white p-8 rounded-lg shadow-sm text-center">
+                    <h2 className="text-xl font-bold text-gray-800">お客様にアプリを紹介しましょう！</h2>
+                    <p className="mt-2 text-gray-600">
+                        以下のURLまたはQRコードからお客様がアプリに登録すると、あなたに紹介報酬が支払われます。
+                    </p>
+
+                    <div className="mt-8">
+                        <label className="block text-sm font-medium text-gray-700 text-left">紹介用URL</label>
+                        <div className="mt-1 flex rounded-md shadow-sm">
+                            <input type="text" readOnly value={referralUrl} className="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-l-md sm:text-sm border-gray-300 bg-gray-100" />
+                            <button onClick={handleCopy} type="button" className="w-28 -ml-px relative inline-flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100">
+                                <span>{copied ? 'コピーしました！' : 'コピー'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-8">
+                         <label className="block text-sm font-medium text-gray-700 text-left mb-2">紹介用QRコード</label>
+                         <div className="flex justify-center p-4 border rounded-lg bg-white">
+                             <QRCodeCanvas
+                                id="qrcode-canvas"
+                                value={referralUrl}
+                                size={192}
+                                bgColor={"#ffffff"}
+                                fgColor={"#000000"}
+                                level={"L"}
+                                includeMargin={true}
+                             />
+                         </div>
+                         <p className="text-xs text-gray-500 mt-2">お客様のスマートフォンで読み取ってもらってください。</p>
+                    </div>
+
+                    <div className="mt-8">
+                        <button onClick={handleDownload} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            QRコードをダウンロード
+                        </button>
+                    </div>
+                </div>
+
+                 <div className="mt-8">
+                   <Link href="/partner/dashboard" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                        ← ダッシュボードに戻る
+                    </Link>
+                </div>
+            </main>
         </div>
-
-        {/* QRコード */}
-        <div className="mb-8">
-          <label className="block text-gray-700 text-sm font-bold mb-2">紹介用QRコード</label>
-          <div className="flex justify-center">
-            <QRCodeCanvas text={referralUrl} />
-          </div>
-        </div>
-        
-        {/* ダウンロードボタン */}
-        <button onClick={handleDownloadQr} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-          QRコードをダウンロード
-        </button>
-      </div>
-    </div>
-  );
-};
+    );
+}
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
@@ -127,6 +114,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (err) {
+    // ログインしていない場合はログインページにリダイレクト
     return {
       redirect: {
         destination: '/partner/login',
