@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import nookies from 'nookies';
-import { getAdminAuth } from '@/lib/firebase-admin'; // Firebase Adminのインポートパスはご自身の環境に合わせてください
+import { getAdminAuth } from '@/lib/firebase-admin';
 
 // Propsの型定義
 interface ReferralInfoProps {
@@ -22,7 +22,7 @@ const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
     const handleCopy = () => {
         navigator.clipboard.writeText(referralUrl).then(() => {
             setCopied(true);
-            setTimeout(() => setCopied(false), 2000); // 2秒後に表示を元に戻す
+            setTimeout(() => setCopied(false), 2000);
         });
     };
 
@@ -30,14 +30,10 @@ const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
     const handleDownload = () => {
         const canvas = document.getElementById('qrcode-canvas') as HTMLCanvasElement;
         if (canvas) {
-            const pngUrl = canvas
-                .toDataURL("image/png")
-                .replace("image/png", "image/octet-stream");
-            
+            const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
             const downloadLink = document.createElement("a");
             downloadLink.href = pngUrl;
             downloadLink.download = "referral-qrcode.png";
-            
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
@@ -57,7 +53,6 @@ const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
                     <p className="mt-2 text-gray-600">
                         以下のURLまたはQRコードからお客様がアプリに登録すると、あなたに紹介報酬が支払われます。
                     </p>
-
                     <div className="mt-8">
                         <label className="block text-sm font-medium text-gray-700 text-left">紹介用URL</label>
                         <div className="mt-1 flex rounded-md shadow-sm">
@@ -67,7 +62,6 @@ const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
                             </button>
                         </div>
                     </div>
-
                     <div className="mt-8">
                          <label className="block text-sm font-medium text-gray-700 text-left mb-2">紹介用QRコード</label>
                          <div className="flex justify-center p-4 border rounded-lg bg-white">
@@ -83,14 +77,12 @@ const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
                          </div>
                          <p className="text-xs text-gray-500 mt-2">お客様のスマートフォンで読み取ってもらってください。</p>
                     </div>
-
                     <div className="mt-8">
                         <button onClick={handleDownload} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
                             QRコードをダウンロード
                         </button>
                     </div>
                 </div>
-
                  <div className="mt-8">
                    <Link href="/partner/dashboard" className="text-sm font-medium text-gray-600 hover:text-gray-900">
                         ← ダッシュボードに戻る
@@ -114,7 +106,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (err) {
-    // ログインしていない場合はログインページにリダイレクト
     return {
       redirect: {
         destination: '/partner/login',
