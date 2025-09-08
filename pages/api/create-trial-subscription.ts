@@ -1,106 +1,83 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import Stripe from 'stripe';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { NextApiRequest, NextApiResponse } from 'next';
+import stripe from '@/lib/stripe'; // { }を削除
+import { getAdminDb } from '@/lib/firebase-admin'; // 仮の関数名。実際のexportに合わせてください。
 
-const secretKey = process.env.STRIPE_SECRET_KEY;
-if (!secretKey) {
-  throw new Error('STRIPE_SECRET_KEY is not set in environment variables.');
-}
-const stripe = new Stripe(secretKey);
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
-    return res.status(405).end('Method Not Allowed');
+    return res.status(405).setHeader('Allow', 'POST').json({ error: 'Method Not Allowed' });
+  }
+  
+  const db = getAdminDb(); // DBインスタンスを取得
+
+  const { name, furigana, email, uid, paymentMethodId, referrerId } = req.body;
+
+  if (!name || !email || !uid || !paymentMethodId) {
+    return res.status(400).json({ error: '必須パラメータが不足しています。' });
   }
 
   try {
-    const { name, furigana, email, uid } = req.body;
-    if (!name || !furigana || !email || !uid) {
-      return res.status(400).json({ error: 'All fields are required.' });
+    let isValidReferrer = false;
+    let referrerType: 'user' | 'partner' | null = null;
+    
+    if (referrerId) {
+      const userRef = db.collection('users').doc(referrerId);
+      const userDoc = await userRef.get();
+      if (userDoc.exists) {
+        isValidReferrer = true;
+        referrerType = 'user';
+      } else {
+        const partnerRef = db.collection('partners').doc(referrerId); 
+        const partnerDoc = await partnerRef.get();
+        if (partnerDoc.exists) {
+          isValidReferrer = true;
+          referrerType = 'partner';
+        }
+      }
     }
 
-    const adminDb = getAdminDb();
-    const adminAuth = getAdminAuth();
-    
-    const user = await adminAuth.getUser(uid);
-    let stripeCustomerId = user.customClaims?.stripeCustomerId as string | undefined;
-
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        name: name,
-        email: email,
-        metadata: { firebaseUID: uid },
-      });
-      stripeCustomerId = customer.id;
-      await adminAuth.setCustomUserClaims(uid, { stripeCustomerId });
-    }
-    
-    const standardPriceId = process.env.STRIPE_STANDARD_PRICE_ID;
-    if (!standardPriceId) throw new Error('STRIPE_STANDARD_PRICE_ID is not set');
+    const customer = await stripe.customers.create({
+      email,
+      name,
+      metadata: { uid },
+      payment_method: paymentMethodId,
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    });
 
     const subscription = await stripe.subscriptions.create({
-      customer: stripeCustomerId,
-      items: [{ price: standardPriceId }],
+      customer: customer.id,
+      items: [{ price: process.env.STRIPE_PRICE_ID }],
       trial_period_days: 7,
-      payment_behavior: 'default_incomplete',
-      expand: ['latest_invoice.payment_intent'],
-      collection_method: 'charge_automatically', 
+      metadata: { uid },
     });
 
-    await adminDb.collection('users').doc(uid).set({
-        name,
-        furigana,
-        email,
-        createdAt: new Date().toISOString(),
-        stripeCustomerId: stripeCustomerId,
-        stripeSubscriptionId: subscription.id,
-        subscriptionStatus: 'trialing',
-        role: 'user',
-    }, { merge: true });
-
-    // ▼▼▼ ここからが最終修正箇所です ▼▼▼
-    const latestInvoice = subscription.latest_invoice;
-
-    if (!latestInvoice || typeof latestInvoice === 'string') {
-      throw new Error('The latest_invoice was not expanded correctly or is missing.');
-    }
-
-    // `payment_intent`プロパティが `latestInvoice` オブジェクト内に存在するかを安全にチェック
-    if (!('payment_intent' in latestInvoice) || !latestInvoice.payment_intent) {
-      throw new Error('Could not find Payment Intent on the invoice.');
-    }
-    
-    const paymentIntent = latestInvoice.payment_intent;
-    
-    let paymentIntentId: string;
-
-    // paymentIntentが文字列か、またはidプロパティを持つオブジェクトかを厳密にチェック
-    if (typeof paymentIntent === 'string') {
-        paymentIntentId = paymentIntent;
-    } else if (typeof paymentIntent === 'object' && paymentIntent !== null && 'id' in paymentIntent && typeof (paymentIntent as { id?: unknown }).id === 'string') {
-        // TypeScriptにpaymentIntentがidを持つオブジェクトであることを伝える
-        paymentIntentId = (paymentIntent as { id: string }).id;
-    } else {
-        throw new Error('Payment Intent ID is not in the expected format.');
-    }
-
-    const retrievedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    if (!retrievedPaymentIntent.client_secret) {
-        throw new Error('Could not find client_secret in the Payment Intent.');
-    }
-
-    res.status(200).json({
+    const userDocData = {
+      name,
+      furigana,
+      email,
+      stripeCustomerId: customer.id,
       subscriptionId: subscription.id,
-      clientSecret: retrievedPaymentIntent.client_secret,
-    });
-    // ▲▲▲ ここまでが最終修正箇所です ▲▲▲
+      subscriptionStatus: subscription.status,
+      createdAt: new Date(),
+      ...(isValidReferrer && { 
+          referrer: {
+            id: referrerId,
+            type: referrerType
+          }
+      })
+    };
+    await db.collection('users').doc(uid).set(userDocData);
+
+    res.status(200).json({ success: true, subscriptionId: subscription.id });
 
   } catch (error: any) {
-    console.error('Subscription creation error:', error);
-    res.status(500).json({ error: error.message });
+    console.error("APIエラー:", error);
+    res.status(500).json({ error: error.message || 'サーバーエラーが発生しました。' });
   }
-}
+};
+
+export default handler;
 
 
 
