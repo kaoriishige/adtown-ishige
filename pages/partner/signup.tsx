@@ -2,7 +2,7 @@ import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-// --- ご提示いただいた業種リストを階層データとして定義 ---
+// --- カテゴリデータ ---
 const categoryData = {
   "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
   "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
@@ -14,7 +14,6 @@ const categoryData = {
   "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
   "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "クリーニング（衣類・布団など）", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
 };
-
 const mainCategories = Object.keys(categoryData);
 
 const PartnerSignupPage: NextPage = () => {
@@ -31,7 +30,7 @@ const PartnerSignupPage: NextPage = () => {
   
   // ▼▼▼ カテゴリ関連のStateを単一選択用に修正 ▼▼▼
   const [mainCategory, setMainCategory] = useState('');
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string>(''); // ★ 修正点: 配列から文字列へ
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>(''); // 配列から文字列へ
   const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
 
   const [agreed, setAgreed] = useState(false);
@@ -42,11 +41,7 @@ const PartnerSignupPage: NextPage = () => {
   // --- 住所からエリアを抽出するロジック ---
   useEffect(() => {
     const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
-    if (match) {
-      setArea(match[0]);
-    } else {
-      setArea('');
-    }
+    if (match) { setArea(match[0]); } else { setArea(''); }
   }, [address]);
   
   // --- 大分類が変更されたら小分類の選択肢を更新 ---
@@ -54,13 +49,11 @@ const PartnerSignupPage: NextPage = () => {
     if (mainCategory) {
       // @ts-ignore
       setSubCategoryOptions(categoryData[mainCategory] || []);
-      setSelectedSubCategory(''); // ★ 修正点: 単一選択用のリセット
+      setSelectedSubCategory(''); // 単一選択用にリセット
     } else {
       setSubCategoryOptions([]);
     }
   }, [mainCategory]);
-
-  // ★ 修正点: 複数選択用の `handleSubCategoryChange` 関数は不要なため削除
 
   // --- 送信処理 ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,30 +62,14 @@ const PartnerSignupPage: NextPage = () => {
     setError(null);
 
     // --- バリデーションチェック ---
-    if (email !== confirmEmail) {
-      setError('メールアドレスが一致しません。');
-      setIsLoading(false);
-      return;
-    }
-    if (!agreed) {
-      setError('利用規約への同意が必要です。');
-      setIsLoading(false);
-      return;
-    }
-    if (!area) { 
-      setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。');
-      setIsLoading(false);
-      return;
-    }
-    // ★ 修正点: バリデーションを単一選択用に変更
-    if (!selectedSubCategory) {
-      setError('カテゴリ（小分類）を選択してください。');
-      setIsLoading(false);
-      return;
-    }
+    if (email !== confirmEmail) { setError('メールアドレスが一致しません。'); setIsLoading(false); return; }
+    if (!agreed) { setError('利用規約への同意が必要です。'); setIsLoading(false); return; }
+    if (!area) { setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。'); setIsLoading(false); return; }
+    if (!selectedSubCategory) { setError('カテゴリ（小分類）を選択してください。'); setIsLoading(false); return; }
     
     try {
-      const response = await fetch('/api/partner/signup', {
+      // ▼▼▼ APIのURLを正しい宛先に戻しました ▼▼▼
+      const response = await fetch('/api/partner/create-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -106,18 +83,17 @@ const PartnerSignupPage: NextPage = () => {
           password, 
           category: {
             main: mainCategory,
-            sub: selectedSubCategory, // ★ 修正点: 単一の文字列を送信
+            sub: selectedSubCategory // 単一の文字列を送信
           },
         }),
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || '登録に失敗しました。');
+        // バックエンドのエラーメッセージキー 'error' に合わせます
+        throw new Error(data.error || '登録に失敗しました。');
       }
-
       setIsSuccess(true);
-
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -130,17 +106,31 @@ const PartnerSignupPage: NextPage = () => {
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
         {isSuccess ? (
           <div className="text-center">
-            {/* ... 省略 ... */}
+            <svg className="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h1 className="text-3xl font-bold text-gray-800 mt-4">ご登録ありがとうございます</h1>
+            <p className="text-gray-600 mt-4 text-lg">パートナー登録の申請を受け付けました。</p>
+            <div className="mt-8 bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-md text-left">
+              <h2 className="font-bold">今後の流れについて</h2>
+              <p className="mt-2">運営者による承認後、本登録完了となります。QRコードスタンドは、後日担当者よりご連絡の上、お届けに伺います。</p>
+            </div>
+            <div className="mt-8">
+              <Link href="/partner/login" className="inline-block bg-blue-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-blue-700 transition">
+                ログインページへ進む
+              </Link>
+            </div>
           </div>
         ) : (
           <>
             <h1 className="text-2xl font-bold text-center mb-6">パートナー無料登録</h1>
             <div className="text-center mb-8">
-              {/* ... 省略 ... */}
+              <a href="https://disguised-cat-noakl5d.gamma.site/" target="_blank" rel="noopener noreferrer" className="inline-block bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
+                とってもお得なご案内はこちら
+              </a>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* --- 店舗名、住所などの入力フィールド --- */}
               <div>
                 <label className="block text-gray-700 font-medium mb-2">店舗名・企業名</label>
                 <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
@@ -150,7 +140,6 @@ const PartnerSignupPage: NextPage = () => {
                 <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg"/>
               </div>
 
-              {/* --- 大分類選択 --- */}
               <div>
                 <label className="block text-gray-700 font-medium mb-2">カテゴリ（大分類）</label>
                 <select value={mainCategory} onChange={(e) => setMainCategory(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white">
@@ -159,7 +148,7 @@ const PartnerSignupPage: NextPage = () => {
                 </select>
               </div>
 
-              {/* ▼▼▼ 小分類をラジオボタンに変更 ▼▼▼ */}
+              {/* ▼▼▼ 小分類のUIをラジオボタンに変更 ▼▼▼ */}
               {mainCategory && (
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">カテゴリ（小分類）</label>
@@ -167,11 +156,11 @@ const PartnerSignupPage: NextPage = () => {
                     {subCategoryOptions.map(subCat => (
                       <label key={subCat} className="flex items-center space-x-3 cursor-pointer">
                         <input
-                          type="radio" // ★ 修正点: typeをradioに変更
-                          name="subCategory" // ★ 修正点: 同じname属性でグループ化
+                          type="radio"
+                          name="subCategory"
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                          checked={selectedSubCategory === subCat} // ★ 修正点: checkedの条件を変更
-                          onChange={() => setSelectedSubCategory(subCat)} // ★ 修正点: onChangeの処理を変更
+                          checked={selectedSubCategory === subCat}
+                          onChange={() => setSelectedSubCategory(subCat)}
                         />
                         <span className="text-gray-700">{subCat}</span>
                       </label>
@@ -181,7 +170,6 @@ const PartnerSignupPage: NextPage = () => {
               )}
               {/* ▲▲▲ ここまで ▲▲▲ */}
 
-              {/* --- 担当者名以下の入力フィールド --- */}
               <div>
                 <label className="block text-gray-700 font-medium mb-2">ご担当者名</label>
                 <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
