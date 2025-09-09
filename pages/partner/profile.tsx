@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link'; // Linkコンポーネントをインポート
 import { db, auth } from '@/lib/firebase';
 import { 
   collection, 
@@ -18,7 +19,6 @@ const StoreProfilePage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // フォームの各項目をStateで管理
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [address, setAddress] = useState('');
@@ -26,9 +26,8 @@ const StoreProfilePage = () => {
   const [description, setDescription] = useState('');
   const [businessHours, setBusinessHours] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
-  const [snsUrls, setSnsUrls] = useState(['', '', '']); // SNS URLを3つ管理
+  const [snsUrls, setSnsUrls] = useState(['', '', '']);
 
-  // ログイン状態を監視
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -40,7 +39,6 @@ const StoreProfilePage = () => {
     return () => unsubscribe();
   }, [router]);
 
-  // 既存の店舗情報を読み込む関数
   const fetchStoreProfile = useCallback(async (currentUser: User) => {
     if (!currentUser) return;
     setLoading(true);
@@ -60,7 +58,6 @@ const StoreProfilePage = () => {
       setDescription(storeData.description || '');
       setBusinessHours(storeData.businessHours || '');
       setWebsiteUrl(storeData.websiteUrl || '');
-      // DBに保存されているSNS URLが3つ未満の場合も考慮
       const loadedSnsUrls = storeData.snsUrls || [];
       setSnsUrls([
         loadedSnsUrls[0] || '',
@@ -77,11 +74,9 @@ const StoreProfilePage = () => {
     }
   }, [user, fetchStoreProfile]);
 
-  // 保存ボタンの処理
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
 
-    // 空のURLは除外して配列にまとめる
     const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
 
     const storeData = {
@@ -115,7 +110,6 @@ const StoreProfilePage = () => {
     }
   };
   
-  // SNS入力欄の値を更新するための関数
   const handleSnsUrlChange = (index: number, value: string) => {
     const newSnsUrls = [...snsUrls];
     newSnsUrls[index] = value;
@@ -148,12 +142,14 @@ const StoreProfilePage = () => {
           <label>営業時間</label>
           <textarea value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} className="w-full p-2 border rounded" rows={3}></textarea>
         </div>
-        {/* --- ↓↓↓ ここからが追加・修正された項目 ↓↓↓ --- */}
+        {/* --- ↓↓↓ ここからがご要望の追加項目 ↓↓↓ --- */}
         <div>
           <label>店舗写真 (複数可)</label>
-          <p className="text-sm text-gray-500">（ファイルアップロード機能は別途実装が必要です）</p>
-          {/* TODO: 複数ファイルアップロードのコンポーネントをここに配置してください */}
+          <div className="p-4 border rounded bg-gray-50">
+            <p className="text-sm text-gray-500">（ファイルアップロード機能は別途実装が必要です）</p>
+          </div>
         </div>
+        {/* --- ↑↑↑ ここまでがご要望の追加項目 ↑↑↑ --- */}
         <div>
           <label>公式ウェブサイトURL</label>
           <input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full p-2 border rounded" placeholder="https://..." />
@@ -170,12 +166,21 @@ const StoreProfilePage = () => {
           <label>SNS URL 3</label>
           <input type="url" value={snsUrls[2]} onChange={(e) => handleSnsUrlChange(2, e.target.value)} className="w-full p-2 border rounded" placeholder="https://..." />
         </div>
-        {/* --- ↑↑↑ 追加・修正された項目はここまで ↑↑↑ --- */}
-
+        
         <button onClick={handleSaveProfile} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600">
           保存する
         </button>
       </div>
+
+      {/* --- ↓↓↓ ここからがご要望の追加項目 ↓↓↓ --- */}
+      <div className="mt-8">
+        <Link href="/partner/dashboard">
+          <a className="text-blue-600 hover:underline">
+            ← ダッシュボードに戻る
+          </a>
+        </Link>
+      </div>
+      {/* --- ↑↑↑ ここまでがご要望の追加項目 ↑↑↑ --- */}
     </div>
   );
 };
