@@ -1,133 +1,108 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { useRouter } from 'next/router';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase'; // パスは環境に合わせて調整してください
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';// 注意：パスの階層が深くなります
+import { ParsedUrlQuery } from 'querystring';
 
-// --- ★★★ データ ★★★ ---
-// 店舗データの型定義
-interface StoreDetails {
+interface Store {
   id: string;
-  name: string;
+  storeName: string;
+  description: string;
   address: string;
-  phone: string;
-  hours: string;
-  menu: string;
-  recommend: string;
-  coupon: string;
-  googleMap: string;
+  phoneNumber: string;
+  businessHours: string;
+  photoUrls: string[];
+  websiteUrl?: string;
+  snsUrls?: string[];
 }
 
-// ページが受け取るpropsの型
-interface StoreDetailPageProps {
-  store: StoreDetails;
+interface StoreDeal {
+  id: string;
+  type: 'お得情報' | 'クーポン' | 'フードロス';
+  title: string;
+  description: string;
+  imageUrl?: string;
 }
 
-const StoreDetailPage: NextPage<StoreDetailPageProps> = ({ store }) => {
-  const router = useRouter();
+interface PageProps {
+  store: Store;
+  deals: StoreDeal[];
+}
 
-  // 改行を<br>タグに変換するヘルパー関数
-  const formatText = (text: string) => {
-    return text.split('\n').map((line, index) => (
-      <span key={index}>{line}<br /></span>
-    ));
-  };
-
+const StoreDetailsPage: NextPage<PageProps> = ({ store, deals }) => {
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      <header className="bg-white p-4 sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800 text-center">{store.name}</h1>
-      </header>
-
-      <main className="p-4 max-w-3xl mx-auto">
-        <div className="my-4">
-          <button onClick={() => router.back()} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg text-sm">
-            ← 一覧に戻る
-          </button>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* 各セクション */}
-          <div className="p-5 border-b">
-            <h2 className="text-lg font-semibold text-gray-800">住所</h2>
-            <p className="text-gray-600 mt-1">{store.address}</p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        {store.photoUrls && store.photoUrls.length > 0 && (
+          <div className="h-64 rounded-lg overflow-hidden bg-gray-200 mb-4">
+            <img src={store.photoUrls[0]} alt={store.storeName} className="w-full h-full object-cover" />
           </div>
-          <div className="p-5 border-b">
-            <h2 className="text-lg font-semibold text-gray-800">電話番号</h2>
-            <a href={`tel:${store.phone}`} className="text-blue-600 hover:underline">{store.phone}</a>
+        )}
+        <h1 className="text-4xl font-bold">{store.storeName}</h1>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold border-b pb-2 mb-4">お店について</h2>
+            <p className="text-gray-700 whitespace-pre-wrap">{store.description}</p>
           </div>
-          <div className="p-5 border-b">
-            <h2 className="text-lg font-semibold text-gray-800">営業時間</h2>
-            <p className="text-gray-600 mt-1">{formatText(store.hours)}</p>
-          </div>
-          <div className="p-5 border-b">
-            <h2 className="text-lg font-semibold text-gray-800">メニュー</h2>
-            <p className="text-gray-600 mt-1 whitespace-pre-wrap">{formatText(store.menu)}</p>
-          </div>
-          <div className="p-5 border-b">
-            <h2 className="text-lg font-semibold text-gray-800">お店のおすすめ</h2>
-            <p className="text-gray-600 mt-1 whitespace-pre-wrap">{formatText(store.recommend)}</p>
-          </div>
-          {store.coupon && (
-            <div className="p-5 border-b bg-yellow-50">
-              <h2 className="text-lg font-semibold text-yellow-800">クーポン情報 🎟️</h2>
-              <p className="text-gray-800 mt-1 font-bold">{store.coupon}</p>
-            </div>
-          )}
-          {store.googleMap && (
-            <div className="p-5">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">地図</h2>
-              <div className="aspect-w-16 aspect-h-9">
-                <iframe
-                  src={store.googleMap}
-                  width="100%"
-                  height="450"
-                  style={{ border: 0 }}
-                  allowFullScreen={false}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                ></iframe>
+          <div>
+            <h2 className="text-2xl font-semibold border-b pb-2 mb-4">お得情報・クーポン</h2>
+            {deals.length > 0 ? (
+              <div className="space-y-4">
+                {deals.map(deal => (
+                  <div key={deal.id} className="border rounded-lg p-4 flex items-center">
+                    {deal.imageUrl && <img src={deal.imageUrl} alt={deal.title} className="w-24 h-24 object-cover rounded-md mr-4" />}
+                    <div>
+                      <span className="text-xs inline-block bg-blue-200 text-blue-800 rounded-full px-2 py-1">{deal.type}</span>
+                      <h3 className="text-lg font-bold mt-1">{deal.title}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{deal.description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          )}
+            ) : <p className="text-gray-500">現在、利用できるお得情報はありません。</p>}
+          </div>
         </div>
-      </main>
+        <div className="border rounded-lg p-4 h-fit">
+          <h3 className="text-xl font-semibold mb-4">基本情報</h3>
+          <ul className="space-y-3 text-sm">
+            <li className="flex items-start"><span className="w-6 h-6 mr-2">📍</span><span>{store.address}</span></li>
+            <li className="flex items-start"><span className="w-6 h-6 mr-2">📞</span><span>{store.phoneNumber}</span></li>
+            <li className="flex items-start"><span className="w-6 h-6 mr-2">⏰</span><span className="whitespace-pre-wrap">{store.businessHours}</span></li>
+            {store.websiteUrl && <li className="flex items-start"><span className="w-6 h-6 mr-2">🌐</span><a href={store.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">公式サイト</a></li>}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 };
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { storeId } = context.params as { storeId: string };
+interface Params extends ParsedUrlQuery {
+  storeId: string;
+}
 
+export const getServerSideProps: GetServerSideProps<PageProps, Params> = async (context) => {
+  const { storeId } = context.params!;
   try {
-    const storeRef = doc(db, 'stores', storeId);
-    const docSnap = await getDoc(storeRef);
+    const storeDocRef = doc(db, 'stores', storeId);
+    const storeDoc = await getDoc(storeDocRef);
+    if (!storeDoc.exists()) return { notFound: true };
+    const storeData = storeDoc.data();
+    
+    // Firestore Timestampsなどをシリアライズ可能な形式に変換する必要がある場合
+    const serializedStore = JSON.parse(JSON.stringify({ id: storeDoc.id, ...storeData }));
 
-    if (!docSnap.exists()) {
-      return { notFound: true };
-    }
-
-    const data = docSnap.data();
-    const store = {
-      id: docSnap.id,
-      name: data.name || '',
-      address: data.address || '',
-      phone: data.phone || '',
-      hours: data.hours || '',
-      menu: data.menu || '',
-      recommend: data.recommend || '',
-      coupon: data.coupon || '',
-      googleMap: data.googleMap || '',
-    };
-
-    return {
-      props: {
-        store,
-      },
-    };
+    const dealsRef = collection(db, 'storeDeals');
+    const q = query(dealsRef, where("storeId", "==", storeId), where("isActive", "==", true));
+    const dealsSnapshot = await getDocs(q);
+    const deals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const serializedDeals = JSON.parse(JSON.stringify(deals));
+    
+    return { props: { store: serializedStore, deals: serializedDeals } };
   } catch (error) {
-    console.error("Error fetching store details:", error);
+    console.error("詳細ページのデータ取得に失敗:", error);
     return { notFound: true };
   }
 };
 
-export default StoreDetailPage;
+export default StoreDetailsPage;
