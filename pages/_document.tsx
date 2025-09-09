@@ -4,8 +4,7 @@ export default function Document() {
   return (
     <Html lang="ja">
       <Head>
-        {/* ↓↓↓ この1行を追加・確認してください ↓↓↓ */}
-        <link rel="manifest" href="/manifest.json" />
+        {/* manifest.jsonへのリンクが完全に削除された状態 */}
       </Head>
       <body>
         <Main />
