@@ -1,84 +1,140 @@
-import { NextPage } from 'next';
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../../lib/firebase'; // TODO: Firebaseのdbインスタンスをインポートするパスを確認してください
 
-// --- パートナー登録画面と全く同じカテゴリデータを使用 ---
-const categoryData = {
-  "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
-  "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
-  "美容・健康関連": ["美容室・理容室", "ネイルサロン", "エステサロン", "リラクゼーション・マッサージ", "整体・整骨院・鍼灸院", "個人経営の薬局", "クリニック・歯科医院"],
-  "住まい・暮らし関連": ["工務店・建築・リフォーム", "水道・電気工事", "不動産会社", "クリーニング店", "造園・植木屋", "便利屋"],
-  "教育・習い事関連": ["学習塾・家庭教師", "ピアノ・音楽教室", "英会話教室", "書道・そろばん教室", "スポーツクラブ・道場", "パソコン教室", "料理教室"],
-  "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
-  "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
-  "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
-  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "クリーニング（衣類・布団など）", "写真館", "保険代理店","カウンセリング","コンサルティング"],
-};
+// --- データ型定義 ---
+interface Subcategory {
+  id: string;
+  name: string;
+  order: number;
+}
 
-const mainCategories = Object.keys(categoryData);
+interface Category {
+  id: string;
+  name: string;
+  order: number;
+  subcategories: Subcategory[];
+}
 
-const DealsCategoryPage: NextPage = () => {
+const DealsIndexPage = () => {
   const router = useRouter();
-  // --- 展開されている大分類を管理するためのState ---
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
 
-  // --- 大分類がクリックされたときの処理 ---
-  const handleCategoryClick = (category: string) => {
-    // すでに開いているカテゴリを再度クリックした場合は閉じる
-    setExpandedCategory(prev => (prev === category ? null : category));
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        // TODO: Firestoreのコレクション名を実際の名称に合わせてください (例: 'dealCategories')
+        const categoriesCollectionRef = collection(db, 'dealCategories');
+        const q = query(categoriesCollectionRef, orderBy('order'));
+        const categoriesSnapshot = await getDocs(q);
+
+        const categoriesData = await Promise.all(
+          categoriesSnapshot.docs.map(async (categoryDoc) => {
+            const category = {
+              id: categoryDoc.id,
+              name: categoryDoc.data().name,
+              order: categoryDoc.data().order,
+              subcategories: [],
+            } as Category;
+
+            // 各カテゴリーのサブコレクションからサブカテゴリーを取得
+            const subcategoriesCollectionRef = collection(db, 'dealCategories', categoryDoc.id, 'subcategories');
+            const subQ = query(subcategoriesCollectionRef, orderBy('order'));
+            const subcategoriesSnapshot = await getDocs(subQ);
+            
+            category.subcategories = subcategoriesSnapshot.docs.map(subDoc => ({
+              id: subDoc.id,
+              name: subDoc.data().name,
+              order: subDoc.data().order,
+            }));
+
+            return category;
+          })
+        );
+
+        setCategories(categoriesData);
+      } catch (err) {
+        console.error("カテゴリーの取得に失敗しました:", err);
+        setError("データの読み込みに失敗しました。時間をおいて再度お試しください。");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const handleCategoryToggle = (categoryName: string) => {
+    setOpenCategory(prevOpenCategory => 
+      prevOpenCategory === categoryName ? null : categoryName
+    );
   };
 
+  const handleSubcategoryClick = (categoryName: string, subcategoryName: string) => {
+    // URLエンコードして、日本語のURLでも正しく遷移できるようにする
+    const encodedCategory = encodeURIComponent(categoryName);
+    const encodedSubcategory = encodeURIComponent(subcategoryName);
+    router.push(`/deals/${encodedCategory}/${encodedSubcategory}`);
+  };
+
+  if (loading) {
+    return <div className="text-center p-10">読み込み中...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center p-10 text-red-500">{error}</div>;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      <header className="bg-white p-4 text-center sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800">地域のお店を応援</h1>
-        <p className="text-gray-600 mt-1">カテゴリを選択してください</p>
-      </header>
-
-      <main className="p-4 max-w-4xl mx-auto">
-        <div className="text-center my-4">
-          <button onClick={() => router.back()} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg text-sm">
-            ← メインページに戻る
-          </button>
-        </div>
-
-        {/* --- カテゴリ選択エリア --- */}
-        <div className="space-y-4">
-          {mainCategories.map(mainCat => (
-            <div key={mainCat}>
-              {/* --- 大分類ボタン --- */}
-              <button
-                onClick={() => handleCategoryClick(mainCat)}
-                className="w-full p-5 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 text-left flex justify-between items-center"
+    // TODO: 全体のレイアウトコンポーネントがあればそれで囲ってください
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <h1 className="text-2xl font-bold text-center mb-6">地域のお店を応援</h1>
+      <p className="text-center text-gray-600 mb-8">カテゴリを選択してください</p>
+      
+      <div className="space-y-4">
+        {categories.map((category) => (
+          <div key={category.id} className="border rounded-lg overflow-hidden">
+            {/* TODO: UIライブラリのアコーディオンコンポーネントがあれば置き換えてください */}
+            <button
+              onClick={() => handleCategoryToggle(category.name)}
+              className="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 focus:outline-none"
+            >
+              <span className="text-lg font-semibold">{category.name}</span>
+              {/* アイコンの向きをStateで変更 */}
+              <svg 
+                className={`w-6 h-6 transition-transform transform ${openCategory === category.name ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24" 
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <span className="text-xl font-bold text-gray-800">{mainCat}</span>
-                <span className={`transform transition-transform duration-300 ${expandedCategory === mainCat ? 'rotate-180' : ''}`}>
-                  ▼
-                </span>
-              </button>
-
-              {/* --- 小分類リスト（選択された大分類の場合のみ表示）--- */}
-              <div
-                className={`overflow-hidden transition-all duration-500 ease-in-out ${expandedCategory === mainCat ? 'max-h-96 mt-2' : 'max-h-0'}`}
-              >
-                <div className="p-4 bg-gray-100 rounded-b-lg grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {/* @ts-ignore */}
-                  {categoryData[mainCat].map((subCat: string) => (
-                    <Link key={subCat} href={`/deals/${mainCat}/${subCat}`}>
-                      <a className="block p-3 bg-white text-gray-700 rounded-md hover:bg-blue-500 hover:text-white transition-colors">
-                        {subCat}
-                      </a>
-                    </Link>
-                  ))}
-                </div>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            
+            {/* 開かれているカテゴリーのサブカテゴリーのみ表示 */}
+            {openCategory === category.name && (
+              <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-4 bg-white">
+                {category.subcategories.map((subcategory) => (
+                  <button
+                    key={subcategory.id}
+                    onClick={() => handleSubcategoryClick(category.name, subcategory.name)}
+                    className="p-3 text-center bg-white border rounded-md shadow-sm hover:bg-blue-50 hover:border-blue-300 transition"
+                  >
+                    {subcategory.name}
+                  </button>
+                ))}
               </div>
-            </div>
-          ))}
-        </div>
-      </main>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
 
-export default DealsCategoryPage;
+export default DealsIndexPage;
