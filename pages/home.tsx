@@ -86,44 +86,16 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
   // ジャンル
   const genres = [
-    '生活情報',
-    '健康支援',
-    '節約・特売',
-    '人間関係',
-    '教育・学習',
-    '子育て',
-    '防災・安全',
-    '診断・運勢',
-    'エンタメ',
-    '趣味・文化',
+    '生活情報', '健康支援', '節約・特売', '人間関係', '教育・学習',
+    '子育て', '防災・安全', '診断・運勢', 'エンタメ', '趣味・文化',
   ];
 
   // 緊急連絡先
   const emergencyContacts = [
-    {
-      name: '消費者ホットライン',
-      number: '188',
-      description: '商品やサービスのトラブル',
-      url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/',
-    },
-    {
-      name: '救急安心センター',
-      number: '#7119',
-      description: '急な病気やケガで救急車を呼ぶか迷った時',
-      url: 'https://www.fdma.go.jp/publication/portal/post2.html',
-    },
-    {
-      name: '休日夜間急患診療所',
-      number: '0287-64-4110',
-      description: '那須塩原市の休日・夜間の急病',
-      url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/yobo/1/3/3055.html',
-    },
-    {
-      name: '水道のトラブル',
-      number: '090-2463-6638',
-      description: '（那須塩原市指定業者）水漏れ・つまりなど',
-      url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/jogesuidobu/gyomuannai/1/5/1749.html',
-    },
+    { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/', },
+    { name: '救急安心センター', number: '#7119', description: '急な病気やケガで救急車を呼ぶか迷った時', url: 'https://www.fdma.go.jp/publication/portal/post2.html', },
+    { name: '休日夜間急患診療所', number: '0287-64-4110', description: '那須塩原市の休日・夜間の急病', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/yobo/1/3/3055.html', },
+    { name: '水道のトラブル', number: '090-2463-6638', description: '（那須塩原市指定業者）水漏れ・つまりなど', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/jogesuidobu/gyomuannai/1/5/1749.html', },
   ];
 
   return (
@@ -143,11 +115,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             </h2>
             <div className="flex flex-wrap justify-center gap-2">
               {genres.map((genre) => (
-                <Link
-                  key={genre}
-                  href={`/genre/${genre}`}
-                  className="bg-blue-100 text-blue-800 text-sm font-semibold py-2 px-4 rounded-full hover:bg-blue-200 transition-colors"
-                >
+                <Link key={genre} href={`/genre/${genre}`} className="bg-blue-100 text-blue-800 text-sm font-semibold py-2 px-4 rounded-full hover:bg-blue-200 transition-colors">
                   {genre}
                 </Link>
               ))}
@@ -156,10 +124,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
           {/* --- 緊急連絡先 --- */}
           <section className="bg-white p-6 rounded-xl shadow-md">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="w-full flex items-center justify-center text-center text-red-800 font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 bg-red-200 hover:bg-red-300"
-            >
+            <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center text-center text-red-800 font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 bg-red-200 hover:bg-red-300">
               <RiAlarmWarningLine className="mr-2" /> お困りのときは (緊急連絡先)
             </button>
           </section>
@@ -171,19 +136,11 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             </h2>
             <div className="grid grid-cols-3 gap-3">
               {searchTools.map((tool) => (
-                <a
-                  key={tool.name}
-                  href={tool.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 ${tool.bgColor}`}
-                >
+                <a key={tool.name} href={tool.href} target="_blank" rel="noopener noreferrer" className={`flex flex-col items-center justify-center p-3 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 ${tool.bgColor}`}>
                   <div className={`text-3xl ${tool.textColor}`}>
                     <tool.Icon />
                   </div>
-                  <span
-                    className={`mt-2 text-xs font-bold text-center ${tool.textColor}`}
-                  >
+                  <span className={`mt-2 text-xs font-bold text-center ${tool.textColor}`}>
                     {tool.name}
                   </span>
                 </a>
@@ -193,17 +150,13 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
           {/* --- 店舗情報 & フードロス --- */}
           <section className="grid grid-cols-2 gap-4">
-            <Link
-              href="/deals"
-              className="block text-center p-6 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-red-500 to-orange-500 text-white"
-            >
+            <Link href="/deals" className="block text-center p-6 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-red-500 to-orange-500 text-white">
               <RiStore2Line className="mx-auto text-4xl mb-2" />
-              <span className="font-bold text-lg">店舗のお得情報</span>
+              {/* ▼▼▼ ここを変更 ▼▼▼ */}
+              <span className="font-bold text-lg">地域の店舗＆サービス情報</span>
+              {/* ▲▲▲ ここまで ▲▲▲ */}
             </Link>
-            <Link
-              href="/food-loss"
-              className="block text-center p-6 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white"
-            >
+            <Link href="/food-loss" className="block text-center p-6 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white">
               <RiRecycleLine className="mx-auto text-4xl mb-2" />
               <span className="font-bold text-lg">フードロス情報</span>
             </Link>
@@ -221,10 +174,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
           {/* --- すべてのアプリ --- */}
           <section>
-            <Link
-              href="/apps/all"
-              className="block text-center p-6 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
-            >
+            <Link href="/apps/all" className="block text-center p-6 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white">
               <RiLayoutGridFill className="mx-auto text-4xl mb-2" />
               <span className="font-bold text-lg">すべてのアプリを見る</span>
             </Link>
@@ -232,10 +182,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
           {/* --- フッター --- */}
           <footer className="text-center mt-8 pb-4">
-            <Link
-              href="/mypage"
-              className="text-sm text-gray-600 hover:text-blue-600 hover:underline"
-            >
+            <Link href="/mypage" className="text-sm text-gray-600 hover:text-blue-600 hover:underline">
               マイページに戻る
             </Link>
             <p className="text-xs text-gray-400 mt-4">© 2025 株式会社adtown</p>
@@ -252,18 +199,9 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             </div>
             <div className="p-4 space-y-4">
               {emergencyContacts.map((contact) => (
-                <a
-                  key={contact.name}
-                  href={contact.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
+                <a key={contact.name} href={contact.url} target="_blank" rel="noopener noreferrer" className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <p className="font-bold text-blue-600">{contact.name}</p>
-                  <a
-                    href={`tel:${contact.number.replace('#', '')}`}
-                    className="text-2xl font-bold text-gray-800 hover:underline"
-                  >
+                  <a href={`tel:${contact.number.replace('#', '')}`} className="text-2xl font-bold text-gray-800 hover:underline">
                     {contact.number}
                   </a>
                   <p className="text-sm text-gray-500">{contact.description}</p>
@@ -271,10 +209,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               ))}
             </div>
             <div className="p-4 border-t text-center">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg"
-              >
+              <button onClick={() => setIsModalOpen(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
                 閉じる
               </button>
             </div>
