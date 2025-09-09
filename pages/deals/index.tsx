@@ -1,161 +1,123 @@
+import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase'; // firebase設定ファイルのインポートパス
+import Link from 'next/link';
 
-/* =================================================================
-  ▼▼▼【重要】ここから下の2つの名前を、あなたのデータベース設定に合わせてください ▼▼▼
-================================================================= */
-
-// 1. 大カテゴリーが格納されているコレクションの「本当の名前」を入力してください
-const MAIN_CATEGORIES_COLLECTION_NAME = 'dealCategories'; 
-
-// 2. サブカテゴリーが格納されているサブコレクションの「本当の名前」を入力してください
-const SUB_CATEGORIES_COLLECTION_NAME = 'subcategories';
-
-/* =================================================================
-  ▲▲▲【重要】上の2つの名前を、あなたのデータベース設定に合わせてください ▲▲▲
-================================================================= */
-
-
-// --- データ型定義 ---
-interface Subcategory {
-  id: string;
-  name: string;
-  order: number;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  order: number;
-  subcategories: Subcategory[];
-}
-
-
-// --- ここから下は変更不要です ---
-const DealsIndexPage = () => {
-  const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [openCategory, setOpenCategory] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const categoriesCollectionRef = collection(db, MAIN_CATEGORIES_COLLECTION_NAME);
-        const q = query(categoriesCollectionRef, orderBy('order'));
-        const categoriesSnapshot = await getDocs(q);
-
-        if (categoriesSnapshot.empty) {
-          console.warn(`コレクション「${MAIN_CATEGORIES_COLLECTION_NAME}」にデータが見つかりませんでした。`);
-        }
-
-        const categoriesData = await Promise.all(
-          categoriesSnapshot.docs.map(async (categoryDoc) => {
-            const category = {
-              id: categoryDoc.id,
-              name: categoryDoc.data().name,
-              order: categoryDoc.data().order,
-              subcategories: [],
-            } as Category;
-
-            const subcategoriesCollectionRef = collection(db, MAIN_CATEGORIES_COLLECTION_NAME, categoryDoc.id, SUB_CATEGORIES_COLLECTION_NAME);
-            const subQ = query(subcategoriesCollectionRef, orderBy('order'));
-            const subcategoriesSnapshot = await getDocs(subQ);
-            
-            category.subcategories = subcategoriesSnapshot.docs.map(subDoc => ({
-              id: subDoc.id,
-              name: subDoc.data().name,
-              order: subDoc.data().order,
-            }));
-
-            return category;
-          })
-        );
-
-        setCategories(categoriesData);
-      } catch (err) {
-        console.error("カテゴリーの取得に失敗しました:", err);
-        setError("データの読み込みに失敗しました。時間をおいて再度お試しください。");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  const handleCategoryToggle = (categoryName: string) => {
-    setOpenCategory(prevOpenCategory => 
-      prevOpenCategory === categoryName ? null : categoryName
-    );
-  };
-
-  const handleSubcategoryClick = (categoryName: string, subcategoryName: string) => {
-    const encodedCategory = encodeURIComponent(categoryName);
-    const encodedSubcategory = encodeURIComponent(subcategoryName);
-    router.push(`/deals/${encodedCategory}/${encodedSubcategory}`);
-  };
-
-  if (loading) {
-    return <div className="text-center p-10">読み込み中...</div>;
-  }
-
-  if (error) {
-    return <div className="text-center p-10 text-red-500">{error}</div>;
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <h1 className="text-2xl font-bold text-center mb-6">地域のお店を応援</h1>
-      <p className="text-center text-gray-600 mb-8">カテゴリを選択してください</p>
-      
-      <div className="space-y-4">
-        {categories.length > 0 ? (
-          categories.map((category) => (
-            <div key={category.id} className="border rounded-lg overflow-hidden">
-              <button
-                onClick={() => handleCategoryToggle(category.name)}
-                className="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 focus:outline-none"
-              >
-                <span className="text-lg font-semibold">{category.name}</span>
-                <svg 
-                  className={`w-6 h-6 transition-transform transform ${openCategory === category.name ? 'rotate-180' : ''}`} 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24" 
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              
-              {openCategory === category.name && (
-                <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-4 bg-white">
-                  {category.subcategories.map((subcategory) => (
-                    <button
-                      key={subcategory.id}
-                      onClick={() => handleSubcategoryClick(category.name, subcategory.name)}
-                      className="p-3 text-center bg-white border rounded-md shadow-sm hover:bg-blue-50 hover:border-blue-300 transition"
-                    >
-                      {subcategory.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="text-center p-10 text-gray-500">
-            <p>カテゴリーが見つかりませんでした。</p>
-            <p className="text-sm mt-2">データベースのコレクション名が正しいか確認してください。</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+const categoryData = {
+  "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
+  "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
+  "美容・健康関連": ["美容室・理容室", "ネイルサロン", "エステサロン", "リラクゼーション・マッサージ", "整体・整骨院・鍼灸院", "個人経営の薬局", "クリニック・歯科医院"],
+  "住まい・暮らし関連": ["工務店・建築・リフォーム", "水道・電気工事", "不動産会社", "クリーニング店", "造園・植木屋", "便利屋"],
+  "教育・習い事関連": ["学習塾・家庭教師", "ピアノ・音楽教室", "英会話教室", "書道・そろばん教室", "スポーツクラブ・道場", "パソコン教室", "料理教室"],
+  "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
+  "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
+  "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
+  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "クリーニング（衣類・布団など）", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
 };
 
-export default DealsIndexPage;
+const mainCategories = Object.keys(categoryData);
+const areas = ["那須塩原市", "大田原市", "那須町"];
+
+interface Store {
+    id: string;
+    storeName: string;
+    address: string;
+}
+
+const DealsSearchPage: NextPage = () => {
+    const [mainCategory, setMainCategory] = useState('');
+    const [subCategory, setSubCategory] = useState('');
+    const [area, setArea] = useState('');
+    const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
+    
+    const [stores, setStores] = useState<Store[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [searched, setSearched] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (mainCategory) {
+            // @ts-ignore
+            setSubCategoryOptions(categoryData[mainCategory] || []);
+            setSubCategory('');
+        } else {
+            setSubCategoryOptions([]);
+        }
+    }, [mainCategory]);
+
+    const handleSearch = async () => {
+        if (!mainCategory || !subCategory || !area) {
+            setError("すべての項目を選択してください。");
+            return;
+        }
+        setIsLoading(true);
+        setSearched(true);
+        setError(null);
+        setStores([]);
+
+        try {
+            const response = await fetch(`/api/deals/search?mainCategory=${mainCategory}&subCategory=${subCategory}&area=${area}`);
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "検索に失敗しました。");
+            }
+            setStores(data);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 p-4">
+            <header className="text-center py-6">
+                <h1 className="text-2xl font-bold text-gray-800">お店を探す</h1>
+            </header>
+            <main className="max-w-4xl mx-auto">
+                <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
+                    {/* Filters */}
+                    <select value={mainCategory} onChange={e => setMainCategory(e.target.value)} className="w-full p-2 border rounded">
+                        <option value="">大分類を選択</option>
+                        {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                    {mainCategory && (
+                        <select value={subCategory} onChange={e => setSubCategory(e.target.value)} className="w-full p-2 border rounded">
+                            <option value="">小分類を選択</option>
+                            {subCategoryOptions.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                        </select>
+                    )}
+                    <select value={area} onChange={e => setArea(e.target.value)} className="w-full p-2 border rounded">
+                        <option value="">エリアを選択</option>
+                        {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                    <button onClick={handleSearch} disabled={isLoading} className="w-full p-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 disabled:bg-blue-400">
+                        {isLoading ? '検索中...' : 'この条件で探す'}
+                    </button>
+                    {error && <p className="text-red-500 text-center">{error}</p>}
+                </div>
+
+                {/* Results */}
+                <div className="mt-8">
+                    {isLoading ? (
+                        <p className="text-center">検索中...</p>
+                    ) : searched && stores.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {stores.map(store => (
+                                <Link key={store.id} href={`/store/${store.id}`}>
+                                    <a className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl">
+                                        <h2 className="text-xl font-bold">{store.storeName}</h2>
+                                        <p className="text-gray-600 mt-2">{store.address}</p>
+                                    </a>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : searched && (
+                        <p className="text-center bg-white p-8 rounded-lg shadow-md">この条件に合う店舗は見つかりませんでした。</p>
+                    )}
+                </div>
+            </main>
+        </div>
+    );
+};
+
+export default DealsSearchPage;
