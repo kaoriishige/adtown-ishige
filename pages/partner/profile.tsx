@@ -1,105 +1,153 @@
-import type { NextPage } from 'next';
-import Link from 'next/link';
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/router';
+import { db, auth } from '../../lib/firebase'; // パスを確認してください
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  updateDoc, 
+  addDoc, 
+  serverTimestamp 
+} from 'firebase/firestore';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
-// 共通のUIコンポーネント
-const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input {...props} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-);
-const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
-    <textarea {...props} rows={4} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-);
-const FormLabel = ({ children }: { children: React.ReactNode }) => (
-    <label className="block text-sm font-medium text-gray-700 mb-1">{children}</label>
-);
+const StoreProfilePage = () => {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // フォームの各項目をStateで管理
+  const [storeId, setStoreId] = useState<string | null>(null); // 既存ストアのID
+  const [storeName, setStoreName] = useState('');
+  const [address, setAddress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [description, setDescription] = useState('');
+  const [businessHours, setBusinessHours] = useState('');
+  // TODO: ファイルアップロード関連のStateもここに追加
 
-const ProfilePage: NextPage = () => {
-    const [formData, setFormData] = useState({
-        storeName: '',
-        address: '',
-        phone: '',
-        description: '',
-        hours: '月〜金: 10:00-20:00\n土日祝: 11:00-22:00',
-        website: '',
-        // ★★★ 変更点(1): Instagramを汎用的なSNSに修正 ★★★
-        sns1: '',
-        sns2: '',
-        sns3: '',
+  // ログイン状態を監視し、ユーザー情報を取得
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        // 未ログインの場合はログインページなどにリダイレクト
+        router.push('/login'); 
+      }
     });
+    return () => unsubscribe();
+  }, [router]);
 
-    const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+  // ユーザーの店舗情報をFirestoreから取得してフォームにセットする
+  const fetchStoreProfile = useCallback(async (currentUser: User) => {
+    if (!currentUser) return;
+    setLoading(true);
+    const storesRef = collection(db, 'stores');
+    const q = query(storesRef, where("ownerId", "==", currentUser.uid));
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const storeDoc = querySnapshot.docs[0];
+      const storeData = storeDoc.data();
+      
+      setStoreId(storeDoc.id);
+      setStoreName(storeData.storeName || '');
+      setAddress(storeData.address || '');
+      setPhoneNumber(storeData.phoneNumber || '');
+      setDescription(storeData.description || '');
+      setBusinessHours(storeData.businessHours || '');
+      // TODO: 画像などの情報もセット
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchStoreProfile(user);
+    }
+  }, [user, fetchStoreProfile]);
+
+
+  // 保存ボタンが押されたときの処理
+  const handleSaveProfile = async () => {
+    if (!user) return alert('ログインしていません。');
+
+    const storeData = {
+      storeName,
+      address,
+      phoneNumber,
+      description,
+      businessHours,
+      ownerId: user.uid,
+      updatedAt: serverTimestamp(),
     };
 
-    const handleSubmit = (e: FormEvent) => {
-        e.preventDefault();
-        // ここにAPIを呼び出してFirestoreなどにデータを保存する処理を実装
-        console.log('Form Data Submitted:', formData);
-        alert('プロフィール情報が保存されました！');
-    };
+    try {
+      if (storeId) {
+        // 既存の店舗情報があるので「更新」
+        const storeDocRef = doc(db, 'stores', storeId);
+        await updateDoc(storeDocRef, storeData);
+      } else {
+        // 既存の店舗情報がないので「新規作成」
+        const storesCollectionRef = collection(db, 'stores');
+        await addDoc(storesCollectionRef, {
+          ...storeData,
+          status: 'pending', // 初期ステータス
+          createdAt: serverTimestamp(),
+        });
+      }
+      alert('店舗情報を保存しました。');
+    } catch (error) {
+      console.error("店舗情報の保存に失敗しました:", error);
+      alert('エラーが発生しました。');
+    }
+  };
 
-    return (
-        <div className="min-h-screen bg-gray-50">
-            <header className="bg-white shadow-sm">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <h1 className="text-2xl font-bold text-gray-900">店舗プロフィールの登録・編集</h1>
-                </div>
-            </header>
+  if (loading) {
+    return <div>読み込み中...</div>;
+  }
 
-            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-sm space-y-6">
-                    <div>
-                        <FormLabel>店舗名 <span className="text-red-500">*</span></FormLabel>
-                        <Input type="text" name="storeName" value={formData.storeName} onChange={handleChange} required />
-                    </div>
-                    <div>
-                        <FormLabel>住所 <span className="text-red-500">*</span></FormLabel>
-                        <Input type="text" name="address" value={formData.address} onChange={handleChange} required />
-                    </div>
-                    <div>
-                        <FormLabel>電話番号 <span className="text-red-500">*</span></FormLabel>
-                        <Input type="tel" name="phone" value={formData.phone} onChange={handleChange} required />
-                    </div>
-                    <div>
-                        <FormLabel>店舗紹介文</FormLabel>
-                        <Textarea name="description" value={formData.description} onChange={handleChange} placeholder="お店のこだわりやお客様へのメッセージを記入してください。" />
-                    </div>
-                    <div>
-                        <FormLabel>営業時間</FormLabel>
-                        <Textarea name="hours" value={formData.hours} onChange={handleChange} />
-                    </div>
-                    <div>
-                        <FormLabel>店舗写真 (複数可)</FormLabel>
-                        <Input type="file" name="photos" multiple accept="image/*" className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                    </div>
-                    <div>
-                        <FormLabel>公式ウェブサイトURL</FormLabel>
-                        <Input type="url" name="website" value={formData.website} onChange={handleChange} placeholder="https://..." />
-                    </div>
-                    
-                    {/* ★★★ 変更点(2): Instagramの入力欄をSNS URL x3に変更 ★★★ */}
-                    <div>
-                        <FormLabel>SNS URL</FormLabel>
-                        <div className="space-y-2">
-                            <Input type="url" name="sns1" value={formData.sns1} onChange={handleChange} placeholder="https://..." />
-                            <Input type="url" name="sns2" value={formData.sns2} onChange={handleChange} placeholder="https://..." />
-                            <Input type="url" name="sns3" value={formData.sns3} onChange={handleChange} placeholder="https://..." />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4">
-                         <Link href="/partner/dashboard" className="text-sm font-medium text-gray-600 hover:text-gray-900">
-                            ← ダッシュボードに戻る
-                        </Link>
-                        <button type="submit" className="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            この内容で保存する
-                        </button>
-                    </div>
-                </form>
-            </main>
+  return (
+    <div className="container mx-auto p-8">
+      <h1 className="text-2xl font-bold mb-6">店舗プロフィールの登録・編集</h1>
+      
+      <div className="space-y-4">
+        <div>
+          <label>店舗名 *</label>
+          <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="w-full p-2 border rounded" />
         </div>
-    );
+        <div>
+          <label>住所 *</label>
+          <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border rounded" />
+        </div>
+        <div>
+          <label>電話番号 *</label>
+          <input type="text" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full p-2 border rounded" />
+        </div>
+        <div>
+          <label>店舗紹介文</label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded" rows={5}></textarea>
+        </div>
+        <div>
+          <label>営業時間</label>
+          <textarea value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} className="w-full p-2 border rounded" rows={3}></textarea>
+        </div>
+
+        {/* TODO: 複数ファイルアップロードのコンポーネントをここに配置してください */}
+        <div>
+          <label>店舗写真 (複数可)</label>
+          <p className="text-sm text-gray-500">（ファイルアップロード機能は別途実装が必要です）</p>
+        </div>
+
+        <button onClick={handleSaveProfile} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+          保存する
+        </button>
+      </div>
+    </div>
+  );
 };
 
-export default ProfilePage;
+export default StoreProfilePage;

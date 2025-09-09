@@ -4,7 +4,7 @@ export default function Document() {
   return (
     <Html lang="ja">
       <Head>
-        {/* ★★★ この行を追加します ★★★ */}
+        {/* ↓↓↓ この1行を追加・確認してください ↓↓↓ */}
         <link rel="manifest" href="/manifest.json" />
       </Head>
       <body>
