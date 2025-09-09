@@ -2,7 +2,7 @@ import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-// --- カテゴリデータ ---
+// --- ご提示いただいた業種リストを階層データとして定義 ---
 const categoryData = {
   "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
   "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
@@ -29,9 +29,9 @@ const PartnerSignupPage: NextPage = () => {
   const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // ▼▼▼ カテゴリ関連のStateを単一選択用に変更 ▼▼▼
+  // ▼▼▼ カテゴリ関連のStateを単一選択用に修正 ▼▼▼
   const [mainCategory, setMainCategory] = useState('');
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string>(''); // 配列から文字列へ
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>(''); // ★ 修正点: 配列から文字列へ
   const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
 
   const [agreed, setAgreed] = useState(false);
@@ -54,11 +54,13 @@ const PartnerSignupPage: NextPage = () => {
     if (mainCategory) {
       // @ts-ignore
       setSubCategoryOptions(categoryData[mainCategory] || []);
-      setSelectedSubCategory(''); // 小分類の選択をリセット
+      setSelectedSubCategory(''); // ★ 修正点: 単一選択用のリセット
     } else {
       setSubCategoryOptions([]);
     }
   }, [mainCategory]);
+
+  // ★ 修正点: 複数選択用の `handleSubCategoryChange` 関数は不要なため削除
 
   // --- 送信処理 ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,10 +69,22 @@ const PartnerSignupPage: NextPage = () => {
     setError(null);
 
     // --- バリデーションチェック ---
-    if (email !== confirmEmail) { /* ... */ }
-    if (!agreed) { /* ... */ }
-    if (!area) { /* ... */ }
-    // ▼▼▼ バリデーションを単一選択用に変更 ▼▼▼
+    if (email !== confirmEmail) {
+      setError('メールアドレスが一致しません。');
+      setIsLoading(false);
+      return;
+    }
+    if (!agreed) {
+      setError('利用規約への同意が必要です。');
+      setIsLoading(false);
+      return;
+    }
+    if (!area) { 
+      setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。');
+      setIsLoading(false);
+      return;
+    }
+    // ★ 修正点: バリデーションを単一選択用に変更
     if (!selectedSubCategory) {
       setError('カテゴリ（小分類）を選択してください。');
       setIsLoading(false);
@@ -90,17 +104,20 @@ const PartnerSignupPage: NextPage = () => {
           qrStandCount,
           email, 
           password, 
-          // ▼▼▼ カテゴリ情報を単一選択用に変更 ▼▼▼
           category: {
             main: mainCategory,
-            sub: selectedSubCategory // 配列から文字列へ
+            sub: selectedSubCategory, // ★ 修正点: 単一の文字列を送信
           },
         }),
       });
 
       const data = await response.json();
-      if (!response.ok) { throw new Error(data.message || '登録に失敗しました。'); }
+      if (!response.ok) {
+        throw new Error(data.message || '登録に失敗しました。');
+      }
+
       setIsSuccess(true);
+
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -112,12 +129,10 @@ const PartnerSignupPage: NextPage = () => {
     <div className="min-h-screen bg-gray-100 py-10 flex flex-col justify-center items-center">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
         {isSuccess ? (
-          // --- 成功時の表示 ---
           <div className="text-center">
             {/* ... 省略 ... */}
           </div>
         ) : (
-          // --- 登録フォームの表示 ---
           <>
             <h1 className="text-2xl font-bold text-center mb-6">パートナー無料登録</h1>
             <div className="text-center mb-8">
@@ -152,11 +167,11 @@ const PartnerSignupPage: NextPage = () => {
                     {subCategoryOptions.map(subCat => (
                       <label key={subCat} className="flex items-center space-x-3 cursor-pointer">
                         <input
-                          type="radio" // typeをradioに変更
-                          name="subCategory" // 同じname属性でグループ化
+                          type="radio" // ★ 修正点: typeをradioに変更
+                          name="subCategory" // ★ 修正点: 同じname属性でグループ化
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                          checked={selectedSubCategory === subCat} // checkedの条件を変更
-                          onChange={() => setSelectedSubCategory(subCat)} // onChangeの処理を変更
+                          checked={selectedSubCategory === subCat} // ★ 修正点: checkedの条件を変更
+                          onChange={() => setSelectedSubCategory(subCat)} // ★ 修正点: onChangeの処理を変更
                         />
                         <span className="text-gray-700">{subCat}</span>
                       </label>
@@ -167,15 +182,46 @@ const PartnerSignupPage: NextPage = () => {
               {/* ▲▲▲ ここまで ▲▲▲ */}
 
               {/* --- 担当者名以下の入力フィールド --- */}
-              {/* ... 省略（コードは変更なし） ... */}
-              
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">ご担当者名</label>
+                <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">電話番号</label>
+                <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg"/>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数</label>
+                <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="0" className="w-full px-4 py-2 border rounded-lg"/>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">メールアドレス</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）</label>
+                <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上)</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg"/>
+              </div>
+              <div className="pt-4">
+                <label className="flex items-start">
+                  <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-4 w-4"/>
+                  <span className="ml-3 text-sm text-gray-600">
+                    登録することで、みんなの那須アプリの紹介料プログラム（QRコードスタンド初期制作料5,000円、追加スタンド作成無料）および、アプリ広告（広告制作料10,000円、広告費無料）の１年契約（１年更新15,000円）に参加を同意したものとみなされます。
+                  </span>
+                </label>
+              </div>
+
               {error && <p className="text-red-500 text-sm text-center pt-2">{error}</p>}
               <button type="submit" disabled={isLoading} className="w-full py-3 mt-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-400">
                 {isLoading ? '登録処理中...' : '登録する'}
               </button>
             </form>
             <p className="text-sm text-center mt-6">
-              {/* ... 省略 ... */}
+              すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-blue-600 hover:underline">ログイン</Link>
             </p>
           </>
         )}
