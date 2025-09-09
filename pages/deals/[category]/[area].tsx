@@ -1,126 +1,102 @@
-import { GetServerSideProps, NextPage } from 'next';
-import Link from 'next/link';
+import { NextPage, GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
+// ▼▼▼ 修正点: クライアントサイドの 'firebase/firestore' は不要なため削除 ▼▼▼
+import { getAdminDb } from '../../../lib/firebase-admin';
+import Link from 'next/link';
 
-// --- ★★★ データ ★★★ ---
-// 店舗データの型定義
-interface StoreData {
-  id: string; // idは行番号などで代用
-  name: string;
-  address: string;
-  category: string;
-  area: string;
+interface Store {
+    id: string;
+    storeName: string;
+    address: string;
+    // 必要に応じて他の店舗情報も追加
 }
 
-// URLのslugから日本語の名前に変換するための対応表
-const categoryNames: { [key: string]: string } = {
-  'restaurant': '飲食店',
-  'hair-salon': '美容室',
-  'beauty': 'Beauty',
-  'health': 'Health',
-  'living': '暮らし',
-  'leisure': 'レジャー',
-};
-const areaNames: { [key: string]: string } = {
-  'nasushiobara': '那須塩原市',
-  'ohtawara': '大田原市',
-  'nasu': '那須町',
-};
-
-// ページが受け取るpropsの型
-interface StoreListPageProps {
-  stores: StoreData[];
-  categoryName: string;
-  areaName: string;
+interface PageProps {
+    stores: Store[];
 }
 
-const StoreListPage: NextPage<StoreListPageProps> = ({ stores, categoryName, areaName }) => {
-  const router = useRouter();
+const StoreListPage: NextPage<PageProps> = ({ stores }) => {
+    const router = useRouter();
+    const { category, area, sub } = router.query;
 
-  return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      <header className="bg-white p-4 text-center sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800">{areaName}の{categoryName}一覧</h1>
-      </header>
+    return (
+        <div className="min-h-screen bg-gray-50 font-sans p-4">
+            <header className="max-w-4xl mx-auto text-center py-6">
+                <h1 className="text-2xl font-bold text-gray-800">{area}のお店一覧</h1>
+                <p className="text-gray-600 mt-2">
+                    カテゴリ: {category} &gt; {sub}
+                </p>
+            </header>
 
-      <main className="p-4 max-w-3xl mx-auto">
-        <div className="text-center my-4">
-          <button onClick={() => router.back()} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg text-sm">
-            ← エリア選択に戻る
-          </button>
+            <main className="max-w-4xl mx-auto">
+                <div className="my-4 text-center">
+                     <Link href={`/deals/select-area?main=${encodeURIComponent(category as string)}&sub=${encodeURIComponent(sub as string)}`}>
+                        <a className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                            ← エリア選択に戻る
+                        </a>
+                    </Link>
+                </div>
+
+                {stores.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {stores.map(store => (
+                            <Link key={store.id} href={`/store/${store.id}`}>
+                                <a className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                                    <h2 className="text-xl font-bold text-gray-800">{store.storeName}</h2>
+                                    <p className="text-gray-600 mt-2">{store.address}</p>
+                                    {/* 他の店舗情報を表示 */}
+                                </a>
+                            </Link>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center bg-white p-8 rounded-lg shadow-md">
+                        <p className="text-gray-600">この条件に合う店舗はまだ登録されていません。</p>
+                    </div>
+                )}
+            </main>
         </div>
-
-        {/* --- 店舗一覧 --- */}
-        <div className="space-y-4 my-8">
-          {stores.length > 0 ? (
-            stores.map((store) => (
-              <Link key={store.id} href={`/store/${store.id}`} className="block p-5 bg-white rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <h2 className="text-xl font-bold text-blue-600">{store.name}</h2>
-                <p className="text-gray-600 mt-1">{store.address}</p>
-              </Link>
-            ))
-          ) : (
-            <div className="text-center p-8 bg-white rounded-lg shadow-md">
-              <p className="text-gray-500">この条件に合う店舗はまだ登録されていません。</p>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  );
+    );
 };
 
-// --- ★★★ ここからが重要な変更点 ★★★ ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { category, area } = context.params as { category: string; area: string; };
+    const { category, area, sub } = context.query;
 
-  let stores: StoreData[] = [];
-  try {
-    // 1. Googleスプレッドシートの公開URLを指定します
-    //    必ずご自身のスプレッドシートのURLに書き換えてください
-    const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQujHRiZb1d4MKRnhqnWCk5gn8lWJjndZxidg8ZgUxgrKe6hDwviEp3bVuyxHzy0z0zlJyUqB6u0txB/pub?gid=1261367864&single=true&output=csv";
-    
-    // 2. スプレッドシートからデータを取得
-    const response = await fetch(SPREADSHEET_URL);
-    const csvText = await response.text();
-    
-    // 3. 取得したCSVデータを扱いやすい形に変換
-    const rows = csvText.split('\n').slice(1); // ヘッダー行を除外
-    const allStores = rows.map((row, index) => {
-      const columns = row.split(',');
-      return {
-        id: String(index + 1), // 行番号をIDとして使用
-        timestamp: columns[0],
-        name: columns[1],
-        address: columns[2],
-        phone: columns[3],
-        hours: columns[4],
-        menu: columns[5],
-        recommend: columns[6],
-        coupon: columns[7],
-        googleMap: columns[8],
-        category: columns[9], // カテゴリのslug (例: restaurant)
-        area: columns[10],     // エリアのslug (例: nasushiobara)
-      };
-    });
+    if (!category || !area || !sub) {
+        return { notFound: true };
+    }
 
-    // 4. カテゴリとエリアで、表示する店舗を絞り込む
-    stores = allStores.filter(store => store.category === category && store.area === area);
+    try {
+        const db = getAdminDb();
+        // ▼▼▼ 修正点: Firebase Admin SDKの記法に修正 ▼▼▼
+        const usersRef = db.collection('users');
+        
+        const q = usersRef
+            .where('role', '==', 'partner')
+            .where('status', '==', 'approved') // 承認済みの店舗のみ表示
+            .where('category.main', '==', category)
+            .where('category.sub', '==', sub)
+            .where('area', '==', area);
 
-  } catch (error) {
-    console.error("Error fetching stores from Google Sheet:", error);
-  }
-  
-  const categoryName = categoryNames[category] || 'お店';
-  const areaName = areaNames[area] || 'エリア';
+        const querySnapshot = await q.get();
+        // ▲▲▲ ここまで ▲▲▲
 
-  return {
-    props: {
-      stores,
-      categoryName,
-      areaName,
-    },
-  };
+        const stores: Store[] = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            storeName: doc.data().storeName || '',
+            address: doc.data().address || '',
+            ...JSON.parse(JSON.stringify(doc.data())),
+        }));
+
+        return {
+            props: { stores },
+        };
+    } catch (error) {
+        console.error("Error fetching stores:", error);
+        return {
+            props: { stores: [] },
+        };
+    }
 };
 
 export default StoreListPage;
