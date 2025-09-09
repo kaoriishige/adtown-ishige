@@ -1,61 +1,33 @@
 import { NextPage } from 'next';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-// --- カテゴリデータを「地元資本」を軸に更新 ---
-const categories = [
-  { 
-    name: '住まい・リフォーム', 
-    emoji: '🏡', 
-    slug: 'housing', 
-    description: '地元工務店、リフォーム' 
-  },
-  { 
-    name: '車・バイク', 
-    emoji: '🚗', 
-    slug: 'automotive', 
-    description: '新車・中古車販売、整備' 
-  },
-  { 
-    name: '教育・習い事', 
-    emoji: '🎓', 
-    slug: 'education', 
-    description: '学習塾、ピアノ、英会話、Web、AI、その他' 
-  },
-  { 
-    name: 'グルメ・カフェ', 
-    emoji: '🍔', 
-    slug: 'gourmet', 
-    description: '地域に根差した飲食店' 
-  },
-  { 
-    name: '美容・健康', 
-    emoji: '💅', 
-    slug: 'beauty-health', 
-    description: '美容室、エステ、整体、その他' 
-  },
-  { 
-    name: '産直・専門店', 
-    emoji: '🌿', 
-    slug: 'local-products', 
-    description: '農産物、お土産、個人商店、その他' 
-  },
-  { 
-    name: '宿泊・温泉', 
-    emoji: '♨️', 
-    slug: 'lodging-onsen', 
-    description: 'ホテル、旅館、日帰り温泉' 
-  },
-  { 
-    name: '専門サービス', 
-    emoji: '🛠️', 
-    slug: 'professional-services', 
-    description: '修理、クリーニング、士業、その他' 
-  },
-];
+// --- パートナー登録画面と全く同じカテゴリデータを使用 ---
+const categoryData = {
+  "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
+  "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
+  "美容・健康関連": ["美容室・理容室", "ネイルサロン", "エステサロン", "リラクゼーション・マッサージ", "整体・整骨院・鍼灸院", "個人経営の薬局", "クリニック・歯科医院"],
+  "住まい・暮らし関連": ["工務店・建築・リフォーム", "水道・電気工事", "不動産会社", "クリーニング店", "造園・植木屋", "便利屋"],
+  "教育・習い事関連": ["学習塾・家庭教師", "ピアノ・音楽教室", "英会話教室", "書道・そろばん教室", "スポーツクラブ・道場", "パソコン教室", "料理教室"],
+  "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
+  "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
+  "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
+  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "クリーニング（衣類・布団など）", "写真館", "保険代理店"],
+};
 
-const DealsTopPage: NextPage = () => {
+const mainCategories = Object.keys(categoryData);
+
+const DealsCategoryPage: NextPage = () => {
   const router = useRouter();
+  // --- 展開されている大分類を管理するためのState ---
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  // --- 大分類がクリックされたときの処理 ---
+  const handleCategoryClick = (category: string) => {
+    // すでに開いているカテゴリを再度クリックした場合は閉じる
+    setExpandedCategory(prev => (prev === category ? null : category));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
@@ -71,15 +43,37 @@ const DealsTopPage: NextPage = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 my-8">
-          {categories.map((category) => (
-            <Link key={category.slug} href={`/deals/${category.slug}`} className="block p-6 bg-white rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center">
-              <div className="text-5xl mb-2">{category.emoji}</div>
-              <h2 className="text-xl font-bold text-gray-800">{category.name}</h2>
-              {category.description && (
-                <p className="text-xs text-gray-500 mt-1">{category.description}</p>
-              )}
-            </Link>
+        {/* --- カテゴリ選択エリア --- */}
+        <div className="space-y-4">
+          {mainCategories.map(mainCat => (
+            <div key={mainCat}>
+              {/* --- 大分類ボタン --- */}
+              <button
+                onClick={() => handleCategoryClick(mainCat)}
+                className="w-full p-5 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 text-left flex justify-between items-center"
+              >
+                <span className="text-xl font-bold text-gray-800">{mainCat}</span>
+                <span className={`transform transition-transform duration-300 ${expandedCategory === mainCat ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+
+              {/* --- 小分類リスト（選択された大分類の場合のみ表示）--- */}
+              <div
+                className={`overflow-hidden transition-all duration-500 ease-in-out ${expandedCategory === mainCat ? 'max-h-96 mt-2' : 'max-h-0'}`}
+              >
+                <div className="p-4 bg-gray-100 rounded-b-lg grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {/* @ts-ignore */}
+                  {categoryData[mainCat].map((subCat: string) => (
+                    <Link key={subCat} href={`/deals/${mainCat}/${subCat}`}>
+                      <a className="block p-3 bg-white text-gray-700 rounded-md hover:bg-blue-500 hover:text-white transition-colors">
+                        {subCat}
+                      </a>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </main>
@@ -87,4 +81,4 @@ const DealsTopPage: NextPage = () => {
   );
 };
 
-export default DealsTopPage;
+export default DealsCategoryPage;
