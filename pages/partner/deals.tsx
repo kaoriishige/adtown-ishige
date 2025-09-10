@@ -1,214 +1,234 @@
-import type { GetServerSideProps, NextPage } from 'next';
+import { useState, useEffect, useCallback } from 'react';
+import type { NextPage } from 'next';
 import Link from 'next/link';
-import { useState } from 'react';
-import { app } from '@/lib/firebase';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { db, auth, storage } from '@/lib/firebase';
+import { 
+  collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, doc, Timestamp
+} from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { v4 as uuidv4 } from 'uuid';
+
+// --- 型定義 ---
+interface Store {
+  id: string;
+  ownerId: string;
+}
 
 interface Deal {
   id: string;
-  title: string;
   type: 'お得情報' | 'クーポン' | 'フードロス';
+  title: string;
   description: string;
-  createdAt: string;
   imageUrl?: string;
+  createdAt: string;
 }
 
-interface DealsPageProps {
-  initialDeals: Deal[];
-}
+// --- ページコンポーネント ---
+const PartnerDealsPage: NextPage = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [store, setStore] = useState<Store | null>(null);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const DealsPage: NextPage<DealsPageProps> = ({ initialDeals }) => {
-    const [deals, setDeals] = useState<Deal[]>(initialDeals);
-    const [dealType, setDealType] = useState<'お得情報' | 'クーポン' | 'フードロス'>('お得情報');
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  // フォームのState
+  const [newDealType, setNewDealType] = useState<'お得情報' | 'クーポン' | 'フードロス'>('お得情報');
+  const [newDealTitle, setNewDealTitle] = useState('');
+  const [newDealDescription, setNewDealDescription] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const handleDelete = async (dealId: string) => {
-        if (!window.confirm('この情報を本当に削除しますか？')) {
-            return;
-        }
-        try {
-            const response = await fetch(`/api/partner/deals/${dealId}`, {
-                method: 'DELETE',
-            });
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || '削除に失敗しました。');
-            }
-            setDeals(currentDeals => currentDeals.filter(deal => deal.id !== dealId));
-            alert('情報を削除しました。');
-        } catch (error: any) {
-            console.error('削除エラー:', error);
-            alert(`エラー: ${error.message}`);
-        }
-    };
+  // ログイン状態を監視
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setLoading(true);
+      setUser(currentUser);
+      if (!currentUser) {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (isSubmitting) return;
-        setIsSubmitting(true);
-
-        try {
-            let newImageUrl: string | undefined = undefined;
-            if (imageFile) {
-                const storage = getStorage(app);
-                const storageRef = ref(storage, `deals/${Date.now()}_${imageFile.name}`);
-                const snapshot = await uploadBytes(storageRef, imageFile);
-                newImageUrl = await getDownloadURL(snapshot.ref);
-            }
-
-            const response = await fetch('/api/partner/deals', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title,
-                    type: dealType,
-                    description,
-                    imageUrl: newImageUrl,
-                }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || '登録に失敗しました。');
-            }
-
-            const newDealData = await response.json();
-            const formattedNewDeal = {
-                ...newDealData,
-                createdAt: new Date(newDealData.createdAt.seconds * 1000).toLocaleDateString('ja-JP'),
-            };
-            
-            setDeals(prev => [formattedNewDeal, ...prev]);
-            
-            setTitle('');
-            setDescription('');
-            setImageFile(null);
-            (document.getElementById('image-upload') as HTMLInputElement).value = "";
-            alert('新しい情報を登録しました！');
-        } catch (error: any) {
-            console.error("登録エラー:", error);
-            alert(`エラー: ${error.message}`);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    return (
-        <div className="min-h-screen bg-gray-50">
-            <header className="bg-white shadow-sm">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <h1 className="text-2xl font-bold text-gray-900">お得情報・クーポン・フードロス管理</h1>
-                </div>
-            </header>
-            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <section className="bg-white p-8 rounded-lg shadow-sm mb-8">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">新規登録</h2>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">種別</label>
-                            <select value={dealType} onChange={(e) => setDealType(e.target.value as any)} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                                <option>お得情報</option>
-                                <option>クーポン</option>
-                                <option>フードロス</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">タイトル</label>
-                            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">説明文</label>
-                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">画像 (任意)</label>
-                            <input type="file" id="image-upload" onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)} accept="image/png, image/jpeg" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                        </div>
-                        <div className="text-right">
-                             <button type="submit" disabled={isSubmitting} className="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400">
-                                {isSubmitting ? '登録中...' : '登録する'}
-                            </button>
-                        </div>
-                    </form>
-                </section>
-                <section>
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">登録済みリスト</h2>
-                    <div className="bg-white rounded-lg shadow-sm">
-                        <ul className="divide-y divide-gray-200">
-                            {deals.map(deal => (
-                                <li key={deal.id} className="p-4 flex items-start space-x-4">
-                                    {deal.imageUrl && <img src={deal.imageUrl} alt={deal.title} className="w-24 h-24 object-cover rounded-md flex-shrink-0" />}
-                                    <div className="flex-grow">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <span className={`inline-flex items-center px-2-5 py-0-5 rounded-full text-xs font-medium ${deal.type === 'クーポン' ? 'bg-blue-100 text-blue-800' : deal.type === 'フードロス' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                    {deal.type}
-                                                </span>
-                                                <p className="font-semibold text-gray-800 mt-1">{deal.title}</p>
-                                            </div>
-                                            <div className="text-right flex-shrink-0 ml-4">
-                                                <p className="text-xs text-gray-400">{deal.createdAt}</p>
-                                                <button onClick={() => handleDelete(deal.id)} className="text-sm text-red-500 hover:text-red-700 mt-2">削除</button>
-                                            </div>
-                                        </div>
-                                        <p className="text-sm text-gray-500 mt-1">{deal.description}</p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </section>
-                <div className="mt-8">
-                   <Link href="/partner/dashboard" className="text-sm font-medium text-gray-600 hover:text-gray-900">
-                        ← ダッシュボードに戻る
-                    </Link>
-                </div>
-            </main>
-        </div>
-    );
-};
-export const getServerSideProps: GetServerSideProps = async (context) => {
+  // ユーザーの店舗情報と、それに紐づくお得情報を取得する
+  const fetchStoreAndDeals = useCallback(async (currentUser: User) => {
     try {
-        const cookies = nookies.get(context);
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-        const { uid: partnerId } = token;
+      setError(null);
+      // 1. ユーザーIDから店舗情報を取得
+      const storesRef = collection(db, 'stores');
+      const storeQuery = query(storesRef, where("ownerId", "==", currentUser.uid));
+      const storeSnapshot = await getDocs(storeQuery);
 
-        const db = getAdminDb();
-        const dealsSnapshot = await db.collection('partners').doc(partnerId).collection('deals').orderBy('createdAt', 'desc').get();
-        
-        const initialDeals = dealsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt as Timestamp;
-            return {
-                id: doc.id,
-                title: data.title,
-                type: data.type,
-                description: data.description,
-                imageUrl: data.imageUrl || null,
-                createdAt: createdAt.toDate().toLocaleDateString('ja-JP'),
-            };
-        });
+      if (storeSnapshot.empty) {
+        setError("店舗情報が見つかりません。まずプロフィールを登録してください。");
+        setLoading(false);
+        return;
+      }
+      
+      const storeDoc = storeSnapshot.docs[0];
+      const fetchedStore = { id: storeDoc.id, ...storeDoc.data() } as Store;
+      setStore(fetchedStore);
 
+      // 2. 店舗IDに紐づくお得情報を取得
+      const dealsRef = collection(db, 'storeDeals');
+      const dealsQuery = query(dealsRef, where("storeId", "==", fetchedStore.id), orderBy("createdAt", "desc"));
+      const dealsSnapshot = await getDocs(dealsQuery);
+
+      const dealsData = dealsSnapshot.docs.map(doc => {
+        const data = doc.data();
         return {
-            props: {
-                initialDeals,
-            },
+          id: doc.id,
+          type: data.type,
+          title: data.title,
+          description: data.description,
+          imageUrl: data.imageUrl,
+          createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
         };
-    } catch (error) {
-        console.error("サーバーサイドエラー:", error);
-        return {
-            redirect: {
-                destination: '/partner/login',
-                permanent: false,
-            },
-        };
+      });
+      setDeals(dealsData);
+
+    } catch (err) {
+      console.error(err);
+      setError("データの読み込みに失敗しました。");
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchStoreAndDeals(user);
+    }
+  }, [user, fetchStoreAndDeals]);
+  
+  // ファイル選択ハンドラ
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0]);
+    }
+  };
+
+  // 新規登録処理
+  const handleCreateDeal = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!store) {
+      setError("店舗情報が読み込めていないため、登録できません。");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      let imageUrl = '';
+      // Step 1: 画像が選択されていればアップロード
+      if (selectedFile) {
+        setUploadProgress(0);
+        const uniqueFileName = `${uuidv4()}_${selectedFile.name}`;
+        const fileRef = ref(storage, `deals/${store.id}/${uniqueFileName}`);
+        const uploadTask = uploadBytesResumable(fileRef, selectedFile);
+        
+        imageUrl = await new Promise<string>((resolve, reject) => {
+          uploadTask.on('state_changed',
+            (snapshot) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
+            (error) => reject(error),
+            async () => { resolve(await getDownloadURL(uploadTask.snapshot.ref)); }
+          );
+        });
+      }
+      
+      // Step 2: Firestoreにデータを保存
+      const dealsCollectionRef = collection(db, 'storeDeals');
+      await addDoc(dealsCollectionRef, {
+        type: newDealType, title: newDealTitle, description: newDealDescription,
+        imageUrl, storeId: store.id, createdAt: serverTimestamp(), isActive: true,
+      });
+
+      // 成功したらフォームをリセットし、リストを再読み込み
+      setNewDealTitle(''); setNewDealDescription(''); setSelectedFile(null); setUploadProgress(null);
+      if(user) fetchStoreAndDeals(user);
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || '登録中にエラーが発生しました。');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 削除処理
+  const handleDeleteDeal = async (dealId: string) => {
+    if (!window.confirm("この情報を削除しますか？")) return;
+    setError(null);
+    try {
+      const response = await fetch(`/api/partner/deals/${dealId}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || '削除に失敗しました。');
+      }
+      setDeals(prevDeals => prevDeals.filter(deal => deal.id !== dealId));
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    }
+  };
+  
+  if (loading) return <div>読み込み中...</div>;
+  if (!user) return <div>このページにアクセスするにはログインが必要です。</div>;
+
+  return (
+    <div className="container mx-auto p-8 max-w-3xl">
+      <h1 className="text-2xl font-bold mb-6">お得情報・クーポン・フードロス管理</h1>
+      
+      <form onSubmit={handleCreateDeal} className="space-y-4 p-4 border rounded-lg mb-8">
+        <h2 className="text-xl font-semibold">新規登録</h2>
+        <div><label>種別</label><select value={newDealType} onChange={(e) => setNewDealType(e.target.value as any)} className="w-full p-2 border rounded mt-1"><option>お得情報</option><option>クーポン</option><option>フードロス</option></select></div>
+        <div><label>タイトル</label><input type="text" value={newDealTitle} onChange={(e) => setNewDealTitle(e.target.value)} required className="w-full p-2 border rounded mt-1" /></div>
+        <div><label>説明文</label><textarea value={newDealDescription} onChange={(e) => setNewDealDescription(e.target.value)} required className="w-full p-2 border rounded mt-1" rows={3}></textarea></div>
+        <div>
+          <label>画像 (任意)</label>
+          <input type="file" onChange={handleFileChange} accept="image/*" className="w-full p-2 border rounded mt-1" />
+          {uploadProgress !== null && (<div className="w-full bg-gray-200 rounded-full h-2.5 my-2"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>)}
+        </div>
+        <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400">
+          {isSubmitting ? '登録中...' : '登録する'}
+        </button>
+      </form>
+      
+      <h2 className="text-xl font-semibold">登録済みリスト</h2>
+      {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded">エラー: {error}</p>}
+      <div className="space-y-4 mt-4">
+        {deals.length > 0 ? (
+          deals.map(deal => (
+            <div key={deal.id} className="p-4 border rounded-lg flex justify-between items-center gap-4">
+              <div className="flex items-center min-w-0">
+                {deal.imageUrl && <img src={deal.imageUrl} alt={deal.title} className="w-16 h-16 object-cover rounded mr-4 flex-shrink-0"/>}
+                <div className="min-w-0">
+                  <span className="text-xs bg-gray-200 rounded-full px-2 py-1">{deal.type}</span>
+                  <p className="font-bold truncate">{deal.title}</p>
+                  <p className="text-sm text-gray-600 truncate">{deal.description}</p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-xs text-gray-500 mb-2">{new Date(deal.createdAt).toLocaleDateString('ja-JP')}</p>
+                <button onClick={() => handleDeleteDeal(deal.id)} className="text-red-500 hover:underline">削除</button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>まだ情報が登録されていません。</p>
+        )}
+      </div>
+
+      <div className="mt-8">
+        <Link href="/partner/dashboard"><a className="text-blue-600 hover:underline">← ダッシュボードに戻る</a></Link>
+      </div>
+    </div>
+  );
 };
 
-export default DealsPage;
+export default PartnerDealsPage;

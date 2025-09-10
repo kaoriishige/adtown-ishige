@@ -1,16 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { doc, getDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
-// TODO: あなたのプロジェクトで、サーバーサイドで認証情報を取得するためのライブラリをインポートしてください。
-// 例: import { getToken } from 'next-auth/jwt';
-// 例: import { auth as adminAuth } from 'firebase-admin';
+import { ref, deleteObject } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
+// TODO: サーバーサイドでユーザーIDを取得する仕組みをインポート
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // 1. DELETEリクエスト以外は拒否
   if (req.method !== 'DELETE') {
     res.setHeader('Allow', ['DELETE']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
@@ -18,45 +15,49 @@ export default async function handler(
 
   try {
     const { dealId } = req.query;
-
     if (typeof dealId !== 'string' || !dealId) {
       return res.status(400).json({ error: 'IDが無効です。' });
     }
 
-    /*
-     * 2. 認証チェック
-     * TODO: この部分は、あなたのアプリの認証の仕組みに合わせて実装する必要があります。
-     * サーバーサイドで安全にユーザーIDを取得してください。
-     */
-    // --- ↓↓↓ 必ずあなたの認証方法に書き換えてください ↓↓↓ ---
-    // 例: const token = await getToken({ req }); const userId = token?.sub;
+    // TODO: サーバーサイドでログインユーザーIDを取得する
     const userId = "ここに、現在ログインしているユーザーのIDを取得する処理を実装してください";
-    if (!userId || typeof userId !== 'string') {
+    if (!userId) {
        return res.status(401).json({ error: '認証情報が取得できませんでした。' });
     }
-    // --- ↑↑↑ 必ずあなたの認証方法に書き換えてください ↑↑↑ ---
 
-    // 3. 権限チェック：削除しようとしているデータのオーナーが、ログインユーザー本人であるか確認
-    const dealDocRef = doc(db, 'storeDeals', dealId); // 削除対象のコレクション名を指定
+    // ★ 修正点: コレクション名を'storeDeals'に統一
+    const dealDocRef = doc(db, 'storeDeals', dealId);
     const dealDoc = await getDoc(dealDocRef);
 
     if (!dealDoc.exists()) {
       return res.status(404).json({ error: '削除対象のデータが見つかりません。' });
     }
     
-    // このお得情報が属する店舗の情報を取得
-    const storeRef = doc(db, 'stores', dealDoc.data().storeId);
-    const storeSnap = await getDoc(storeRef);
+    const dealData = dealDoc.data();
 
-    // 店舗が存在しないか、店舗のオーナーIDがログインユーザーIDと一致しない場合は拒否
+    // 権限チェック
+    const storeRef = doc(db, 'stores', dealData.storeId);
+    const storeSnap = await getDoc(storeRef);
     if (!storeSnap.exists() || storeSnap.data().ownerId !== userId) {
       return res.status(403).json({ error: 'このデータを削除する権限がありません。' });
     }
 
-    // 4. すべてのチェックをパスしたら削除を実行
+    // ★ 追加機能: Storageに画像があれば削除する
+    if (dealData.imageUrl) {
+      try {
+        const imageRef = ref(storage, dealData.imageUrl);
+        await deleteObject(imageRef);
+      } catch (storageError: any) {
+        // ファイルが存在しないエラーは無視して処理を続行
+        if (storageError.code !== 'storage/object-not-found') {
+          throw storageError; // その他のエラーは問題として処理
+        }
+      }
+    }
+    
+    // Firestoreのドキュメントを削除
     await deleteDoc(dealDocRef);
 
-    // 5. 成功の応答を返す
     return res.status(200).json({ message: '正常に削除されました。' });
 
   } catch (error) {
