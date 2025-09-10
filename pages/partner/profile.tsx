@@ -1,13 +1,11 @@
-// ファイル名: pages/partner/profile.tsx
-
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { db, auth, storage } from '@/lib/firebase';
 import {
-  collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion
+  collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion, arrayRemove
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -73,7 +71,6 @@ const StoreProfilePage = () => {
     setSnsUrls(newSnsUrls);
   };
   
-  // ★★★ 新しく追加された画像削除関数 ★★★
   const handleDeleteImage = async (imageUrlToDelete: string) => {
     if (!storeId || !window.confirm("この写真を削除しますか？")) return;
     setError(null);
@@ -88,7 +85,7 @@ const StoreProfilePage = () => {
       const data = await response.json();
       if (!response.ok) { throw new Error(data.error || "削除に失敗しました。"); }
       
-      setPhotoUrls(prev => prev.filter(url => url !== imageUrlToDelete)); // UIから写真を削除
+      setPhotoUrls(prev => prev.filter(url => url !== imageUrlToDelete));
       alert("写真を削除しました。");
 
     } catch (err: any) {
@@ -101,18 +98,26 @@ const StoreProfilePage = () => {
     if (!user) return alert('ログインしていません。');
     setIsSaving(true);
     setError(null);
-    // ... (既存の保存処理は変更なし) ...
+    
     const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
-    const storeData = { storeName, address, phoneNumber, description, businessHours, websiteUrl, snsUrls: finalSnsUrls, ownerId: user.uid, updatedAt: serverTimestamp(), };
+    const textData = { storeName, address, phoneNumber, description, businessHours, websiteUrl, snsUrls: finalSnsUrls, ownerId: user.uid, updatedAt: serverTimestamp(), };
+    
     let currentStoreId = storeId;
     try {
-      if (currentStoreId) { await updateDoc(doc(db, 'stores', currentStoreId), storeData); } else {
-        const docRef = await addDoc(collection(db, 'stores'), { ...storeData, status: 'pending', createdAt: serverTimestamp(), photoUrls: [] });
-        setStoreId(docRef.id); currentStoreId = docRef.id;
+      if (currentStoreId) {
+        await updateDoc(doc(db, 'stores', currentStoreId), textData);
+      } else {
+        const docRef = await addDoc(collection(db, 'stores'), { ...textData, status: 'pending', createdAt: serverTimestamp(), photoUrls: [] });
+        setStoreId(docRef.id);
+        currentStoreId = docRef.id;
       }
-    } catch (error) { console.error("テキスト情報の保存に失敗:", error); alert('エラーが発生しました。'); setIsSaving(false); return; }
+    } catch (error) { console.error("テキスト情報の保存に失敗:", error); setError('テキスト情報の保存に失敗しました。'); setIsSaving(false); return; }
+
     if (selectedFiles.length > 0 && currentStoreId) {
-      setUploadProgress(0); let uploadedCount = 0; const totalFiles = selectedFiles.length;
+      setUploadProgress(0);
+      let uploadedCount = 0;
+      const totalFiles = selectedFiles.length;
+
       const uploadPromises = selectedFiles.map(file => {
         const uniqueFileName = `${uuidv4()}_${file.name}`;
         const fileRef = ref(storage, `stores/${currentStoreId}/${uniqueFileName}`);
@@ -129,10 +134,13 @@ const StoreProfilePage = () => {
         const newPhotoUrls = await Promise.all(uploadPromises);
         const storeDocRef = doc(db, 'stores', currentStoreId);
         await updateDoc(storeDocRef, { photoUrls: arrayUnion(...newPhotoUrls) });
-        setPhotoUrls(prev => [...prev, ...newPhotoUrls]); setSelectedFiles([]);
+        setPhotoUrls(prev => [...prev, ...newPhotoUrls]);
+        setSelectedFiles([]);
       } catch (error) { console.error("画像アップロードまたはURL保存に失敗:", error); setError('画像のアップロードに失敗しました。'); }
     }
-    setIsSaving(false); setUploadProgress(null);
+    
+    setIsSaving(false);
+    setUploadProgress(null);
     if (!error) { alert('店舗情報を保存しました。'); }
   };
 
@@ -143,14 +151,17 @@ const StoreProfilePage = () => {
       <h1 className="text-2xl font-bold mb-6">店舗プロフィールの登録・編集</h1>
       {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded">エラー: {error}</p>}
       <div className="space-y-4">
-        {/* ... (店舗名, 住所などの入力欄は変更なし) ... */}
+        <div><label className="font-bold">店舗名 *</label><input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
+        <div><label className="font-bold">住所 *</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
+        <div><label className="font-bold">電話番号 *</label><input type="text" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
+        <div><label className="font-bold">店舗紹介文</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded mt-1" rows={5}></textarea></div>
+        <div><label className="font-bold">営業時間</label><textarea value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} className="w-full p-2 border rounded mt-1" rows={3}></textarea></div>
         
         <div>
           <label className="font-bold">店舗写真 (複数可)</label>
           <div className="flex flex-wrap gap-2 my-2 border p-2 rounded min-h-[112px]">
             {photoUrls.length > 0
               ? photoUrls.map(url => (
-                  // ★★★ 削除ボタンを追加した画像プレビュー ★★★
                   <div key={url} className="relative">
                     <img src={url} className="w-24 h-24 object-cover rounded" alt="アップロード済みの店舗写真"/>
                     <button 
@@ -169,12 +180,16 @@ const StoreProfilePage = () => {
           {uploadProgress !== null && (<div className="w-full bg-gray-200 rounded-full h-2.5 my-2"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>)}
         </div>
         
-        {/* ... (ウェブサイトURL, SNS URLなどの入力欄は変更なし) ... */}
+        <div><label className="font-bold">公式ウェブサイトURL</label><input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
+        <div><label className="font-bold">SNS URL 1</label><input type="url" value={snsUrls[0]} onChange={(e) => handleSnsUrlChange(0, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
+        <div><label className="font-bold">SNS URL 2</label><input type="url" value={snsUrls[1]} onChange={(e) => handleSnsUrlChange(1, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
+        <div><label className="font-bold">SNS URL 3</label><input type="url" value={snsUrls[2]} onChange={(e) => handleSnsUrlChange(2, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
         
         <button onClick={handleSaveProfile} disabled={isSaving} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400">
           {isSaving ? '保存中...' : '保存する'}
         </button>
       </div>
+
       <div className="mt-8">
         <Link href="/partner/dashboard"><a className="text-blue-600 hover:underline">← ダッシュボードに戻る</a></Link>
       </div>
