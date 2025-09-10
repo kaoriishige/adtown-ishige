@@ -3,9 +3,9 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { db, auth, storage } from '@/lib/firebase';
 import {
-  collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion, arrayRemove
+  collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,6 +15,7 @@ const StoreProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Form State
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [address, setAddress] = useState('');
@@ -28,20 +29,26 @@ const StoreProfilePage = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Auth observer
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) { setUser(currentUser); } else { router.push('/login'); }
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        router.push('/login');
+      }
     });
     return () => unsubscribe();
   }, [router]);
 
+  // Fetch existing store profile
   const fetchStoreProfile = useCallback(async (currentUser: User) => {
     if (!currentUser) return;
     setLoading(true);
     const storesRef = collection(db, 'stores');
     const q = query(storesRef, where("ownerId", "==", currentUser.uid));
     const querySnapshot = await getDocs(q);
-    
+
     if (!querySnapshot.empty) {
       const storeDoc = querySnapshot.docs[0];
       const storeData = storeDoc.data();
@@ -59,10 +66,16 @@ const StoreProfilePage = () => {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (user) { fetchStoreProfile(user); } }, [user, fetchStoreProfile]);
+  useEffect(() => {
+    if (user) {
+      fetchStoreProfile(user);
+    }
+  }, [user, fetchStoreProfile]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) { setSelectedFiles(Array.from(event.target.files)); }
+    if (event.target.files) {
+      setSelectedFiles(Array.from(event.target.files));
+    }
   };
 
   const handleSnsUrlChange = (index: number, value: string) => {
@@ -71,6 +84,7 @@ const StoreProfilePage = () => {
     setSnsUrls(newSnsUrls);
   };
   
+  // Image delete function
   const handleDeleteImage = async (imageUrlToDelete: string) => {
     if (!storeId || !window.confirm("この写真を削除しますか？")) return;
     setError(null);
@@ -83,7 +97,9 @@ const StoreProfilePage = () => {
       });
 
       const data = await response.json();
-      if (!response.ok) { throw new Error(data.error || "削除に失敗しました。"); }
+      if (!response.ok) {
+        throw new Error(data.error || "削除に失敗しました。");
+      }
       
       setPhotoUrls(prev => prev.filter(url => url !== imageUrlToDelete));
       alert("写真を削除しました。");
@@ -94,13 +110,14 @@ const StoreProfilePage = () => {
     }
   };
 
+  // Save profile function
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
     setIsSaving(true);
     setError(null);
     
     const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
-    const textData = { storeName, address, phoneNumber, description, businessHours, websiteUrl, snsUrls: finalSnsUrls, ownerId: user.uid, updatedAt: serverTimestamp(), };
+    const textData = { storeName, address, phoneNumber, description, businessHours, websiteUrl, snsUrls: finalSnsUrls, ownerId: user.uid, updatedAt: serverTimestamp() };
     
     let currentStoreId = storeId;
     try {
@@ -111,7 +128,12 @@ const StoreProfilePage = () => {
         setStoreId(docRef.id);
         currentStoreId = docRef.id;
       }
-    } catch (error) { console.error("テキスト情報の保存に失敗:", error); setError('テキスト情報の保存に失敗しました。'); setIsSaving(false); return; }
+    } catch (error) {
+      console.error("テキスト情報の保存に失敗:", error);
+      setError('テキスト情報の保存に失敗しました。');
+      setIsSaving(false);
+      return;
+    }
 
     if (selectedFiles.length > 0 && currentStoreId) {
       setUploadProgress(0);
@@ -123,11 +145,20 @@ const StoreProfilePage = () => {
         const fileRef = ref(storage, `stores/${currentStoreId}/${uniqueFileName}`);
         const metadata = { customMetadata: { ownerId: user.uid } };
         const uploadTask = uploadBytesResumable(fileRef, file, metadata);
+
         return new Promise<string>((resolve, reject) => {
-          uploadTask.on('state_changed', (snapshot) => {
-            const overallProgress = ((uploadedCount + (snapshot.bytesTransferred / snapshot.totalBytes)) / totalFiles) * 100;
-            setUploadProgress(overallProgress);
-          }, (error) => reject(error), async () => { uploadedCount++; const downloadURL = await getDownloadURL(uploadTask.snapshot.ref); resolve(downloadURL); });
+          uploadTask.on('state_changed',
+            (snapshot) => {
+              const overallProgress = ((uploadedCount + (snapshot.bytesTransferred / snapshot.totalBytes)) / totalFiles) * 100;
+              setUploadProgress(overallProgress);
+            },
+            (error) => reject(error),
+            async () => {
+              uploadedCount++;
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
+            }
+          );
         });
       });
       try {
@@ -136,12 +167,17 @@ const StoreProfilePage = () => {
         await updateDoc(storeDocRef, { photoUrls: arrayUnion(...newPhotoUrls) });
         setPhotoUrls(prev => [...prev, ...newPhotoUrls]);
         setSelectedFiles([]);
-      } catch (error) { console.error("画像アップロードまたはURL保存に失敗:", error); setError('画像のアップロードに失敗しました。'); }
+      } catch (error) {
+        console.error("画像アップロードまたはURL保存に失敗:", error);
+        setError('画像のアップロードに失敗しました。');
+      }
     }
     
     setIsSaving(false);
     setUploadProgress(null);
-    if (!error) { alert('店舗情報を保存しました。'); }
+    if (!error) {
+      alert('店舗情報を保存しました。');
+    }
   };
 
   if (loading) return <div>読み込み中...</div>;
@@ -176,7 +212,7 @@ const StoreProfilePage = () => {
               : <p className="text-sm text-gray-500 self-center">まだ写真はありません。</p>
             }
           </div>
-          <input type="file" multiple onChange={handleFileChange} />
+          <input type="file" multiple onChange={handleFileChange} accept="image/*" />
           {uploadProgress !== null && (<div className="w-full bg-gray-200 rounded-full h-2.5 my-2"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>)}
         </div>
         
