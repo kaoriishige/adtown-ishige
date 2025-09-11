@@ -103,7 +103,7 @@ const DealsSearchPage: NextPage = () => {
                     ) : searched && stores.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {stores.map(store => (
-                                <Link key={store.id} href={`/store/${store.id}`}>
+                                <Link key={store.id} href={`/stores/${store.id}`}>
                                     <a className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl">
                                         <h2 className="text-xl font-bold">{store.storeName}</h2>
                                         <p className="text-gray-600 mt-2">{store.address}</p>
