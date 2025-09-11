@@ -84,15 +84,24 @@ const StoreProfilePage = () => {
     setSnsUrls(newSnsUrls);
   };
   
+  // ▼▼▼ ここを修正しました ▼▼▼
   // Image delete function
   const handleDeleteImage = async (imageUrlToDelete: string) => {
-    if (!storeId || !window.confirm("この写真を削除しますか？")) return;
+    // ユーザーがログインしているか、storeIdがあるかを確認
+    if (!user || !storeId || !window.confirm("この写真を削除しますか？")) return;
     setError(null);
 
     try {
+      // 認証に必要なIDトークンを取得 👈 **追加**
+      const token = await user.getIdToken();
+
       const response = await fetch('/api/partner/delete-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // ヘッダーに認証トークンを追加 👈 **追加**
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ storeId, imageUrl: imageUrlToDelete }),
       });
 
@@ -109,6 +118,7 @@ const StoreProfilePage = () => {
       setError(err.message);
     }
   };
+  // ▲▲▲ 修正はここまで ▲▲▲
 
   // Save profile function
   const handleSaveProfile = async () => {
@@ -227,7 +237,7 @@ const StoreProfilePage = () => {
       </div>
 
       <div className="mt-8">
-        <Link href="/partner/dashboard"><a className="text-blue-600 hover:underline">← ダッシュボードに戻る</a></Link>
+        <Link href="/partner/dashboard">← ダッシュボードに戻る</Link>
       </div>
     </div>
   );
