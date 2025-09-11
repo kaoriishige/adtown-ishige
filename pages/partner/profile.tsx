@@ -29,7 +29,7 @@ const StoreProfilePage = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Auth observer
+  // ユーザーのログイン状態を監視
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -41,31 +41,38 @@ const StoreProfilePage = () => {
     return () => unsubscribe();
   }, [router]);
 
-  // Fetch existing store profile
+  // ログインユーザーに紐づく店舗情報をFirestoreから取得する関数
   const fetchStoreProfile = useCallback(async (currentUser: User) => {
     if (!currentUser) return;
     setLoading(true);
-    const storesRef = collection(db, 'stores');
-    const q = query(storesRef, where("ownerId", "==", currentUser.uid));
-    const querySnapshot = await getDocs(q);
+    setError(null);
+    try {
+      const storesRef = collection(db, 'stores');
+      const q = query(storesRef, where("ownerId", "==", currentUser.uid));
+      const querySnapshot = await getDocs(q);
 
-    if (!querySnapshot.empty) {
-      const storeDoc = querySnapshot.docs[0];
-      const storeData = storeDoc.data();
-      setStoreId(storeDoc.id);
-      setStoreName(storeData.storeName || '');
-      setAddress(storeData.address || '');
-      setPhoneNumber(storeData.phoneNumber || '');
-      setDescription(storeData.description || '');
-      setBusinessHours(storeData.businessHours || '');
-      setWebsiteUrl(storeData.websiteUrl || '');
-      const loadedSnsUrls = storeData.snsUrls || [];
-      setSnsUrls([loadedSnsUrls[0] || '', loadedSnsUrls[1] || '', loadedSnsUrls[2] || '']);
-      setPhotoUrls(storeData.photoUrls || []);
+      if (!querySnapshot.empty) {
+        const storeDoc = querySnapshot.docs[0];
+        const storeData = storeDoc.data();
+        setStoreId(storeDoc.id);
+        setStoreName(storeData.storeName || '');
+        setAddress(storeData.address || '');
+        setPhoneNumber(storeData.phoneNumber || '');
+        setDescription(storeData.description || '');
+        setBusinessHours(storeData.businessHours || '');
+        setWebsiteUrl(storeData.websiteUrl || '');
+        const loadedSnsUrls = storeData.snsUrls || [];
+        setSnsUrls([loadedSnsUrls[0] || '', loadedSnsUrls[1] || '', loadedSnsUrls[2] || '']);
+        setPhotoUrls(storeData.photoUrls || []);
+      }
+    } catch (err) {
+      console.error("店舗情報の取得に失敗:", err);
+      setError("店舗情報の読み込みに失敗しました。Firestoreのセキュリティルールが正しく設定されているか確認してください。");
     }
     setLoading(false);
   }, []);
 
+  // ユーザー情報が取得できたら、店舗情報を取得する
   useEffect(() => {
     if (user) {
       fetchStoreProfile(user);
@@ -84,22 +91,21 @@ const StoreProfilePage = () => {
     setSnsUrls(newSnsUrls);
   };
   
-  // ▼▼▼ ここを修正しました ▼▼▼
-  // Image delete function
+  // 画像削除ボタンがクリックされたときに実行される関数
   const handleDeleteImage = async (imageUrlToDelete: string) => {
-    // ユーザーがログインしているか、storeIdがあるかを確認
-    if (!user || !storeId || !window.confirm("この写真を削除しますか？")) return;
+    if (!user || !storeId) {
+      alert("エラーが発生しました。ページを再読み込みしてください。");
+      return;
+    }
+    if (!window.confirm("この写真を削除しますか？")) return;
+    
     setError(null);
-
     try {
-      // 認証に必要なIDトークンを取得 👈 **追加**
       const token = await user.getIdToken();
-
       const response = await fetch('/api/partner/delete-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // ヘッダーに認証トークンを追加 👈 **追加**
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ storeId, imageUrl: imageUrlToDelete }),
@@ -114,13 +120,12 @@ const StoreProfilePage = () => {
       alert("写真を削除しました。");
 
     } catch (err: any) {
-      console.error(err);
+      console.error("画像削除エラー:", err);
       setError(err.message);
     }
   };
-  // ▲▲▲ 修正はここまで ▲▲▲
 
-  // Save profile function
+  // 保存ボタンがクリックされたときに実行される関数
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
     setIsSaving(true);
