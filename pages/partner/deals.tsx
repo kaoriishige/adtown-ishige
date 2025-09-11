@@ -41,7 +41,6 @@ const PartnerDealsPage: NextPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ログイン状態を監視
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setLoading(true);
@@ -53,11 +52,9 @@ const PartnerDealsPage: NextPage = () => {
     return () => unsubscribe();
   }, []);
 
-  // ユーザーの店舗情報と、それに紐づくお得情報を取得する
   const fetchStoreAndDeals = useCallback(async (currentUser: User) => {
     try {
       setError(null);
-      // 1. ユーザーIDから店舗情報を取得
       const storesRef = collection(db, 'stores');
       const storeQuery = query(storesRef, where("ownerId", "==", currentUser.uid));
       const storeSnapshot = await getDocs(storeQuery);
@@ -72,7 +69,6 @@ const PartnerDealsPage: NextPage = () => {
       const fetchedStore = { id: storeDoc.id, ...storeDoc.data() } as Store;
       setStore(fetchedStore);
 
-      // 2. 店舗IDに紐づくお得情報を取得
       const dealsRef = collection(db, 'storeDeals');
       const dealsQuery = query(dealsRef, where("storeId", "==", fetchedStore.id), orderBy("createdAt", "desc"));
       const dealsSnapshot = await getDocs(dealsQuery);
@@ -89,7 +85,6 @@ const PartnerDealsPage: NextPage = () => {
         };
       });
       setDeals(dealsData);
-
     } catch (err) {
       console.error(err);
       setError("データの読み込みに失敗しました。");
@@ -104,18 +99,16 @@ const PartnerDealsPage: NextPage = () => {
     }
   }, [user, fetchStoreAndDeals]);
   
-  // ファイル選択ハンドラ
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);
     }
   };
 
-  // 新規登録処理
   const handleCreateDeal = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!store) {
-      setError("店舗情報が読み込めていないため、登録できません。");
+    if (!store || !user) {
+      setError("店舗情報またはユーザー情報が読み込めていません。");
       return;
     }
     setIsSubmitting(true);
@@ -123,12 +116,12 @@ const PartnerDealsPage: NextPage = () => {
 
     try {
       let imageUrl = '';
-      // Step 1: 画像が選択されていればアップロード
       if (selectedFile) {
         setUploadProgress(0);
         const uniqueFileName = `${uuidv4()}_${selectedFile.name}`;
         const fileRef = ref(storage, `deals/${store.id}/${uniqueFileName}`);
-        const uploadTask = uploadBytesResumable(fileRef, selectedFile);
+        const metadata = { customMetadata: { ownerId: user.uid } };
+        const uploadTask = uploadBytesResumable(fileRef, selectedFile, metadata);
         
         imageUrl = await new Promise<string>((resolve, reject) => {
           uploadTask.on('state_changed',
@@ -139,16 +132,17 @@ const PartnerDealsPage: NextPage = () => {
         });
       }
       
-      // Step 2: Firestoreにデータを保存
       const dealsCollectionRef = collection(db, 'storeDeals');
       await addDoc(dealsCollectionRef, {
         type: newDealType, title: newDealTitle, description: newDealDescription,
         imageUrl, storeId: store.id, createdAt: serverTimestamp(), isActive: true,
       });
 
-      // 成功したらフォームをリセットし、リストを再読み込み
-      setNewDealTitle(''); setNewDealDescription(''); setSelectedFile(null); setUploadProgress(null);
-      if(user) fetchStoreAndDeals(user);
+      setNewDealTitle('');
+      setNewDealDescription('');
+      setSelectedFile(null);
+      setUploadProgress(null);
+      if (user) fetchStoreAndDeals(user);
 
     } catch (err: any) {
       console.error(err);
@@ -158,14 +152,11 @@ const PartnerDealsPage: NextPage = () => {
     }
   };
 
-  // 削除処理
   const handleDeleteDeal = async (dealId: string) => {
     if (!window.confirm("この情報を削除しますか？")) return;
     setError(null);
     try {
-      const response = await fetch(`/api/partner/deals/${dealId}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(`/api/partner/deals/${dealId}`, { method: 'DELETE' });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || '削除に失敗しました。');
@@ -186,7 +177,18 @@ const PartnerDealsPage: NextPage = () => {
       
       <form onSubmit={handleCreateDeal} className="space-y-4 p-4 border rounded-lg mb-8">
         <h2 className="text-xl font-semibold">新規登録</h2>
-        <div><label>種別</label><select value={newDealType} onChange={(e) => setNewDealType(e.target.value as any)} className="w-full p-2 border rounded mt-1"><option>お得情報</option><option>クーポン</option><option>フードロス</option></select></div>
+        <div>
+            <label>種別</label>
+            <select 
+              value={newDealType} 
+              onChange={(e) => setNewDealType(e.target.value as 'お得情報' | 'クーポン' | 'フードロス')} 
+              className="w-full p-2 border rounded mt-1"
+            >
+              <option value="お得情報">お得情報</option>
+              <option value="クーポン">クーポン</option>
+              <option value="フードロス">フードロス</option>
+            </select>
+        </div>
         <div><label>タイトル</label><input type="text" value={newDealTitle} onChange={(e) => setNewDealTitle(e.target.value)} required className="w-full p-2 border rounded mt-1" /></div>
         <div><label>説明文</label><textarea value={newDealDescription} onChange={(e) => setNewDealDescription(e.target.value)} required className="w-full p-2 border rounded mt-1" rows={3}></textarea></div>
         <div>
@@ -225,7 +227,9 @@ const PartnerDealsPage: NextPage = () => {
       </div>
 
       <div className="mt-8">
-        <Link href="/partner/dashboard"><a className="text-blue-600 hover:underline">← ダッシュボードに戻る</a></Link>
+        <Link href="/partner/dashboard" className="text-blue-600 hover:underline">
+          ← ダッシュボードに戻る
+        </Link>
       </div>
     </div>
   );
