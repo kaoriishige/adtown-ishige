@@ -135,7 +135,7 @@ const PartnerDealsPage: NextPage = () => {
       const dealsCollectionRef = collection(db, 'storeDeals');
       await addDoc(dealsCollectionRef, {
         type: newDealType, title: newDealTitle, description: newDealDescription,
-        imageUrl, storeId: store.id, createdAt: serverTimestamp(), isActive: true,
+        imageUrl, storeId: store.id, ownerId: user.uid, createdAt: serverTimestamp(), isActive: true,
       });
 
       setNewDealTitle('');
@@ -152,21 +152,41 @@ const PartnerDealsPage: NextPage = () => {
     }
   };
 
+  // ▼▼▼ ここを修正しました ▼▼▼
   const handleDeleteDeal = async (dealId: string) => {
+    if (!user) {
+      alert("ログインしていません。");
+      return;
+    }
     if (!window.confirm("この情報を削除しますか？")) return;
+    
     setError(null);
     try {
-      const response = await fetch(`/api/partner/deals/${dealId}`, { method: 'DELETE' });
-      const data = await response.json();
+      // 認証トークンを取得
+      const token = await user.getIdToken();
+
+      // ヘッダーにトークンを含めてAPIを呼び出す
+      const response = await fetch(`/api/partner/deals/${dealId}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.error || '削除に失敗しました。');
       }
+
       setDeals(prevDeals => prevDeals.filter(deal => deal.id !== dealId));
+      alert('削除しました。');
+
     } catch (err: any) {
       console.error(err);
       setError(err.message);
     }
   };
+  // ▲▲▲ 修正はここまで ▲▲▲
   
   if (loading) return <div>読み込み中...</div>;
   if (!user) return <div>このページにアクセスするにはログインが必要です。</div>;
@@ -227,8 +247,10 @@ const PartnerDealsPage: NextPage = () => {
       </div>
 
       <div className="mt-8">
-        <Link href="/partner/dashboard" className="text-blue-600 hover:underline">
-          ← ダッシュボードに戻る
+        <Link href="/partner/dashboard" legacyBehavior>
+          <a className="text-blue-600 hover:underline">
+            ← ダッシュボードに戻る
+          </a>
         </Link>
       </div>
     </div>
