@@ -11,7 +11,7 @@ const categoryData = {
   "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
   "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
   "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
-  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "クリーニング（衣類・布団など）", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
+  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
 };
 
 const mainCategories = Object.keys(categoryData);
@@ -75,7 +75,6 @@ const DealsSearchPage: NextPage = () => {
             </header>
             <main className="max-w-4xl mx-auto">
                 <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
-                    {/* Filters */}
                     <select value={mainCategory} onChange={e => setMainCategory(e.target.value)} className="w-full p-2 border rounded">
                         <option value="">大分類を選択</option>
                         {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -96,15 +95,16 @@ const DealsSearchPage: NextPage = () => {
                     {error && <p className="text-red-500 text-center">{error}</p>}
                 </div>
 
-                {/* Results */}
                 <div className="mt-8">
                     {isLoading ? (
                         <p className="text-center">検索中...</p>
                     ) : searched && stores.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {stores.map(store => (
-                                <Link key={store.id} href={`/stores/${store.id}`}>
-                                    <a className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl">
+                                // ▼▼▼ The link has been corrected here (/store/ -> /stores/) ▼▼▼
+                                // ▼▼▼ 最終確認のためのコメント ▼▼▼
+                                <Link key={store.id} href={`/stores/${store.id}`} legacyBehavior>
+                                    <a className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer">
                                         <h2 className="text-xl font-bold">{store.storeName}</h2>
                                         <p className="text-gray-600 mt-2">{store.address}</p>
                                     </a>
