@@ -57,7 +57,7 @@ export function getAdminAuth(): admin.auth.Auth {
   }
   return admin.auth(app!);
 }
-
+export { admin };
 // ▼▼▼ 以下をファイルの一番下に追加 ▼▼▼
 /**
  * Storage Bucket インスタンスを返す
