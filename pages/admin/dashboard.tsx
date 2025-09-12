@@ -2,7 +2,7 @@ import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { FiUsers, FiHome, FiTrendingUp, FiHeart, FiArrowUp } from 'react-icons/fi';
 

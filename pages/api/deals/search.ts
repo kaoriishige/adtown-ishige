@@ -1,8 +1,11 @@
-// pages/api/deals/search.ts
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { Query } from 'firebase-admin/firestore';
+
+type Store = {
+  id: string;
+  storeName: string;
+  address: string;
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -15,37 +18,39 @@ export default async function handler(
   try {
     const { mainCategory, subCategory, area } = req.query;
 
-    if (typeof mainCategory !== 'string' || typeof subCategory !== 'string' || typeof area !== 'string') {
-      return res.status(400).json({ error: 'クエリパラメータが無効です。' });
+    if (!mainCategory || !subCategory || !area) {
+      return res.status(400).json({ error: 'すべての検索パラメータが必要です。' });
     }
-
-    const db = getAdminDb();
-    let storesQuery: Query = db.collection('stores');
-
-    // 検索条件を組み立て
-    storesQuery = storesQuery.where('status', '==', 'approved'); // 承認済みの店舗のみ
-    storesQuery = storesQuery.where('mainCategory', '==', mainCategory);
-    storesQuery = storesQuery.where('subCategory', '==', subCategory);
-    storesQuery = storesQuery.where('area', '==', area);
     
-    // 店名順で並べ替え
-    storesQuery = storesQuery.orderBy('storeName', 'asc');
-
-    const snapshot = await storesQuery.get();
+    const db = getAdminDb();
+    
+    // TypeScriptの型エラーを回避するため、Query型を明記
+    let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = db.collection('stores');
+    
+    query = query.where('mainCategory', '==', mainCategory as string);
+    query = query.where('subCategory', '==', subCategory as string);
+    query = query.where('area', '==', area as string);
+    
+    const snapshot = await query.get();
 
     if (snapshot.empty) {
-      return res.status(200).json([]); // 結果が0件でもOK
+      return res.status(200).json([]);
     }
 
-    const stores = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const stores: Store[] = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      stores.push({
+        id: doc.id,
+        storeName: data.storeName || '',
+        address: data.address || '',
+      });
+    });
 
-    return res.status(200).json(stores);
+    res.status(200).json(stores);
 
   } catch (error) {
-    console.error('店舗検索APIでエラー:', error);
-    return res.status(500).json({ error: 'サーバーでエラーが発生しました。' });
+    console.error('店舗の検索中にエラーが発生しました:', error);
+    res.status(500).json({ error: 'サーバー内部でエラーが発生しました。' });
   }
 }
