@@ -17,12 +17,12 @@ const categoryData = {
 const mainCategories = Object.keys(categoryData);
 const areas = ["那須塩原市", "大田原市", "那須町"];
 
-// APIから受け取るデータの型を更新
+// APIから受け取るデータの型
 interface Store {
     id: string;
     storeName: string;
     address: string;
-    galleryImageUrls?: string[]; // photoUrlsから変更
+    galleryImageUrls?: string[];
     budgetDinner?: string;
     budgetLunch?: string;
 }
@@ -78,9 +78,26 @@ const DealsSearchPage: NextPage = () => {
                 <h1 className="text-2xl font-bold text-gray-800">お店を探す</h1>
             </header>
             <main className="max-w-4xl mx-auto">
-                {/* 検索フィルター部分 (変更なし) */}
+                {/* ▼▼▼ 前回私が削除してしまった検索フィルター部分を元に戻しました ▼▼▼ */}
                 <div className="bg-white p-6 rounded-lg shadow-md space-y-4 mb-8">
-                    {/* ... (selectとbuttonのコードは変更なし) ... */}
+                    <select value={mainCategory} onChange={e => setMainCategory(e.target.value)} className="w-full p-2 border rounded">
+                        <option value="">大分類を選択</option>
+                        {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                    {mainCategory && (
+                        <select value={subCategory} onChange={e => setSubCategory(e.target.value)} className="w-full p-2 border rounded">
+                            <option value="">小分類を選択</option>
+                            {subCategoryOptions.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                        </select>
+                    )}
+                    <select value={area} onChange={e => setArea(e.target.value)} className="w-full p-2 border rounded">
+                        <option value="">エリアを選択</option>
+                        {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                    <button onClick={handleSearch} disabled={isLoading} className="w-full p-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 disabled:bg-blue-400">
+                        {isLoading ? '検索中...' : 'この条件で探す'}
+                    </button>
+                    {error && <p className="text-red-500 text-center">{error}</p>}
                 </div>
 
                 {/* 検索結果の表示 */}
@@ -92,7 +109,7 @@ const DealsSearchPage: NextPage = () => {
                             {stores.map(store => (
                                 <Link key={store.id} href={`/stores/${store.id}`} legacyBehavior>
                                     <a className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow overflow-hidden block">
-                                        {/* ▼▼▼ 画像セクションを3枚表示に変更 ▼▼▼ */}
+                                        {/* 画像セクション (3枚表示) */}
                                         <div className="flex bg-gray-200">
                                             {(store.galleryImageUrls && store.galleryImageUrls.length > 0) ? (
                                                 store.galleryImageUrls.slice(0, 3).map((url, index) => (
