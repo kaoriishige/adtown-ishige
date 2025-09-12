@@ -2,8 +2,9 @@ import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+// カテゴリデータ (変更なし)
 const categoryData = {
-  "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
+  "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
   "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
   "美容・健康関連": ["美容室・理容室", "ネイルサロン", "エステサロン", "リラクゼーション・マッサージ", "整体・整骨院・鍼灸院", "個人経営の薬局", "クリニック・歯科医院"],
   "住まい・暮らし関連": ["工務店・建築・リフォーム", "水道・電気工事", "不動産会社", "クリーニング店", "造園・植木屋", "便利屋"],
@@ -13,14 +14,17 @@ const categoryData = {
   "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
   "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
 };
-
 const mainCategories = Object.keys(categoryData);
 const areas = ["那須塩原市", "大田原市", "那須町"];
 
+// APIから受け取るデータの型を更新
 interface Store {
     id: string;
     storeName: string;
     address: string;
+    photoUrls?: string[];
+    budgetDinner?: string;
+    budgetLunch?: string;
 }
 
 const DealsSearchPage: NextPage = () => {
@@ -74,6 +78,7 @@ const DealsSearchPage: NextPage = () => {
                 <h1 className="text-2xl font-bold text-gray-800">お店を探す</h1>
             </header>
             <main className="max-w-4xl mx-auto">
+                {/* 検索フィルター部分 (変更なし) */}
                 <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
                     <select value={mainCategory} onChange={e => setMainCategory(e.target.value)} className="w-full p-2 border rounded">
                         <option value="">大分類を選択</option>
@@ -95,18 +100,41 @@ const DealsSearchPage: NextPage = () => {
                     {error && <p className="text-red-500 text-center">{error}</p>}
                 </div>
 
+                {/* ▼▼▼ 検索結果の表示をカード形式に変更 ▼▼▼ */}
                 <div className="mt-8">
                     {isLoading ? (
                         <p className="text-center">検索中...</p>
                     ) : searched && stores.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
                             {stores.map(store => (
-                                // ▼▼▼ The link has been corrected here (/store/ -> /stores/) ▼▼▼
-                                // ▼▼▼ 最終確認のためのコメント ▼▼▼
                                 <Link key={store.id} href={`/stores/${store.id}`} legacyBehavior>
-                                    <a className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer">
-                                        <h2 className="text-xl font-bold">{store.storeName}</h2>
-                                        <p className="text-gray-600 mt-2">{store.address}</p>
+                                    <a className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow overflow-hidden flex flex-col sm:flex-row">
+                                        {/* 画像セクション */}
+                                        <div className="w-full sm:w-48 h-48 sm:h-auto flex-shrink-0">
+                                            {store.photoUrls && store.photoUrls.length > 0 ? (
+                                                <img src={store.photoUrls[0]} alt={store.storeName} className="h-full w-full object-cover" />
+                                            ) : (
+                                                <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+                                                    <span className="text-gray-400 text-sm">NO IMAGE</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* 情報セクション */}
+                                        <div className="p-4 flex flex-col flex-grow">
+                                            <h2 className="text-xl font-bold text-gray-800 truncate">{store.storeName}</h2>
+                                            
+                                            <div className="text-sm text-gray-500 my-2">
+                                                <span>⭐ (口コミ評価は後ほど実装)</span>
+                                            </div>
+                                            
+                                            <p className="text-xs text-gray-600 truncate">{store.address}</p>
+                                            
+                                            <div className="mt-auto border-t pt-2 text-sm text-gray-700">
+                                                {store.budgetDinner && <p>夜: <span className="font-bold text-red-600">{store.budgetDinner}</span></p>}
+                                                {store.budgetLunch && <p>昼: <span className="font-bold text-orange-600">{store.budgetLunch}</span></p>}
+                                            </div>
+                                        </div>
                                     </a>
                                 </Link>
                             ))}
