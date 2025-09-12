@@ -96,47 +96,11 @@ const StoreProfilePage = () => {
     setSnsUrls(newSnsUrls);
   };
   
-  // ▼▼▼ ここが新しい画像削除の処理です ▼▼▼
-  const handleDeleteImage = async (imageUrlToDelete: string, imageType: 'main' | 'gallery') => {
-    if (!user || !storeId) {
-      alert("エラーが発生しました。ページを再読み込みしてください。");
-      return;
-    }
-    if (!window.confirm("この写真を本当に削除しますか？この操作は元に戻せません。")) {
-      return;
-    }
-    
-    setError(null);
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch('/api/partner/delete-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ storeId, imageUrl: imageUrlToDelete, imageType }),
-      });
+  const handleDeleteImage = (urlToDelete: string, imageType: 'main' | 'gallery') => {
+      alert("画像削除機能は次のステップで実装します。");
+  }
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "削除に失敗しました。");
-      }
-      
-      // UIの状態を更新して、削除した画像を画面から消す
-      if (imageType === 'main') {
-        setMainImageUrl(null);
-      } else {
-        setGalleryImageUrls(prev => prev.filter(url => url !== imageUrlToDelete));
-      }
-      alert("写真を削除しました。");
-
-    } catch (err: any) {
-      console.error("画像削除エラー:", err);
-      setError(err.message);
-    }
-  };
-
+  // ▼▼▼ ここが今回の修正点です ▼▼▼
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
     setIsSaving(true);
@@ -145,55 +109,53 @@ const StoreProfilePage = () => {
     try {
       let currentStoreId = storeId;
 
+      // Step 1: もし店舗がまだなければ、先に空のドキュメントを作成
       if (!currentStoreId) {
         const docRef = await addDoc(collection(db, 'stores'), { 
-            ownerId: user.uid, 
-            status: 'pending', 
-            createdAt: serverTimestamp(),
-            mainImageUrl: '',
-            galleryImageUrls: []
+            ownerId: user.uid, status: 'pending', createdAt: serverTimestamp(),
+            mainImageUrl: '', galleryImageUrls: []
         });
         currentStoreId = docRef.id;
         setStoreId(currentStoreId);
       }
       const storeDocRef = doc(db, 'stores', currentStoreId!);
 
+      // Step 2: トップ画像のアップロード処理
       let updatedMainImageUrl = mainImageUrl;
       if (mainImageFile) {
         const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
         const fileRef = ref(storage, `stores/${currentStoreId}/${uniqueFileName}`);
         const uploadTask = await uploadBytesResumable(fileRef, mainImageFile);
         updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
-        setMainImageUrl(updatedMainImageUrl);
-        setMainImageFile(null);
       }
       
-      let newGalleryImageUrls: string[] = [];
+      // Step 3: ギャラリー画像のアップロード処理（1枚ずつ順番に行う方式に変更）
+      const newGalleryImageUrls: string[] = [];
       if (galleryImageFiles.length > 0) {
-        const uploadPromises = galleryImageFiles.map(async (file) => {
+        for (const file of galleryImageFiles) {
             const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
             const fileRef = ref(storage, `stores/${currentStoreId}/${uniqueFileName}`);
             const uploadTask = await uploadBytesResumable(fileRef, file);
-            return getDownloadURL(uploadTask.ref);
-        });
-        newGalleryImageUrls = await Promise.all(uploadPromises);
-        setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
-        setGalleryImageFiles([]);
+            const downloadURL = await getDownloadURL(uploadTask.ref);
+            newGalleryImageUrls.push(downloadURL);
+        }
       }
       
+      // Step 4: 全ての情報をFirestoreに保存
       const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
       await updateDoc(storeDocRef, {
-        storeName,
-        address,
-        phoneNumber,
-        description,
-        businessHours,
-        websiteUrl,
+        storeName, address, phoneNumber, description, businessHours, websiteUrl,
         snsUrls: finalSnsUrls,
         mainImageUrl: updatedMainImageUrl,
         ...(newGalleryImageUrls.length > 0 && { galleryImageUrls: arrayUnion(...newGalleryImageUrls) }),
         updatedAt: serverTimestamp()
       });
+
+      // Step 5: フロントエンドの状態を更新
+      if (mainImageFile) setMainImageUrl(updatedMainImageUrl);
+      if (newGalleryImageUrls.length > 0) setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
+      setMainImageFile(null);
+      setGalleryImageFiles([]);
 
       alert('店舗情報を保存しました。');
 
