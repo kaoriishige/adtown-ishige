@@ -6,7 +6,7 @@ type Store = {
   id: string;
   storeName: string;
   address: string;
-  photoUrls: string[];
+  galleryImageUrls: string[]; // photoUrlsから変更
   budgetDinner: string;
   budgetLunch: string;
 };
@@ -33,7 +33,6 @@ export default async function handler(
     query = query.where('mainCategory', '==', mainCategory as string);
     query = query.where('subCategory', '==', subCategory as string);
     query = query.where('area', '==', area as string);
-    // 承認済みの店舗のみを検索対象とします
     query = query.where('status', '==', 'approved');
     
     const snapshot = await query.get();
@@ -49,8 +48,8 @@ export default async function handler(
         id: doc.id,
         storeName: data.storeName || '',
         address: data.address || '',
-        // ▼▼▼ 新しく追加したデータを取得 ▼▼▼
-        photoUrls: data.photoUrls || [],
+        // ▼▼▼ galleryImageUrlsから取得するように変更 ▼▼▼
+        galleryImageUrls: data.galleryImageUrls || [],
         budgetDinner: data.budgetDinner || '',
         budgetLunch: data.budgetLunch || '',
       });
