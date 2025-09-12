@@ -224,7 +224,15 @@ const StoreProfilePage = () => {
                         />
                         <button 
                             type="button"
-                            onClick={() => mainImageUrl && handleDeleteImage(mainImageUrl, 'main')}
+                            onClick={() => {
+                                if (mainImageFile) {
+                                    setMainImageFile(null);
+                                    const input = document.getElementById('main-image-input') as HTMLInputElement;
+                                    if (input) input.value = '';
+                                } else if (mainImageUrl) {
+                                    handleDeleteImage(mainImageUrl, 'main');
+                                }
+                            }}
                             className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -m-2"
                         >
                             X
@@ -234,7 +242,7 @@ const StoreProfilePage = () => {
                     <p className="text-gray-400">まだ画像はありません。</p>
                 )}
             </div>
-            <input type="file" accept="image/*" onChange={handleMainImageChange} className="text-sm" />
+            <input id="main-image-input" type="file" accept="image/*" onChange={handleMainImageChange} className="text-sm" />
         </div>
 
         {/* --- ギャラリー写真 --- */}
