@@ -96,9 +96,46 @@ const StoreProfilePage = () => {
     setSnsUrls(newSnsUrls);
   };
   
-  const handleDeleteImage = (urlToDelete: string, imageType: 'main' | 'gallery') => {
-      alert("画像削除機能は次のステップで実装します。");
-  }
+  // ▼▼▼ ここが新しい画像削除の処理です ▼▼▼
+  const handleDeleteImage = async (imageUrlToDelete: string, imageType: 'main' | 'gallery') => {
+    if (!user || !storeId) {
+      alert("エラーが発生しました。ページを再読み込みしてください。");
+      return;
+    }
+    if (!window.confirm("この写真を本当に削除しますか？この操作は元に戻せません。")) {
+      return;
+    }
+    
+    setError(null);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/partner/delete-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ storeId, imageUrl: imageUrlToDelete, imageType }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "削除に失敗しました。");
+      }
+      
+      // UIの状態を更新して、削除した画像を画面から消す
+      if (imageType === 'main') {
+        setMainImageUrl(null);
+      } else {
+        setGalleryImageUrls(prev => prev.filter(url => url !== imageUrlToDelete));
+      }
+      alert("写真を削除しました。");
+
+    } catch (err: any) {
+      console.error("画像削除エラー:", err);
+      setError(err.message);
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
@@ -213,7 +250,6 @@ const StoreProfilePage = () => {
             <label className="font-bold">ギャラリー写真 (複数可)</label>
             <p className="text-sm text-gray-500">推奨サイズ: 横800px × 縦800px (1:1)</p>
             <div className="p-2 border rounded min-h-[112px] flex flex-wrap gap-2">
-                {/* 既存の画像プレビュー（有効なURLのみフィルタリング） */}
                 {galleryImageUrls && galleryImageUrls.filter(url => url).map((url, index) => (
                     <div key={index} className="relative">
                         <img 
@@ -230,13 +266,11 @@ const StoreProfilePage = () => {
                         </button>
                     </div>
                 ))}
-                {/* 新規選択した画像のプレビュー */}
                 {galleryImageFiles.map((file, index) => (
                      <div key={index} className="relative">
                         <img src={URL.createObjectURL(file)} alt={`新規ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded"/>
                     </div>
                 ))}
-                {/* 画像が一つもない場合にメッセージを表示 */}
                 {galleryImageUrls.filter(url => url).length === 0 && galleryImageFiles.length === 0 && (
                      <p className="text-gray-400">まだ写真はありません。</p>
                 )}
