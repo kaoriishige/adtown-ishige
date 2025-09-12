@@ -100,7 +100,6 @@ const StoreProfilePage = () => {
       alert("画像削除機能は次のステップで実装します。");
   }
 
-  // ▼▼▼ ここが今回の修正点です ▼▼▼
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
     setIsSaving(true);
@@ -109,7 +108,6 @@ const StoreProfilePage = () => {
     try {
       let currentStoreId = storeId;
 
-      // Step 1: もし店舗がまだなければ、先に空のドキュメントを作成
       if (!currentStoreId) {
         const docRef = await addDoc(collection(db, 'stores'), { 
             ownerId: user.uid, status: 'pending', createdAt: serverTimestamp(),
@@ -120,7 +118,6 @@ const StoreProfilePage = () => {
       }
       const storeDocRef = doc(db, 'stores', currentStoreId!);
 
-      // Step 2: トップ画像のアップロード処理
       let updatedMainImageUrl = mainImageUrl;
       if (mainImageFile) {
         const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
@@ -129,7 +126,6 @@ const StoreProfilePage = () => {
         updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
       }
       
-      // Step 3: ギャラリー画像のアップロード処理（1枚ずつ順番に行う方式に変更）
       const newGalleryImageUrls: string[] = [];
       if (galleryImageFiles.length > 0) {
         for (const file of galleryImageFiles) {
@@ -141,7 +137,6 @@ const StoreProfilePage = () => {
         }
       }
       
-      // Step 4: 全ての情報をFirestoreに保存
       const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
       await updateDoc(storeDocRef, {
         storeName, address, phoneNumber, description, businessHours, websiteUrl,
@@ -151,7 +146,6 @@ const StoreProfilePage = () => {
         updatedAt: serverTimestamp()
       });
 
-      // Step 5: フロントエンドの状態を更新
       if (mainImageFile) setMainImageUrl(updatedMainImageUrl);
       if (newGalleryImageUrls.length > 0) setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
       setMainImageFile(null);
@@ -212,6 +206,7 @@ const StoreProfilePage = () => {
             <label className="font-bold">ギャラリー写真 (複数可)</label>
             <p className="text-sm text-gray-500">推奨サイズ: 横800px × 縦800px (1:1)</p>
             <div className="p-2 border rounded min-h-[112px] flex flex-wrap gap-2">
+                {/* 既存の画像プレビュー */}
                 {galleryImageUrls && galleryImageUrls.filter(url => url).map((url, index) => (
                     <div key={index} className="relative">
                         <img 
@@ -228,11 +223,20 @@ const StoreProfilePage = () => {
                         </button>
                     </div>
                 ))}
+                {/* 新規選択した画像のプレビュー */}
                 {galleryImageFiles.map((file, index) => (
                      <div key={index} className="relative">
                         <img src={URL.createObjectURL(file)} alt={`新規ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded"/>
-                    </div>
+                        <button 
+                            type="button"
+                            onClick={() => setGalleryImageFiles(galleryImageFiles.filter((_, i) => i !== index))}
+                            className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                        >
+                            X
+                        </button>
+                     </div>
                 ))}
+                {/* 画像が一つもない場合にメッセージを表示 */}
                 {galleryImageUrls.filter(url => url).length === 0 && galleryImageFiles.length === 0 && (
                      <p className="text-gray-400">まだ写真はありません。</p>
                 )}
