@@ -90,7 +90,6 @@ const StoreProfilePage = () => {
   const handleMainImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setMainImageFile(event.target.files[0]);
-      // 既存の画像URLがある場合はクリアして、新しいプレビューに備える
       if (mainImageUrl) setMainImageUrl(null);
     }
   };
@@ -120,7 +119,6 @@ const StoreProfilePage = () => {
     try {
       let currentStoreId = storeId;
 
-      // Step 1: もし店舗がまだなければ、先に空のドキュメントを作成
       if (!currentStoreId) {
         const docRef = await addDoc(collection(db, 'stores'), { 
             ownerId: user.uid, 
@@ -134,18 +132,16 @@ const StoreProfilePage = () => {
       }
       const storeDocRef = doc(db, 'stores', currentStoreId!);
 
-      // Step 2: トップ画像のアップロード処理
       let updatedMainImageUrl = mainImageUrl;
       if (mainImageFile) {
         const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
         const fileRef = ref(storage, `stores/${currentStoreId}/${uniqueFileName}`);
         const uploadTask = await uploadBytesResumable(fileRef, mainImageFile);
         updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
-        setMainImageUrl(updatedMainImageUrl); // UIを更新
-        setMainImageFile(null); // ファイル選択をリセット
+        setMainImageUrl(updatedMainImageUrl);
+        setMainImageFile(null);
       }
       
-      // Step 3: ギャラリー画像のアップロード処理
       let newGalleryImageUrls: string[] = [];
       if (galleryImageFiles.length > 0) {
         const uploadPromises = galleryImageFiles.map(async (file) => {
@@ -155,11 +151,10 @@ const StoreProfilePage = () => {
             return getDownloadURL(uploadTask.ref);
         });
         newGalleryImageUrls = await Promise.all(uploadPromises);
-        setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]); // UIを更新
-        setGalleryImageFiles([]); // ファイル選択をリセット
+        setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
+        setGalleryImageFiles([]);
       }
       
-      // Step 4: 全てのテキスト情報と、新しい画像URLをFirestoreに保存
       const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
       await updateDoc(storeDocRef, {
         storeName,
@@ -170,7 +165,6 @@ const StoreProfilePage = () => {
         websiteUrl,
         snsUrls: finalSnsUrls,
         mainImageUrl: updatedMainImageUrl,
-        // 新しくアップロードしたURLがあれば、既存の配列に追加する
         ...(newGalleryImageUrls.length > 0 && { galleryImageUrls: arrayUnion(...newGalleryImageUrls) }),
         updatedAt: serverTimestamp()
       });
@@ -186,21 +180,23 @@ const StoreProfilePage = () => {
   };
 
   if (loading) return <div>読み込み中...</div>;
+  
+  // ▼▼▼ 変更点5: デバッグ用のconsole.logを追加 ▼▼▼
+  console.log('現在のギャラリー画像URL:', galleryImageUrls);
 
   return (
     <div className="container mx-auto p-8 max-w-3xl">
       <h1 className="text-2xl font-bold mb-6">店舗プロフィールの登録・編集</h1>
       {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded">エラー: {error}</p>}
       <div className="space-y-4">
-        {/* テキスト入力フィールドはそのまま */}
+        {/* テキスト入力フィールド */}
         <div><label className="font-bold">店舗名 *</label><input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
         <div><label className="font-bold">住所 *</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
         <div><label className="font-bold">電話番号 *</label><input type="text" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
         <div><label className="font-bold">店舗紹介文</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded mt-1" rows={5}></textarea></div>
         <div><label className="font-bold">営業時間</label><textarea value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} className="w-full p-2 border rounded mt-1" rows={3}></textarea></div>
         
-        {/* ▼▼▼ 変更点5: JSXをトップ画像とギャラリー画像の2つのセクションに分離 ▼▼▼ */}
-        {/* --- トップ画像 --- */}
+        {/* ▼▼▼ 変更点6: JSXをトップ画像とギャラリー画像の2つのセクションに分離 ▼▼▼ */}
         <div className="space-y-2">
             <label className="font-bold">トップ画像 (1枚)</label>
             <div className="p-2 border rounded min-h-[100px]">
@@ -210,7 +206,6 @@ const StoreProfilePage = () => {
             <input type="file" accept="image/*" onChange={handleMainImageChange} className="text-sm" />
         </div>
 
-        {/* --- ギャラリー写真 --- */}
         <div className="space-y-2">
             <label className="font-bold">ギャラリー写真 (複数可)</label>
             <div className="p-2 border rounded min-h-[112px] flex flex-wrap gap-2">
@@ -224,7 +219,7 @@ const StoreProfilePage = () => {
             <input type="file" multiple onChange={handleGalleryImagesChange} accept="image/*" className="text-sm" />
         </div>
         
-        {/* 他の入力フィールドはそのまま */}
+        {/* 他の入力フィールド */}
         <div><label className="font-bold">公式ウェブサイトURL</label><input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
         <div><label className="font-bold">SNS URL 1</label><input type="url" value={snsUrls[0]} onChange={(e) => handleSnsUrlChange(0, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
         <div><label className="font-bold">SNS URL 2</label><input type="url" value={snsUrls[1]} onChange={(e) => handleSnsUrlChange(1, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
