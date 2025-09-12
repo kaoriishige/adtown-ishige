@@ -187,7 +187,6 @@ const StoreProfilePage = () => {
             <label className="font-bold">トップ画像 (1枚)</label>
             <p className="text-sm text-gray-500">推奨サイズ: 横1200px × 縦675px (16:9)</p>
             <div className="p-2 border rounded min-h-[100px]">
-                {/* 既存の画像か、新規選択した画像のプレビューを表示 */}
                 {(mainImageUrl || mainImageFile) ? (
                     <div className="relative inline-block">
                         <img 
@@ -217,7 +216,12 @@ const StoreProfilePage = () => {
                 {/* 既存の画像プレビュー（有効なURLのみフィルタリング） */}
                 {galleryImageUrls && galleryImageUrls.filter(url => url).map((url, index) => (
                     <div key={index} className="relative">
-                        <img src={url} alt={`ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded"/>
+                        <img 
+                            src={url} 
+                            alt={`ギャラリー画像 ${index + 1}`} 
+                            className="w-24 h-24 object-cover rounded"
+                            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                        />
                         <button 
                             onClick={() => handleDeleteImage(url, 'gallery')} 
                             className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
