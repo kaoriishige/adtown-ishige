@@ -96,9 +96,44 @@ const StoreProfilePage = () => {
     setSnsUrls(newSnsUrls);
   };
   
-  const handleDeleteImage = (urlToDelete: string, imageType: 'main' | 'gallery') => {
-      alert("画像削除機能は次のステップで実装します。");
-  }
+  const handleDeleteImage = async (imageUrlToDelete: string, imageType: 'main' | 'gallery') => {
+    if (!user || !storeId) {
+      alert("エラーが発生しました。ページを再読み込みしてください。");
+      return;
+    }
+    if (!window.confirm("この写真を本当に削除しますか？この操作は元に戻せません。")) {
+      return;
+    }
+    
+    setError(null);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/partner/delete-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ storeId, imageUrl: imageUrlToDelete, imageType }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "削除に失敗しました。");
+      }
+      
+      if (imageType === 'main') {
+        setMainImageUrl(null);
+      } else {
+        setGalleryImageUrls(prev => prev.filter(url => url !== imageUrlToDelete));
+      }
+      alert("写真を削除しました。");
+
+    } catch (err: any) {
+      console.error("画像削除エラー:", err);
+      setError(err.message);
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
@@ -188,7 +223,8 @@ const StoreProfilePage = () => {
                             className="w-48 h-auto rounded"
                         />
                         <button 
-                            onClick={() => handleDeleteImage(mainImageUrl!, 'main')}
+                            type="button"
+                            onClick={() => mainImageUrl && handleDeleteImage(mainImageUrl, 'main')}
                             className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -m-2"
                         >
                             X
@@ -206,7 +242,6 @@ const StoreProfilePage = () => {
             <label className="font-bold">ギャラリー写真 (複数可)</label>
             <p className="text-sm text-gray-500">推奨サイズ: 横800px × 縦800px (1:1)</p>
             <div className="p-2 border rounded min-h-[112px] flex flex-wrap gap-2">
-                {/* 既存の画像プレビュー */}
                 {galleryImageUrls && galleryImageUrls.filter(url => url).map((url, index) => (
                     <div key={index} className="relative">
                         <img 
@@ -216,6 +251,7 @@ const StoreProfilePage = () => {
                             onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
                         />
                         <button 
+                            type="button"
                             onClick={() => handleDeleteImage(url, 'gallery')} 
                             className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
                         >
@@ -223,7 +259,6 @@ const StoreProfilePage = () => {
                         </button>
                     </div>
                 ))}
-                {/* 新規選択した画像のプレビュー */}
                 {galleryImageFiles.map((file, index) => (
                      <div key={index} className="relative">
                         <img src={URL.createObjectURL(file)} alt={`新規ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded"/>
@@ -236,7 +271,6 @@ const StoreProfilePage = () => {
                         </button>
                      </div>
                 ))}
-                {/* 画像が一つもない場合にメッセージを表示 */}
                 {galleryImageUrls.filter(url => url).length === 0 && galleryImageFiles.length === 0 && (
                      <p className="text-gray-400">まだ写真はありません。</p>
                 )}
