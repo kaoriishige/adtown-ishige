@@ -1,108 +1,148 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';// 注意：パスの階層が深くなります
+import { getAdminDb } from '@/lib/firebase-admin'; // Admin SDKを使用
 import { ParsedUrlQuery } from 'querystring';
+import { FiMapPin, FiPhone, FiClock, FiGlobe, FiXCircle, FiCreditCard, FiAward } from 'react-icons/fi';
 
+
+// ▼▼▼ Firestoreのドキュメントが持つべきデータの型を定義 ▼▼▼
 interface Store {
   id: string;
-  storeName: string;
-  description: string;
-  address: string;
-  phoneNumber: string;
-  businessHours: string;
-  photoUrls: string[];
+  storeName?: string;
+  catchphrase?: string;
+  description?: string;
+  mainImageUrl?: string;
+  galleryImageUrls?: string[];
+  address?: string;
+  phoneNumber?: string;
+  businessHours?: string;
+  closingDays?: string;
+  paymentMethods?: string;
+  parkingInfo?: string;
   websiteUrl?: string;
   snsUrls?: string[];
 }
 
-interface StoreDeal {
-  id: string;
-  type: 'お得情報' | 'クーポン' | 'フードロス';
-  title: string;
-  description: string;
-  imageUrl?: string;
+interface Props {
+    store: Store | null;
+    error?: string;
 }
 
-interface PageProps {
-  store: Store;
-  deals: StoreDeal[];
-}
+const StoreDetailsPage: NextPage<Props> = ({ store, error }) => {
+    if (error || !store) {
+        return <div className="text-center py-20">エラー: 店舗情報の読み込みに失敗しました。</div>;
+    }
 
-const StoreDetailsPage: NextPage<PageProps> = ({ store, deals }) => {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        {store.photoUrls && store.photoUrls.length > 0 && (
-          <div className="h-64 rounded-lg overflow-hidden bg-gray-200 mb-4">
-            <img src={store.photoUrls[0]} alt={store.storeName} className="w-full h-full object-cover" />
-          </div>
-        )}
-        <h1 className="text-4xl font-bold">{store.storeName}</h1>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold border-b pb-2 mb-4">お店について</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{store.description}</p>
-          </div>
-          <div>
-            <h2 className="text-2xl font-semibold border-b pb-2 mb-4">お得情報・クーポン</h2>
-            {deals.length > 0 ? (
-              <div className="space-y-4">
-                {deals.map(deal => (
-                  <div key={deal.id} className="border rounded-lg p-4 flex items-center">
-                    {deal.imageUrl && <img src={deal.imageUrl} alt={deal.title} className="w-24 h-24 object-cover rounded-md mr-4" />}
-                    <div>
-                      <span className="text-xs inline-block bg-blue-200 text-blue-800 rounded-full px-2 py-1">{deal.type}</span>
-                      <h3 className="text-lg font-bold mt-1">{deal.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{deal.description}</p>
+    return (
+        <div className="bg-gray-50 min-h-screen">
+            <main className="container mx-auto px-4 py-8">
+                {/* --- トップ画像 --- */}
+                {store.mainImageUrl ? (
+                    <div className="h-64 md:h-80 rounded-lg overflow-hidden bg-gray-200 mb-6 shadow-lg">
+                        <img src={store.mainImageUrl} alt={store.storeName} className="w-full h-full object-cover" />
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="text-gray-500">現在、利用できるお得情報はありません。</p>}
-          </div>
+                ) : <div className="h-24 bg-gray-200 rounded-lg mb-6"></div> }
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* --- メインコンテンツ --- */}
+                    <div className="lg:col-span-2">
+                        {/* 店舗名とキャッチコピー */}
+                        <section className="bg-white p-6 rounded-lg shadow">
+                            <h1 className="text-3xl md:text-4xl font-bold text-gray-800">{store.storeName}</h1>
+                            {store.catchphrase && <p className="text-lg text-gray-600 mt-2">{store.catchphrase}</p>}
+                            <div className="mt-4 text-yellow-500">⭐ (口コミ評価は後ほど実装)</div>
+                        </section>
+
+                        {/* ギャラリー写真 */}
+                        {store.galleryImageUrls && store.galleryImageUrls.length > 0 && (
+                            <section className="mt-8">
+                                <h2 className="text-2xl font-semibold mb-4 text-gray-700">ギャラリー</h2>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {store.galleryImageUrls.map((url, index) => (
+                                        <div key={index} className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
+                                            <img src={url} alt={`ギャラリー画像 ${index + 1}`} className="w-full h-full object-cover"/>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                        
+                        {/* 店舗紹介文 */}
+                        <section className="mt-8">
+                             <h2 className="text-2xl font-semibold mb-4 text-gray-700">お店について</h2>
+                             <div className="bg-white p-6 rounded-lg shadow">
+                                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{store.description}</p>
+                             </div>
+                        </section>
+
+                         {/* サービス・料金（プレースホルダー） */}
+                        <section className="mt-8">
+                             <h2 className="text-2xl font-semibold mb-4 text-gray-700">サービス・料金</h2>
+                             <div className="bg-white p-6 rounded-lg shadow text-gray-500">
+                                (このセクションは、美容室の施術メニューや便利屋の料金表など、お店によって内容が大きく変わるため、後ほど本格的に実装します)
+                             </div>
+                        </section>
+
+                    </div>
+
+                    {/* --- サイドバー：店舗基本情報 --- */}
+                    <aside className="lg:col-span-1">
+                        <div className="bg-white p-6 rounded-lg shadow sticky top-8">
+                            <h3 className="text-xl font-bold mb-4 border-b pb-2">店舗情報</h3>
+                            <ul className="space-y-4 text-gray-700">
+                                <li className="flex items-start"><FiMapPin className="w-5 h-5 mr-3 mt-1 text-gray-400 flex-shrink-0" /><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(store.address || '')}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">{store.address}</a></li>
+                                <li className="flex items-start"><FiPhone className="w-5 h-5 mr-3 mt-1 text-gray-400 flex-shrink-0" /><a href={`tel:${store.phoneNumber}`} className="hover:text-blue-600">{store.phoneNumber}</a></li>
+                                <li className="flex items-start"><FiClock className="w-5 h-5 mr-3 mt-1 text-gray-400 flex-shrink-0" /><div><span className="font-semibold">営業時間:</span><br/><p className="whitespace-pre-wrap">{store.businessHours}</p></div></li>
+                                {store.closingDays && <li className="flex items-start"><FiXCircle className="w-5 h-5 mr-3 mt-1 text-gray-400 flex-shrink-0" /><div><span className="font-semibold">定休日:</span><br/>{store.closingDays}</div></li>}
+                                {store.paymentMethods && <li className="flex items-start"><FiCreditCard className="w-5 h-5 mr-3 mt-1 text-gray-400 flex-shrink-0" /><div><span className="font-semibold">支払い方法:</span><br/>{store.paymentMethods}</div></li>}
+                                {store.parkingInfo && <li className="flex items-start"><FiAward className="w-5 h-5 mr-3 mt-1 text-gray-400 flex-shrink-0" /><div><span className="font-semibold">駐車場:</span><br/>{store.parkingInfo}</div></li>}
+                                {store.websiteUrl && <li className="flex items-start"><FiGlobe className="w-5 h-5 mr-3 mt-1 text-gray-400 flex-shrink-0" /><a href={store.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">公式サイト</a></li>}
+                            </ul>
+                        </div>
+                    </aside>
+                </div>
+            </main>
         </div>
-        <div className="border rounded-lg p-4 h-fit">
-          <h3 className="text-xl font-semibold mb-4">基本情報</h3>
-          <ul className="space-y-3 text-sm">
-            <li className="flex items-start"><span className="w-6 h-6 mr-2">📍</span><span>{store.address}</span></li>
-            <li className="flex items-start"><span className="w-6 h-6 mr-2">📞</span><span>{store.phoneNumber}</span></li>
-            <li className="flex items-start"><span className="w-6 h-6 mr-2">⏰</span><span className="whitespace-pre-wrap">{store.businessHours}</span></li>
-            {store.websiteUrl && <li className="flex items-start"><span className="w-6 h-6 mr-2">🌐</span><a href={store.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">公式サイト</a></li>}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
-interface Params extends ParsedUrlQuery {
-  storeId: string;
-}
+// ▼▼▼ サーバーサイドでデータを取得する部分を、新しいフィールドを取得するように修正 ▼▼▼
+export const getServerSideProps: GetServerSideProps<Props, ParsedUrlQuery> = async (context) => {
+    try {
+        const { storeId } = context.params!;
+        if (typeof storeId !== 'string') {
+            return { notFound: true };
+        }
 
-export const getServerSideProps: GetServerSideProps<PageProps, Params> = async (context) => {
-  const { storeId } = context.params!;
-  try {
-    const storeDocRef = doc(db, 'stores', storeId);
-    const storeDoc = await getDoc(storeDocRef);
-    if (!storeDoc.exists()) return { notFound: true };
-    const storeData = storeDoc.data();
-    
-    // Firestore Timestampsなどをシリアライズ可能な形式に変換する必要がある場合
-    const serializedStore = JSON.parse(JSON.stringify({ id: storeDoc.id, ...storeData }));
+        const db = getAdminDb();
+        const storeDoc = await db.collection('stores').doc(storeId).get();
 
-    const dealsRef = collection(db, 'storeDeals');
-    const q = query(dealsRef, where("storeId", "==", storeId), where("isActive", "==", true));
-    const dealsSnapshot = await getDocs(q);
-    const deals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const serializedDeals = JSON.parse(JSON.stringify(deals));
-    
-    return { props: { store: serializedStore, deals: serializedDeals } };
-  } catch (error) {
-    console.error("詳細ページのデータ取得に失敗:", error);
-    return { notFound: true };
-  }
+        if (!storeDoc.exists) {
+            return { notFound: true };
+        }
+
+        const storeData = storeDoc.data()!;
+        const store: Store = {
+            id: storeDoc.id,
+            storeName: storeData.storeName || '',
+            catchphrase: storeData.catchphrase || '',
+            description: storeData.description || '',
+            mainImageUrl: storeData.mainImageUrl || null,
+            galleryImageUrls: storeData.galleryImageUrls || [],
+            address: storeData.address || '',
+            phoneNumber: storeData.phoneNumber || '',
+            businessHours: storeData.businessHours || '',
+            closingDays: storeData.closingDays || '',
+            paymentMethods: storeData.paymentMethods || '',
+            parkingInfo: storeData.parkingInfo || '',
+            websiteUrl: storeData.websiteUrl || '',
+            snsUrls: storeData.snsUrls || [],
+        };
+        
+        return { props: { store } };
+    } catch (error) {
+        console.error('店舗詳細ページのデータ取得に失敗:', error);
+        return { props: { store: null, error: 'データの取得に失敗しました。' } };
+    }
 };
 
 export default StoreDetailsPage;
