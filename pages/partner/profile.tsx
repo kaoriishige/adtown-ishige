@@ -9,6 +9,20 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
 
+// ▼▼▼ 追加部分1: カテゴリデータ ▼▼▼
+const categoryData = {
+    "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
+    "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
+    "美容・健康関連": ["美容室・理容室", "ネイルサロン", "エステサロン", "リラクゼーション・マッサージ", "整体・整骨院・鍼灸院", "個人経営の薬局", "クリニック・歯科医院"],
+    "住まい・暮らし関連": ["工務店・建築・リフォーム", "水道・電気工事", "不動産会社", "クリーニング店", "造園・植木屋", "便利屋"],
+    "教育・習い事関連": ["学習塾・家庭教師", "ピアノ・音楽教室", "英会話教室", "書道・そろばん教室", "スポーツクラブ・道場", "パソコン教室", "料理教室"],
+    "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
+    "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
+    "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
+    "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
+};
+const mainCategories = Object.keys(categoryData);
+
 const StoreProfilePage = () => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -19,17 +33,21 @@ const StoreProfilePage = () => {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [address, setAddress] = useState('');
+  
+  // ▼▼▼ 追加部分2: カテゴリを管理するState ▼▼▼
+  const [mainCategory, setMainCategory] = useState('');
+  const [subCategory, setSubCategory] = useState('');
+  const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
+  
   const [phoneNumber, setPhoneNumber] = useState('');
   const [description, setDescription] = useState('');
   const [businessHours, setBusinessHours] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [snsUrls, setSnsUrls] = useState(['', '', '']);
-  
   const [mainImageUrl, setMainImageUrl] = useState<string | null>(null);
   const [galleryImageUrls, setGalleryImageUrls] = useState<string[]>([]);
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [galleryImageFiles, setGalleryImageFiles] = useState<File[]>([]);
-
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,6 +75,11 @@ const StoreProfilePage = () => {
         setStoreId(storeDoc.id);
         setStoreName(storeData.storeName || '');
         setAddress(storeData.address || '');
+        
+        // ▼▼▼ 追加部分3: 既存のカテゴリ情報を読み込む ▼▼▼
+        setMainCategory(storeData.mainCategory || '');
+        setSubCategory(storeData.subCategory || '');
+        
         setPhoneNumber(storeData.phoneNumber || '');
         setDescription(storeData.description || '');
         setBusinessHours(storeData.businessHours || '');
@@ -77,6 +100,15 @@ const StoreProfilePage = () => {
       fetchStoreProfile(user);
     }
   }, [user, fetchStoreProfile]);
+  
+  // ▼▼▼ 追加部分4: 大分類→小分類の連動ロジック ▼▼▼
+  useEffect(() => {
+    if (mainCategory && categoryData[mainCategory as keyof typeof categoryData]) {
+      setSubCategoryOptions(categoryData[mainCategory as keyof typeof categoryData]);
+    } else {
+      setSubCategoryOptions([]);
+    }
+  }, [mainCategory]);
 
   const handleMainImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -137,6 +169,13 @@ const StoreProfilePage = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
+
+    // ▼▼▼ 追加部分5: カテゴリ選択のバリデーション ▼▼▼
+    if (!mainCategory || !subCategory) {
+        alert('カテゴリ（大分類・小分類）は必須項目です。');
+        return;
+    }
+    
     setIsSaving(true);
     setError(null);
 
@@ -173,8 +212,12 @@ const StoreProfilePage = () => {
       }
       
       const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
+      
+      // ▼▼▼ 追加部分6: 保存データにカテゴリを追加 ▼▼▼
       await updateDoc(storeDocRef, {
         storeName, address, phoneNumber, description, businessHours, websiteUrl,
+        mainCategory, 
+        subCategory,
         snsUrls: finalSnsUrls,
         mainImageUrl: updatedMainImageUrl,
         ...(newGalleryImageUrls.length > 0 && { galleryImageUrls: arrayUnion(...newGalleryImageUrls) }),
@@ -206,11 +249,30 @@ const StoreProfilePage = () => {
         {/* テキスト入力フィールド */}
         <div><label className="font-bold">店舗名 *</label><input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
         <div><label className="font-bold">住所 *</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
+        
+        {/* ▼▼▼ 追加部分7: カテゴリ選択用のJSX ▼▼▼ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
+            <div>
+                <label className="font-bold">カテゴリ（大分類）*</label>
+                <select value={mainCategory} onChange={e => setMainCategory(e.target.value)} className="w-full p-2 border rounded mt-1">
+                    <option value="">選択してください</option>
+                    {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+            </div>
+            <div>
+                <label className="font-bold">カテゴリ（小分類）*</label>
+                <select value={subCategory} onChange={e => setSubCategory(e.target.value)} disabled={!mainCategory} className="w-full p-2 border rounded mt-1 disabled:bg-gray-100">
+                    <option value="">大分類を先に選択</option>
+                    {subCategoryOptions.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                </select>
+            </div>
+        </div>
+        
         <div><label className="font-bold">電話番号 *</label><input type="text" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
         <div><label className="font-bold">店舗紹介文</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded mt-1" rows={5}></textarea></div>
         <div><label className="font-bold">営業時間</label><textarea value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} className="w-full p-2 border rounded mt-1" rows={3}></textarea></div>
         
-        {/* --- トップ画像 --- */}
+        {/* --- 画像関連 (変更なし) --- */}
         <div className="space-y-2">
             <label className="font-bold">トップ画像 (1枚)</label>
             <p className="text-sm text-gray-500">推奨サイズ: 横1200px × 縦675px (16:9)</p>
@@ -238,14 +300,10 @@ const StoreProfilePage = () => {
                             X
                         </button>
                     </div>
-                ) : (
-                    <p className="text-gray-400">まだ画像はありません。</p>
-                )}
+                ) : ( <p className="text-gray-400">まだ画像はありません。</p> )}
             </div>
             <input id="main-image-input" type="file" accept="image/*" onChange={handleMainImageChange} className="text-sm" />
         </div>
-
-        {/* --- ギャラリー写真 --- */}
         <div className="space-y-2">
             <label className="font-bold">ギャラリー写真 (複数可)</label>
             <p className="text-sm text-gray-500">推奨サイズ: 横800px × 縦800px (1:1)</p>
@@ -286,7 +344,7 @@ const StoreProfilePage = () => {
             <input type="file" multiple onChange={handleGalleryImagesChange} accept="image/*" className="text-sm" />
         </div>
         
-        {/* 他の入力フィールド */}
+        {/* --- SNS と 保存ボタン (変更なし) --- */}
         <div><label className="font-bold">公式ウェブサイトURL</label><input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
         <div><label className="font-bold">SNS URL 1</label><input type="url" value={snsUrls[0]} onChange={(e) => handleSnsUrlChange(0, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
         <div><label className="font-bold">SNS URL 2</label><input type="url" value={snsUrls[1]} onChange={(e) => handleSnsUrlChange(1, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
