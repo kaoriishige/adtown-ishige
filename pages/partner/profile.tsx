@@ -9,7 +9,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
 
-// ▼▼▼ 追加部分1: カテゴリデータ ▼▼▼
+// ▼▼▼ 追加: カテゴリデータ ▼▼▼
 const categoryData = {
     "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
     "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
@@ -33,12 +33,12 @@ const StoreProfilePage = () => {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState('');
   const [address, setAddress] = useState('');
-  
-  // ▼▼▼ 追加部分2: カテゴリを管理するState ▼▼▼
+
+  // ▼▼▼ 追加: カテゴリを管理するState ▼▼▼
   const [mainCategory, setMainCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
-  
+
   const [phoneNumber, setPhoneNumber] = useState('');
   const [description, setDescription] = useState('');
   const [businessHours, setBusinessHours] = useState('');
@@ -75,11 +75,11 @@ const StoreProfilePage = () => {
         setStoreId(storeDoc.id);
         setStoreName(storeData.storeName || '');
         setAddress(storeData.address || '');
-        
-        // ▼▼▼ 追加部分3: 既存のカテゴリ情報を読み込む ▼▼▼
+
+        // ▼▼▼ 追加: 既存のカテゴリ情報を読み込む ▼▼▼
         setMainCategory(storeData.mainCategory || '');
         setSubCategory(storeData.subCategory || '');
-        
+
         setPhoneNumber(storeData.phoneNumber || '');
         setDescription(storeData.description || '');
         setBusinessHours(storeData.businessHours || '');
@@ -101,7 +101,7 @@ const StoreProfilePage = () => {
     }
   }, [user, fetchStoreProfile]);
   
-  // ▼▼▼ 追加部分4: 大分類→小分類の連動ロジック ▼▼▼
+  // ▼▼▼ 追加: 大分類→小分類の連動ロジック ▼▼▼
   useEffect(() => {
     if (mainCategory && categoryData[mainCategory as keyof typeof categoryData]) {
       setSubCategoryOptions(categoryData[mainCategory as keyof typeof categoryData]);
@@ -109,6 +109,7 @@ const StoreProfilePage = () => {
       setSubCategoryOptions([]);
     }
   }, [mainCategory]);
+
 
   const handleMainImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -170,26 +171,40 @@ const StoreProfilePage = () => {
   const handleSaveProfile = async () => {
     if (!user) return alert('ログインしていません。');
 
-    // ▼▼▼ 追加部分5: カテゴリ選択のバリデーション ▼▼▼
+    // ▼▼▼ 追加: カテゴリ選択のバリデーション ▼▼▼
     if (!mainCategory || !subCategory) {
         alert('カテゴリ（大分類・小分類）は必須項目です。');
         return;
     }
-    
+
     setIsSaving(true);
     setError(null);
 
     try {
       let currentStoreId = storeId;
+      const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
+
+      // 保存するテキストデータにカテゴリを追加
+      const textData = {
+          storeName, address, mainCategory, subCategory, phoneNumber, 
+          description, businessHours, websiteUrl,
+          snsUrls: finalSnsUrls,
+          ownerId: user.uid,
+          updatedAt: serverTimestamp(),
+      };
 
       if (!currentStoreId) {
         const docRef = await addDoc(collection(db, 'stores'), { 
-            ownerId: user.uid, status: 'pending', createdAt: serverTimestamp(),
+            ...textData,
+            status: 'pending', createdAt: serverTimestamp(),
             mainImageUrl: '', galleryImageUrls: []
         });
         currentStoreId = docRef.id;
         setStoreId(currentStoreId);
+      } else {
+        await updateDoc(doc(db, 'stores', currentStoreId), textData);
       }
+      
       const storeDocRef = doc(db, 'stores', currentStoreId!);
 
       let updatedMainImageUrl = mainImageUrl;
@@ -211,17 +226,9 @@ const StoreProfilePage = () => {
         }
       }
       
-      const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
-      
-      // ▼▼▼ 追加部分6: 保存データにカテゴリを追加 ▼▼▼
       await updateDoc(storeDocRef, {
-        storeName, address, phoneNumber, description, businessHours, websiteUrl,
-        mainCategory, 
-        subCategory,
-        snsUrls: finalSnsUrls,
         mainImageUrl: updatedMainImageUrl,
         ...(newGalleryImageUrls.length > 0 && { galleryImageUrls: arrayUnion(...newGalleryImageUrls) }),
-        updatedAt: serverTimestamp()
       });
 
       if (mainImageFile) setMainImageUrl(updatedMainImageUrl);
@@ -246,11 +253,10 @@ const StoreProfilePage = () => {
       <h1 className="text-2xl font-bold mb-6">店舗プロフィールの登録・編集</h1>
       {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded">エラー: {error}</p>}
       <div className="space-y-6">
-        {/* テキスト入力フィールド */}
         <div><label className="font-bold">店舗名 *</label><input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
         <div><label className="font-bold">住所 *</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
         
-        {/* ▼▼▼ 追加部分7: カテゴリ選択用のJSX ▼▼▼ */}
+        {/* ▼▼▼ 追加: カテゴリ選択用のJSX ▼▼▼ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
             <div>
                 <label className="font-bold">カテゴリ（大分類）*</label>
