@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill } from 'react-icons/ri';
 
 // --- 型定義 ---
-// データベースからの動的コンテンツはないため、型は空のままにします
 interface LandingData {}
 
 interface IndexPageProps {
@@ -26,13 +25,12 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         <header
           className="relative text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[60vh]"
           style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/nasu-landscape.jpg')`, // 背景を少し暗くして文字の視認性を向上
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/nasu-landscape.jpg')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
         >
           <div className="max-w-3xl">
-            {/* ▼▼▼ ここから変更 ▼▼▼ */}
             <p className="text-lg md:text-xl mb-3 font-semibold" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
               那須塩原市、大田原市、那須町の地域専用アプリ
             </p>
@@ -44,7 +42,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               休日当番医からAIお悩み相談まで。
               <span className="block mt-1">あなたのスマホが、那須地域最強の「お守り」に変わります。</span>
             </p>
-            {/* ▲▲▲ ここまで変更 ▲▲▲ */}
 
             <div className="space-y-4 bg-black bg-opacity-40 p-6 rounded-lg inline-block">
               <button 
@@ -58,7 +55,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                   オープン告知はLINE公式アカウントでお知らせします！
                 </p>
                 <a href="https://lin.ee/EWBKk9Z">
-                    <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" />
+                    <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
                 </a>
               </div>
             </div>
@@ -127,7 +124,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                     オープン告知はLINE公式アカウントでお知らせします！
                   </p>
                   <a href="https://lin.ee/EWBKk9Z">
-                      <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" />
+                      <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
                   </a>
                 </div>
               </div>
