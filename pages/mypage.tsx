@@ -47,7 +47,7 @@ interface MyPageProps {
     total: number;
     pending: number;
   };
-  subscriptionStatus: 'active' | 'trial' | 'canceled' | 'free' | null; // 'free'を追加
+  subscriptionStatus: 'active' | 'trial' | 'trialing' | 'canceled' | 'free' | null; // 型を拡張
   purchasedDeals: PurchasedDeal[];
   acceptedQuests: AcceptedQuest[];
 }
@@ -333,7 +333,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       return { redirect: { destination: '/home', permanent: false } };
     }
     
-    // --- 既存のデータ取得ロジックをそのまま使用 ---
     const pointsData = userData.points || {};
     const points = {
       balance: pointsData.balance || 0,
@@ -360,7 +359,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       status: doc.data().status || 'accepted',
     }));
     
-    // JSONシリアライズ可能な形式に変換
     const safeUser = { uid, email: email || '' };
     const safePurchasedDeals = JSON.parse(JSON.stringify(purchasedDeals));
     const safeAcceptedQuests = JSON.parse(JSON.stringify(acceptedQuests));
