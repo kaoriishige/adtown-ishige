@@ -10,7 +10,8 @@ import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { 
     RiQrCodeLine, RiFileList3Line, RiCopperCoinLine, RiGiftLine, 
     RiLogoutCircleRLine, RiMoneyCnyCircleLine, RiInformationLine, 
-    RiMailSendLine, RiHome2Line, RiTicketLine, RiTaskLine 
+    RiMailSendLine, RiHome2Line, RiTicketLine, RiTaskLine,
+    RiStore2Line, RiRecycleLine // ★ アイコンを追加
 } from 'react-icons/ri';
 import { loadStripe } from '@stripe/stripe-js';
 
@@ -157,13 +158,12 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
         </section>
 
         <section className="mb-8">
+            {/* ★★★ ここから変更 ★★★ */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {/* ▼▼▼ ここが修正箇所です ▼▼▼ */}
                 <Link href="/home" className="bg-blue-500 text-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-blue-600 transition-all">
                     <RiHome2Line size={32} className="text-white mb-2" />
                     <span className="font-semibold text-sm">アプリトップ</span>
                 </Link>
-                {/* ▲▲▲ ここが修正箇所です ▲▲▲ */}
                 <Link href="/referral-info" className="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-gray-100 transition-all">
                     <RiGiftLine size={32} className="text-pink-500 mb-2" />
                     <span className="font-semibold text-sm text-gray-800">紹介用URL</span>
@@ -172,7 +172,22 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
                     <RiMailSendLine size={32} className="text-cyan-500 mb-2" />
                     <span className="font-semibold text-sm text-gray-800">お問い合わせ</span>
                 </Link>
+                
+                {/* ★★★ 新しく追加するボタン ★★★ */}
+                <Link href="/deals" className="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-gray-100 transition-all">
+                    <RiStore2Line size={32} className="text-orange-500 mb-2" />
+                    <span className="font-semibold text-sm text-gray-800">地域の店舗情報</span>
+                </Link>
+                <Link href="/food-loss" className="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-gray-100 transition-all">
+                    <RiRecycleLine size={32} className="text-green-500 mb-2" />
+                    <span className="font-semibold text-sm text-gray-800">フードロス情報</span>
+                </Link>
+                <Link href="/flyers" className="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-gray-100 transition-all">
+                    <RiFileList3Line size={32} className="text-purple-500 mb-2" />
+                    <span className="font-semibold text-sm text-gray-800">スーパーチラシ</span>
+                </Link>
             </div>
+            {/* ★★★ ここまで変更 ★★★ */}
         </section>
         
         <section className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-6 rounded-xl shadow-lg mb-8">
@@ -306,7 +321,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     let token;
     try {
-      token = await getAdminAuth().verifySessionCookie(cookies.token, false);
+      token = await getAdminAuth().verifySessionCookie(cookies.token, true); // セッション切れチェックを有効に
       console.log(`OK: Cookieの検証に成功しました。UID: ${token.uid}`);
     } catch (error) {
       console.error('エラー: Cookieの検証に失敗しました。', error);
@@ -331,6 +346,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.log(`OK: Firestoreでユーザー(${uid})のドキュメントが見つかりました。`);
     const userData = userDoc.data() || {};
 
+    // ★★★ ここからロジック変更 ★★★
+    const userPlan = userData.plan || 'free'; 
+
+    if (userPlan === 'free') {
+      console.log(`INFO: ユーザー(${uid})は無料プランのため、/homeへリダイレクトします。`);
+      return { redirect: { destination: '/home', permanent: false } };
+    }
+    // ★★★ ここまでロジック変更 ★★★
+
     const pointsData = userData.points || {};
     const points = {
       balance: pointsData.balance || 0,
@@ -339,7 +363,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       activationStatus: pointsData.activationStatus || '',
       expiredAmount: pointsData.expiredAmount || 0,
     };
-    // Firestoreの `totalRewards` と `unpaidRewards` をポイントとして props に渡します
+    
     const rewards = { total: userData.totalRewards || 0, pending: userData.unpaidRewards || 0 };
     const subscriptionStatus = userData.subscriptionStatus || null;
 

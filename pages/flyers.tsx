@@ -1,63 +1,49 @@
-// pages/flyers.tsx のコード（すべてコピーして貼り付けてください）
 import { useState } from 'react';
-// クライアントサイドのFirebase初期化は、lib/firebase.ts があればそちらを使う
-// ただし、このファイルでしか使わない場合は、このまま残しておくことも可能
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'; // Firestore関連はAPIルートで使うので、クライアント側では不要になる可能性あり
+import { GetServerSideProps, NextPage } from 'next'; // ★ NextPage, GetServerSideProps をインポート
+import nookies from 'nookies'; // ★ nookies をインポート
+import { getAdminAuth, getAdminDb } from '../lib/firebase-admin'; // ★ firebase-admin をインポート
+import Head from 'next/head'; // ★ Head をインポート
+import Link from 'next/link'; // ★ Link をインポート
+import { RiArrowLeftLine } from 'react-icons/ri'; // ★ アイコンをインポート
 
-// 環境変数からFirebaseの設定を読み込む (メインアプリ用)
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
+// Firebaseのクライアントサイド初期化は不要になります。
+// サーバーサイドで認証が完了し、propsでユーザー情報が渡されるためです。
 
-// Firebaseの初期化（エラーを防ぐためのおまじない） - メインアプリ用
-// ※SuperSaver AIのデータはAPIルートから取得するため、このクライアント側初期化はメインアプリのFirestoreに接続
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app); // メインアプリのFirestoreインスタンス
-
-// チラシのデータ型を定義
+// --- 型定義 ---
 interface Flyer {
   id: string;
   shopName: string;
   imageUrl: string;
-  // APIルートで返される可能性のある他のフィールドも追加
-  // period?: string;
-  // price?: number;
-  // productName?: string;
-  // quantity?: string;
-  // status?: string;
-  region?: string; // regionもAPIから返されるので追加
+  region?: string;
 }
 
-const FlyersPage = () => {
+interface FlyersPageProps {
+  user: { // ★ getServerSidePropsから渡されるユーザー情報
+    email: string;
+  };
+}
+
+const FlyersPage: NextPage<FlyersPageProps> = ({ user }) => {
   const [flyers, setFlyers] = useState<Flyer[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('上のボタンからエリアを選択してください。');
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
   const getFlyers = async (region: string) => {
-    console.log('getFlyers function called for region:', region); 
-
     setLoading(true);
     setFlyers([]);
+    setSelectedRegion(region);
     setMessage('読み込み中...');
 
     try {
-      // APIルートを呼び出してデータを取得する
-      // クライアントサイドからは/api/getFlyersにアクセス
       const response = await fetch(`/api/getFlyers?region=${encodeURIComponent(region)}`);
       
-      if (!response.ok) { // レスポンスがOKでなかった場合 (例: 400, 500エラー)
+      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `API request failed with status ${response.status}`);
       }
 
-      const data: Flyer[] = await response.json(); // 取得したJSONデータをFlyer型として受け取る
+      const data: Flyer[] = await response.json();
       
       if (data.length > 0) {
         setFlyers(data);
@@ -65,40 +51,116 @@ const FlyersPage = () => {
         setMessage(`<b>${region}</b>の一致する情報が見つかりませんでした。`);
         setFlyers([]);
       }
-
     } catch (error) {
-      console.error("Error getting flyers from API route: ", error); // APIルートからのエラーをキャッチ
+      console.error("Error getting flyers from API route: ", error);
       setMessage("データの取得中にエラーが発生しました。");
     }
     setLoading(false);
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h2>スーパーのチラシ</h2>
-      <div>
-        <button onClick={() => getFlyers('那須塩原市')} style={{ marginRight: '10px' }}>那須塩原市</button>
-        <button onClick={() => getFlyers('大田原市')} style={{ marginRight: '10px' }}>大田原市</button>
-        <button onClick={() => getFlyers('那須町')}>那須町</button>
-      </div>
-      <hr />
-      <div>
-        {loading || flyers.length === 0 ? (
-          <p dangerouslySetInnerHTML={{ __html: message }}></p>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-            {flyers.map(flyer => (
-              <div key={flyer.id} style={{ border: '1px solid #ccc', padding: '10px', borderRadius: '8px', width: '300px' }}>
-                <h3>{flyer.shopName}</h3>
-                {/* 画像が表示されることを期待 */}
-                <img src={flyer.imageUrl} alt={`${flyer.shopName}のチラシ`} style={{ maxWidth: '100%' }} />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="min-h-screen bg-gray-100">
+        <Head>
+            <title>スーパーのチラシ - みんなの那須アプリ</title>
+        </Head>
+
+        <header className="bg-white shadow-sm sticky top-0 z-10">
+            <div className="max-w-4xl mx-auto p-4 flex items-center">
+                <Link href="/mypage" className="text-gray-600 hover:text-blue-500 mr-4">
+                    <RiArrowLeftLine size={24} />
+                </Link>
+                <h1 className="text-xl font-bold text-gray-800">スーパーのチラシ</h1>
+            </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto p-4 sm:p-6">
+            <div className="bg-white p-6 rounded-xl shadow-md mb-6">
+                <p className="text-center text-gray-700 mb-4">閲覧したいエリアを選択してください。</p>
+                <div className="flex justify-center space-x-2 sm:space-x-4">
+                    {['那須塩原市', '大田原市', '那須町'].map((region) => (
+                        <button 
+                            key={region}
+                            onClick={() => getFlyers(region)} 
+                            className={`px-4 py-2 text-sm sm:text-base font-bold rounded-lg transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5
+                                ${selectedRegion === region 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}`
+                                }
+                        >
+                            {region}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="mt-6">
+                {loading && <p className="text-center text-gray-600">読み込み中...</p>}
+                
+                {!loading && flyers.length === 0 && (
+                    <p className="text-center text-gray-600" dangerouslySetInnerHTML={{ __html: message }}></p>
+                )}
+                
+                {!loading && flyers.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        {flyers.map(flyer => (
+                            <div key={flyer.id} className="bg-white rounded-lg shadow-md overflow-hidden transition transform hover:scale-105">
+                                <img src={flyer.imageUrl} alt={`${flyer.shopName}のチラシ`} className="w-full h-auto object-cover" />
+                                <div className="p-4">
+                                    <h3 className="font-bold text-lg text-gray-800">{flyer.shopName}</h3>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </main>
     </div>
   );
 };
+
+// ★★★ ここから新規追加 ★★★
+export const getServerSideProps: GetServerSideProps = async (context) => {
+    try {
+        const cookies = nookies.get(context);
+        if (!cookies.token) {
+            return { redirect: { destination: '/login', permanent: false } };
+        }
+
+        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+        const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+
+        if (!userDoc.exists) {
+            return { redirect: { destination: '/login', permanent: false } };
+        }
+
+        const userData = userDoc.data() || {};
+        const userPlan = userData.plan || 'free';
+
+        // 無料会員 (free) がこのページにアクセスしたら、無料トップページにリダイレクト
+        if (userPlan === 'free') {
+            return { redirect: { destination: '/home', permanent: false } };
+        }
+
+        // 有料会員はページを表示
+        return {
+            props: {
+                user: {
+                    email: token.email || '',
+                },
+            },
+        };
+
+    } catch (error) {
+        console.error("flyers.tsx getServerSideProps エラー:", error);
+        // エラーが発生した場合はログインページにリダイレクト
+        return {
+            redirect: {
+                destination: '/login',
+                permanent: false,
+            },
+        };
+    }
+};
+// ★★★ ここまで新規追加 ★★★
 
 export default FlyersPage;
