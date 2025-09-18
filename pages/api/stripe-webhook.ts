@@ -6,6 +6,7 @@ import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
 
 // Stripe SDKの初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  // @ts-ignore
 apiVersion: '2024-04-10',// 固定したバージョンに合わせた正しいAPIバージョン
 });
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
