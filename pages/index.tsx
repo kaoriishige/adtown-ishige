@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill } from 'react-icons/ri';
 
 // --- 型定義 ---
+// データベースからの動的コンテンツはないため、型は空のままにします
 interface LandingData {}
 
 interface IndexPageProps {
@@ -25,23 +26,28 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         <header
           className="relative text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[60vh]"
           style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/nasu-landscape.jpg')`,
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/nasu-landscape.jpg')`, // 背景を少し暗くして文字の視認性を向上
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
         >
           <div className="max-w-3xl">
-            <p className="text-lg md:text-xl mb-3 font-semibold" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
+            {/* ▼▼▼ ここからが修正箇所です ▼▼▼ */}
+            
+            <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
+              みんなの那須アプリ
+            </h1>
+            
+            <p className="text-lg md:text-xl mb-4 font-semibold" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
               那須塩原市、大田原市、那須町の地域専用アプリ
             </p>
-            <h1 className="text-4xl md:text-5xl font-black leading-tight mb-4" style={{ textShadow: '2px 2px 6px rgba(0,0,0,0.8)' }}>
+
+            <h2 className="text-4xl md:text-5xl font-black leading-tight mb-8" style={{ textShadow: '2px 2px 6px rgba(0,0,0,0.8)' }}>
               那須の暮らしが、もっと便利に、もっとお得に。
               <span className="block mt-2 text-yellow-300">約50個のアプリが永久無料で使い放題！</span>
-            </h1>
-            <p className="text-lg md:text-xl mb-8" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
-              休日当番医からAIお悩み相談まで。
-              <span className="block mt-1">あなたのスマホが、那須地域最強の「お守り」に変わります。</span>
-            </p>
+            </h2>
+
+            {/* ▲▲▲ ここまでが修正箇所です ▲▲▲ */}
 
             <div className="space-y-4 bg-black bg-opacity-40 p-6 rounded-lg inline-block">
               <button 
