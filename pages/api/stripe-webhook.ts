@@ -6,7 +6,9 @@ import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
 
 // Stripe SDKの初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
+  // ▼▼▼ ここを修正 ▼▼▼
+  apiVersion: '2024-04-10', // エラーメッセージが要求するバージョンに修正
+  // ▲▲▲ ここまで修正 ▲▲▲
 });
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -67,9 +69,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           referrer: referrerUid || null,
         }, { merge: true });
         
-        // ▼▼▼ ここを修正 ▼▼▼
         const userRecord = await adminAuth.getUser(firebaseUID);
-        const claims = userRecord.customClaims || {}; // .customUserClaims から .customClaims に修正
+        const claims = userRecord.customClaims || {};
         await adminAuth.setCustomUserClaims(firebaseUID, {
           ...claims,
           plan: 'paid_480',
@@ -133,11 +134,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
              plan: 'free'
           });
           
-          // ▼▼▼ ここを修正 ▼▼▼
           const userRecord = await adminAuth.getUser(uid);
-//[start]
-          const claims = userRecord.customClaims || {}; // .customUserClaims から .customClaims に修正
-//[end]
+          const claims = userRecord.customClaims || {};
           await adminAuth.setCustomUserClaims(uid, {
             ...claims,
             plan: 'free',
