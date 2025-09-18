@@ -11,11 +11,12 @@ import {
     RiQrCodeLine, RiFileList3Line, RiCopperCoinLine, RiGiftLine, 
     RiLogoutCircleRLine, RiMoneyCnyCircleLine, RiInformationLine, 
     RiMailSendLine, RiHome2Line, RiTicketLine, RiTaskLine,
-    RiStore2Line, RiRecycleLine // ★ アイコンを追加
+    RiStore2Line, RiRecycleLine
 } from 'react-icons/ri';
 import { loadStripe } from '@stripe/stripe-js';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Stripeの初期化はクライアントサイドでのみ実行されるように修正
+const stripePromise = typeof window !== 'undefined' ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!) : null;
 
 // --- 型定義 ---
 interface PurchasedDeal {
@@ -46,7 +47,7 @@ interface MyPageProps {
     total: number;
     pending: number;
   };
-  subscriptionStatus: 'active' | 'trial' | 'canceled' | null;
+  subscriptionStatus: 'active' | 'trial' | 'canceled' | 'free' | null; // 'free'を追加
   purchasedDeals: PurchasedDeal[];
   acceptedQuests: AcceptedQuest[];
 }
@@ -82,6 +83,11 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
   const handleReissue = async () => {
     setIsReissuing(true);
     try {
+      if (!stripePromise) {
+          alert('Stripeの読み込みに失敗しました。');
+          setIsReissuing(false);
+          return;
+      }
       const response = await fetch('/api/points/reissue', { method: 'POST' });
       const session = await response.json();
       if (response.ok && session.sessionId) {
@@ -158,7 +164,6 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
         </section>
 
         <section className="mb-8">
-            {/* ★★★ ここから変更 ★★★ */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <Link href="/home" className="bg-blue-500 text-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-blue-600 transition-all">
                     <RiHome2Line size={32} className="text-white mb-2" />
@@ -173,7 +178,6 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
                     <span className="font-semibold text-sm text-gray-800">お問い合わせ</span>
                 </Link>
                 
-                {/* ★★★ 新しく追加するボタン ★★★ */}
                 <Link href="/deals" className="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-gray-100 transition-all">
                     <RiStore2Line size={32} className="text-orange-500 mb-2" />
                     <span className="font-semibold text-sm text-gray-800">地域の店舗情報</span>
@@ -187,7 +191,6 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
                     <span className="font-semibold text-sm text-gray-800">スーパーチラシ</span>
                 </Link>
             </div>
-            {/* ★★★ ここまで変更 ★★★ */}
         </section>
         
         <section className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-6 rounded-xl shadow-lg mb-8">
@@ -309,52 +312,28 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
 };
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  console.log('--- mypage.tsx getServerSideProps: 開始 ---');
   try {
     const cookies = nookies.get(context);
-
     if (!cookies.token) {
-      console.log('エラー: Cookieに`token`が見つかりません。ログインページにリダイレクトします。');
-      return { redirect: { destination: '/login', permanent: false } };
-    }
-    console.log('OK: Cookie `token` が見つかりました。');
-
-    let token;
-    try {
-      token = await getAdminAuth().verifySessionCookie(cookies.token, true); // セッション切れチェックを有効に
-      console.log(`OK: Cookieの検証に成功しました。UID: ${token.uid}`);
-    } catch (error) {
-      console.error('エラー: Cookieの検証に失敗しました。', error);
       return { redirect: { destination: '/login', permanent: false } };
     }
 
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
     const { uid, email } = token;
 
-    let userDoc;
-    try {
-      userDoc = await getAdminDb().collection('users').doc(uid).get();
-      console.log(`OK: Firestoreのユーザー(${uid})検索を実行しました。`);
-    } catch (error) {
-      console.error(`エラー: Firestoreのユーザー(${uid})検索中にエラーが発生しました。`, error);
-      return { redirect: { destination: '/login', permanent: false } };
-    }
-
+    const userDoc = await getAdminDb().collection('users').doc(uid).get();
     if (!userDoc.exists) {
-      console.log(`エラー: Firestoreにユーザー(${uid})のドキュメントが見つかりません。`);
       return { redirect: { destination: '/login', permanent: false } };
     }
-    console.log(`OK: Firestoreでユーザー(${uid})のドキュメントが見つかりました。`);
+    
     const userData = userDoc.data() || {};
-
-    // ★★★ ここからロジック変更 ★★★
-    const userPlan = userData.plan || 'free'; 
+    const userPlan = userData.plan || 'free';
 
     if (userPlan === 'free') {
-      console.log(`INFO: ユーザー(${uid})は無料プランのため、/homeへリダイレクトします。`);
       return { redirect: { destination: '/home', permanent: false } };
     }
-    // ★★★ ここまでロジック変更 ★★★
-
+    
+    // --- 既存のデータ取得ロジックをそのまま使用 ---
     const pointsData = userData.points || {};
     const points = {
       balance: pointsData.balance || 0,
@@ -380,20 +359,24 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       title: doc.data().title || '無題のクエスト',
       status: doc.data().status || 'accepted',
     }));
+    
+    // JSONシリアライズ可能な形式に変換
+    const safeUser = { uid, email: email || '' };
+    const safePurchasedDeals = JSON.parse(JSON.stringify(purchasedDeals));
+    const safeAcceptedQuests = JSON.parse(JSON.stringify(acceptedQuests));
 
-    console.log('--- mypage.tsx getServerSideProps: 正常終了 ---');
     return {
       props: {
-        user: JSON.parse(JSON.stringify({ uid, email: email || '' })),
+        user: safeUser,
         points,
         rewards,
         subscriptionStatus,
-        purchasedDeals: JSON.parse(JSON.stringify(purchasedDeals)),
-        acceptedQuests: JSON.parse(JSON.stringify(acceptedQuests)),
+        purchasedDeals: safePurchasedDeals,
+        acceptedQuests: safeAcceptedQuests,
       },
     };
   } catch (error) {
-    console.error("予期せぬ全体エラー:", error); 
+    console.error("mypage.tsx getServerSideProps エラー:", error); 
     return {
       redirect: {
         destination: '/login',
