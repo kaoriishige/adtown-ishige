@@ -38,153 +38,152 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   return (
     <>
       <Head>
-        <title>{data.mainTitle || 'みんなの那須アプリ - 約50個のアプリが永久無料で使い放題！'}</title>
-        <meta name="description" content={`${data.areaDescription}休日当番医、AI相談など、那須地域での生活を劇的に便利にする約50個のアプリがもうすぐ登場。`} />
-      </Head>
+        <title>{data.mainTitle?.replace('\n', ' ') || 'みんなの那須アプリ - 約50個のアプリが永久無料で使い放題！'}</title>
+      	<meta name="description" content={`${data.areaDescription}休日当番医、AI相談など、那須地域での生活を劇的に便利にする約50個のアプリがもうすぐ登場。`} />
+    	</Head>
 
-      <div className="bg-white text-gray-800">
-        {/* --- ファーストビュー --- */}
-        <header
-          className="relative text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[70vh]"
-          style={{
-            backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7) 10%, transparent 60%), url('/images/family-smile.jpg')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center 75%',
-          }}
-        >
-          <div className="max-w-3xl px-4">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.6)' }}>
-              {data.mainTitle}
-            </h1>
-            <p className="text-lg md:text-xl mb-4 font-semibold" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.6)' }}>
-              {data.areaDescription}
-            </p>
-            <h2 className="text-4xl md:text-5xl font-black leading-tight mb-8" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.6)' }}>
-              {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-            </h2>
-            <div className="space-y-4 bg-gray-900 bg-opacity-50 backdrop-blur-sm p-6 rounded-2xl inline-block border border-white/20">
-              <button
-                className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
-                disabled
-              >
-                  まもなくオープン
-                </button>
-                <div className="mt-4 flex flex-col items-center">
-                  <p className="mb-2 text-lg font-semibold text-white">
-                    オープン告知はLINE公式アカウントでお知らせします！
-                  </p>
-                  <a href="https://lin.ee/rFvws11">
-                    <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
-                  </a>
-                </div>
-            </div>
-          </div>
-        </header>
+    	<div className="bg-white text-gray-800">
+    	  {/* --- ファーストビュー --- */}
+    	  <header className="relative bg-gradient-to-br from-cyan-500 to-blue-700 text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[70vh] overflow-hidden">
+          {/* 背景の装飾用オーブ */}
+          <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-300 rounded-full mix-blend-screen filter blur-3xl opacity-50 -translate-x-24 -translate-y-24"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-400 rounded-full mix-blend-screen filter blur-3xl opacity-50 translate-x-24 translate-y-24"></div>
 
-        <main>
-          {/* --- 動画セクション --- */}
-          {data.youtubeVideoId && (
-            <section className="py-16 bg-gray-100 text-center">
-                <div className="max-w-4xl mx-auto px-6">
-                    <div className="aspect-w-16 aspect-h-9 shadow-2xl rounded-lg overflow-hidden">
-                        <iframe
-                            src={`https://www.youtube.com/embed/${data.youtubeVideoId}`}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            className="w-full h-full"
-                        ></iframe>
-                    </div>
-                </div>
-            </section>
-          )}
+    	    <div className="max-w-3xl px-4 z-10">
+    	      <h1 className="text-4xl md:text-5xl font-bold mb-3" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.2)' }}>
+    	        {data.mainTitle?.split('\n').map((line, i) => (
+    	          <span key={i} className={`block ${i > 0 ? 'text-2xl md:text-3xl font-medium mt-1' : ''}`}>
+    	            {line}
+    	          </span>
+    	        ))}
+    	      </h1>
+    	      <p className="text-lg md:text-xl mb-4 text-blue-100 font-semibold" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.2)' }}>
+    	        {data.areaDescription}
+    	      </p>
+    	      <h2 className="text-4xl md:text-5xl font-black leading-tight mb-8" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.2)' }}>
+    	        {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+    	      </h2>
+    	      <div className="space-y-4 bg-white/10 backdrop-blur-md p-6 rounded-2xl inline-block border border-white/20">
+    	        <button className="bg-white text-blue-600 font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105" disabled={false}>
+    	          まもなくオープン
+    	        </button>
+    	        <div className="mt-4 flex flex-col items-center">
+    	          <p className="mb-2 text-lg font-semibold text-white">
+                    オープン告知はLINE公式アカウントでお知らせします！
+                  </p>
+    	          <a href="https://lin.ee/rFvws11">
+                    <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
+                  </a>
+    	        </div>
+    	      </div>
+    	    </div>
+    	  </header>
 
-          {/* --- 共感セクション --- */}
-          <section className="py-20 bg-blue-600 text-white">
-            <div className="max-w-4xl mx-auto px-6 text-center">
-              <h2 className="text-3xl font-bold mb-4">{data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}</h2>
-                <p className="text-blue-200 mb-12">{data.empathyIntro}</p>
-                <div className="grid md:grid-cols-3 gap-8 text-left text-gray-800">
-                  <div className="bg-white p-6 rounded-lg shadow-md">
-                    <RiHeartPulseFill className="text-4xl text-red-500 mb-3" />
-                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit1_Title}</h3>
-                    <p className="text-sm text-gray-600">{data.solutionBenefit1_Desc}</p>
-                  </div>
-                  <div className="bg-white p-6 rounded-lg shadow-md">
-                    <RiShieldCheckFill className="text-4xl text-blue-500 mb-3" />
-                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit2_Title}</h3>
-                    <p className="text-sm text-gray-600">{data.solutionBenefit2_Desc}</p>
-                  </div>
-                  <div className="bg-white p-6 rounded-lg shadow-md">
-                    <RiChatHeartFill className="text-4xl text-green-500 mb-3" />
-                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit3_Title}</h3>
-                    <p className="text-sm text-gray-600">{data.solutionBenefit3_Desc}</p>
-                  </div>
-                </div>
-            </div>
-          </section>
+    	  <main>
+    	    {/* --- 動画セクション --- */}
+    	    {data.youtubeVideoId && (
+    	      <section className="py-16 bg-gray-100 text-center">
+    	        <div className="max-w-4xl mx-auto px-6">
+    	          <div className="aspect-w-16 aspect-h-9 shadow-2xl rounded-lg overflow-hidden">
+    	            <iframe 
+                        src={`https://www.youtube.com/embed/${data.youtubeVideoId}`} 
+                        title="YouTube video player" 
+                        frameBorder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowFullScreen 
+                        className="w-full h-full">
+                    </iframe>
+    	          </div>
+    	        </div>
+    	      </section>
+    	    )}
 
-          {/* --- なぜ無料なのか --- */}
-          <section className="py-20 bg-white">
-            <div className="max-w-3xl mx-auto px-6 text-center">
-                  <h2 className="text-3xl font-bold mb-4">{data.freeReasonTitle}</h2>
-                  <p className="text-gray-600 leading-relaxed">{data.freeReasonDesc}</p>
-            </div>
-          </section>
+    	    {/* --- 共感セクション --- */}
+    	    <section className="py-20 bg-blue-600 text-white">
+    	      <div className="max-w-4xl mx-auto px-6 text-center">
+    	        <h2 className="text-3xl font-bold mb-4">
+                    {data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+                </h2>
+    	        <p className="text-blue-200 mb-12">{data.empathyIntro}</p>
+    	        <div className="grid md:grid-cols-3 gap-8 text-left text-gray-800">
+    	          <div className="bg-white p-6 rounded-lg shadow-md">
+                    <RiHeartPulseFill className="text-4xl text-red-500 mb-3" />
+                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit1_Title}</h3>
+                    <p className="text-sm text-gray-600">{data.solutionBenefit1_Desc}</p>
+                  </div>
+    	          <div className="bg-white p-6 rounded-lg shadow-md">
+                    <RiShieldCheckFill className="text-4xl text-blue-500 mb-3" />
+                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit2_Title}</h3>
+                    <p className="text-sm text-gray-600">{data.solutionBenefit2_Desc}</p>
+                  </div>
+    	          <div className="bg-white p-6 rounded-lg shadow-md">
+                    <RiChatHeartFill className="text-4xl text-green-500 mb-3" />
+                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit3_Title}</h3>
+                    <p className="text-sm text-gray-600">{data.solutionBenefit3_Desc}</p>
+                  </div>
+    	        </div>
+    	      </div>
+    	    </section>
 
-          {/* --- プレミアムプラン予告セクション --- */}
-          <section className="py-20 bg-gradient-to-b from-gray-50 to-blue-100">
-            <div className="max-w-3xl mx-auto px-6 text-center">
-                  <div className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500">
-                    <RiRocketFill className="text-5xl text-blue-500 mb-4 mx-auto" />
-                    <h2 className="text-2xl font-bold mb-2 text-blue-800">{data.premiumTeaserTitle}</h2>
-                  	<p className="text-gray-700 text-lg font-semibold">
-                	  {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-                	</p>
-                	<p className="text-sm text-gray-500 mt-4">{data.premiumTeaserNote}</p>
-              	</div>
-          	</div>
-        	</section>
+    	    {/* --- なぜ無料なのか --- */}
+    	    <section className="py-20 bg-white">
+    	      <div className="max-w-3xl mx-auto px-6 text-center">
+    	        <h2 className="text-3xl font-bold mb-4 text-gray-800">{data.freeReasonTitle}</h2>
+    	        <p className="text-gray-600 leading-relaxed">{data.freeReasonDesc}</p>
+    	      </div>
+    	    </section>
 
-        	{/* --- 最後のCTA --- */}
-        	<section className="py-20 bg-blue-800 text-white">
-        	  <div className="max-w-4xl mx-auto px-6 text-center">
-        	    <h2 className="text-3xl font-bold mb-4">{data.finalCtaTitle}</h2>
-        	    <p className="text-lg text-blue-200 mb-8">{data.finalCtaSubtext}</p>
-        	    
-        	    <div className="space-y-4 bg-black bg-opacity-20 p-6 rounded-lg inline-block">
-        	      <button
-        	          className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
-        	          disabled
-        	      >
-        	          まもなくオープン
-        	      </button>
-        	      <div className="mt-4 flex flex-col items-center">
-        	        <p className="mb-2 text-lg font-semibold text-white">
-        	          オープン告知はLINE公式アカウントでお知らせします！
-        	        </p>
-        	        <a href="https://lin.ee/rFvws11">
-        	          <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
-        	        </a>
-        	      </div>
-        	    </div>
-        	  </div>
-        	</section>
-        </main>
+    	    {/* --- プレミアムプラン予告セクション --- */}
+    	    <section className="py-20 bg-gradient-to-b from-gray-50 to-blue-100">
+    	      <div className="max-w-3xl mx-auto px-6 text-center">
+    	        <div className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500">
+                    <RiRocketFill className="text-5xl text-blue-500 mb-4 mx-auto" />
+                    <h2 className="text-2xl font-bold mb-2 text-blue-800">{data.premiumTeaserTitle}</h2>
+                    <p className="text-gray-700 text-lg font-semibold">
+                        {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-4">{data.premiumTeaserNote}</p>
+                </div>
+    	      </div>
+    	    </section>
 
-        {/* --- フッター --- */}
-        <footer className="bg-gray-200 text-center text-sm text-gray-600 py-8 px-4">
-            <div className="space-y-2">
-                <div className="flex justify-center space-x-6 mb-4">
-                    <Link href="/legal" className="hover:underline">特定商取引法に基づく表記</Link>
-                </div>
-                <div>
-                    <p>みんなの那須アプリ運営</p><p>株式会社adtown</p><p>〒329-2711 栃木県那須塩原市石林698-35</p><p>TEL:0287-39-7577</p>
-                </div>
-            </div>
-        </footer>
-      </div>
+    	    {/* --- 最後のCTA --- */}
+    	    <section className="py-20 bg-blue-800 text-white">
+    	      <div className="max-w-4xl mx-auto px-6 text-center">
+    	        <h2 className="text-3xl font-bold mb-4">{data.finalCtaTitle}</h2>
+    	        <p className="text-lg text-blue-200 mb-8">{data.finalCtaSubtext}</p>
+    	        <div className="space-y-4 bg-black bg-opacity-20 p-6 rounded-lg inline-block">
+    	          <button className="bg-white text-blue-600 font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105" disabled={false}>
+    	            まもなくオープン
+    	          </button>
+    	          <div className="mt-4 flex flex-col items-center">
+    	            <p className="mb-2 text-lg font-semibold text-white">
+                        オープン告知はLINE公式アカウントでお知らせします！
+                    </p>
+    	            <a href="https://lin.ee/rFvws11">
+                        <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
+                    </a>
+    	          </div>
+    	        </div>
+    	      </div>
+    	    </section>
+    	  </main>
+
+    	  {/* --- フッター --- */}
+    	  <footer className="bg-gray-200 text-center text-sm text-gray-600 py-8 px-4">
+    	    <div className="space-y-2">
+    	      <div className="flex justify-center space-x-6 mb-4">
+                <Link href="/legal" className="hover:underline">特定商取引法に基づく表記</Link>
+              </div>
+    	      <div>
+                <p>みんなの那須アプリ運営</p>
+                <p>株式会社adtown</p>
+                <p>〒329-2711 栃木県那須塩原市石林698-35</p>
+                <p>TEL:0287-39-7577</p>
+              </div>
+    	    </div>
+    	  </footer>
+    	</div>
     </>
   );
 };
@@ -196,9 +195,8 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
     
-    // ▼▼▼ ここに、お客様の元のテキストをすべて戻しました ▼▼▼
     const fallbackData: LandingData = {
-      mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
+      mainTitle: "みんなの那須アプリ\n「地域お守り無料プラン」",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
       heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
       heroSubheadline: "休日当番医からAIお悩み相談まで。\nあなたのスマホが、那須地域最強の「お守り」に変わります。",
