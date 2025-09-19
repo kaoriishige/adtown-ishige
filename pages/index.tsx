@@ -16,8 +16,8 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   return (
     <>
       <Head>
-        <title>みんなの那須アプリ - 地域お守り無料プラン</title>
-        <meta name="description" content="那須塩原市、大田原市、那須町専用！休日当番医、AI相談など、約50個のアプリが永久無料で使える「地域お守り無料プラン」が登場。" />
+        <title>みんなの那須アプリ - 約50個のアプリが永久無料で使い放題！</title>
+        <meta name="description" content="那須塩原市、大田原市、那須町専用！休日当番医、AI相談など、那須地域での生活を劇的に便利にする約50個のアプリがもうすぐ登場。" />
       </Head>
 
       <div className="bg-white text-gray-800">
@@ -52,8 +52,9 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 <p className="mb-2 text-lg font-semibold text-white">
                   オープン告知はLINE公式アカウントでお知らせします！
                 </p>
+                {/* ▼▼▼ 1箇所目の修正 ▼▼▼ */}
                 <a href="https://lin.ee/rFvws11">
-                    <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
+                  <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
                 </a>
               </div>
             </div>
@@ -99,7 +100,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             <div className="max-w-3xl mx-auto px-6 text-center">
                 <h2 className="text-3xl font-bold mb-4">なぜ、これだけの機能がずっと無料なのですか？</h2>
                 <p className="text-gray-600">
-                    このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに**「地域お守り無料プラン」**の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。
+                    このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたにアプリ50個の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。
                 </p>
             </div>
           </section>
@@ -115,12 +116,11 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                       <span className="text-blue-600">プレミアムプラン</span>も要確認!!
                     </p>
                     <p className="text-sm text-gray-500 mt-4">
-                      ※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。
+                      ※プレミアムプランの詳細はアプリ内でご案内します。まずは無料登録で「お守りアプリ」の便利さをご体験ください。
                     </p>
                 </div>
             </div>
           </section>
-
 
           {/* --- 最後のCTA --- */}
           <section className="py-20 bg-gray-800 text-white">
@@ -139,6 +139,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                   <p className="mb-2 text-lg font-semibold text-white">
                     オープン告知はLINE公式アカウントでお知らせします！
                   </p>
+                  {/* ▼▼▼ 2箇所目の修正 ▼▼▼ */}
                   <a href="https://lin.ee/rFvws11">
                       <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
                   </a>
