@@ -47,7 +47,9 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         <header
           className="relative text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[60vh]"
           style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/nasu-landscape.jpg')`,
+            // ▼▼▼ ここを変更しました ▼▼▼
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('/images/family-smile.jpg')`,
+            // ▲▲▲ ここまで ▲▲▲
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
@@ -64,19 +66,19 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             </h2>
             <div className="space-y-4 bg-black bg-opacity-40 p-6 rounded-lg inline-block">
               <button
-                className="bg-gray-400 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
+                className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
                 disabled
-              >
-                まもなくオープン
-              </button>
-              <div className="mt-4 flex flex-col items-center">
-                <p className="mb-2 text-lg font-semibold text-white">
-                  オープン告知はLINE公式アカウントでお知らせします！
-                </p>
-                <a href="https://lin.ee/rFvws11">
+                >
+                  まもなくオープン
+                </button>
+                <div className="mt-4 flex flex-col items-center">
+                  <p className="mb-2 text-lg font-semibold text-white">
+                    オープン告知はLINE公式アカウントでお知らせします！
+                  </p>
+                  <a href="https://lin.ee/rFvws11">
                     <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
-                </a>
-              </div>
+                  </a>
+                </div>
             </div>
           </div>
         </header>
@@ -93,84 +95,84 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                             frameBorder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
-                            className="w-full h-full"
-                        ></iframe>
-                    </div>
-                </div>
-            </section>
-          )}
+                      	  className="w-full h-full"
+                      	></iframe>
+                  	  </div>
+              	  </div>
+            	</section>
+        	)}
 
-          {/* --- 共感セクション --- */}
-          <section className="py-16 bg-gray-50">
-            <div className="max-w-4xl mx-auto px-6 text-center">
-              <h2 className="text-3xl font-bold mb-4">{data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}</h2>
-              <p className="text-gray-600 mb-10">{data.empathyIntro}</p>
-              <div className="grid md:grid-cols-3 gap-8 text-left">
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <RiHeartPulseFill className="text-4xl text-red-500 mb-3" />
-                  <h3 className="font-bold text-lg mb-2">{data.solutionBenefit1_Title}</h3>
-                  <p className="text-sm text-gray-600">{data.solutionBenefit1_Desc}</p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <RiShieldCheckFill className="text-4xl text-blue-500 mb-3" />
-                  <h3 className="font-bold text-lg mb-2">{data.solutionBenefit2_Title}</h3>
-                  <p className="text-sm text-gray-600">{data.solutionBenefit2_Desc}</p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <RiChatHeartFill className="text-4xl text-green-500 mb-3" />
-                  <h3 className="font-bold text-lg mb-2">{data.solutionBenefit3_Title}</h3>
-                  <p className="text-sm text-gray-600">{data.solutionBenefit3_Desc}</p>
-                </div>
-              </div>
-            </div>
-          </section>
+        	{/* --- 共感セクション --- */}
+        	<section className="py-16 bg-gray-50">
+        	  <div className="max-w-4xl mx-auto px-6 text-center">
+        	    <h2 className="text-3xl font-bold mb-4">{data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}</h2>
+        	    <p className="text-gray-600 mb-10">{data.empathyIntro}</p>
+        	    <div className="grid md:grid-cols-3 gap-8 text-left">
+        	      <div className="bg-white p-6 rounded-lg shadow-md">
+        	        <RiHeartPulseFill className="text-4xl text-red-500 mb-3" />
+        	        <h3 className="font-bold text-lg mb-2">{data.solutionBenefit1_Title}</h3>
+        	        <p className="text-sm text-gray-600">{data.solutionBenefit1_Desc}</p>
+        	      </div>
+        	      <div className="bg-white p-6 rounded-lg shadow-md">
+        	        <RiShieldCheckFill className="text-4xl text-blue-500 mb-3" />
+        	        <h3 className="font-bold text-lg mb-2">{data.solutionBenefit2_Title}</h3>
+        	        <p className="text-sm text-gray-600">{data.solutionBenefit2_Desc}</p>
+        	      </div>
+        	      <div className="bg-white p-6 rounded-lg shadow-md">
+        	        <RiChatHeartFill className="text-4xl text-green-500 mb-3" />
+        	        <h3 className="font-bold text-lg mb-2">{data.solutionBenefit3_Title}</h3>
+        	        <p className="text-sm text-gray-600">{data.solutionBenefit3_Desc}</p>
+        	      </div>
+        	    </div>
+        	  </div>
+        	</section>
 
-          {/* --- なぜ無料なのか --- */}
-          <section className="py-16 bg-white">
-            <div className="max-w-3xl mx-auto px-6 text-center">
-                <h2 className="text-3xl font-bold mb-4">{data.freeReasonTitle}</h2>
-                <p className="text-gray-600">{data.freeReasonDesc}</p>
-            </div>
-          </section>
+        	{/* --- なぜ無料なのか --- */}
+        	<section className="py-16 bg-white">
+        	  <div className="max-w-3xl mx-auto px-6 text-center">
+        	      <h2 className="text-3xl font-bold mb-4">{data.freeReasonTitle}</h2>
+        	      <p className="text-gray-600">{data.freeReasonDesc}</p>
+        	  </div>
+        	</section>
 
-          {/* --- プレミアムプラン予告セクション --- */}
-          <section className="py-16 bg-blue-50">
-            <div className="max-w-3xl mx-auto px-6 text-center">
-                <div className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500">
-                    <RiRocketFill className="text-5xl text-blue-500 mb-4 mx-auto" />
-                    <h2 className="text-2xl font-bold mb-2 text-blue-800">{data.premiumTeaserTitle}</h2>
-                    <p className="text-gray-700 text-lg font-semibold">
-                      {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-4">{data.premiumTeaserNote}</p>
-                </div>
-            </div>
-          </section>
+        	{/* --- プレミアムプラン予告セクション --- */}
+        	<section className="py-16 bg-blue-50">
+        	  <div className="max-w-3xl mx-auto px-6 text-center">
+        	      <div className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500">
+        	        <RiRocketFill className="text-5xl text-blue-500 mb-4 mx-auto" />
+        	        <h2 className="text-2xl font-bold mb-2 text-blue-800">{data.premiumTeaserTitle}</h2>
+        	        <p className="text-gray-700 text-lg font-semibold">
+        	          {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+        	        </p>
+        	        <p className="text-sm text-gray-500 mt-4">{data.premiumTeaserNote}</p>
+        	      </div>
+        	  </div>
+        	</section>
 
-          {/* --- 最後のCTA --- */}
-          <section className="py-20 bg-gray-800 text-white">
-            <div className="max-w-4xl mx-auto px-6 text-center">
-              <h2 className="text-3xl font-bold mb-4">{data.finalCtaTitle}</h2>
-              <p className="text-lg mb-8">{data.finalCtaSubtext}</p>
-             
-              <div className="space-y-4 bg-black bg-opacity-40 p-6 rounded-lg inline-block">
-                <button
-                  className="bg-gray-400 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
-                  disabled
-                >
-                  まもなくオープン
-                </button>
-                <div className="mt-4 flex flex-col items-center">
-                  <p className="mb-2 text-lg font-semibold text-white">
-                    オープン告知はLINE公式アカウントでお知らせします！
-                  </p>
-                  <a href="https://lin.ee/rFvws11">
-                      <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </section>
+        	{/* --- 最後のCTA --- */}
+        	<section className="py-20 bg-gray-800 text-white">
+        	  <div className="max-w-4xl mx-auto px-6 text-center">
+        	    <h2 className="text-3xl font-bold mb-4">{data.finalCtaTitle}</h2>
+        	    <p className="text-lg mb-8">{data.finalCtaSubtext}</p>
+        	    
+        	    <div className="space-y-4 bg-black bg-opacity-40 p-6 rounded-lg inline-block">
+        	      <button
+        	          className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
+        	          disabled
+        	      >
+        	          まもなくオープン
+        	      </button>
+        	      <div className="mt-4 flex flex-col items-center">
+        	        <p className="mb-2 text-lg font-semibold text-white">
+        	          オープン告知はLINE公式アカウントでお知らせします！
+        	        </p>
+        	        <a href="https://lin.ee/rFvws11">
+        	          <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
+        	        </a>
+        	      </div>
+        	    </div>
+        	  </div>
+        	</section>
         </main>
 
         {/* --- フッター --- */}
@@ -189,14 +191,13 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   );
 };
 
-// --- サーバーサイドでのデータ取得を修正 ---
+// --- サーバーサイドでのデータ取得 ---
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
     const adminDb = getAdminDb();
     const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
-   
-    // 編集ページと同じ初期データ（フォールバック）をここに追加
+    
     const fallbackData: LandingData = {
       mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
@@ -209,29 +210,28 @@ export const getServerSideProps: GetServerSideProps = async () => {
       solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避-行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
       solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
       solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
-      solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
-      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャッ-AIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
-      freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
-      freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
-      premiumTeaserTitle: "さらに、もっとお得に。",
-      premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
-      premiumTeaserNote: "※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。",
-      finalCtaTitle: "那須の暮らしを、アップデートしよう。",
-      finalCtaSubtext: "約50個の無料アプリが、あなたのスマホに。オープンをお楽しみに！",
-    };
-   
-    const dbData = docSnap.exists ? docSnap.data() : {};
-    // 初期データとデータベースのデータを統合
-    const finalData = { ...fallbackData, ...dbData };
+    	solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
+  	solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャッ-AIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
+  	freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
+  	freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
+  	premiumTeaserTitle: "さらに、もっとお得に。",
+  	premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
+  	premiumTeaserNote: "※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。",
+  	finalCtaTitle: "那須の暮らしを、アップデートしよう。",
+  	finalCtaSubtext: "約50個の無料アプリが、あなたのスマホに。オープンをお楽しみに！",
+    };
+    
+  	const dbData = docSnap.exists ? docSnap.data() : {};
+  	const finalData = { ...fallbackData, ...dbData };
 
-    return {
-      props: {
-        data: JSON.parse(JSON.stringify(finalData))
-      }
-    };
+  	return {
+  	  props: {
+  	    data: JSON.parse(JSON.stringify(finalData))
+  	  }
+  	};
   } catch (error) {
-    console.error("Landing page data fetch error:", error);
-    return { props: { data: {} } };
+  	console.error("Landing page data fetch error:", error);
+  	return { props: { data: {} } };
   }
 };
 
