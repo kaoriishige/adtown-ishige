@@ -4,13 +4,16 @@ import Link from 'next/link';
 import nookies from 'nookies';
 import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
 import Head from 'next/head';
+import Image from 'next/image';
+import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill, RiRocketFill } from 'react-icons/ri';
 
-// --- 型定義：新しいランディングページに合わせて簡略化 ---
+// --- 型定義 ---
 interface LandingData {
   mainTitle: string;
   areaDescription: string;
   heroHeadline: string;
   heroSubheadline: string;
+  youtubeVideoId: string;
   empathyTitle: string;
   empathyIntro: string;
   solutionBenefit1_Title: string;
@@ -32,7 +35,70 @@ interface EditorPageProps {
   initialContent: LandingData;
 }
 
-// --- ページコンポーネント ---
+// --- プレビュー用コンポーネント ---
+const LandingPreview: React.FC<{ data: LandingData }> = ({ data }) => {
+    const formatText = (text: string = '') => {
+        return text.split('\n').map((line, i) => <span key={i} className="block">{line}</span>);
+    };
+
+    return (
+        <div className="bg-white text-gray-800 scale-75 origin-top-left" style={{ minWidth: '133.33%' }}>
+            {/* ファーストビュー */}
+            <header
+              className="relative text-white text-center py-16 px-4 flex flex-col items-center justify-center"
+              style={{
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/nasu-landscape.jpg')`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
+            >
+              <div className="max-w-3xl">
+                <h1 className="text-2xl font-bold mb-2">{data.mainTitle}</h1>
+                <p className="text-md mb-3 font-semibold">{data.areaDescription}</p>
+                <h2 className="text-3xl font-black leading-tight mb-4">{formatText(data.heroHeadline)}</h2>
+                <p className="text-lg mb-6">{formatText(data.heroSubheadline)}</p>
+                 <div className="space-y-4 bg-black bg-opacity-40 p-4 rounded-lg inline-block">
+                  <button className="bg-gray-400 text-white font-bold text-md py-3 px-6 rounded-full shadow-lg cursor-not-allowed" disabled>
+                    まもなくオープン
+                  </button>
+                  <div className="mt-2 flex flex-col items-center">
+                    <p className="mb-2 text-md font-semibold text-white">
+                      オープン告知はLINE公式アカウントでお知らせします！
+                    </p>
+                    <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
+                  </div>
+                </div>
+              </div>
+            </header>
+            
+            <main>
+                {/* 動画セクション */}
+                <section className="py-16 bg-gray-50 text-center">
+                    {data.youtubeVideoId ? (
+                        <div className="aspect-w-16 aspect-h-9 max-w-3xl mx-auto shadow-lg">
+                            <iframe
+                                src={`https://www.youtube.com/embed/${data.youtubeVideoId}`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="w-full h-full rounded-lg"
+                            ></iframe>
+                        </div>
+                    ) : (
+                        <div className="h-64 flex items-center justify-center bg-gray-200 text-gray-500 max-w-3xl mx-auto rounded-lg">
+                            YouTube動画IDを入力するとここに表示されます
+                        </div>
+                    )}
+                </section>
+                {/* 他のセクションもプレビューとして追加 */}
+            </main>
+        </div>
+    );
+};
+
+
+// --- 編集ページのメインコンポーネント ---
 const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
   const [data, setData] = useState<LandingData>(initialContent);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +106,16 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setData((prev) => ({ ...prev, [name]: value }));
+    if (name === 'youtubeVideoId' && value.includes('v=')) {
+        try {
+            const videoId = new URL(value).searchParams.get('v');
+            setData((prev) => ({ ...prev, [name]: videoId || value }));
+        } catch {
+            setData((prev) => ({ ...prev, [name]: value }));
+        }
+    } else {
+        setData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSave = async () => {
@@ -53,9 +128,7 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
         body: JSON.stringify({ documentId: 'landingV3', data }),
       });
       const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || '保存に失敗しました。');
-      }
+      if (!response.ok) throw new Error(result.error || '保存に失敗しました。');
       setMessage('保存しました！');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '保存中にエラーが発生しました。');
@@ -65,12 +138,12 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
     }
   };
 
-  // フォームの項目と表示名を定義
   const formFields = [
     { name: 'mainTitle', label: 'ファーストビュー：メインタイトル', rows: 1 },
     { name: 'areaDescription', label: 'ファーストビュー：エリア説明', rows: 1 },
     { name: 'heroHeadline', label: 'ファーストビュー：キャッチコピー', rows: 3 },
     { name: 'heroSubheadline', label: 'ファーストビュー：サブコピー', rows: 3 },
+    { name: 'youtubeVideoId', label: '紹介動画 (YouTubeのURLまたはID)', rows: 1 },
     { name: 'empathyTitle', label: '共感セクション：タイトル', rows: 2 },
     { name: 'empathyIntro', label: '共感セクション：導入文', rows: 3 },
     { name: 'solutionBenefit1_Title', label: '解決策1：タイトル', rows: 1 },
@@ -89,26 +162,21 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
   ];
 
   return (
-    <div className="bg-gray-100 min-h-screen">
+    <div className="flex h-screen bg-gray-100">
       <Head>
         <title>ランディングページ編集</title>
       </Head>
-      <div className="w-full max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-4">
+
+      <div className="w-1/2 p-6 bg-white border-r overflow-y-auto">
+        <div className="flex justify-between items-center mb-4 sticky top-0 bg-white py-2 z-10">
           <Link href="/admin" className="text-blue-600 hover:underline">← 管理メニューに戻る</Link>
-          <button 
-            onClick={handleSave} 
-            disabled={isLoading} 
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded disabled:bg-gray-400"
-          >
+          <button onClick={handleSave} disabled={isLoading} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded disabled:bg-gray-400">
             {isLoading ? '保存中...' : '変更を保存'}
           </button>
         </div>
         {message && <p className="mb-4 text-center text-sm font-bold text-green-600">{message}</p>}
-
         <h1 className="text-2xl font-bold mb-6 text-center">ランディングページ編集</h1>
-        
-        <div className="space-y-6 bg-white p-8 rounded-lg shadow-md">
+        <div className="space-y-6">
           {formFields.map(({ name, label, rows }) => (
             <div key={name}>
               <label className="block text-sm font-bold mb-1 text-gray-700">{label}</label>
@@ -118,10 +186,18 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
                 onChange={handleInputChange} 
                 rows={rows}
                 className="w-full p-2 border rounded shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder={name === 'youtubeVideoId' ? '例: https://www.youtube.com/watch?v=xxxxxxxxxxx' : ''}
               />
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="w-1/2 overflow-y-auto">
+        <div className="sticky top-0 bg-gray-800 text-white p-2 text-center text-sm z-10">
+            リアルタイムプレビュー
+        </div>
+        <LandingPreview data={data} />
       </div>
     </div>
   );
@@ -129,7 +205,6 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
 
 // --- サーバーサイドでのデータ取得 ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  // 認証チェック
   try {
     const cookies = nookies.get(context);
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
@@ -141,32 +216,29 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return { redirect: { destination: '/admin/login', permanent: false } };
   }
 
-  // データ取得
   const adminDb = getAdminDb();
   try {
     const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
     
-    // データがない場合のデフォルト値
     const fallbackData: LandingData = {
       mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
       heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
       heroSubheadline: "休日当番医からAIお悩み相談まで。\nあなたのスマホが、那須地域最強の「お守り」に変わります。",
+      youtubeVideoId: '',
       empathyTitle: "病院探し、子育ての悩み…\nその都度、別のアプリやサイトを開いていませんか？",
-      empathyIntro: "那須での生活に必要な「あれもこれも」を、たった一つに。50個以上の便利が、あなたの毎日を徹底的にサポートします。",
+      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50個以上の便利が、あなたの毎日を徹底的にサポートします。",
       solutionBenefit1_Title: "もしもの時の、家族の安心に",
-      solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
+      solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避-行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
       solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
       solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
       solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
-      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャットAIが、24時間あなたの心に寄り添います。毎朝届く「褒美言葉シャワー」で一日を元気に。",
+      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャッ-AIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
       freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
-      // ▼▼▼ 修正点1: 「無料の理由」説明文にプラン名を反映 ▼▼▼
       freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
       premiumTeaserTitle: "さらに、もっとお得に。",
       premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
-      // ▼▼▼ 修正点2: 「プレミアムプラン予告」注意書きにプラン名を反映 ▼▼▼
       premiumTeaserNote: "※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。",
       finalCtaTitle: "那須の暮らしを、アップデートしよう。",
       finalCtaSubtext: "約50個の無料アプリが、あなたのスマホに。オープンをお楽しみに！",
