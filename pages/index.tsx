@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
-import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill, RiRocketFill } from 'react-icons/ri'; // RiRocketFill を追加
+import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill, RiRocketFill } from 'react-icons/ri';
 
 // --- 型定義 ---
 interface LandingData {}
@@ -16,12 +16,12 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   return (
     <>
       <Head>
-        <title>みんなの那須アプリ - 約50個のアプリが永久無料で使い放題！</title>
-        <meta name="description" content="那須塩原市、大田原市、那須町専用！休日当番医、AI相談など、那須地域での生活を劇的に便利にする約50個のアプリがもうすぐ登場。" />
+        <title>みんなの那須アプリ - 地域お守り無料プラン</title>
+        <meta name="description" content="那須塩原市、大田原市、那須町専用！休日当番医、AI相談など、約50個のアプリが永久無料で使える「地域お守り無料プラン」が登場。" />
       </Head>
 
       <div className="bg-white text-gray-800">
-        {/* --- ファーストビュー (変更なし) --- */}
+        {/* --- ファーストビュー --- */}
         <header
           className="relative text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[60vh]"
           style={{
@@ -52,7 +52,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 <p className="mb-2 text-lg font-semibold text-white">
                   オープン告知はLINE公式アカウントでお知らせします！
                 </p>
-                <a href="https://lin.ee/EWBKk9Z">
+                <a href="https://lin.ee/rFvws11">
                     <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
                 </a>
               </div>
@@ -61,7 +61,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         </header>
 
         <main>
-          {/* --- 共感セクション (変更なし) --- */}
+          {/* --- 共感セクション --- */}
           <section className="py-16 bg-gray-50">
             <div className="max-w-4xl mx-auto px-6 text-center">
               <h2 className="text-3xl font-bold mb-4">病院探し、子育ての悩み…<br />その都度、別のアプリやサイトを開いていませんか？</h2>
@@ -94,17 +94,16 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             </div>
           </section>
 
-          {/* --- なぜ無料なのか (変更なし) --- */}
+          {/* --- なぜ無料なのか --- */}
           <section className="py-16 bg-white">
             <div className="max-w-3xl mx-auto px-6 text-center">
                 <h2 className="text-3xl font-bold mb-4">なぜ、これだけの機能がずっと無料なのですか？</h2>
                 <p className="text-gray-600">
-                    このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたにアプリ50個の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。
+                    このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに**「地域お守り無料プラン」**の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。
                 </p>
             </div>
           </section>
 
-          {/* ▼▼▼ ここから新規追加 ▼▼▼ */}
           {/* --- プレミアムプラン予告セクション --- */}
           <section className="py-16 bg-blue-50">
             <div className="max-w-3xl mx-auto px-6 text-center">
@@ -116,15 +115,14 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                       <span className="text-blue-600">プレミアムプラン</span>も要確認!!
                     </p>
                     <p className="text-sm text-gray-500 mt-4">
-                      ※プレミアムプランの詳細はアプリ内でご案内します。まずは無料登録で「お守りアプリ」の便利さをご体験ください。
+                      ※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。
                     </p>
                 </div>
             </div>
           </section>
-          {/* ▲▲▲ ここまで新規追加 ▲▲▲ */}
 
 
-          {/* --- 最後のCTA (変更なし) --- */}
+          {/* --- 最後のCTA --- */}
           <section className="py-20 bg-gray-800 text-white">
             <div className="max-w-4xl mx-auto px-6 text-center">
               <h2 className="text-3xl font-bold mb-4">那須の暮らしを、アップデートしよう。</h2>
@@ -141,7 +139,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                   <p className="mb-2 text-lg font-semibold text-white">
                     オープン告知はLINE公式アカウントでお知らせします！
                   </p>
-                  <a href="https://lin.ee/EWBKk9Z">
+                  <a href="https://lin.ee/rFvws11">
                       <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
                   </a>
                 </div>
@@ -150,7 +148,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
           </section>
         </main>
 
-        {/* --- フッター (変更なし) --- */}
+        {/* --- フッター --- */}
         <footer className="bg-gray-200 text-center text-sm text-gray-600 py-8 px-4">
             <div className="space-y-2">
                 <div className="flex justify-center space-x-6 mb-4">
