@@ -154,7 +154,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
       heroSubheadline: "休日当番医からAIお悩み相談まで。\nあなたのスマホが、那須地域最強の「お守り」に変わります。",
       empathyTitle: "病院探し、子育ての悩み…\nその都度、別のアプリやサイトを開いていませんか？",
-      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50個以上の便利が、あなたの毎日を徹底的にサポートします。",
+      empathyIntro: "那須での生活に必要な「あれもこれも」を、たった一つに。50個以上の便利が、あなたの毎日を徹底的にサポートします。",
       solutionBenefit1_Title: "もしもの時の、家族の安心に",
       solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
       solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
