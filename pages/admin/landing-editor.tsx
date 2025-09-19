@@ -7,29 +7,23 @@ import Head from 'next/head';
 
 // --- 型定義：新しいランディングページに合わせて簡略化 ---
 interface LandingData {
-  // ファーストビュー
   mainTitle: string;
   areaDescription: string;
   heroHeadline: string;
   heroSubheadline: string;
-  // 共感セクション
   empathyTitle: string;
   empathyIntro: string;
-  // 解決策セクション
   solutionBenefit1_Title: string;
   solutionBenefit1_Desc: string;
   solutionBenefit2_Title: string;
   solutionBenefit2_Desc: string;
   solutionBenefit3_Title: string;
   solutionBenefit3_Desc: string;
-  // 無料の理由セクション
   freeReasonTitle: string;
   freeReasonDesc: string;
-  // プレミアムプラン予告セクション
   premiumTeaserTitle: string;
   premiumTeaserText: string;
   premiumTeaserNote: string;
-  // 最終CTAセクション
   finalCtaTitle: string;
   finalCtaSubtext: string;
 }
@@ -53,11 +47,10 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
     setIsLoading(true);
     setMessage('');
     try {
-      // データの保存先を landingV3 など新しいドキュメント名に変更することを推奨
       const response = await fetch('/api/admin/update-landing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId: 'landingV3', data }), // 保存先IDを指定
+        body: JSON.stringify({ documentId: 'landingV3', data }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -151,7 +144,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   // データ取得
   const adminDb = getAdminDb();
   try {
-    const docRef = adminDb.collection('settings').doc('landingV3'); // 新しいデータソース
+    const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
     
     // データがない場合のデフォルト値
@@ -167,11 +160,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
       solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
       solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
-      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャットAIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
+      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャットAIが、24時間あなたの心に寄り添います。毎朝届く「褒美言葉シャワー」で一日を元気に。",
       freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
-      freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
+      // ▼▼▼ 修正点1: 「無料の理由」説明文にプラン名を反映 ▼▼▼
+      freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
       premiumTeaserTitle: "さらに、もっとお得に。",
       premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
+      // ▼▼▼ 修正点2: 「プレミアムプラン予告」注意書きにプラン名を反映 ▼▼▼
       premiumTeaserNote: "※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。",
       finalCtaTitle: "那須の暮らしを、アップデートしよう。",
       finalCtaSubtext: "約50個の無料アプリが、あなたのスマホに。オープンをお楽しみに！",
