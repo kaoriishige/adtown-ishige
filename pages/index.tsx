@@ -38,56 +38,46 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   return (
     <>
       <Head>
-        <title>{data.mainTitle || 'みんなの那須アプリ - あなたのスマホが、那須の最強お守りに。'}</title>
+        <title>{data.mainTitle || 'みんなの那須アプリ - 約50個のアプリが永久無料で使い放題！'}</title>
         <meta name="description" content={`${data.areaDescription}休日当番医、AI相談など、那須地域での生活を劇的に便利にする約50個のアプリがもうすぐ登場。`} />
       </Head>
 
       <div className="bg-white text-gray-800">
         {/* --- ファーストビュー --- */}
-        <header className="relative text-white text-center flex flex-col items-center justify-center min-h-[70vh] overflow-hidden">
-          {/* Next.jsのImageコンポーネントを背景として配置 */}
-          <Image
-            src="/images/family-smile.jpg"
-            alt="那須の家族の笑顔"
-            layout="fill"
-            objectFit="cover"
-            // この行で画像の焦点（顔の部分）を指定
-            objectPosition="center 75%"
-            className="-z-20"
-            priority
-          />
-          {/* 画像の上のグラデーションフィルター */}
-          <div
-            className="absolute inset-0 -z-10"
-            style={{ backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.7) 10%, transparent 60%)' }}
-          />
-
+        <header
+          className="relative text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[70vh]"
+          style={{
+            backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7) 10%, transparent 60%), url('/images/family-smile.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 75%',
+          }}
+        >
           <div className="max-w-3xl px-4">
-            <h1 className="text-4xl md:text-5xl font-black mb-4" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.5)' }}>
+            <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.6)' }}>
               {data.mainTitle}
             </h1>
-            <p className="text-lg md:text-xl mb-8" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.5)' }}>
-            	{data.heroHeadline}
-          	</p>
-          	<p className="max-w-xl mx-auto mb-8 text-base text-gray-200">
-          	  {data.heroSubheadline}
-          	</p>
-          	<div className="space-y-4 bg-gray-900 bg-opacity-50 backdrop-blur-sm p-6 rounded-2xl inline-block border border-white/20">
-          	  <button
-          	    className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
-          	    disabled
-          	  >
-          	    まもなくオープン
-          	  </button>
-          	  <div className="mt-4 flex flex-col items-center">
-          	    <p className="mb-2 text-lg font-semibold text-white">
-          	      オープン告知はLINE公式アカウントでお知らせします！
-          	    </p>
-          	    <a href="https://lin.ee/rFvws11">
-          	      <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
-          	    </a>
-          	  </div>
-          	</div>
+            <p className="text-lg md:text-xl mb-4 font-semibold" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.6)' }}>
+              {data.areaDescription}
+            </p>
+            <h2 className="text-4xl md:text-5xl font-black leading-tight mb-8" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.6)' }}>
+              {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+            </h2>
+            <div className="space-y-4 bg-gray-900 bg-opacity-50 backdrop-blur-sm p-6 rounded-2xl inline-block border border-white/20">
+              <button
+                className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
+                disabled
+              >
+                  まもなくオープン
+                </button>
+                <div className="mt-4 flex flex-col items-center">
+                  <p className="mb-2 text-lg font-semibold text-white">
+                    オープン告知はLINE公式アカウントでお知らせします！
+                  </p>
+                  <a href="https://lin.ee/rFvws11">
+                    <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
+                  </a>
+                </div>
+            </div>
           </div>
         </header>
 
@@ -206,20 +196,21 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
     
+    // ▼▼▼ ここに、お客様の元のテキストをすべて戻しました ▼▼▼
     const fallbackData: LandingData = {
-      mainTitle: "あなたのスマホが、那須の最強お守りに。",
+      mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
-      heroHeadline: "休日当番医からお得情報、AI相談まで。",
-      heroSubheadline: "約50の便利機能が、このアプリひとつに。那須の暮らしを、もっと便利で、もっと安心な毎日に変えましょう。",
+      heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
+      heroSubheadline: "休日当番医からAIお悩み相談まで。\nあなたのスマホが、那須地域最強の「お守り」に変わります。",
       youtubeVideoId: '',
-      empathyTitle: "病院探し、子育ての悩み…\nその都度、別のアプリを開いていませんか？",
-      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50以上の便利が、あなたの毎日を徹底的にサポートします。",
+      empathyTitle: "病院探し、子育ての悩み…\nその都度、スマホで別のアプリやサイトを開いていませんか？",
+      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50個以上の便利が、あなたの毎日を徹底的にサポートします。",
       solutionBenefit1_Title: "もしもの時の、家族の安心に",
-      solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
+      solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避-行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
       solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
       solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
       solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
-      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャットAIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
+      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャッ-AIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
       freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
       freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
       premiumTeaserTitle: "さらに、もっとお得に。",
@@ -230,16 +221,16 @@ export const getServerSideProps: GetServerSideProps = async () => {
     };
     
     const dbData = docSnap.exists ? docSnap.data() : {};
-    const finalData = { ...fallbackData, ...dbData };
+  	const finalData = { ...fallbackData, ...dbData };
 
-    return {
-      props: {
-        data: JSON.parse(JSON.stringify(finalData))
-      }
-    };
+  	return {
+  	  props: {
+  	    data: JSON.parse(JSON.stringify(finalData))
+  	  }
+  	};
   } catch (error) {
-    console.error("Landing page data fetch error:", error);
-    return { props: { data: {} } };
+  	console.error("Landing page data fetch error:", error);
+  	return { props: { data: {} } };
   }
 };
 
