@@ -19,11 +19,8 @@ interface LandingData {
   solutionBenefit2_Desc?: string;
   solutionBenefit3_Title?: string;
   solutionBenefit3_Desc?: string;
-  freeReasonTitle?: string;
-  freeReasonDesc?: string;
   premiumTeaserTitle?: string;
   premiumTeaserText?: string;
-  premiumTeaserNote?: string;
   finalCtaTitle?: string;
   finalCtaSubtext?: string;
 }
@@ -32,6 +29,7 @@ interface IndexPageProps {
   data: LandingData;
 }
 
+// --- コンポーネント ---
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title?: string, description?: string }) => (
   <div className="bg-[#161b22] p-8 rounded-xl border border-gray-700/50 h-full">
     <div className="text-4xl text-cyan-400 mb-4">{icon}</div>
@@ -51,18 +49,12 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	<div className="bg-[#0d1117] text-gray-300">
         
         {/* --- ヒーローセクション --- */}
-    	  <header className="relative pt-24 pb-20 md:pt-32 md:pb-28 text-center overflow-hidden border-b border-gray-800">
+    	  <header className="relative py-24 md:py-32 text-center overflow-hidden border-b border-gray-800">
           <div className="absolute inset-0 bg-gradient-radial from-blue-900/30 via-transparent to-transparent -z-0 blur-3xl"></div>
           <div className="container mx-auto px-6 relative z-10">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
-              {data.mainTitle}
-            </h1>
-            <p className="mt-2 text-md text-gray-400">
-              {data.areaDescription}
-            </p>
-            <h2 className="mt-6 text-4xl md:text-6xl font-black text-white leading-tight">
+            <h1 className="text-4xl md:text-6xl font-black text-white leading-tight">
               {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-            </h2>
+            </h1>
             <p className="mt-6 text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
               {data.heroSubheadline}
             </p>
@@ -71,78 +63,102 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	          まもなくオープン！LINEで通知を受け取る
     	        </a>
             </div>
-          <div className="mt-20">
-            <p className="text-sm text-gray-500 mb-4">那須地域のパートナー企業・団体様（一部）</p>
-            <div className="flex justify-center items-center gap-x-8 md:gap-x-12 grayscale opacity-60">
-              <Image src="/images/logo-placeholder-1.svg" alt="パートナーロゴ1" width={100} height={40} />
-              <Image src="/images/logo-placeholder-2.svg" alt="パートナーロゴ2" width={100} height={40} />
-              <Image src="/images/logo-placeholder-3.svg" alt="パートナーロゴ3" width={100} height={40} />
-              <Image src="/images/logo-placeholder-4.svg" alt="パートナーロゴ4" width={100} height={40} />
+            {/* ▼▼▼ パートナー様の情報に更新しました ▼▼▼ */}
+            <div className="mt-20">
+              <p className="text-sm text-gray-500 mb-4">那須地域のパートナー企業・団体様（一部）</p>
+              <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-12 gap-y-4 filter grayscale contrast-125 opacity-70">
+                <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={150} height={50} objectFit="contain" />
+                <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={150} height={50} objectFit="contain" />
+                <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={150} height={50} objectFit="contain" />
+                <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={150} height={50} objectFit="contain" />
+              </div>
             </div>
-          </div>
           </div>
         </header>
 
-    	  <main>
+    	  <main className="container mx-auto px-6 py-20">
           {/* --- お悩みセクション --- */}
-          <section className="py-20">
-            <div className="container mx-auto px-6 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                {data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-              </h2>
-              <p className="mt-4 text-gray-400 max-w-3xl mx-auto">{data.empathyIntro}</p>
+          <section className="py-16">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="text-left">
+                <h2 className="text-3xl md:text-4xl font-bold text-white leading-snug">
+                  {data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+                </h2>
+                <p className="mt-4 text-gray-400">{data.empathyIntro}</p>
+              </div>
+              <div>
+                <Image src="/images/visual-diagram.png" alt="課題解決のイメージ図" width={600} height={400} className="rounded-lg shadow-lg" />
+              </div>
             </div>
           </section>
 
           {/* --- 機能紹介セクション --- */}
-          <section className="py-20">
-            <div className="container mx-auto px-6">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-4xl font-bold text-white">アプリの主な機能</h2>
+          <section className="py-16">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-white">アプリの主な機能</h2>
+            </div>
+            
+            {/* 機能1 */}
+            <div className="grid md:grid-cols-2 gap-12 items-center mb-20">
+              <div className="text-left">
+                <RiHeartPulseFill className="text-4xl text-red-400 mb-4" />
+                <h3 className="text-2xl font-bold text-white mb-4">{data.solutionBenefit1_Title}</h3>
+                <p className="text-gray-400">{data.solutionBenefit1_Desc}</p>
               </div>
-              <div className="grid md:grid-cols-3 gap-8">
-                <FeatureCard icon={<RiHeartPulseFill />} title={data.solutionBenefit1_Title} description={data.solutionBenefit1_Desc} />
-                <FeatureCard icon={<RiShieldCheckFill />} title={data.solutionBenefit2_Title} description={data.solutionBenefit2_Desc} />
-                <FeatureCard icon={<RiChatHeartFill />} title={data.solutionBenefit3_Title} description={data.solutionBenefit3_Desc} />
-              </div>
-            </div>
+              <div>
+                <Image src="/images/feature-screenshot-1.png" alt={data.solutionBenefit1_Title ?? '機能1のイメージ画像'} width={600} height={400} className="rounded-lg shadow-lg" />
+              </div>
+            </div>
+
+            {/* 機能2 */}
+            <div className="grid md:grid-cols-2 gap-12 items-center mb-20">
+              <div className="md:order-2 text-left">
+                <RiShieldCheckFill className="text-4xl text-blue-400 mb-4" />
+                <h3 className="text-2xl font-bold text-white mb-4">{data.solutionBenefit2_Title}</h3>
+                <p className="text-gray-400">{data.solutionBenefit2_Desc}</p>
+              </div>
+              <div className="md:order-1">
+                <Image src="/images/feature-screenshot-2.png" alt={data.solutionBenefit2_Title ?? '機能2のイメージ画像'} width={600} height={400} className="rounded-lg shadow-lg" />
+              </div>
+            </div>
+
+            {/* 機能3 */}
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="text-left">
+                <RiChatHeartFill className="text-4xl text-green-400 mb-4" />
+                <h3 className="text-2xl font-bold text-white mb-4">{data.solutionBenefit3_Title}</h3>
+                <p className="text-gray-400">{data.solutionBenefit3_Desc}</p>
+              </div>
+              <div>
+                <Image src="/images/feature-screenshot-3.png" alt={data.solutionBenefit3_Title ?? '機能3のイメージ画像'} width={600} height={400} className="rounded-lg shadow-lg" />
+              </div>
+            </div>
           </section>
 
-          {/* --- なぜ無料なのか --- */}
-          <section className="py-20">
-            <div className="container mx-auto px-6 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">{data.freeReasonTitle}</h2>
-              <p className="mt-4 text-gray-400 leading-relaxed max-w-3xl mx-auto">{data.freeReasonDesc}</p>
-            </div>
-          </section>
-
           {/* --- プレミアムプラン予告セクション --- */}
-          <section className="py-20">
-            <div className="container mx-auto px-6 text-center">
+          <section className="py-16">
+            <div className="text-center">
               <div className="max-w-3xl mx-auto bg-gradient-to-br from-blue-900/50 to-cyan-900/20 p-8 md:p-12 rounded-2xl border border-cyan-400/20 shadow-xl">
                 <RiRocketFill className="text-5xl text-cyan-400 mb-4 mx-auto" />
                 <h2 className="text-3xl font-bold text-white">{data.premiumTeaserTitle}</h2>
                 <p className="mt-4 text-xl md:text-2xl text-white font-semibold">
                   {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
                 </p>
-                 <p className="mt-4 text-sm text-gray-400">{data.premiumTeaserNote}</p>
               </div>
             </div>
           </section>
 
     	    {/* --- 最後のCTA --- */}
-    	    <section id="cta" className="py-20">
-    	      <div className="container mx-auto px-6 text-center">
-    	        <div className="max-w-2xl mx-auto">
-                <h2 className="text-3xl md:text-4xl font-bold text-white">{data.finalCtaTitle}</h2>
-    	          <p className="mt-4 text-gray-400">{data.finalCtaSubtext}</p>
-    	          <div className="mt-8">
-                  <a href="https://lin.ee/rFvws11" target="_blank" rel="noopener noreferrer" className="bg-cyan-400 text-black font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-105 hover:shadow-cyan-500/40 inline-block">
+    	    <section id="cta" className="py-20 text-center">
+    	      <div className="max-w-2xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold text-white">{data.finalCtaTitle}</h2>
+    	        <p className="mt-4 text-gray-400">{data.finalCtaSubtext}</p>
+    	        <div className="mt-8">
+                <a href="https://lin.ee/rFvws11" target="_blank" rel="noopener noreferrer" className="bg-cyan-400 text-black font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-105 hover:shadow-cyan-500/40 inline-block">
     	              LINEでオープン通知を受け取る
     	            </a>
                 </div>
-              </div>
-    	      </div>
+            </div>
     	    </section>
     	  </main>
 
@@ -171,25 +187,22 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const docSnap = await docRef.get();
     
     const fallbackData: LandingData = {
-      mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
-      areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
-      heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
-      heroSubheadline: "休日当番医からAIお悩み相談まで。あなたのスマホが、那須地域最強の「お守り」に変わります。",
-      empathyTitle: "病院探し、子育ての悩み…\nその都度、スマホで別のアプリやサイトを開いていませんか？",
-      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50個以上の便利が、あなたの毎日を徹底的にサポートします。",
-      solutionBenefit1_Title: "もしもの時の、家族の安心に",
-      solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
-      solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
-      solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
-      solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
-      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャットAIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
-      freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
-      freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
-      premiumTeaserTitle: "さらに、もっとお得に。",
-      premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
-      premiumTeaserNote: "※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。",
-      finalCtaTitle: "さあ、那須の暮らしをアップデートしよう。",
-      finalCtaSubtext: "オープン告知はLINE公式アカウントでお知らせします。今すぐ登録して、最新情報や限定特典を手に入れよう！",
+      mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
+      areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
+      heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。",
+      heroSubheadline: "休日当番医からお得なクーポン、AI相談まで。あなたのスマホが、那須地域最強の「お守り」に変わります。",
+      empathyTitle: "病院探し、子育ての悩み…\nその都度、スマホで別のアプリやサイトを開いていませんか？",
+      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50以上の便利が、あなたの毎日を徹底的にサポートします。",
+      solutionBenefit1_Title: "もしもの時の、家族の安心に",
+      solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
+      solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
+      solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
+      solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
+      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャットAIが、24時間あなたの心に寄り添います。",
+      premiumTeaserTitle: "さらに、もっとお得に。",
+      premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
+      finalCtaTitle: "さあ、那須の暮らしをアップデートしよう。",
+      finalCtaSubtext: "オープン告知はLINE公式アカウントでお知らせします。今すぐ登録して、最新情報や限定特典を手に入れよう！",
     };
     
     const dbData = docSnap.exists ? docSnap.data() as LandingData : {};
