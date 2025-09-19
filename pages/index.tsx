@@ -38,48 +38,56 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   return (
     <>
       <Head>
-        <title>{data.mainTitle || 'みんなの那須アプリ - 約50個のアプリが永久無料で使い放題！'}</title>
+        <title>{data.mainTitle || 'みんなの那須アプリ - あなたのスマホが、那須の最強お守りに。'}</title>
         <meta name="description" content={`${data.areaDescription}休日当番医、AI相談など、那須地域での生活を劇的に便利にする約50個のアプリがもうすぐ登場。`} />
       </Head>
 
       <div className="bg-white text-gray-800">
         {/* --- ファーストビュー --- */}
-        <header
-          className="relative text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[60vh]"
-          style={{
-            // ▼▼▼ ここを変更しました ▼▼▼
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('/images/family-smile.jpg')`,
-            // ▲▲▲ ここまで ▲▲▲
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        >
-          <div className="max-w-3xl">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
+        <header className="relative text-white text-center flex flex-col items-center justify-center min-h-[70vh] overflow-hidden">
+          {/* Next.jsのImageコンポーネントを背景として配置 */}
+          <Image
+            src="/images/family-smile.jpg"
+            alt="那須の家族の笑顔"
+            layout="fill"
+            objectFit="cover"
+            // この行で画像の焦点（顔の部分）を指定
+            objectPosition="center 75%"
+            className="-z-20"
+            priority
+          />
+          {/* 画像の上のグラデーションフィルター */}
+          <div
+            className="absolute inset-0 -z-10"
+            style={{ backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.7) 10%, transparent 60%)' }}
+          />
+
+          <div className="max-w-3xl px-4">
+            <h1 className="text-4xl md:text-5xl font-black mb-4" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.5)' }}>
               {data.mainTitle}
             </h1>
-            <p className="text-lg md:text-xl mb-4 font-semibold" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
-              {data.areaDescription}
-            </p>
-            <h2 className="text-4xl md:text-5xl font-black leading-tight mb-8" style={{ textShadow: '2px 2px 6px rgba(0,0,0,0.8)' }}>
-              {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-            </h2>
-            <div className="space-y-4 bg-black bg-opacity-40 p-6 rounded-lg inline-block">
-              <button
-                className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
-                disabled
-                >
-                  まもなくオープン
-                </button>
-                <div className="mt-4 flex flex-col items-center">
-                  <p className="mb-2 text-lg font-semibold text-white">
-                    オープン告知はLINE公式アカウントでお知らせします！
-                  </p>
-                  <a href="https://lin.ee/rFvws11">
-                    <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
-                  </a>
-                </div>
-            </div>
+            <p className="text-lg md:text-xl mb-8" style={{ textShadow: '1px 1px 6px rgba(0,0,0,0.5)' }}>
+            	{data.heroHeadline}
+          	</p>
+          	<p className="max-w-xl mx-auto mb-8 text-base text-gray-200">
+          	  {data.heroSubheadline}
+          	</p>
+          	<div className="space-y-4 bg-gray-900 bg-opacity-50 backdrop-blur-sm p-6 rounded-2xl inline-block border border-white/20">
+          	  <button
+          	    className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
+          	    disabled
+          	  >
+          	    まもなくオープン
+          	  </button>
+          	  <div className="mt-4 flex flex-col items-center">
+          	    <p className="mb-2 text-lg font-semibold text-white">
+          	      オープン告知はLINE公式アカウントでお知らせします！
+          	    </p>
+          	    <a href="https://lin.ee/rFvws11">
+          	      <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
+          	    </a>
+          	  </div>
+          	</div>
           </div>
         </header>
 
@@ -95,67 +103,67 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                             frameBorder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
-                      	  className="w-full h-full"
-                      	></iframe>
-                  	  </div>
-              	  </div>
-            	</section>
-        	)}
+                            className="w-full h-full"
+                        ></iframe>
+                    </div>
+                </div>
+            </section>
+          )}
 
-        	{/* --- 共感セクション --- */}
-        	<section className="py-16 bg-gray-50">
-        	  <div className="max-w-4xl mx-auto px-6 text-center">
-        	    <h2 className="text-3xl font-bold mb-4">{data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}</h2>
-        	    <p className="text-gray-600 mb-10">{data.empathyIntro}</p>
-        	    <div className="grid md:grid-cols-3 gap-8 text-left">
-        	      <div className="bg-white p-6 rounded-lg shadow-md">
-        	        <RiHeartPulseFill className="text-4xl text-red-500 mb-3" />
-        	        <h3 className="font-bold text-lg mb-2">{data.solutionBenefit1_Title}</h3>
-        	        <p className="text-sm text-gray-600">{data.solutionBenefit1_Desc}</p>
-        	      </div>
-        	      <div className="bg-white p-6 rounded-lg shadow-md">
-        	        <RiShieldCheckFill className="text-4xl text-blue-500 mb-3" />
-        	        <h3 className="font-bold text-lg mb-2">{data.solutionBenefit2_Title}</h3>
-        	        <p className="text-sm text-gray-600">{data.solutionBenefit2_Desc}</p>
-        	      </div>
-        	      <div className="bg-white p-6 rounded-lg shadow-md">
-        	        <RiChatHeartFill className="text-4xl text-green-500 mb-3" />
-        	        <h3 className="font-bold text-lg mb-2">{data.solutionBenefit3_Title}</h3>
-        	        <p className="text-sm text-gray-600">{data.solutionBenefit3_Desc}</p>
-        	      </div>
-        	    </div>
-        	  </div>
-        	</section>
+          {/* --- 共感セクション --- */}
+          <section className="py-20 bg-blue-600 text-white">
+            <div className="max-w-4xl mx-auto px-6 text-center">
+              <h2 className="text-3xl font-bold mb-4">{data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}</h2>
+                <p className="text-blue-200 mb-12">{data.empathyIntro}</p>
+                <div className="grid md:grid-cols-3 gap-8 text-left text-gray-800">
+                  <div className="bg-white p-6 rounded-lg shadow-md">
+                    <RiHeartPulseFill className="text-4xl text-red-500 mb-3" />
+                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit1_Title}</h3>
+                    <p className="text-sm text-gray-600">{data.solutionBenefit1_Desc}</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-lg shadow-md">
+                    <RiShieldCheckFill className="text-4xl text-blue-500 mb-3" />
+                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit2_Title}</h3>
+                    <p className="text-sm text-gray-600">{data.solutionBenefit2_Desc}</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-lg shadow-md">
+                    <RiChatHeartFill className="text-4xl text-green-500 mb-3" />
+                    <h3 className="font-bold text-lg mb-2">{data.solutionBenefit3_Title}</h3>
+                    <p className="text-sm text-gray-600">{data.solutionBenefit3_Desc}</p>
+                  </div>
+                </div>
+            </div>
+          </section>
 
-        	{/* --- なぜ無料なのか --- */}
-        	<section className="py-16 bg-white">
-        	  <div className="max-w-3xl mx-auto px-6 text-center">
-        	      <h2 className="text-3xl font-bold mb-4">{data.freeReasonTitle}</h2>
-        	      <p className="text-gray-600">{data.freeReasonDesc}</p>
-        	  </div>
-        	</section>
+          {/* --- なぜ無料なのか --- */}
+          <section className="py-20 bg-white">
+            <div className="max-w-3xl mx-auto px-6 text-center">
+                  <h2 className="text-3xl font-bold mb-4">{data.freeReasonTitle}</h2>
+                  <p className="text-gray-600 leading-relaxed">{data.freeReasonDesc}</p>
+            </div>
+          </section>
 
-        	{/* --- プレミアムプラン予告セクション --- */}
-        	<section className="py-16 bg-blue-50">
-        	  <div className="max-w-3xl mx-auto px-6 text-center">
-        	      <div className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500">
-        	        <RiRocketFill className="text-5xl text-blue-500 mb-4 mx-auto" />
-        	        <h2 className="text-2xl font-bold mb-2 text-blue-800">{data.premiumTeaserTitle}</h2>
-        	        <p className="text-gray-700 text-lg font-semibold">
-        	          {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-        	        </p>
-        	        <p className="text-sm text-gray-500 mt-4">{data.premiumTeaserNote}</p>
-        	      </div>
-        	  </div>
+          {/* --- プレミアムプラン予告セクション --- */}
+          <section className="py-20 bg-gradient-to-b from-gray-50 to-blue-100">
+            <div className="max-w-3xl mx-auto px-6 text-center">
+                  <div className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500">
+                    <RiRocketFill className="text-5xl text-blue-500 mb-4 mx-auto" />
+                    <h2 className="text-2xl font-bold mb-2 text-blue-800">{data.premiumTeaserTitle}</h2>
+                  	<p className="text-gray-700 text-lg font-semibold">
+                	  {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+                	</p>
+                	<p className="text-sm text-gray-500 mt-4">{data.premiumTeaserNote}</p>
+              	</div>
+          	</div>
         	</section>
 
         	{/* --- 最後のCTA --- */}
-        	<section className="py-20 bg-gray-800 text-white">
+        	<section className="py-20 bg-blue-800 text-white">
         	  <div className="max-w-4xl mx-auto px-6 text-center">
         	    <h2 className="text-3xl font-bold mb-4">{data.finalCtaTitle}</h2>
-        	    <p className="text-lg mb-8">{data.finalCtaSubtext}</p>
+        	    <p className="text-lg text-blue-200 mb-8">{data.finalCtaSubtext}</p>
         	    
-        	    <div className="space-y-4 bg-black bg-opacity-40 p-6 rounded-lg inline-block">
+        	    <div className="space-y-4 bg-black bg-opacity-20 p-6 rounded-lg inline-block">
         	      <button
         	          className="bg-transparent border-2 border-gray-300 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed"
         	          disabled
@@ -199,39 +207,39 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const docSnap = await docRef.get();
     
     const fallbackData: LandingData = {
-      mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
+      mainTitle: "あなたのスマホが、那須の最強お守りに。",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
-      heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
-      heroSubheadline: "休日当番医からAIお悩み相談まで。\nあなたのスマホが、那須地域最強の「お守り」に変わります。",
+      heroHeadline: "休日当番医からお得情報、AI相談まで。",
+      heroSubheadline: "約50の便利機能が、このアプリひとつに。那須の暮らしを、もっと便利で、もっと安心な毎日に変えましょう。",
       youtubeVideoId: '',
-      empathyTitle: "病院探し、子育ての悩み…\nその都度、スマホで別のアプリやサイトを開いていませんか？",
-      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50個以上の便利が、あなたの毎日を徹底的にサポートします。",
+      empathyTitle: "病院探し、子育ての悩み…\nその都度、別のアプリを開いていませんか？",
+      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50以上の便利が、あなたの毎日を徹底的にサポートします。",
       solutionBenefit1_Title: "もしもの時の、家族の安心に",
-      solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避-行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
+      solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
       solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
       solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
-    	solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
-  	solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャッ-AIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
-  	freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
-  	freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
-  	premiumTeaserTitle: "さらに、もっとお得に。",
-  	premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
-  	premiumTeaserNote: "※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。",
-  	finalCtaTitle: "那須の暮らしを、アップデートしよう。",
-  	finalCtaSubtext: "約50個の無料アプリが、あなたのスマホに。オープンをお楽しみに！",
-    };
+      solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
+      solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャットAIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
+      freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
+      freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
+      premiumTeaserTitle: "さらに、もっとお得に。",
+      premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
+      premiumTeaserNote: "※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。",
+      finalCtaTitle: "那須の暮らしを、アップデートしよう。",
+      finalCtaSubtext: "約50個の無料アプリが、あなたのスマホに。オープンをお楽しみに！",
+    };
     
-  	const dbData = docSnap.exists ? docSnap.data() : {};
-  	const finalData = { ...fallbackData, ...dbData };
+    const dbData = docSnap.exists ? docSnap.data() : {};
+    const finalData = { ...fallbackData, ...dbData };
 
-  	return {
-  	  props: {
-  	    data: JSON.parse(JSON.stringify(finalData))
-  	  }
-  	};
+    return {
+      props: {
+        data: JSON.parse(JSON.stringify(finalData))
+      }
+    };
   } catch (error) {
-  	console.error("Landing page data fetch error:", error);
-  	return { props: { data: {} } };
+    console.error("Landing page data fetch error:", error);
+    return { props: { data: {} } };
   }
 };
 
