@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getAdminDb } from '../lib/firebase-admin';
-import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill, RiCheckboxCircleFill, RiRocketFill } from 'react-icons/ri';
+import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill, RiRocketFill } from 'react-icons/ri';
 
 // --- 型定義 ---
 interface LandingData {
@@ -41,18 +41,18 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
       	<meta name="description" content={data.heroSubheadline} />
     	</Head>
 
-    	<div className="bg-white text-gray-700">
+    	<div className="bg-[#fefcfb] text-gray-700">
         
         {/* --- ヒーローセクション --- */}
-    	  <header className="bg-gray-50">
-          <div className="container mx-auto px-6 py-16 md:py-24 text-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+    	  <header className="bg-white border-b">
+          <div className="container mx-auto px-6 pt-16 pb-12 md:pt-24 md:pb-20 text-center">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
               {data.mainTitle}
             </h1>
-            <p className="mt-2 text-lg text-gray-600">
+            <p className="mt-2 text-md text-gray-500">
               {data.areaDescription}
             </p>
-            <h2 className="mt-6 text-4xl md:text-5xl font-black text-gray-900 leading-tight">
+            <h2 className="mt-4 text-4xl md:text-5xl font-black text-gray-900 leading-tight">
               {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
             </h2>
             <p className="mt-4 text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
@@ -67,26 +67,35 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         </header>
 
     	  <main>
-    	    {/* --- お悩みセクション --- */}
-    	    <section className="py-20 bg-white">
-    	      <div className="container mx-auto px-6 text-center">
-    	        <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
-              {data.empathyTitle}
-            </h2>
-              <p className="mt-4 text-gray-600 max-w-3xl mx-auto">{data.empathyIntro}</p>
-    	      </div>
-    	    </section>
+    	    {/* --- メインビジュアル --- */}
+          <section className="bg-white">
+            <div className="container mx-auto px-6 -mt-10 md:-mt-16">
+              {/* 仮のイラストです。/public/images/illustration-hero.png に画像を配置してください */}
+              <Image 
+                src="/images/illustration-hero.png"
+                alt="みんなの那須アプリの便利さを表すイラスト" 
+                width={1200} 
+                height={600}
+                objectFit="contain"
+                priority
+              />
+            </div>
+          </section>
 
-          {/* --- 機能紹介セクション --- */}
-          <section className="py-20 bg-gray-50">
-            <div className="container mx-auto px-6">
-              <div className="grid md:grid-cols-3 gap-8 text-center">
-                <div className="bg-white p-8 rounded-lg shadow-md border"><RiHeartPulseFill className="text-4xl text-red-500 mb-4 mx-auto" /><h3 className="font-bold text-lg mb-2">{data.solutionBenefit1_Title}</h3><p className="text-sm text-gray-600">{data.solutionBenefit1_Desc}</p></div>
-                <div className="bg-white p-8 rounded-lg shadow-md border"><RiShieldCheckFill className="text-4xl text-blue-500 mb-4 mx-auto" /><h3 className="font-bold text-lg mb-2">{data.solutionBenefit2_Title}</h3><p className="text-sm text-gray-600">{data.solutionBenefit2_Desc}</p></div>
-                <div className="bg-white p-8 rounded-lg shadow-md border"><RiChatHeartFill className="text-4xl text-green-500 mb-4 mx-auto" /><h3 className="font-bold text-lg mb-2">{data.solutionBenefit3_Title}</h3><p className="text-sm text-gray-600">{data.solutionBenefit3_Desc}</p></div>
-              </div>
-            </div>
-          </section>
+          {/* --- 機能紹介セクション --- */}
+          <section className="py-20 bg-[#f4f1ed]">
+            <div className="container mx-auto px-6">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-800">{data.empathyTitle}</h2>
+                <p className="mt-4 text-gray-600 max-w-2xl mx-auto">{data.empathyIntro}</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-8 text-center">
+                <div className="bg-white p-8 rounded-lg shadow-md"><RiHeartPulseFill className="text-4xl text-red-500 mb-4 mx-auto" /><h3 className="font-bold text-lg mb-2">{data.solutionBenefit1_Title}</h3><p className="text-sm text-gray-600">{data.solutionBenefit1_Desc}</p></div>
+                <div className="bg-white p-8 rounded-lg shadow-md"><RiShieldCheckFill className="text-4xl text-blue-500 mb-4 mx-auto" /><h3 className="font-bold text-lg mb-2">{data.solutionBenefit2_Title}</h3><p className="text-sm text-gray-600">{data.solutionBenefit2_Desc}</p></div>
+                <div className="bg-white p-8 rounded-lg shadow-md"><RiChatHeartFill className="text-4xl text-green-500 mb-4 mx-auto" /><h3 className="font-bold text-lg mb-2">{data.solutionBenefit3_Title}</h3><p className="text-sm text-gray-600">{data.solutionBenefit3_Desc}</p></div>
+              </div>
+            </div>
+          </section>
 
     	    {/* --- なぜ無料なのか --- */}
     	    <section className="py-20 bg-white">
@@ -97,33 +106,30 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	    </section>
 
           {/* --- プレミアムプラン予告セクション --- */}
-          <section className="py-20 bg-yellow-50 border-t border-b border-yellow-200">
-            <div className="container mx-auto px-6 text-center">
+          <section className="py-20 bg-[#004445]">
+            <div className="container mx-auto px-6 text-center text-white">
               <div className="max-w-3xl mx-auto">
-                <RiRocketFill className="text-5xl text-yellow-500 mb-4 mx-auto" />
-                <h2 className="text-3xl font-bold text-gray-800">{data.premiumTeaserTitle}</h2>
-                <p className="mt-4 text-xl md:text-2xl text-gray-700 font-semibold">
+                <RiRocketFill className="text-5xl text-yellow-400 mb-4 mx-auto" />
+                <h2 className="text-3xl font-bold">{data.premiumTeaserTitle}</h2>
+                <p className="mt-4 text-xl md:text-2xl text-white font-semibold">
                   {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
                 </p>
-                <p className="mt-4 text-sm text-gray-500">{data.premiumTeaserNote}</p>
+                <p className="mt-4 text-sm text-gray-300">{data.premiumTeaserNote}</p>
               </div>
             </div>
           </section>
 
     	    {/* --- 最後のCTA --- */}
-    	    <section id="cta" className="bg-blue-600 text-white">
+    	    <section id="cta" className="bg-gray-800 text-white">
     	      <div className="container mx-auto px-6 py-20 text-center">
     	        <h2 className="text-3xl md:text-4xl font-bold">{data.finalCtaTitle}</h2>
-    	        <p className="mt-4 text-blue-200 max-w-2xl mx-auto">{data.finalCtaSubtext}</p>
+    	        <p className="mt-4 text-gray-300 max-w-2xl mx-auto">{data.finalCtaSubtext}</p>
     	        <div className="mt-8 space-y-4">
                 <a href="https://lin.ee/rFvws11" target="_blank" rel="noopener noreferrer" className="bg-orange-500 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105 inline-block">
-    	            まもなくオープン！LINEで先行情報を受け取る
+    	            LINEでオープン通知を受け取る
     	          </a>
-                <div className="flex flex-col items-center">
-                  <p className="mb-2 text-base font-semibold text-blue-100">オープン告知はLINE公式アカウントで！</p>
-                  <a href="https://lin.ee/rFvws11">
-                    <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
-                  </a>
+                <div className="flex flex-col items-center mt-4">
+                  <Image src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" width={116} height={36} />
                 </div>
     	        </div>
     	      </div>
@@ -131,7 +137,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	  </main>
 
     	  {/* --- フッター --- */}
-    	  <footer className="bg-gray-800 text-white">
+    	  <footer className="bg-gray-900 text-white">
     	    <div className="container mx-auto py-10 px-6 text-center text-sm">
     	      <div className="mb-4"><Link href="/legal" className="text-gray-400 hover:text-white">特定商取引法に基づく表記</Link></div>
     	      <div>
