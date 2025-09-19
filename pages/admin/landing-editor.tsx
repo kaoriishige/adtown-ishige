@@ -149,7 +149,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     
     // データがない場合のデフォルト値
     const fallbackData: LandingData = {
-      mainTitle: "みんなの那須アプリ",
+      mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
       heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
       heroSubheadline: "休日当番医からAIお悩み相談まで。\nあなたのスマホが、那須地域最強の「お守り」に変わります。",
