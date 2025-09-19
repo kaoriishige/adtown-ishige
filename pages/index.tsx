@@ -2,10 +2,9 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
-import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill } from 'react-icons/ri';
+import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill, RiRocketFill } from 'react-icons/ri'; // RiRocketFill を追加
 
 // --- 型定義 ---
-// データベースからの動的コンテンツはないため、型は空のままにします
 interface LandingData {}
 
 interface IndexPageProps {
@@ -22,33 +21,26 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
       </Head>
 
       <div className="bg-white text-gray-800">
-        {/* --- ファーストビュー --- */}
+        {/* --- ファーストビュー (変更なし) --- */}
         <header
           className="relative text-white text-center py-20 px-4 flex flex-col items-center justify-center min-h-[60vh]"
           style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/nasu-landscape.jpg')`, // 背景を少し暗くして文字の視認性を向上
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/nasu-landscape.jpg')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
         >
           <div className="max-w-3xl">
-            {/* ▼▼▼ ここからが修正箇所です ▼▼▼ */}
-            
             <h1 className="text-3xl md:text-4xl font-bold mb-3" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
               みんなの那須アプリ
             </h1>
-            
             <p className="text-lg md:text-xl mb-4 font-semibold" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.8)' }}>
               那須塩原市、大田原市、那須町の地域専用アプリ
             </p>
-
             <h2 className="text-4xl md:text-5xl font-black leading-tight mb-8" style={{ textShadow: '2px 2px 6px rgba(0,0,0,0.8)' }}>
               那須の暮らしが、もっと便利に、もっとお得に。
               <span className="block mt-2 text-yellow-300">約50個のアプリが永久無料で使い放題！</span>
             </h2>
-
-            {/* ▲▲▲ ここまでが修正箇所です ▲▲▲ */}
-
             <div className="space-y-4 bg-black bg-opacity-40 p-6 rounded-lg inline-block">
               <button 
                 className="bg-gray-400 text-white font-bold text-lg py-4 px-8 rounded-full shadow-lg cursor-not-allowed" 
@@ -69,7 +61,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         </header>
 
         <main>
-          {/* --- 共感セクション --- */}
+          {/* --- 共感セクション (変更なし) --- */}
           <section className="py-16 bg-gray-50">
             <div className="max-w-4xl mx-auto px-6 text-center">
               <h2 className="text-3xl font-bold mb-4">病院探し、子育ての悩み…<br />その都度、別のアプリやサイトを開いていませんか？</h2>
@@ -102,7 +94,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             </div>
           </section>
 
-          {/* --- なぜ無料なのか --- */}
+          {/* --- なぜ無料なのか (変更なし) --- */}
           <section className="py-16 bg-white">
             <div className="max-w-3xl mx-auto px-6 text-center">
                 <h2 className="text-3xl font-bold mb-4">なぜ、これだけの機能がずっと無料なのですか？</h2>
@@ -112,7 +104,27 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             </div>
           </section>
 
-          {/* --- 最後のCTA --- */}
+          {/* ▼▼▼ ここから新規追加 ▼▼▼ */}
+          {/* --- プレミアムプラン予告セクション --- */}
+          <section className="py-16 bg-blue-50">
+            <div className="max-w-3xl mx-auto px-6 text-center">
+                <div className="bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-500">
+                    <RiRocketFill className="text-5xl text-blue-500 mb-4 mx-auto" />
+                    <h2 className="text-2xl font-bold mb-2 text-blue-800">さらに、もっとお得に。</h2>
+                    <p className="text-gray-700 text-lg font-semibold">
+                      年間93,000円＋αの損を「得」に変える<br/>
+                      <span className="text-blue-600">プレミアムプラン</span>も要確認!!
+                    </p>
+                    <p className="text-sm text-gray-500 mt-4">
+                      ※プレミアムプランの詳細はアプリ内でご案内します。まずは無料登録で「お守りアプリ」の便利さをご体験ください。
+                    </p>
+                </div>
+            </div>
+          </section>
+          {/* ▲▲▲ ここまで新規追加 ▲▲▲ */}
+
+
+          {/* --- 最後のCTA (変更なし) --- */}
           <section className="py-20 bg-gray-800 text-white">
             <div className="max-w-4xl mx-auto px-6 text-center">
               <h2 className="text-3xl font-bold mb-4">那須の暮らしを、アップデートしよう。</h2>
@@ -138,7 +150,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
           </section>
         </main>
 
-        {/* --- フッター --- */}
+        {/* --- フッター (変更なし) --- */}
         <footer className="bg-gray-200 text-center text-sm text-gray-600 py-8 px-4">
             <div className="space-y-2">
                 <div className="flex justify-center space-x-6 mb-4">
