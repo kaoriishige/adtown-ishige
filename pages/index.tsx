@@ -96,7 +96,8 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 <p className="text-gray-400">{data.solutionBenefit1_Desc}</p>
               </div>
               <div>
-                <Image src="/images/feature-screenshot-1.png" alt={data.solutionBenefit1_Title} width={600} height={400} className="rounded-lg shadow-lg" />
+                {/* ▼▼▼ ここを修正 ▼▼▼ */}
+                <Image src="/images/feature-screenshot-1.png" alt={data.solutionBenefit1_Title ?? '機能1のイメージ画像'} width={600} height={400} className="rounded-lg shadow-lg" />
               </div>
             </div>
 
@@ -108,7 +109,8 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 <p className="text-gray-400">{data.solutionBenefit2_Desc}</p>
               </div>
               <div className="md:order-1">
-                <Image src="/images/feature-screenshot-2.png" alt={data.solutionBenefit2_Title} width={600} height={400} className="rounded-lg shadow-lg" />
+                {/* ▼▼▼ ここを修正 ▼▼▼ */}
+                <Image src="/images/feature-screenshot-2.png" alt={data.solutionBenefit2_Title ?? '機能2のイメージ画像'} width={600} height={400} className="rounded-lg shadow-lg" />
               </div>
             </div>
 
@@ -120,7 +122,8 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 <p className="text-gray-400">{data.solutionBenefit3_Desc}</p>
               </div>
               <div>
-                <Image src="/images/feature-screenshot-3.png" alt={data.solutionBenefit3_Title} width={600} height={400} className="rounded-lg shadow-lg" />
+                {/* ▼▼▼ ここを修正 ▼▼▼ */}
+                <Image src="/images/feature-screenshot-3.png" alt={data.solutionBenefit3_Title ?? '機能3のイメージ画像'} width={600} height={400} className="rounded-lg shadow-lg" />
               </div>
             </div>
           </section>
