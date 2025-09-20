@@ -54,18 +54,12 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	  <header className="relative pt-24 pb-20 md:pt-32 md:pb-28 text-center overflow-hidden border-b border-gray-800">
           <div className="absolute inset-0 bg-gradient-radial from-blue-900/30 via-transparent to-transparent -z-0 blur-3xl"></div>
           <div className="container mx-auto px-6 relative z-10">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
-              {data.mainTitle}
-            </h1>
-            <p className="mt-2 text-md text-gray-400">
-              {data.areaDescription}
-            </p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">{data.mainTitle}</h1>
+            <p className="mt-2 text-md text-gray-400">{data.areaDescription}</p>
             <h2 className="mt-6 text-4xl md:text-6xl font-black text-white leading-tight">
               {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
             </h2>
-            <p className="mt-6 text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
-              {data.heroSubheadline}
-            </p>
+            <p className="mt-6 text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">{data.heroSubheadline}</p>
             <div className="mt-10">
               <a href="#cta" className="bg-cyan-400 text-black font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-105 hover:shadow-cyan-500/40 inline-block">
     	          まもなくオープン！LINEで通知を受け取る
@@ -73,11 +67,11 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             </div>
           <div className="mt-20">
             <p className="text-sm text-gray-500 mb-4">那須地域のパートナー企業・団体様（一部）</p>
-            <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-12 gap-y-4">
-                <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={250} height={100} className="h-auto w-40" />
-                <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={250} height={100} className="h-auto w-40" />
-                <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={250} height={100} className="h-auto w-40" />
-                <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={250} height={100} className="h-auto w-40" />
+            <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-12 gap-y-4 filter grayscale contrast-125 opacity-70">
+                <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={150} height={50} className="h-10 w-auto" />
+                <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={150} height={50} className="h-10 w-auto" />
+                <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={150} height={50} className="h-10 w-auto" />
+                <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={150} height={50} className="h-10 w-auto" />
             </div>
           </div>
           </div>
@@ -85,7 +79,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
 
     	  <main>
           {/* --- お悩みセクション --- */}
-          <section className="py-20">
+          <section className="py-20 bg-[#161b22]">
             <div className="container mx-auto px-6 text-center">
               <h2 className="text-3xl md:text-4xl font-bold text-white">
                 {data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
@@ -109,35 +103,35 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
           </section>
 
           {/* --- なぜ無料なのか --- */}
-          <section className="py-20">
+          <section className="py-20 bg-white text-gray-800">
             <div className="container mx-auto px-6 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">{data.freeReasonTitle}</h2>
-              <p className="mt-4 text-gray-400 leading-relaxed max-w-3xl mx-auto">{data.freeReasonDesc}</p>
+              <h2 className="text-3xl md:text-4xl font-bold">{data.freeReasonTitle}</h2>
+              <p className="mt-4 text-gray-600 leading-relaxed max-w-3xl mx-auto">{data.freeReasonDesc}</p>
             </div>
           </section>
 
           {/* --- プレミアムプラン予告セクション --- */}
-          <section className="py-20">
+          <section className="py-20 bg-gray-50">
             <div className="container mx-auto px-6 text-center">
-              <div className="max-w-3xl mx-auto bg-gradient-to-br from-blue-900/50 to-cyan-900/20 p-8 md:p-12 rounded-2xl border border-cyan-400/20 shadow-xl">
-                <RiRocketFill className="text-5xl text-cyan-400 mb-4 mx-auto" />
-                <h2 className="text-3xl font-bold text-white">{data.premiumTeaserTitle}</h2>
-                <p className="mt-4 text-xl md:text-2xl text-white font-semibold">
+              <div className="max-w-3xl mx-auto">
+                <RiRocketFill className="text-5xl text-blue-600 mb-4 mx-auto" />
+                <h2 className="text-3xl font-bold text-gray-800">{data.premiumTeaserTitle}</h2>
+                <p className="mt-4 text-xl md:text-2xl text-gray-700 font-semibold">
                   {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
                 </p>
-                 <p className="mt-4 text-sm text-gray-400">{data.premiumTeaserNote}</p>
+                 <p className="mt-4 text-sm text-gray-500">{data.premiumTeaserNote}</p>
               </div>
             </div>
           </section>
 
     	    {/* --- 最後のCTA --- */}
-    	    <section id="cta" className="py-20">
-    	      <div className="container mx-auto px-6 text-center">
+    	    <section id="cta" className="bg-blue-700">
+    	      <div className="container mx-auto px-6 py-20 text-center text-white">
     	        <div className="max-w-2xl mx-auto">
-                <h2 className="text-3xl md:text-4xl font-bold text-white">{data.finalCtaTitle}</h2>
-    	          <p className="mt-4 text-gray-400">{data.finalCtaSubtext}</p>
+                <h2 className="text-3xl md:text-4xl font-bold">{data.finalCtaTitle}</h2>
+    	          <p className="mt-4 text-blue-200">{data.finalCtaSubtext}</p>
     	          <div className="mt-8">
-                  <a href="https://lin.ee/rFvws11" target="_blank" rel="noopener noreferrer" className="bg-cyan-400 text-black font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-105 hover:shadow-cyan-500/40 inline-block">
+                  <a href="https://lin.ee/rFvws11" target="_blank" rel="noopener noreferrer" className="bg-orange-500 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-all transform hover:scale-105 inline-block">
     	              LINEでオープン通知を受け取る
     	            </a>
                 </div>
@@ -147,7 +141,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	  </main>
 
     	  {/* --- フッター --- */}
-    	  <footer className="border-t border-gray-800">
+    	  <footer className="border-t border-gray-800 bg-[#0d1117]">
     	    <div className="container mx-auto py-8 px-6 text-center text-xs text-gray-500">
     	      <div className="mb-4">
                 <Link href="/legal" className="hover:text-white">特定商取引法に基づく表記</Link>
