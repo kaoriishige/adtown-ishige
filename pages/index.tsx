@@ -63,14 +63,14 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	          まもなくオープン！LINEで通知を受け取る
     	        </a>
             </div>
-            {/* ▼▼▼ パートナー様の情報に更新しました ▼▼▼ */}
             <div className="mt-20">
               <p className="text-sm text-gray-500 mb-4">那須地域のパートナー企業・団体様（一部）</p>
+              {/* ▼▼▼ この中のImageタグ4つを修正しました ▼▼▼ */}
               <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-12 gap-y-4 filter grayscale contrast-125 opacity-70">
-                <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={150} height={50} objectFit="contain" />
-                <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={150} height={50} objectFit="contain" />
-                <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={150} height={50} objectFit="contain" />
-                <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={150} height={50} objectFit="contain" />
+                <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={150} height={50} className="h-10 w-auto" />
+                <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={150} height={50} className="h-10 w-auto" />
+                <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={150} height={50} className="h-10 w-auto" />
+                <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={150} height={50} className="h-10 w-auto" />
               </div>
             </div>
           </div>
@@ -98,7 +98,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               <h2 className="text-3xl md:text-4xl font-bold text-white">アプリの主な機能</h2>
             </div>
             
-            {/* 機能1 */}
             <div className="grid md:grid-cols-2 gap-12 items-center mb-20">
               <div className="text-left">
                 <RiHeartPulseFill className="text-4xl text-red-400 mb-4" />
@@ -110,7 +109,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               </div>
             </div>
 
-            {/* 機能2 */}
             <div className="grid md:grid-cols-2 gap-12 items-center mb-20">
               <div className="md:order-2 text-left">
                 <RiShieldCheckFill className="text-4xl text-blue-400 mb-4" />
@@ -122,7 +120,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               </div>
             </div>
 
-            {/* 機能3 */}
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="text-left">
                 <RiChatHeartFill className="text-4xl text-green-400 mb-4" />
@@ -192,7 +189,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
       heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。",
       heroSubheadline: "休日当番医からお得なクーポン、AI相談まで。あなたのスマホが、那須地域最強の「お守り」に変わります。",
       empathyTitle: "病院探し、子育ての悩み…\nその都度、スマホで別のアプリやサイトを開いていませんか？",
-      empathyIntro: "那須での生活に必要な「あれもこれも」を、たった一つに。50以上の便利が、あなたの毎日を徹底的にサポートします。",
+      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50以上の便利が、あなたの毎日を徹底的にサポートします。",
       solutionBenefit1_Title: "もしもの時の、家族の安心に",
       solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
       solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
