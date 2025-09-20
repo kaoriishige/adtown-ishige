@@ -33,10 +33,10 @@ interface IndexPageProps {
 }
 
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title?: string, description?: string }) => (
-  <div className="bg-[#161b22] p-8 rounded-xl border border-gray-700/50 h-full">
-    <div className="text-4xl text-cyan-400 mb-4">{icon}</div>
+  <div className="bg-blue-900/40 p-8 rounded-xl border border-blue-400/20 h-full text-center">
+    <div className="text-4xl text-lime-400 mb-4 inline-block">{icon}</div>
     <h3 className="font-bold text-lg mb-2 text-white">{title}</h3>
-    <p className="text-sm text-gray-400">{description}</p>
+    <p className="text-sm text-blue-200">{description}</p>
   </div>
 );
 
@@ -47,47 +47,46 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         <title>{data.mainTitle || 'みんなの那須アプリ'}</title>
       	<meta name="description" content={data.heroSubheadline} />
     	</Head>
-      
-      {/* ▼▼▼ 背景デザインを、ご指摘の「ひし形」模様に完全に作り直しました ▼▼▼ */}
-    	<div className="bg-[#0d1117] text-gray-300">
+    	<div className="bg-[#001e41] text-gray-300 relative">
+        {/* 背景のひし形模様 */}
         <div 
-          className="fixed inset-0 z-0 opacity-20"
+          className="fixed inset-0 z-0 opacity-10"
           style={{
+            backgroundColor: '#0052cc',
             backgroundImage: `
-              linear-gradient(135deg, rgba(0, 150, 255, 0.1) 25%, transparent 25%),
-              linear-gradient(225deg, rgba(0, 150, 255, 0.1) 25%, transparent 25%),
-              linear-gradient(45deg, rgba(0, 150, 255, 0.1) 25%, transparent 25%),
-              linear-gradient(315deg, rgba(0, 150, 255, 0.1) 25%, #0d1117 25%)
+              linear-gradient(135deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+              linear-gradient(225deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+              linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+              linear-gradient(315deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%)
             `,
-            backgroundSize: '40px 40px',
-            backgroundPosition: '0 0, 20px 0, 20px -20px, 0px 20px',
+            backgroundPosition: '10px 0, 10px 0, 0 0, 0 0',
+            backgroundSize: '20px 20px',
           }}
         />
-        <div className="relative z-10">
+        <div className="relative z-10 backdrop-blur-sm">
           {/* --- ヒーローセクション --- */}
-    	    <header className="relative pt-24 pb-20 md:pt-32 md:pb-28 text-center overflow-hidden border-b border-gray-800">
-            <div className="absolute inset-0 bg-gradient-radial from-blue-900/30 via-transparent to-transparent -z-0 blur-3xl"></div>
-            <div className="container mx-auto px-6 relative z-10">
+    	    <header className="py-24 md:py-32 text-center overflow-hidden">
+            <div className="container mx-auto px-6">
               <h1 className="text-2xl md:text-3xl font-bold text-white">
                 {data.mainTitle}
               </h1>
               <p className="mt-2 text-md text-gray-400">
                 {data.areaDescription}
               </p>
-              <h2 className="mt-6 text-4xl md:text-6xl font-black text-white leading-tight">
+              <h2 className="mt-6 text-4xl md:text-6xl font-black text-white leading-tight" style={{textShadow: '0 2px 10px rgba(0,0,0,0.3)'}}>
                 {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
               </h2>
-              <p className="mt-6 text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
+              <p className="mt-6 text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
                 {data.heroSubheadline}
               </p>
               <div className="mt-10">
-                <a href="#cta" className="bg-cyan-400 text-black font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-105 hover:shadow-cyan-500/40 inline-block">
-    	            まもなくオープン！LINEで通知を受け取る
+                <a href="#cta" className="bg-lime-400 text-black font-bold text-lg py-4 px-10 rounded-md shadow-lg transition-all transform hover:scale-105 hover:shadow-lime-500/40 inline-block">
+    	            LINEでオープン通知を受け取る
     	          </a>
               </div>
             <div className="mt-20">
-              <p className="text-sm text-gray-500 mb-4">那須地域のパートナー企業・団体様（一部）</p>
-              <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-12 gap-y-4 filter grayscale contrast-125 opacity-70">
+              <p className="text-sm text-gray-400 mb-4">那須地域のパートナー企業・団体様</p>
+              <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-12 gap-y-4 opacity-80">
                   <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={150} height={50} className="h-10 w-auto" />
                   <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={150} height={50} className="h-10 w-auto" />
                   <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={150} height={50} className="h-10 w-auto" />
@@ -96,15 +95,79 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             </div>
             </div>
           </header>
+            
+            <main>
+              {/* --- お悩みセクション --- */}
+              <section className="py-20">
+                <div className="container mx-auto px-6 text-center">
+                  <h2 className="text-3xl md:text-4xl font-bold text-white">
+                    {data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+                  </h2>
+                  <p className="mt-4 text-gray-400 max-w-3xl mx-auto">{data.empathyIntro}</p>
+                </div>
+              </section>
 
-    	    <main>
-            {/* ... (これ以降のセクションは変更ありません) ... */}
-    	    </main>
+              {/* --- 機能紹介セクション --- */}
+              <section className="py-20">
+                <div className="container mx-auto px-6">
+                  <div className="grid md:grid-cols-3 gap-8">
+                    <FeatureCard icon={<RiHeartPulseFill />} title={data.solutionBenefit1_Title} description={data.solutionBenefit1_Desc} />
+                    <FeatureCard icon={<RiShieldCheckFill />} title={data.solutionBenefit2_Title} description={data.solutionBenefit2_Desc} />
+                    <FeatureCard icon={<RiChatHeartFill />} title={data.solutionBenefit3_Title} description={data.solutionBenefit3_Desc} />
+                  </div>
+                </div>
+              </section>
 
-    	    <footer className="border-t border-gray-800">
-            {/* ... (フッターは変更ありません) ... */}
-    	    </footer>
-    	  </div>
+              {/* --- なぜ無料なのか --- */}
+              <section className="py-20">
+                <div className="container mx-auto px-6 text-center">
+                  <h2 className="text-3xl md:text-4xl font-bold text-white">{data.freeReasonTitle}</h2>
+                  <p className="mt-4 text-gray-400 leading-relaxed max-w-3xl mx-auto">{data.freeReasonDesc}</p>
+                </div>
+              </section>
+
+              {/* --- プレミアムプラン予告セクション --- */}
+              <section className="py-20">
+                <div className="container mx-auto px-6 text-center">
+                  <div className="max-w-3xl mx-auto bg-blue-900/20 p-8 md:p-12 rounded-2xl border border-blue-400/20">
+                    <RiRocketFill className="text-5xl text-lime-400 mb-4 mx-auto" />
+                    <h2 className="text-3xl font-bold text-white">{data.premiumTeaserTitle}</h2>
+                    <p className="mt-4 text-xl md:text-2xl text-white font-semibold">
+                      {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+                    </p>
+                    <p className="mt-4 text-sm text-gray-400">{data.premiumTeaserNote}</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* --- 最後のCTA --- */}
+              <section id="cta" className="py-20">
+                <div className="container mx-auto px-6 text-center">
+                  <div className="max-w-2xl mx-auto">
+                    <h2 className="text-3xl md:text-4xl font-bold text-white">{data.finalCtaTitle}</h2>
+                    <p className="mt-4 text-gray-400">{data.finalCtaSubtext}</p>
+                    <div className="mt-8">
+                      <a href="https://lin.ee/rFvws11" target="_blank" rel="noopener noreferrer" className="bg-lime-400 text-black font-bold text-lg py-4 px-10 rounded-md shadow-lg transition-all transform hover:scale-105 hover:shadow-lime-500/40 inline-block">
+                        LINEでオープン通知を受け取る
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </main>
+
+            <footer className="border-t border-gray-800">
+              <div className="container mx-auto py-8 px-6 text-center text-xs text-gray-500">
+                <div className="mb-4">
+                  <Link href="/legal" className="hover:text-white">特定商取引法に基づく表記</Link>
+                </div>
+                <div>
+                  <p>みんなの那須アプリ運営 | 株式会社adtown</p>
+                  <p>〒329-2711 栃木県那須塩原市石林698-35 | TEL:0287-39-7577</p>
+                </div>
+              </div>
+            </footer>
+        </div>
     	</div>
     </>
   );
@@ -154,4 +217,3 @@ export const getServerSideProps: GetServerSideProps = async () => {
 };
 
 export default IndexPage;
-
