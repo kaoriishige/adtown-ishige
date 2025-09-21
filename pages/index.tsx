@@ -105,8 +105,8 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                   <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={160} height={55} style={{objectFit: "contain"}} />
                   <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={160} height={55} style={{objectFit: "contain"}} />
               {/* ▼ ここから追加分 ▼ */}
-      <Image src="/images/partner-sakakibara.png" alt="パートナー 坂木原" width={160} height={55} style={{objectFit: "contain"}} />
-      <Image src="/images/partner-serusio-ru.png" alt="パートナー セルシオール" width={160} height={55} style={{objectFit: "contain"}} />
+      <Image src="/images/partner-sakakibara.png" alt="榊原会館" width={160} height={55} style={{objectFit: "contain"}} />
+      <Image src="/images/partner-serusio-ru.png" alt="株式会社セルシオール" width={160} height={55} style={{objectFit: "contain"}} />
       {/* ▲ 追加ここまで ▲ */}
               </div>
             </div>
