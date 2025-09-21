@@ -11,8 +11,6 @@ interface LandingData {
   areaDescription?: string;
   heroHeadline?: string;
   heroSubheadline?: string;
-  empathyTitle?: string;
-  empathyIntro?: string;
   solutionBenefit1_Title?: string;
   solutionBenefit1_Desc?: string;
   solutionBenefit2_Title?: string;
@@ -32,14 +30,6 @@ interface IndexPageProps {
   data: LandingData;
 }
 
-const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title?: string, description?: string }) => (
-  <div className="bg-[#161b22] p-8 rounded-xl border border-gray-700/50 h-full">
-    <div className="text-4xl text-cyan-400 mb-4">{icon}</div>
-    <h3 className="font-bold text-lg mb-2 text-white">{title}</h3>
-    <p className="text-sm text-gray-400">{description}</p>
-  </div>
-);
-
 const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
   return (
     <>
@@ -48,90 +38,107 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
       	<meta name="description" content={data.heroSubheadline} />
     	</Head>
 
-    	<div className="bg-[#0d1117] text-gray-300">
+    	<div className="bg-white text-gray-800">
         
         {/* --- ヒーローセクション --- */}
-    	  <header className="relative pt-24 pb-20 md:pt-32 md:pb-28 text-center overflow-hidden border-b border-gray-800">
-          <div className="absolute inset-0 bg-gradient-radial from-blue-900/30 via-transparent to-transparent -z-0 blur-3xl"></div>
-          <div className="container mx-auto px-6 relative z-10">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">{data.mainTitle}</h1>
-            <p className="mt-2 text-md text-gray-400">{data.areaDescription}</p>
-            <h2 className="mt-6 text-4xl md:text-6xl font-black text-white leading-tight">
-              {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-            </h2>
-            <p className="mt-6 text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">{data.heroSubheadline}</p>
-            <div className="mt-10">
-              <a href="#cta" className="bg-cyan-400 text-black font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-105 hover:shadow-cyan-500/40 inline-block">
-    	          まもなくオープン！LINEで通知を受け取る
-    	        </a>
-            </div>
-          <div className="mt-20">
-            <p className="text-sm text-gray-500 mb-4">那須地域のパートナー企業・団体様（一部）</p>
-            <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-12 gap-y-4 filter grayscale contrast-125 opacity-70">
-                <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={150} height={50} className="h-10 w-auto" />
-                <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={150} height={50} className="h-10 w-auto" />
-                <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={150} height={50} className="h-10 w-auto" />
-                <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={150} height={50} className="h-10 w-auto" />
-            </div>
-          </div>
+    	  <header className="bg-gray-50 py-20 md:py-28">
+          <div className="container mx-auto px-6 text-center">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-700">
+              {data.mainTitle}
+            </h1>
+            <p className="mt-2 text-md text-gray-500">
+              {data.areaDescription}
+            </p>
+            <h2 className="mt-4 text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+                {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
+              </h2>
+              <p className="mt-6 text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+                {data.heroSubheadline}
+              </p>
+              <div className="mt-10">
+                <a href="#cta" className="bg-blue-600 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105 inline-block">
+    	            LINEでオープン通知を受け取る
+    	          </a>
+              </div>
           </div>
         </header>
 
     	  <main>
-          {/* --- お悩みセクション --- */}
-          <section className="py-20 bg-[#161b22]">
+          {/* --- パートナーセクション --- */}
+          <section className="py-16 bg-white border-y">
             <div className="container mx-auto px-6 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                {data.empathyTitle?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-              </h2>
-              <p className="mt-4 text-gray-400 max-w-3xl mx-auto">{data.empathyIntro}</p>
+              <h3 className="text-sm text-gray-500 mb-6 font-semibold">那須地域のパートナー企業・団体様</h3>
+              <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-16 gap-y-6">
+                  <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={160} height={55} style={{objectFit: "contain"}} />
+                  <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={160} height={55} style={{objectFit: "contain"}} />
+                  <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={160} height={55} style={{objectFit: "contain"}} />
+                  <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={160} height={55} style={{objectFit: "contain"}} />
+              </div>
             </div>
           </section>
 
           {/* --- 機能紹介セクション --- */}
-          <section className="py-20">
-            <div className="container mx-auto px-6">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-4xl font-bold text-white">アプリの主な機能</h2>
+          <section className="py-20 bg-gray-50">
+            <div className="container mx-auto px-6 text-center">
+              <div className="max-w-3xl mx-auto mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-800">アプリの主な機能</h2>
               </div>
               <div className="grid md:grid-cols-3 gap-8">
-                <FeatureCard icon={<RiHeartPulseFill />} title={data.solutionBenefit1_Title} description={data.solutionBenefit1_Desc} />
-                <FeatureCard icon={<RiShieldCheckFill />} title={data.solutionBenefit2_Title} description={data.solutionBenefit2_Desc} />
-                <FeatureCard icon={<RiChatHeartFill />} title={data.solutionBenefit3_Title} description={data.solutionBenefit3_Desc} />
+                <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+                  <div className="p-4 bg-red-100 inline-block rounded-full mb-4">
+                    <RiHeartPulseFill className="text-3xl text-red-600" />
+                  </div>
+                  <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit1_Title}</h3>
+                  <p className="text-gray-600">{data.solutionBenefit1_Desc}</p>
+                </div>
+                <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+                  <div className="p-4 bg-blue-100 inline-block rounded-full mb-4">
+                    <RiShieldCheckFill className="text-3xl text-blue-600" />
+                  </div>
+                  <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit2_Title}</h3>
+                  <p className="text-gray-600">{data.solutionBenefit2_Desc}</p>
+                </div>
+                <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+                  <div className="p-4 bg-green-100 inline-block rounded-full mb-4">
+                    <RiChatHeartFill className="text-3xl text-green-600" />
+                  </div>
+                  <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit3_Title}</h3>
+                  <p className="text-gray-600">{data.solutionBenefit3_Desc}</p>
+                </div>
               </div>
             </div>
           </section>
 
-          {/* --- なぜ無料なのか --- */}
-          <section className="py-20 bg-white text-gray-800">
-            <div className="container mx-auto px-6 text-center">
-              <h2 className="text-3xl md:text-4xl font-bold">{data.freeReasonTitle}</h2>
-              <p className="mt-4 text-gray-600 leading-relaxed max-w-3xl mx-auto">{data.freeReasonDesc}</p>
-            </div>
-          </section>
+    	    {/* --- なぜ無料なのか --- */}
+    	    <section className="py-20 bg-white">
+    	      <div className="container mx-auto px-6 text-center max-w-3xl">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800">{data.freeReasonTitle}</h2>
+              <p className="mt-4 text-gray-600 leading-relaxed">{data.freeReasonDesc}</p>
+    	      </div>
+    	    </section>
 
           {/* --- プレミアムプラン予告セクション --- */}
-          <section className="py-20 bg-gray-50">
+          <section className="py-20 bg-blue-600 text-white">
             <div className="container mx-auto px-6 text-center">
               <div className="max-w-3xl mx-auto">
-                <RiRocketFill className="text-5xl text-blue-600 mb-4 mx-auto" />
-                <h2 className="text-3xl font-bold text-gray-800">{data.premiumTeaserTitle}</h2>
-                <p className="mt-4 text-xl md:text-2xl text-gray-700 font-semibold">
+                <RiRocketFill className="text-5xl text-white mb-4 mx-auto" />
+                <h2 className="text-3xl font-bold">{data.premiumTeaserTitle}</h2>
+                <p className="mt-4 text-xl md:text-2xl font-semibold">
                   {data.premiumTeaserText?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
                 </p>
-                 <p className="mt-4 text-sm text-gray-500">{data.premiumTeaserNote}</p>
+                 <p className="mt-4 text-sm text-blue-200">{data.premiumTeaserNote}</p>
               </div>
             </div>
           </section>
 
     	    {/* --- 最後のCTA --- */}
-    	    <section id="cta" className="bg-blue-700">
-    	      <div className="container mx-auto px-6 py-20 text-center text-white">
+    	    <section id="cta" className="bg-gray-800 text-white">
+    	      <div className="container mx-auto px-6 py-20 text-center">
     	        <div className="max-w-2xl mx-auto">
                 <h2 className="text-3xl md:text-4xl font-bold">{data.finalCtaTitle}</h2>
-    	          <p className="mt-4 text-blue-200">{data.finalCtaSubtext}</p>
+    	          <p className="mt-4 text-gray-300">{data.finalCtaSubtext}</p>
     	          <div className="mt-8">
-                  <a href="https://lin.ee/rFvws11" target="_blank" rel="noopener noreferrer" className="bg-orange-500 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-all transform hover:scale-105 inline-block">
+                  <a href="https://lin.ee/rFvws11" target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105 inline-block">
     	              LINEでオープン通知を受け取る
     	            </a>
                 </div>
@@ -141,15 +148,11 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	  </main>
 
     	  {/* --- フッター --- */}
-    	  <footer className="border-t border-gray-800 bg-[#0d1117]">
-    	    <div className="container mx-auto py-8 px-6 text-center text-xs text-gray-500">
-    	      <div className="mb-4">
-                <Link href="/legal" className="hover:text-white">特定商取引法に基づく表記</Link>
-              </div>
-    	      <div>
-                <p>みんなの那須アプリ運営 | 株式会社adtown</p>
-                <p>〒329-2711 栃木県那須塩原市石林698-35 | TEL:0287-39-7577</p>
-              </div>
+    	  <footer className="bg-gray-900 text-gray-400 text-sm">
+    	    <div className="container mx-auto py-10 px-6 text-center space-y-3">
+    	      <Link href="/legal" className="hover:text-white">特定商取引法に基づく表記</Link>
+    	      <p>みんなの那須アプリ運営 | 株式会社adtown</p>
+    	      <p>〒329-2711 栃木県那須塩原市石林698-35 | TEL:0287-39-7577</p>
     	    </div>
     	  </footer>
     	</div>
@@ -169,8 +172,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
       heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
       heroSubheadline: "休日当番医からAIお悩み相談まで。あなたのスマホが、那須地域最強の「お守り」に変わります。",
-      empathyTitle: "病院探し、子育ての悩み…\nその都度、スマホで別のアプリやサイトを開いていませんか？",
-      empathyIntro: "那須での生活に必要な「あれこれ」を、たった一つに。50個以上の便利が、あなたの毎日を徹底的にサポートします。",
       solutionBenefit1_Title: "もしもの時の、家族の安心に",
       solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
       solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
