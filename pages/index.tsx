@@ -194,7 +194,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const fallbackData: LandingData = {
       mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
-      heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
+      heroHeadline: "那須地域の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題！",
       heroSubheadline: "休日当番医からAIお悩み相談まで。あなたのスマホが、那須地域最強の「お守り」に変わります。",
       solutionBenefit1_Title: "もしもの時の、家族の安心に",
       solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
