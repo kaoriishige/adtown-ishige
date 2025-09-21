@@ -56,7 +56,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             }}
           />
           <Image 
-            src="/images/hero-background.jpg"
+            src="/images/hero-background.png"
             alt="背景画像"
             layout="fill"
             objectFit="cover"
