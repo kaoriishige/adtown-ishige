@@ -43,25 +43,23 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         {/* --- ヒーローセクション --- */}
     	  <header className="bg-gray-50 py-20 md:py-28">
           <div className="container mx-auto px-6 text-center">
-            {/* ▼▼▼ この部分の文字の大きさや余白を調整しました ▼▼▼ */}
-            <h1 className="text-xl md:text-2xl font-bold text-gray-700">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-700">
               {data.mainTitle}
             </h1>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-2 text-md text-gray-500">
               {data.areaDescription}
             </p>
-            <h2 className="mt-6 text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+            <h2 className="mt-4 text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
                 {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
               </h2>
               <p className="mt-6 text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
                 {data.heroSubheadline}
               </p>
               <div className="mt-10">
-                <a href="#cta" className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105 inline-block">
+                <a href="#cta" className="bg-blue-600 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105 inline-block">
     	            LINEでオープン通知を受け取る
     	          </a>
               </div>
-            {/* ▲▲▲ ここまで ▲▲▲ */}
           </div>
         </header>
 
