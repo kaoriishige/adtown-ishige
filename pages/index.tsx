@@ -41,51 +41,57 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     	<div className="bg-white text-gray-800">
         
         {/* ▼▼▼ このヒーローセクションのデザインのみ、ご指示通りに再修正しました ▼▼▼ */}
-    	  <header className="relative bg-blue-800 text-white overflow-hidden">
-          <div 
-            className="absolute inset-0 z-0 opacity-20"
-            style={{
-              backgroundColor: '#0052cc',
-              backgroundImage: `
-                linear-gradient(135deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
-                linear-gradient(225deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
-                linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
-                linear-gradient(315deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%)
-              `,
-              backgroundPosition: '10px 0, 10px 0, 0 0, 0 0',
-              backgroundSize: '20px 20px',
-            }}
-          />
-          <Image 
-            src="/images/hero-background.jpg"
-            alt="背景画像"
-            layout="fill"
-            objectFit="cover"
-            className="absolute inset-0 z-0 opacity-10"
-            priority
-          />
-          <div className="container mx-auto px-6 py-24 md:py-32 relative z-20 text-center">
-            <div className="max-w-3xl mx-auto">
-              <h1 className="text-2xl md:text-3xl font-bold text-white opacity-90">
-                {data.mainTitle}
-              </h1>
-              <p className="mt-2 text-md text-blue-200">
-                {data.areaDescription}
-              </p>
-              <h2 className="mt-6 text-4xl md:text-6xl font-black leading-tight text-white" style={{textShadow: '0 2px 10px rgba(0,0,0,0.3)'}}>
-                {data.heroHeadline?.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
-              </h2>
-              <p className="mt-6 text-lg md:text-xl text-blue-200 max-w-2xl mx-auto">
-                {data.heroSubheadline}
-              </p>
-              <div className="mt-10">
-                <a href="#cta" className="bg-lime-400 text-black font-bold py-4 px-8 rounded-md shadow-lg transition-all transform hover:scale-105">
-    	            LINEでオープン通知を受け取る
-    	          </a>
-              </div>
-            </div>
-          </div>
-        </header>
+    	 <header className="relative bg-blue-800 text-white overflow-hidden">
+  <div 
+    className="absolute inset-0 z-0 opacity-20"
+    style={{
+      backgroundColor: '#0052cc',
+      backgroundImage: `
+        linear-gradient(135deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+        linear-gradient(225deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+        linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+        linear-gradient(315deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%)
+      `,
+      backgroundPosition: '10px 0, 10px 0, 0 0, 0 0',
+      backgroundSize: '20px 20px',
+    }}
+  />
+  <Image 
+    src="/images/hero-background.jpg"
+    alt="背景画像"
+    layout="fill"
+    objectFit="cover"
+    className="absolute inset-0 z-0 opacity-10"
+    priority
+  />
+  <div className="container mx-auto px-6 py-24 md:py-32 relative z-20 text-center">
+    <div className="max-w-3xl mx-auto">
+      <h1 className="text-2xl md:text-3xl font-bold text-white opacity-90">
+        {data.mainTitle}
+      </h1>
+      <p className="mt-2 text-md text-blue-200">
+        {data.areaDescription}
+      </p>
+      <h2 className="mt-6 text-3xl md:text-5xl font-black leading-tight text-white" style={{textShadow: '0 2px 10px rgba(0,0,0,0.3)'}}>
+        {data.heroHeadline?.split('\n').map((line, i) => (
+          <span key={i} className="block">{line}</span>
+        ))}
+      </h2>
+      <p className="mt-6 text-lg md:text-xl text-blue-200 max-w-2xl mx-auto">
+        {data.heroSubheadline}
+      </p>
+      <div className="mt-10">
+        <a 
+          href="#cta" 
+          className="bg-lime-400 text-black font-bold py-4 px-8 rounded-md shadow-lg transition-all transform hover:scale-105 inline-block max-w-xs w-full"
+        >
+          LINEでオープン通知を受け取る
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
         {/* ▲▲▲ 変更はここまでです ▲▲▲ */}
 
     	  <main>
