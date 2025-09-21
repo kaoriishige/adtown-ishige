@@ -27,7 +27,7 @@ const FinalTestPage: NextPage = () => {
         <div className="relative z-10 p-10">
           <h1 className="text-4xl font-bold text-white mb-6">最終表示テストページ</h1>
           <p className="mb-8">
-            以下に、`speelead.com`風の背景の上で、パートナー様の画像4点が表示されていれば、全ての機能は正常です。
+            以下に、`speelead.com`風の背景の上で、パートナー様画像4点が表示されていれば、全ての機能は正常です。
           </p>
           <div className="bg-black/20 p-8 rounded-lg">
             <h2 className="text-sm text-gray-400 mb-4">パートナー企業・団体様</h2>
