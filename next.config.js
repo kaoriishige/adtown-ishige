@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // ▼▼▼ ここから追記 ▼▼▼
   images: {
     remotePatterns: [
       {
@@ -10,12 +9,19 @@ const nextConfig = {
         port: '',
         pathname: '/n/line_add_friends/btn/ja.png',
       },
+      {
+        protocol: 'https',
+        hostname: 'minna-no-nasu-app.netlify.app',
+        port: '',
+        pathname: '/images/**', // ← Netlifyの公開画像を許可
+      },
     ],
   },
-  // ▲▲▲ ここまで追記 ▲▲▲
 };
 
 module.exports = nextConfig;
+
+
 
 
 
