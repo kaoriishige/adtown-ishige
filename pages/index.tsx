@@ -91,7 +91,21 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
     </div>
   </div>
 </header>
-
+  {/* --- YouTube 動画セクション --- */}
+<section className="py-16 bg-white">
+  <div className="container mx-auto px-6 text-center">
+    <div className="relative max-w-4xl mx-auto shadow-lg rounded-lg overflow-hidden" style={{ paddingTop: "56.25%" }}>
+      <iframe
+        className="absolute top-0 left-0 w-full h-full"
+        src="https://www.youtube.com/embed/5gQoF7wODUI"
+        title="YouTube video"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+    </div>
+  </div>
+</section>
         {/* ▲▲▲ 変更はここまでです ▲▲▲ */}
 
     	  <main>
