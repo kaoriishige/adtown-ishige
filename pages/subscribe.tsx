@@ -5,11 +5,14 @@ import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
 import Link from 'next/link';
 import Head from 'next/head';
+import { GetServerSideProps, NextPage } from 'next';
+import nookies from 'nookies';
+import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-const SubscribePage = () => {
-  const { user, loading } = useAuth();
+const SubscribePage: NextPage = () => {
+  const { user } = useAuth();
   const router = useRouter();
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,10 +26,9 @@ const SubscribePage = () => {
     setError(null);
     try {
       const token = await user.getIdToken();
-      // サーバーサイドでStripe Checkoutセッションを作成するAPIを呼び出す
       const response = await axios.post(
         '/api/stripe-create-checkout-session',
-        {}, // bodyは空でOK
+        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -43,14 +45,6 @@ const SubscribePage = () => {
       setIsSubscribing(false);
     }
   };
-
-  if (loading) {
-    return (
-        <div className="flex justify-center items-center min-h-screen">
-            <div>読み込み中...</div>
-        </div>
-    );
-  }
 
   return (
     <>
@@ -88,6 +82,25 @@ const SubscribePage = () => {
   );
 };
 
-export default SubscribePage;
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  try {
+    const cookies = nookies.get(context);
+    if (!cookies.token) {
+        return { redirect: { destination: '/login?from=/subscribe', permanent: false } };
+    }
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
 
+    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    if (userDoc.data()?.plan === 'paid_480') {
+        return { redirect: { destination: '/mypage', permanent: false } };
+    }
+    
+    return { props: {} };
+
+  } catch (err) {
+    return { redirect: { destination: '/login?from=/subscribe', permanent: false } };
+  }
+};
+
+export default SubscribePage;
 
