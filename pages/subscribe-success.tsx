@@ -1,38 +1,43 @@
-// pages/subscribe-success.tsx
+import { NextPage } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import { RiCheckboxCircleFill } from 'react-icons/ri';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-// Firebaseの認証関連のインポートは不要になるので削除します
-// import { onAuthStateChanged } from 'firebase/auth';
-// import { auth } from '../lib/firebase';
-
-const SubscribeSuccessPage = () => {
-  const router = useRouter();
-
-  useEffect(() => {
-    // 5秒後にログインページへリダイレクトするタイマーを設定
-    const timer = setTimeout(() => {
-      router.push('/login'); // リダイレクト先を '/login' に変更
-    }, 5000); // 5秒
-
-    // このページを離れるときにタイマーを解除する
-    return () => clearTimeout(timer);
-  }, [router]);
-
+const SubscribeSuccessPage: NextPage = () => {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="text-center p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold mb-4">ありがとうございます！</h1>
-        <p className="mb-6">決済とユーザー登録が完了しました。</p>
-        
-        {/* ローディングアニメーション */}
-        <div className="my-6">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-        </div>
+    <>
+      <Head>
+        <title>ご登録ありがとうございます！</title>
+      </Head>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-lg text-center">
+          
+          <div className="flex justify-center">
+            <RiCheckboxCircleFill className="w-16 h-16 text-green-500" />
+          </div>
 
-        <p>ログインページへ移動します。少々お待ちください...</p>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              アップグレードが完了しました！
+            </h1>
+            <p className="mt-3 text-gray-600">
+              ご登録いただき、誠にありがとうございます。全ての機能が利用可能になりました。
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              下のボタンからマイページへお進みください。
+            </p>
+          </div>
+
+          <Link 
+            href="/mypage" 
+            className="block w-full px-6 py-3 text-lg font-semibold text-white bg-blue-500 rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-300 ease-in-out"
+          >
+            マイページへ進む
+          </Link>
+
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

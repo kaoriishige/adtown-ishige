@@ -1,113 +1,103 @@
+// pages/subscribe.tsx
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { loadStripe } from '@stripe/stripe-js';
-import Link from 'next/link';
 import Head from 'next/head';
-import { GetServerSideProps, NextPage } from 'next';
-import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
+import { getAuth } from 'firebase/auth';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-const SubscribePage: NextPage = () => {
-  const { user } = useAuth();
+const SubscribePage = () => {
   const router = useRouter();
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubscribe = async () => {
-    if (!user) {
-      router.push('/login?from=/subscribe');
-      return;
-    }
-    
     setIsSubscribing(true);
     setError(null);
 
     try {
-      // ▼▼▼ ここからが修正箇所です ▼▼▼
-      // Authorizationヘッダーは不要。Cookie認証に一本化します。
+      const auth = getAuth();
+      const idToken = await auth.currentUser?.getIdToken(true);
+
+      if (!idToken) {
+        setIsSubscribing(false);
+        router.push('/login?from=/subscribe');
+        return;
+      }
+
       const response = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-          },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
       });
-      // ▲▲▲ ここまでが修正箇所です ▲▲▲
+
+      if (response.status === 401) {
+        setIsSubscribing(false);
+        router.push('/login?from=/subscribe');
+        return;
+      }
 
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || '決済セッションの作成に失敗しました。');
+
+      if (!data.url) {
+        throw new Error('Stripe セッションURLが返されませんでした');
       }
 
       const stripe = await stripePromise;
-      if (stripe && data.sessionId) {
-        await stripe.redirectToCheckout({ sessionId: data.sessionId });
-      } else {
-        throw new Error('Stripeの準備に失敗しました。');
-      }
+      window.location.href = data.url;
     } catch (err) {
       console.error('Subscription failed:', err);
-      setError(err instanceof Error ? err.message : '決済処理を開始できませんでした。時間をおいて再度お試しください。');
+      setError('決済処理を開始できませんでした。時間をおいて再度お試しください。');
       setIsSubscribing(false);
     }
   };
 
+  // 🔽 ここから下の return 文が変更箇所です 🔽
   return (
     <>
       <Head>
         <title>有料プランにアップグレード</title>
       </Head>
-      <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-4">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 text-center">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">有料プランにアップグレード</h1>
-            <p className="text-gray-600 mb-6">
-                チラシ比較、限定クーポン、フードロス情報など、全ての節約機能が利用可能になります。
-            </p>
-            <div className="my-8 p-6 bg-blue-50 rounded-lg">
-                <p className="text-xl font-semibold text-gray-700">月額</p>
-                <p className="text-5xl font-black text-blue-600">480<span className="text-2xl font-bold">円</span></p>
-            </div>
-            
-            {error && <p className="text-red-500 mb-4">{error}</p>}
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="w-full max-w-sm p-8 space-y-6 bg-white rounded-2xl shadow-lg text-center">
+          
+          {/* ヘッダー */}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              有料プランにアップグレード
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">全ての機能が利用可能になります。</p>
+          </div>
 
-            <button
-                onClick={handleSubscribe}
-                disabled={isSubscribing}
-                className="w-full bg-green-500 text-white px-6 py-4 rounded-lg font-bold text-xl hover:bg-green-600 disabled:bg-gray-400 transition transform hover:scale-105"
-            >
-                {isSubscribing ? '処理中...' : '月額480円でアップグレードする'}
-            </button>
-            <div className="mt-6">
-                <Link href="/home" className="text-sm text-gray-500 hover:text-blue-600">
-                    今はしない
-                </Link>
-            </div>
+          {/* 価格表示 */}
+          <div className="py-4">
+            <span className="text-5xl font-extrabold text-gray-900">¥480</span>
+            <span className="ml-1 text-xl font-medium text-gray-500">/ 月</span>
+          </div>
+
+          {/* エラーメッセージ表示 */}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          
+          {/* アップグレードボタン */}
+          <button
+            onClick={handleSubscribe}
+            disabled={isSubscribing}
+            className="w-full px-6 py-3 text-lg font-semibold text-white bg-green-500 rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 ease-in-out"
+          >
+            {isSubscribing ? '処理中...' : 'アップグレードする'}
+          </button>
+            
         </div>
       </div>
     </>
   );
-};
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  try {
-    const cookies = nookies.get(context);
-    if (!cookies.token) {
-        return { redirect: { destination: '/login?from=/subscribe', permanent: false } };
-    }
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-
-    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
-    if (userDoc.data()?.plan === 'paid_480') {
-        return { redirect: { destination: '/mypage', permanent: false } };
-    }
-    
-    return { props: {} };
-
-  } catch (err) {
-    return { redirect: { destination: '/login?from=/subscribe', permanent: false } };
-  }
+  // 🔼 ここまでが変更箇所です 🔼
 };
 
 export default SubscribePage;
+
+
+

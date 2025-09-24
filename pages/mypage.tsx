@@ -14,8 +14,9 @@ import {
     RiStore2Line, RiRecycleLine
 } from 'react-icons/ri';
 import { loadStripe } from '@stripe/stripe-js';
+// お客様のプロジェクトの他のファイルで使われている形式に合わせます
+import { getAdminStripe } from '@/lib/stripe-admin';
 
-// Stripeの初期化はクライアントサイドでのみ実行されるように修正
 const stripePromise = typeof window !== 'undefined' ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!) : null;
 
 // --- 型定義 ---
@@ -24,46 +25,36 @@ interface PurchasedDeal {
   title: string;
   storeName: string;
 }
-
 interface AcceptedQuest {
-  id: string;
+  id:string;
   title: string;
   status: 'accepted' | 'submitted' | 'completed' | 'rejected';
 }
-
 interface MyPageProps {
-  user: {
-    uid: string;
-    email: string;
-  };
-  points: {
-    balance: number;
-    usableBalance: number;
-    pendingBalance: number;
-    activationStatus: string;
-    expiredAmount: number;
-  };
-  rewards: {
-    total: number;
-    pending: number;
-  };
-  subscriptionStatus: 'active' | 'trial' | 'trialing' | 'canceled' | 'free' | null; // 型を拡張
+  user: { uid: string; email: string; };
+  points: { balance: number; usableBalance: number; pendingBalance: number; activationStatus: string; expiredAmount: number; };
+  rewards: { total: number; pending: number; };
+  subscriptionStatus: 'active' | 'trial' | 'trialing' | 'canceled' | 'free' | null;
   purchasedDeals: PurchasedDeal[];
   acceptedQuests: AcceptedQuest[];
 }
 
+// --- コンポーネント ---
 const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStatus, purchasedDeals, acceptedQuests }) => {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isReissuing, setIsReissuing] = useState(false);
-  const [reissueMessage, setReissueMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (router.query.session_id) {
+        setMessage('アップグレードありがとうございます！すべての機能が利用可能になりました。');
+    }
     if (router.query.reissue === 'success') {
-      setReissueMessage('ポイントの再発行手続きが完了しました！');
+      setMessage('ポイントの再発行手続きが完了しました！');
     }
     if (router.query.reissue === 'cancel') {
-      setReissueMessage('ポイントの再発行手続きはキャンセルされました。');
+      setMessage('ポイントの再発行手続きはキャンセルされました。');
     }
   }, [router.query]);
 
@@ -89,12 +80,12 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
           return;
       }
       const response = await fetch('/api/points/reissue', { method: 'POST' });
-      const session = await response.json();
-      if (response.ok && session.sessionId) {
+      const sessionData = await response.json();
+      if (response.ok && sessionData.sessionId) {
         const stripe = await stripePromise;
-        await stripe?.redirectToCheckout({ sessionId: session.sessionId });
+        await stripe?.redirectToCheckout({ sessionId: sessionData.sessionId });
       } else {
-        alert(session.error || '再発行手続きに失敗しました。');
+        alert(sessionData.error || '再発行手続きに失敗しました。');
       }
     } catch (error) {
       alert('エラーが発生しました。');
@@ -104,12 +95,8 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
   };
 
   const getActivationMessage = (status: string) => {
-    if (status === 'awaiting_november_payment') {
-      return "11月の課金が確認されると、ポイントが使えるようになります。";
-    }
-    if (status === 'awaiting_next_payment') {
-      return "翌月の課金が確認されると、ポイントが使えるようになります。";
-    }
+    if (status === 'awaiting_november_payment') return "11月の課金が確認されると、ポイントが使えるようになります。";
+    if (status === 'awaiting_next_payment') return "翌月の課金が確認されると、ポイントが使えるようになります。";
     return null;
   };
   
@@ -117,50 +104,32 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Head>
-        <title>マイページ - みんなの那須アプリ</title>
-      </Head>
-      
+      <Head><title>マイページ - みんなの那須アプリ</title></Head>
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-xl mx-auto p-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-800">マイページ</h1>
           <button onClick={handleLogout} disabled={isLoggingOut} className="flex items-center text-sm font-semibold text-gray-600 hover:text-red-500 disabled:opacity-50 transition-colors">
-            <RiLogoutCircleRLine className="mr-1" />
-            ログアウト
+            <RiLogoutCircleRLine className="mr-1" />ログアウト
           </button>
         </div>
       </header>
-
       <main className="max-w-xl mx-auto p-4 sm:p-6 pb-24">
         <p className="text-center text-gray-600 mb-6">ようこそ、{user.email}さん</p>
-
-        {reissueMessage && (
-          <div className="my-4 p-4 bg-blue-100 text-blue-800 rounded-lg text-center">
-            {reissueMessage}
-          </div>
-        )}
-
+        {message && (<div className="my-4 p-4 bg-blue-100 text-blue-800 rounded-lg text-center">{message}</div>)}
+        
         <section className="bg-white p-6 rounded-xl shadow-md mb-8">
             <h2 className="text-lg font-bold mb-4 text-gray-800">あなたの紹介報酬 💰</h2>
             <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
                     <p className="text-sm text-gray-500">累計紹介ポイント</p>
-                    <p className="text-3xl font-bold text-gray-800">
-                        {rewards.total.toLocaleString()}
-                        <span className="text-base font-normal ml-1">pt</span>
-                    </p>
+                    <p className="text-3xl font-bold text-gray-800">{rewards.total.toLocaleString()}<span className="text-base font-normal ml-1">pt</span></p>
                 </div>
                 <div>
                     <p className="text-sm text-gray-500">未確定ポイント</p>
-                    <p className="text-3xl font-bold text-blue-600">
-                        {rewards.pending.toLocaleString()}
-                        <span className="text-base font-normal ml-1">pt</span>
-                    </p>
+                    <p className="text-3xl font-bold text-blue-600">{rewards.pending.toLocaleString()}<span className="text-base font-normal ml-1">pt</span></p>
                 </div>
             </div>
-            <p className="text-xs mt-4 text-gray-600 text-center">
-                ※紹介で獲得したポイントは、承認後「なっぴーポイント残高」に加算されます。
-            </p>
+            <p className="text-xs mt-4 text-gray-600 text-center">※紹介で獲得したポイントは、承認後「なっぴーポイント残高」に加算されます。</p>
         </section>
 
         <section className="mb-8">
@@ -177,7 +146,6 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
                     <RiMailSendLine size={32} className="text-cyan-500 mb-2" />
                     <span className="font-semibold text-sm text-gray-800">お問い合わせ</span>
                 </Link>
-                
                 <Link href="/deals" className="bg-white p-4 rounded-lg shadow-md text-center flex flex-col items-center justify-center aspect-square hover:shadow-lg hover:bg-gray-100 transition-all">
                     <RiStore2Line size={32} className="text-orange-500 mb-2" />
                     <span className="font-semibold text-sm text-gray-800">地域の店舗情報</span>
@@ -311,24 +279,46 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
   );
 };
 
+// --- サーバーサイド処理 ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
     if (!cookies.token) {
-      return { redirect: { destination: '/login', permanent: false } };
+      return { redirect: { destination: '/login?from=/mypage', permanent: false } };
     }
 
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
     const { uid, email } = token;
 
-    const userDoc = await getAdminDb().collection('users').doc(uid).get();
+    const userRef = getAdminDb().collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    
     if (!userDoc.exists) {
       return { redirect: { destination: '/login', permanent: false } };
     }
     
-    const userData = userDoc.data() || {};
-    const userPlan = userData.plan || 'free';
+    let userData = userDoc.data() || {};
+    let userPlan = userData.plan || 'free';
 
+    const { session_id } = context.query;
+
+    if (session_id && userPlan === 'free') {
+      const stripe = getAdminStripe();
+      try {
+        const session = await stripe.checkout.sessions.retrieve(session_id as string);
+        
+        if (session.payment_status === 'paid') {
+          await userRef.update({
+            plan: 'paid', // 有料プラン名
+            subscriptionStatus: 'active',
+          });
+          userPlan = 'paid';
+        }
+      } catch (error) {
+        console.error("Stripe session retrieval failed:", error);
+      }
+    } 
+    
     if (userPlan === 'free') {
       return { redirect: { destination: '/home', permanent: false } };
     }
@@ -345,42 +335,25 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const rewards = { total: userData.totalRewards || 0, pending: userData.unpaidRewards || 0 };
     const subscriptionStatus = userData.subscriptionStatus || null;
 
-    const purchasedDealsSnapshot = await getAdminDb().collection('users').doc(uid).collection('purchasedDeals').where('used', '==', false).get();
-    const purchasedDeals = purchasedDealsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      title: doc.data().title || '無題のチケット',
-      storeName: doc.data().storeName || '不明な店舗',
-    }));
+    const purchasedDealsSnapshot = await userRef.collection('purchasedDeals').where('used', '==', false).get();
+    const purchasedDeals = purchasedDealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PurchasedDeal[];
     
-    const acceptedQuestsSnapshot = await getAdminDb().collection('users').doc(uid).collection('acceptedQuests').limit(5).get();
-    const acceptedQuests = acceptedQuestsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      title: doc.data().title || '無題のクエスト',
-      status: doc.data().status || 'accepted',
-    }));
+    const acceptedQuestsSnapshot = await userRef.collection('acceptedQuests').limit(5).get();
+    const acceptedQuests = acceptedQuestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AcceptedQuest[];
     
-    const safeUser = { uid, email: email || '' };
-    const safePurchasedDeals = JSON.parse(JSON.stringify(purchasedDeals));
-    const safeAcceptedQuests = JSON.parse(JSON.stringify(acceptedQuests));
-
     return {
       props: {
-        user: safeUser,
+        user: { uid, email: email || '' },
         points,
         rewards,
         subscriptionStatus,
-        purchasedDeals: safePurchasedDeals,
-        acceptedQuests: safeAcceptedQuests,
+        purchasedDeals: JSON.parse(JSON.stringify(purchasedDeals)),
+        acceptedQuests: JSON.parse(JSON.stringify(acceptedQuests)),
       },
     };
   } catch (error) {
-    console.error("mypage.tsx getServerSideProps エラー:", error); 
-    return {
-      redirect: {
-        destination: '/login',
-        permanent: false,
-      },
-    };
+    console.error("An error occurred in mypage.tsx getServerSideProps:", error); 
+    return { redirect: { destination: '/login', permanent: false } };
   }
 };
 

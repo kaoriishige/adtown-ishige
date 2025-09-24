@@ -1,35 +1,54 @@
 // pages/api/login.ts
-import { NextApiRequest, NextApiResponse } from 'next';
+
+import type { NextApiRequest, NextApiResponse } from 'next';
 import nookies from 'nookies';
 import { getAuth } from 'firebase-admin/auth';
+import { getAdminAuth } from '../../lib/firebase-admin'; // 修正: 独自の初期化関数をインポート
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') {
     return res.status(405).end();
   }
 
   try {
-    const idToken = req.body.token; // クライアントから送られてきた Firebase ID トークン
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5日間（必要に応じて変更）
+    const { token } = req.body as { token: string };
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5日間
 
-    // Firebase Admin SDKでセッションクッキーを発行
-    const sessionCookie = await getAuth().createSessionCookie(idToken, { expiresIn });
+    const adminAuth = getAdminAuth(); // 修正: 初期化済みのインスタンスを使用
+    const sessionCookie = await adminAuth.createSessionCookie(token, { expiresIn });
 
-    const options = {
-      maxAge: expiresIn / 1000, // 秒単位
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-    };
+    // クッキーオプション (ローカルと本番で切り替え)
+    const options =
+      process.env.NODE_ENV === 'production'
+        ? {
+            maxAge: expiresIn / 1000,
+            httpOnly: true,
+            secure: true,
+            path: '/',
+            sameSite: 'none' as const,
+          }
+        : {
+            maxAge: expiresIn / 1000,
+            httpOnly: true,
+            secure: false,
+            path: '/',
+            sameSite: 'lax' as const, // 修正: ローカルではlaxが最も安定的
+          };
 
-    // セッションクッキーをセット
     nookies.set({ res }, 'token', sessionCookie, options);
-
     res.status(200).json({ success: true });
+
   } catch (error) {
     console.error('Login API error:', error);
     res.status(401).json({ error: 'Unauthorized' });
   }
-};
+}
 
-export default handler;
+
+
+
+
+

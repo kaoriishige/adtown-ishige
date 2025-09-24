@@ -1,68 +1,63 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { getAdminAuth } from '../../lib/firebase-admin';
-import nookies from 'nookies'; // nookies をインポート
+import nookies from 'nookies';
+import { getAuth } from 'firebase-admin/auth';
 
-const secretKey = process.env.STRIPE_SECRET_KEY;
-if (!secretKey) {
-  throw new Error('The Stripe secret key is not set in environment variables.');
-}
-const stripe = new Stripe(secretKey);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
   }
 
   try {
-    // ▼▼▼ ここからが修正箇所です ▼▼▼
-    // ヘッダーではなく、Cookieからセッション情報を取得・検証します
     const cookies = nookies.get({ req });
-    if (!cookies.token) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    const decodedToken = await getAdminAuth().verifySessionCookie(cookies.token, true);
-    const { uid, email } = decodedToken;
-    // ▲▲▲ ここまでが修正箇所です ▲▲▲
+    let token = cookies.token;
 
-    const priceId = process.env.STRIPE_480_PRICE_ID;
-    if (!priceId) {
-        throw new Error('Stripe Price ID for 480 JPY plan is not set.');
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
     }
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized: No token' });
+    }
+
+    const auth = getAuth();
+    let decodedClaims;
+    try {
+      decodedClaims = await auth.verifySessionCookie(token, true);
+    } catch {
+      decodedClaims = await auth.verifyIdToken(token, true);
+    }
+
+    const user = await auth.getUser(decodedClaims.uid);
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
       mode: 'subscription',
-      customer_email: email,
+      payment_method_types: ['card'],
       line_items: [
         {
-          price: priceId,
+          price: process.env.STRIPE_PRICE_ID as string,
           quantity: 1,
         },
       ],
-      subscription_data: {
-        metadata: {
-            firebaseUID: uid,
-        }
-      },
+      customer_email: user.email || undefined,
+      // 決済後の移動先を「ありがとうページ」に設定します
       success_url: `${req.headers.origin}/subscribe-success`,
       cancel_url: `${req.headers.origin}/subscribe`,
     });
 
-    res.status(200).json({ sessionId: session.id });
-
+    return res.status(200).json({ url: session.url });
   } catch (err) {
     console.error('Stripe Checkout Session Error:', err);
-    if (err instanceof Stripe.errors.StripeError) {
-      res.status(err.statusCode || 500).json({ message: err.message });
-    } else if (err instanceof Error) {
-        res.status(500).json({ message: err.message });
-    } else {
-      res.status(500).json({ message: 'An unexpected error occurred.' });
-    }
+    return res.status(500).json({ error: 'Stripe Checkout Session failed' });
   }
 }
+
+
+
+
+
+
+
+

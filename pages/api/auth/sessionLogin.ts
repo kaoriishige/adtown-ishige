@@ -1,3 +1,5 @@
+// pages/api/auth/sessionLogin.ts
+
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
@@ -32,13 +34,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 days
     const sessionCookie = await getAdminAuth().createSessionCookie(idToken, { expiresIn });
 
-    // ▼▼▼ ここからが修正箇所です ▼▼▼
+    // ▼▼▼ ここが修正箇所です ▼▼▼
     const options = { 
       maxAge: expiresIn / 1000, 
       httpOnly: true, 
       secure: process.env.NODE_ENV === 'production', 
       path: '/',
-      sameSite: 'lax' as 'lax', // sameSite属性を追加
+      sameSite: 'lax' as 'lax', // sameSite属性を追加してローカル環境でのCookie保存を確実にする
     };
     // ▲▲▲ ここまでが修正箇所です ▲▲▲
 
