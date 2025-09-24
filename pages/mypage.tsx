@@ -16,7 +16,7 @@ import {
 } from 'react-icons/ri';
 import { loadStripe } from '@stripe/stripe-js';
 import Stripe from 'stripe';
-import { getAdminStripe } from '@/lib/stripe-admin';
+import { getAdminStripe } from '../lib/stripe-admin';
 
 const stripePromise = typeof window !== 'undefined' ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!) : null;
 
