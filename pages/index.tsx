@@ -3,9 +3,18 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getAdminDb } from '../lib/firebase-admin';
-import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill, RiRocketFill } from 'react-icons/ri';
+import { 
+  RiShieldCheckFill, 
+  RiHeartPulseFill, 
+  RiChatHeartFill, 
+  RiRocketFill,
+  RiShoppingCartLine,
+  RiHandHeartLine,
+  RiBriefcase4Line,
+  RiCoupon3Line 
+} from 'react-icons/ri';
 
-// --- 型定義 ---
+// --- 型定義（変更なし） ---
 interface LandingData {
   mainTitle?: string;
   areaDescription?: string;
@@ -17,6 +26,14 @@ interface LandingData {
   solutionBenefit2_Desc?: string;
   solutionBenefit3_Title?: string;
   solutionBenefit3_Desc?: string;
+  solutionBenefit4_Title?: string;
+  solutionBenefit4_Desc?: string;
+  solutionBenefit5_Title?: string;
+  solutionBenefit5_Desc?: string;
+  solutionBenefit6_Title?: string;
+  solutionBenefit6_Desc?: string;
+  solutionBenefit7_Title?: string;
+  solutionBenefit7_Desc?: string;
   freeReasonTitle?: string;
   freeReasonDesc?: string;
   premiumTeaserTitle?: string;
@@ -55,7 +72,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               backgroundSize: '20px 20px',
             }}
           />
-          {/* ▼▼▼ 修正: layout, objectFit を削除し fill を使用 ▼▼▼ */}
           <Image 
             src="/images/hero-background.png"
             alt="背景画像"
@@ -79,7 +95,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               <p className="mt-6 text-lg md:text-xl text-blue-200 max-w-2xl mx-auto">
                 {data.heroSubheadline}
               </p>
-              {/* ▼▼▼ 修正: LINEボタンを無料登録ボタンに変更 ▼▼▼ */}
               <div className="mt-10">
                 <Link href="/signup" passHref legacyBehavior>
                   <a className="bg-lime-400 text-black font-bold py-4 px-8 rounded-md shadow-lg transition-all transform hover:scale-105 inline-block max-w-xs w-full">
@@ -113,7 +128,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
             <div className="container mx-auto px-6 text-center">
               <h3 className="text-sm tracking-widest text-gray-500 mb-8 font-semibold uppercase">那須地域のパートナー企業・団体様</h3>
               <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-16 gap-y-6">
-                  {/* ▼▼▼ 修正: style objectFit を className object-contain に変更 ▼▼▼ */}
                   <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={160} height={55} className="object-contain" />
                   <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={160} height={55} className="object-contain" />
                   <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={160} height={55} className="object-contain" />
@@ -129,22 +143,58 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               <div className="max-w-3xl mx-auto mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800">アプリの主な機能</h2>
               </div>
-              <div className="grid md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* 既存の機能 1 */}
                 <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
                   <div className="p-4 bg-red-100 inline-block rounded-full mb-4"><RiHeartPulseFill className="text-3xl text-red-600" /></div>
                   <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit1_Title}</h3>
                   <p className="text-gray-600">{data.solutionBenefit1_Desc}</p>
                 </div>
+                {/* 既存の機能 2 */}
                 <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
                   <div className="p-4 bg-blue-100 inline-block rounded-full mb-4"><RiShieldCheckFill className="text-3xl text-blue-600" /></div>
                   <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit2_Title}</h3>
                   <p className="text-gray-600">{data.solutionBenefit2_Desc}</p>
                 </div>
+                {/* 既存の機能 3 */}
                 <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
                   <div className="p-4 bg-green-100 inline-block rounded-full mb-4"><RiChatHeartFill className="text-3xl text-green-600" /></div>
                   <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit3_Title}</h3>
                   <p className="text-gray-600">{data.solutionBenefit3_Desc}</p>
                 </div>
+
+                {/* --- 修正・追加した機能 --- */}
+                
+                {/* フリマ機能 */}
+                <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+                  <div className="p-4 bg-orange-100 inline-block rounded-full mb-4"><RiShoppingCartLine className="text-3xl text-orange-600" /></div>
+                  <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit4_Title}</h3>
+                  {/* ▼▼▼ 変更: 説明文を dangerouslySetInnerHTML で表示 ▼▼▼ */}
+                  <p className="text-gray-600" dangerouslySetInnerHTML={{ __html: data.solutionBenefit4_Desc || '' }}></p>
+                </div>
+
+                {/* お手伝い機能 */}
+                <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+                  <div className="p-4 bg-pink-100 inline-block rounded-full mb-4"><RiHandHeartLine className="text-3xl text-pink-600" /></div>
+                  <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit5_Title}</h3>
+                  <p className="text-gray-600">{data.solutionBenefit5_Desc}</p>
+                </div>
+                
+                {/* AI求人機能 */}
+                <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+                  <div className="p-4 bg-purple-100 inline-block rounded-full mb-4"><RiBriefcase4Line className="text-3xl text-purple-600" /></div>
+                  <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit6_Title}</h3>
+                  <p className="text-gray-600">{data.solutionBenefit6_Desc}</p>
+                </div>
+
+                {/* クーポン機能 */}
+                <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
+                  <div className="p-4 bg-yellow-100 inline-block rounded-full mb-4"><RiCoupon3Line className="text-3xl text-yellow-600" /></div>
+                  <h3 className="font-bold text-xl mb-2 text-gray-900">{data.solutionBenefit7_Title}</h3>
+                   {/* ▼▼▼ 変更: 説明文を dangerouslySetInnerHTML で表示 ▼▼▼ */}
+                  <p className="text-gray-600" dangerouslySetInnerHTML={{ __html: data.solutionBenefit7_Desc || '' }}></p>
+                </div>
+
               </div>
             </div>
           </section>
@@ -174,7 +224,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               <div className="max-w-2xl mx-auto">
                 <h2 className="text-3xl md:text-4xl font-bold">{data.finalCtaTitle}</h2>
                 <p className="mt-4 text-gray-300">{data.finalCtaSubtext}</p>
-                {/* ▼▼▼ 修正: LINEボタンを無料登録ボタンに変更 ▼▼▼ */}
                 <div className="mt-8">
                   <Link href="/signup" passHref legacyBehavior>
                     <a className="bg-lime-400 text-black font-bold text-lg py-4 px-10 rounded-md shadow-lg transition-transform transform hover:scale-105 inline-block">
@@ -189,7 +238,6 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
 
         <footer className="bg-gray-900 text-gray-400 text-sm">
           <div className="container mx-auto py-10 px-6 text-center space-y-3">
-            {/* ▼▼▼ 修正: legacyBehaviorを追加してエラーを解消 ▼▼▼ */}
             <Link href="/legal" legacyBehavior>
                 <a className="hover:text-white">特定商取引法に基づく表記</a>
             </Link>
@@ -209,6 +257,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
     
+    // --- ▼▼▼ 変更: fallbackDataのテキストを修正 ▼▼▼ ---
     const fallbackData: LandingData = {
       mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
@@ -220,6 +269,20 @@ export const getServerSideProps: GetServerSideProps = async () => {
       solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
       solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
       solutionBenefit3_Desc: "愚痴聞き地蔵AIや共感チャットAIが、24時間あなたの心に寄り添います。毎朝届く「褒め言葉シャワー」で一日を元気に。",
+      
+      // -- 修正箇所 --
+      solutionBenefit4_Title: "地域のフリマでお得に売買",
+      solutionBenefit4_Desc: "不要になったものを地域の人に譲ったり、掘り出し物を見つけたり。安心・安全な地域内取引をサポートします。<br><span class='text-sm text-gray-500'>※無料プランは購入のみ。出品はプレミアムプランで可能になります。</span>",
+      
+      solutionBenefit5_Title: "ご近所助け合い（お手伝い）",
+      solutionBenefit5_Desc: "電球の交換や買い物代行など、ちょっとした困りごとを気軽に相談・解決。地域のつながりを深めます。",
+      solutionBenefit6_Title: "AIが探す、あなたに合う仕事",
+      solutionBenefit6_Desc: "履歴書不要。簡単な質問に答えるだけで、AIが那須地域の最適な求人をマッチング。新しいキャリアを応援します。",
+
+      // -- 修正箇所 --
+      solutionBenefit7_Title: "地域のお店の割引クーポン",
+      solutionBenefit7_Desc: "地元の飲食店やお店で使えるお得なクーポンが満載。地域経済を応援しながら、賢くお買い物を楽しめます。<br><span class='text-sm text-gray-500'>※無料プランは情報閲覧のみ。アプリ限定クーポンはプレミアムプランでご利用いただけます。</span>",
+      
       freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
       freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
       premiumTeaserTitle: "さらに、もっとお得に。",
@@ -228,6 +291,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
       finalCtaTitle: "さあ、那須の暮らしをアップデートしよう。",
       finalCtaSubtext: "今すぐ無料登録して、那須での毎日をもっと豊かに。登録はメールアドレスだけで簡単1分！",
     };
+    // --- ▲▲▲ 変更 ▲▲▲ ---
     
     const dbData = docSnap.exists ? docSnap.data() as LandingData : {};
     const finalData = { ...fallbackData, ...dbData };
@@ -239,7 +303,8 @@ export const getServerSideProps: GetServerSideProps = async () => {
     };
   } catch (error) {
     console.error("Landing page data fetch error:", error);
-    return { props: { data: {} as LandingData } };
+    const fallbackData = { /* ここにもフォールバックデータを定義するか、空にする */ };
+    return { props: { data: fallbackData as LandingData } };
   }
 };
 
