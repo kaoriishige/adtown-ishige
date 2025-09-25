@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { NextPage } from 'next';
 
 const PartnerTermsPage: NextPage = () => {
@@ -7,11 +8,11 @@ const PartnerTermsPage: NextPage = () => {
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">
-            <a href="/" className="hover:text-orange-500">みんなの那須アプリ</a>
+            <Link href="/" className="hover:text-orange-500">みんなの那須アプリ</Link>
           </h1>
-          <a href="/partner/signup" className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg">
+          <Link href="/partner/signup/" className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg">
             パートナー登録に戻る
-          </a>
+          </Link>
         </div>
       </header>
 
