@@ -1,6 +1,53 @@
 import { NextPage } from 'next';
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useRef } from 'react';
+
+// 実行環境によって注入されるグローバル変数をTypeScriptに認識させます
+declare const __NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY__: string | undefined;
+
+// --- インラインSVGアイコンコンポーネンﾄ ---
+const ZapIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+);
+const UsersIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+);
+const BarChartIcon = (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+);
+const XCircleIcon = (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+);
+const PhoneIcon = (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+);
+const MessageCircleIcon = (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+);
+const UserCheckIcon = (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+);
+const ChevronDownIcon = (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="6 9 12 15 18 9"></polyline></svg>
+);
+
+// --- FAQ Item Component ---
+const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="border-b">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full text-left py-5 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                <span className="text-lg font-medium text-gray-800 pr-2">{question}</span>
+                <ChevronDownIcon className={`w-6 h-6 text-orange-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isOpen && (
+                <div className="pb-5 pt-2 px-2 text-gray-600 bg-gray-50">
+                    {children}
+                </div>
+            )}
+        </div>
+    )
+};
+
 
 // --- カテゴリデータ ---
 const categoryData = {
@@ -12,210 +59,380 @@ const categoryData = {
   "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
   "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
   "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
-  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "クリーニング（衣類・布団など）", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
+  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
 };
 const mainCategories = Object.keys(categoryData);
 
 const PartnerSignupPage: NextPage = () => {
-  // --- State定義 ---
-  const [storeName, setStoreName] = useState('');
-  const [address, setAddress] = useState('');
-  const [area, setArea] = useState('');
-  const [contactPerson, setContactPerson] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [qrStandCount, setQrStandCount] = useState(0);
-  const [email, setEmail] = useState('');
-  const [confirmEmail, setConfirmEmail] = useState('');
-  const [password, setPassword] = useState('');
-  
-  // ▼▼▼ カテゴリ関連のStateを単一選択用に修正 ▼▼▼
-  const [mainCategory, setMainCategory] = useState('');
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string>(''); // 配列から文字列へ
-  const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
+    // --- State定義 ---
+    const [storeName, setStoreName] = useState('');
+    const [address, setAddress] = useState('');
+    const [area, setArea] = useState('');
+    const [contactPerson, setContactPerson] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [qrStandCount, setQrStandCount] = useState(1);
+    const [email, setEmail] = useState('');
+    const [confirmEmail, setConfirmEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [mainCategory, setMainCategory] = useState('');
+    const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+    const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
+    const [agreed, setAgreed] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [stripe, setStripe] = useState<any>(null);
 
-  const [agreed, setAgreed] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
+    const [registeredCount] = useState(32);
+    const totalSlots = 100;
+    const remainingSlots = totalSlots - registeredCount;
 
-  // --- 住所からエリアを抽出するロジック ---
-  useEffect(() => {
-    const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
-    if (match) { setArea(match[0]); } else { setArea(''); }
-  }, [address]);
-  
-  // --- 大分類が変更されたら小分類の選択肢を更新 ---
-  useEffect(() => {
-    if (mainCategory) {
-      // @ts-ignore
-      setSubCategoryOptions(categoryData[mainCategory] || []);
-      setSelectedSubCategory(''); // 単一選択用にリセット
-    } else {
-      setSubCategoryOptions([]);
-    }
-  }, [mainCategory]);
+    const registrationFormRef = useRef<HTMLDivElement>(null);
 
-  // --- 送信処理 ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    // --- Stripe.jsの読み込み ---
+    useEffect(() => {
+        const stripeKey = typeof __NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY__ !== 'undefined'
+            ? __NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY__
+            : null;
 
-    // --- バリデーションチェック ---
-    if (email !== confirmEmail) { setError('メールアドレスが一致しません。'); setIsLoading(false); return; }
-    if (!agreed) { setError('利用規約への同意が必要です。'); setIsLoading(false); return; }
-    if (!area) { setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。'); setIsLoading(false); return; }
-    if (!selectedSubCategory) { setError('カテゴリ（小分類）を選択してください。'); setIsLoading(false); return; }
+        if (stripeKey) {
+            const stripeJs = document.createElement('script');
+            stripeJs.src = 'https://js.stripe.com/v3/';
+            stripeJs.async = true;
+            stripeJs.onload = () => {
+                // @ts-ignore
+                if (window.Stripe) { setStripe(window.Stripe(stripeKey)); }
+            };
+            document.head.appendChild(stripeJs);
+        } else {
+            // 決済キーが設定されていない場合、エラーメッセージは表示せず、コンソールにログを残します。
+            // これにより、決済ボタンは非活性になりますが、ページにエラーは表示されません。
+            console.error("Stripe public key is not defined. Payment form will be disabled.");
+        }
+    }, []);
+
+    // --- 住所からエリアを抽出 ---
+    useEffect(() => {
+        const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
+        if (match) { setArea(match[0]); } else { setArea(''); }
+    }, [address]);
+
+    // --- カテゴリ選択ロジック ---
+    useEffect(() => {
+        if (mainCategory) {
+            // @ts-ignore
+            setSubCategoryOptions(categoryData[mainCategory] || []);
+            setSelectedSubCategory('');
+        } else {
+            setSubCategoryOptions([]);
+        }
+    }, [mainCategory]);
     
-    try {
-      // ▼▼▼ APIのURLを正しい宛先に戻しました ▼▼▼
-      const response = await fetch('/api/partner/create-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          storeName, 
-          address,
-          area,
-          contactPerson, 
-          phoneNumber, 
-          qrStandCount,
-          email, 
-          password, 
-          category: {
-            main: mainCategory,
-            sub: selectedSubCategory // 単一の文字列を送信
-          },
-        }),
-      });
+    // --- 登録フォームへのスクロール ---
+    const scrollToForm = () => {
+        registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
-      const data = await response.json();
-      if (!response.ok) {
-        // バックエンドのエラーメッセージキー 'error' に合わせます
-        throw new Error(data.error || '登録に失敗しました。');
-      }
-      setIsSuccess(true);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // --- 送信処理 ---
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
 
-  return (
-    <div className="min-h-screen bg-gray-100 py-10 flex flex-col justify-center items-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
-        {isSuccess ? (
-          <div className="text-center">
-            <svg className="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h1 className="text-3xl font-bold text-gray-800 mt-4">ご登録ありがとうございます</h1>
-            <p className="text-gray-600 mt-4 text-lg">パートナー登録の申請を受け付けました。</p>
-            <div className="mt-8 bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-md text-left">
-              <h2 className="font-bold">今後の流れについて</h2>
-              <p className="mt-2">運営者による承認後、本登録完了となります。QRコードスタンドは、後日担当者よりご連絡の上、お届けに伺います。</p>
-            </div>
-            <div className="mt-8">
-              <Link href="/partner/login" className="inline-block bg-blue-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-blue-700 transition">
-                ログインページへ進む
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <>
-            <h1 className="text-2xl font-bold text-center mb-6">パートナー無料登録</h1>
-            <div className="text-center mb-8">
-              <a href="https://disguised-cat-noakl5d.gamma.site/" target="_blank" rel="noopener noreferrer" className="inline-block bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
-                とってもお得なご案内はこちら
-              </a>
-            </div>
+        if (!stripe) { setError('決済システムの準備ができていません。'); return; }
+        if (email !== confirmEmail) { setError('メールアドレスが一致しません。'); return; }
+        if (!agreed) { setError('利用規約への同意が必要です。'); return; }
+        if (!area) { setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。'); return; }
+        if (!selectedSubCategory) { setError('カテゴリ（小分類）を選択してください。'); return; }
+        if (password.length < 6) { setError('パスワードは6文字以上で入力してください。'); return; }
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">店舗名・企業名</label>
-                <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">住所</label>
-                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg"/>
-              </div>
+        setIsLoading(true);
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">カテゴリ（大分類）</label>
-                <select value={mainCategory} onChange={(e) => setMainCategory(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white">
-                  <option value="">選択してください</option>
-                  {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
+        try {
+            const response = await fetch('/api/partner/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    storeName, address, area, contactPerson, phoneNumber, qrStandCount, email, password,
+                    category: { main: mainCategory, sub: selectedSubCategory },
+                }),
+            });
+            const { sessionId, error: apiError } = await response.json();
+            if (apiError) throw new Error(apiError);
+            if (sessionId) {
+                await stripe.redirectToCheckout({ sessionId });
+            } else {
+                throw new Error('決済セッションの作成に失敗しました。');
+            }
+        } catch (err: any) {
+            setError(err.message || '不明なエラーが発生しました。');
+            setIsLoading(false);
+        }
+    };
 
-              {/* ▼▼▼ 小分類のUIをラジオボタンに変更 ▼▼▼ */}
-              {mainCategory && (
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">カテゴリ（小分類）</label>
-                  <div className="mt-2 p-4 border rounded-lg grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                    {subCategoryOptions.map(subCat => (
-                      <label key={subCat} className="flex items-center space-x-3 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="subCategory"
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                          checked={selectedSubCategory === subCat}
-                          onChange={() => setSelectedSubCategory(subCat)}
-                        />
-                        <span className="text-gray-700">{subCat}</span>
-                      </label>
-                    ))}
-                  </div>
+    return (
+        <div className="bg-gray-50 text-gray-800 font-sans">
+            <header className="bg-white shadow-md sticky top-0 z-50">
+                <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                    <h1 className="text-2xl font-bold text-gray-800">みんなの那須アプリ</h1>
+                    <button onClick={scrollToForm} className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg animate-pulse">
+                        初期費用0円で申し込む
+                    </button>
                 </div>
-              )}
-              {/* ▲▲▲ ここまで ▲▲▲ */}
+            </header>
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">ご担当者名</label>
-                <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">電話番号</label>
-                <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg"/>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数</label>
-                <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="0" className="w-full px-4 py-2 border rounded-lg"/>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">メールアドレス</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）</label>
-                <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg"/>
-              </div>
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上)</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg"/>
-              </div>
-              <div className="pt-4">
-                <label className="flex items-start">
-                  <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-4 w-4"/>
-                  <span className="ml-3 text-sm text-gray-600">
-                    登録することで、みんなの那須アプリの紹介料プログラム（QRコードスタンド初期制作料5,000円、追加スタンド作成無料）および、アプリ広告（広告制作料10,000円、広告費無料）の１年契約（１年更新15,000円）に参加を同意したものとみなされます。
-                  </span>
-                </label>
-              </div>
+            <main className="container mx-auto px-6">
+                <section className="text-center py-16 md:py-24">
+                    <p className="text-orange-500 font-semibold">人手不足・物価高の時代に、売上を伸ばしたいオーナー様へ</p>
+                    <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
+                        広告費を「コスト」から「利益」に変える。<br />
+                        那須地域だけの新しい集客・収益化ツールです。
+                    </h2>
+                    <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
+                        『みんなの那須アプリ』は、ただの広告ではありません。人手不足や物価高騰で広告費をかけても売上が伸び悩む…。そんな悩みを解決するために生まれました。
+                    </p>
+                    <div className="mt-8">
+                        <button onClick={scrollToForm} className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+                            今すぐ初期費用無料で申し込む
+                        </button>
+                        <p className="mt-2 text-sm text-gray-500">登録はたった3分で完了！</p>
+                    </div>
+                </section>
 
-              {error && <p className="text-red-500 text-sm text-center pt-2">{error}</p>}
-              <button type="submit" disabled={isLoading} className="w-full py-3 mt-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-400">
-                {isLoading ? '登録処理中...' : '登録する'}
-              </button>
-            </form>
-            <p className="text-sm text-center mt-6">
-              すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-blue-600 hover:underline">ログイン</Link>
-            </p>
-          </>
-        )}
-      </div>
-    </div>
-  );
+                <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
+                    <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
+                    <p className="mt-2 text-lg">今なら通常発生する初期費用が<span className="font-bold text-red-600">完全無料</span>。リスクなく始められる絶好の機会です。</p>
+                    <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
+                        <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
+                        <div className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wider bg-gray-100 px-3 py-1 rounded">{registeredCount}店舗</div>
+                        <p className="text-md md:text-lg font-semibold text-red-600">残り {remainingSlots} 枠！</p>
+                    </div>
+                </section>
+                
+                <section className="mt-20 text-center">
+                    <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様が参加を決めています</h3>
+                    {/* ▼▼▼ パートナーロゴ表示エリア ▼▼▼ */}
+                    <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
+                        {[
+                            { name: 'パートナー 1', logo: '/logos/cafe-a-logo.png' },
+                            { name: 'パートナー 2', logo: '/logos/restaurant-b-logo.png' },
+                            { name: 'パートナー 3', logo: '/logos/shop-c-logo.svg' },
+                            { name: 'パートナー 4', logo: '/logos/hotel-d-logo.png' },
+                            { name: 'パートナー 5', logo: '/logos/salon-e-logo.png' },
+                            { name: 'パートナー 6', logo: '/logos/partner-6.png' },
+                            { name: 'パートナー 7', logo: '/logos/partner-7.svg' },
+                            { name: 'パートナー 8', logo: '/logos/partner-8.png' },
+                            { name: 'パートナー 9', logo: '/logos/partner-9.png' },
+                            { name: 'パートナー 10', logo: '/logos/partner-10.png' },
+                            { name: 'パートナー 11', logo: '/logos/partner-11.svg' },
+                            { name: 'パートナー 12', logo: '/logos/partner-12.png' },
+                            { name: 'パートナー 13', logo: '/logos/partner-13.png' },
+                            { name: 'パートナー 14', logo: '/logos/partner-14.png' },
+                            { name: 'パートナー 15', logo: '/logos/partner-15.svg' },
+                            { name: 'パートナー 16', logo: '/logos/partner-16.png' },
+                            { name: 'パートナー 17', logo: '/logos/partner-17.png' },
+                            { name: 'パートナー 18', logo: '/logos/partner-18.png' },
+                            { name: 'パートナー 19', logo: '/logos/partner-19.svg' },
+                            { name: 'パートナー 20', logo: '/logos/partner-20.png' }
+                        ].map((partner) => (
+                            <img 
+                                key={partner.name}
+                                src={partner.logo} 
+                                alt={partner.name}
+                                className="h-12 w-auto object-contain" 
+                                // 画像が読み込めなかった場合のフォールバック
+                                onError={(e) => { e.currentTarget.src = 'https://placehold.co/120x48/f0f0f0/cccccc?text=Logo'; e.currentTarget.alt = 'ロゴの読み込みに失敗しました'; }}
+                            />
+                        ))}
+                    </div>
+                    {/* ▲▲▲ ここまで ▲▲▲ */}
+                </section>
+
+                <section className="mt-20">
+                    <h3 className="text-3xl font-extrabold text-center">広告費が利益になる仕組み</h3>
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                        <div className="border-4 border-red-300 rounded-xl p-6 bg-red-50 relative">
+                            <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-1 rounded-full font-bold">従来の広告</div>
+                            <h4 className="text-2xl font-bold text-center mt-4">従来の広告</h4>
+                            <p className="text-center text-5xl font-extrabold text-red-500 mt-4">コスト</p>
+                            <ul className="mt-6 space-y-2 text-gray-600 list-disc list-inside">
+                                <li>効果が見えにくい</li>
+                                <li>掲載して終わり</li>
+                                <li>費用は常にマイナス</li>
+                            </ul>
+                        </div>
+                        <div className="border-4 border-green-400 rounded-xl p-6 bg-green-50 relative">
+                            <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-1 rounded-full font-bold">みんなの那須アプリ</div>
+                            <h4 className="text-2xl font-bold text-center mt-4">このアプリ</h4>
+                            <p className="text-center text-5xl font-extrabold text-green-600 mt-4">収益</p>
+                            <ul className="mt-6 space-y-2 text-gray-700 list-disc list-inside">
+                                <li>紹介料で利益が生まれる</li>
+                                <li>継続的な収入源になる</li>
+                                <li>広告費がプラスに変わる</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
+                    <h3 className="text-3xl font-extrabold text-center">店舗タイプ別 収益シミュレーション</h3>
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="bg-orange-50 p-8 rounded-lg border-2 border-dashed border-orange-300">
+                            <h4 className="font-bold text-xl text-center">例：カフェの場合</h4>
+                            <p className="text-center text-sm text-gray-600">1日に2人が登録した場合...</p>
+                             <p className="mt-4 text-center text-lg text-gray-700">2人/日 × 30日 = <span className="font-bold text-2xl text-orange-600">60人</span>/月</p>
+                             <p className="mt-2 text-center text-xl font-bold text-gray-800">月間収益: <span className="text-red-600">8,640円</span></p>
+                             <p className="mt-4 text-center text-xl font-bold text-gray-800">年間収益: <span className="text-4xl font-extrabold text-red-600">103,680円</span></p>
+                        </div>
+                         <div className="bg-blue-50 p-8 rounded-lg border-2 border-dashed border-blue-300">
+                            <h4 className="font-bold text-xl text-center">例：レストラン・居酒屋の場合</h4>
+                             <p className="text-center text-sm text-gray-600">1日に5人が登録した場合...</p>
+                             <p className="mt-4 text-center text-lg text-gray-700">5人/日 × 30日 = <span className="font-bold text-2xl text-blue-600">150人</span>/月</p>
+                             <p className="mt-2 text-center text-xl font-bold text-gray-800">月間収益: <span className="text-red-600">21,600円</span></p>
+                             <p className="mt-4 text-center text-xl font-bold text-gray-800">年間収益: <span className="text-4xl font-extrabold text-red-600">259,200円</span></p>
+                        </div>
+                    </div>
+                    <p className="mt-4 text-sm text-gray-500 text-center">※紹介料は1人あたり144円 (月額480円×30%) で計算。これは広告掲載による集客効果とは別の収益です。</p>
+                </section>
+
+                <section className="mt-20 text-center">
+                    <h3 className="text-3xl font-extrabold">安心のトリプルサポート体制</h3>
+                    <p className="mt-4 text-gray-600 max-w-2xl mx-auto">導入後も、専任の担当者が貴店を徹底的にサポートします。ITが苦手な方でも安心してご利用いただけます。</p>
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><PhoneIcon className="w-10 h-10 mx-auto text-blue-500"/><p className="mt-4 font-bold text-lg">お電話サポート</p></div>
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><MessageCircleIcon className="w-10 h-10 mx-auto text-green-500"/><p className="mt-4 font-bold text-lg">LINEチャットサポート</p></div>
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><UserCheckIcon className="w-10 h-10 mx-auto text-orange-500"/><p className="mt-4 font-bold text-lg">専任担当者</p></div>
+                    </div>
+                </section>
+
+                <section className="mt-20 max-w-4xl mx-auto">
+                    <h3 className="text-3xl font-extrabold text-center">よくあるご質問</h3>
+                    <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
+                        <FAQItem question="本当にお金（紹介料）は振り込まれるのですか？">
+                            <p className="leading-relaxed">はい、もちろんです。紹介料は月末締めで計算し、翌月15日にご登録いただいた銀行口座へ自動でお振込みいたします。振込額が3,000円に満たない場合は翌月に繰り越されますが、報酬が消えることはございませんのでご安心ください。</p>
+                        </FAQItem>
+                        <FAQItem question="支払いプランについて教えてください。">
+                            <p className="leading-relaxed font-semibold text-gray-700">お支払い方法は、下記のプランからお選びいただけます。</p>
+                             <ul className="list-disc list-inside mt-4 space-y-3">
+                                <li><strong className="font-bold text-gray-800">月額プラン：</strong>月額3,300円（税込）。当社指定の決済代行サービス（Stripe）を通じたクレジットカードでの自動支払いとなります。</li>
+                                <li><strong className="font-bold text-gray-800">年額プラン：</strong>年額39,600円（税込）。当社発行の請求書に基づく銀行振り込みによる一括前払いとなります。ご希望の場合は、登録フォーム入力後、別途お問い合わせください。</li>
+                             </ul>
+                        </FAQItem>
+                        <FAQItem question="契約の途中で解約はできますか？">
+                            <p className="leading-relaxed">はい、いつでも解約手続きが可能です。ただし、本契約は1年単位での自動更新となっており、契約期間中のご返金は致しかねますのでご了承ください。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
+                        </FAQItem>
+                        <FAQItem question="導入後のサポート体制はどうなっていますか？">
+                             <p className="leading-relaxed">ご安心ください。各店舗様に専任の担当者がつき、導入から運用までしっかりサポートいたします。操作方法がわからない、もっと集客効果を上げたいなど、どんなことでもお気軽にご相談いただけます。LINE、お電話、メールでのサポートに対応しております。</p>
+                        </FAQItem>
+                    </div>
+                </section>
+
+
+                <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10">
+                    <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
+                        <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
+                        <p className="text-center text-gray-600 mb-8">全てのメリットを手に入れるために、以下のフォームをご入力ください。</p>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">店舗名・企業名 *</label>
+                                    <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label>
+                                    <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-2">住所 *</label>
+                                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須町、大田原市のいずれかを入力してください。</p>}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">カテゴリ（大分類）*</label>
+                                    <select value={mainCategory} onChange={(e) => setMainCategory(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-orange-500 focus:border-orange-500">
+                                        <option value="">選択してください</option>
+                                        {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                    </select>
+                                </div>
+                                 <div>
+                                    <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数 *</label>
+                                    <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="1" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                            </div>
+                            {mainCategory && (
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">カテゴリ（小分類）*</label>
+                                    <div className="mt-2 p-4 border rounded-lg grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 bg-gray-50">
+                                        {subCategoryOptions.map(subCat => (
+                                            <label key={subCat} className="flex items-center space-x-3 cursor-pointer">
+                                                <input type="radio" name="subCategory" className="h-4 w-4 text-orange-600 focus:ring-orange-500" checked={selectedSubCategory === subCat} onChange={() => setSelectedSubCategory(subCat)} />
+                                                <span className="text-gray-700">{subCat}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">電話番号 *</label>
+                                    <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上) *</label>
+                                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">メールアドレス *</label>
+                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）*</label>
+                                    <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                </div>
+                            </div>
+
+                            <div className="pt-4">
+                                <label className="flex items-start">
+                                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-5 w-5 text-orange-600 focus:ring-orange-500 rounded"/>
+                                    <span className="ml-3 text-sm text-gray-600">
+                                        「<a href="/partner/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">パートナー利用規約</a>」に同意し、広告掲載および紹介料プログラム（月額3,300円/税込）へ申し込みます。本契約は1年単位での自動更新となります。
+                                    </span>
+                                </label>
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
+                                    <XCircleIcon className="h-5 w-5 mr-3"/>
+                                    <p className="text-sm">{error}</p>
+                                </div>
+                            )}
+                            
+                            <button type="submit" disabled={isLoading || !agreed || !stripe} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
+                                {isLoading ? '処理中...' : '初期費用0円で決済に進む (月額3,300円)'}
+                            </button>
+                             <p className="text-sm text-center -mt-2 text-gray-500">登録は3分で完了します</p>
+                        </form>
+                        <p className="text-sm text-center mt-6">
+                            すでにアカウントをお持ちですか？ <a href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</a>
+                        </p>
+                    </div>
+                </section>
+            </main>
+
+            <footer className="bg-white mt-20 border-t">
+                <div className="container mx-auto px-6 py-8 text-center text-gray-600">
+                    <p>&copy; {new Date().getFullYear()} 株式会社adtown. All Rights Reserved.</p>
+                    <div className="mt-4">
+                        <a href="/legal" className="text-sm text-gray-500 hover:underline mx-2">利用規約</a>
+                        <a href="/privacy" className="text-sm text-gray-500 hover:underline mx-2">プライバシーポリシー</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    );
 };
 
 export default PartnerSignupPage;
