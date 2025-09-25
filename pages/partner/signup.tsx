@@ -1,8 +1,6 @@
 import { NextPage } from 'next';
 import { useState, useEffect, useRef } from 'react';
-
-// 実行環境によって注入されるグローバル変数をTypeScriptに認識させます
-declare const __NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY__: string | undefined;
+import { loadStripe } from '@stripe/stripe-js';
 
 // --- インラインSVGアイコンコンポーネンﾄ ---
 const ZapIcon = (props: any) => (
@@ -48,7 +46,6 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
     )
 };
 
-
 // --- カテゴリデータ ---
 const categoryData = {
   "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
@@ -63,65 +60,89 @@ const categoryData = {
 };
 const mainCategories = Object.keys(categoryData);
 
+// --- フォームの入力内容をブラウザのタブを閉じるまで保持するカスタムフック ---
+const usePersistentState = (key: string, defaultValue: any) => {
+    const [state, setState] = useState(() => {
+        if (typeof window === 'undefined') {
+            return defaultValue;
+        }
+        try {
+            const storedValue = window.sessionStorage.getItem(key);
+            return storedValue ? JSON.parse(storedValue) : defaultValue;
+        } catch (error) {
+            console.error(`Error reading sessionStorage key “${key}”:`, error);
+            return defaultValue;
+        }
+    });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                window.sessionStorage.setItem(key, JSON.stringify(state));
+            } catch (error) {
+                console.error(`Error writing sessionStorage key “${key}”:`, error);
+            }
+        }
+    }, [key, state]);
+
+    return [state, setState];
+};
+
+// StripeのPromiseを一度だけ生成
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+    : null;
+
+
 const PartnerSignupPage: NextPage = () => {
     // --- State定義 ---
-    const [storeName, setStoreName] = useState('');
-    const [address, setAddress] = useState('');
-    const [area, setArea] = useState('');
-    const [contactPerson, setContactPerson] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [qrStandCount, setQrStandCount] = useState(1);
-    const [email, setEmail] = useState('');
-    const [confirmEmail, setConfirmEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [mainCategory, setMainCategory] = useState('');
-    const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+    const [storeName, setStoreName] = usePersistentState('partnerForm_storeName', '');
+    const [address, setAddress] = usePersistentState('partnerForm_address', '');
+    const [area, setArea] = usePersistentState('partnerForm_area', '');
+    const [contactPerson, setContactPerson] = usePersistentState('partnerForm_contactPerson', '');
+    const [phoneNumber, setPhoneNumber] = usePersistentState('partnerForm_phoneNumber', '');
+    const [qrStandCount, setQrStandCount] = usePersistentState('partnerForm_qrStandCount', 0);
+    const [email, setEmail] = usePersistentState('partnerForm_email', '');
+    const [confirmEmail, setConfirmEmail] = usePersistentState('partnerForm_confirmEmail', '');
+    const [password, setPassword] = usePersistentState('partnerForm_password', '');
+    const [mainCategory, setMainCategory] = usePersistentState('partnerForm_mainCategory', '');
+    const [selectedSubCategory, setSelectedSubCategory] = usePersistentState('partnerForm_selectedSubCategory', '');
+    const [agreed, setAgreed] = usePersistentState('partnerForm_agreed', false);
+    
     const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
-    const [agreed, setAgreed] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [stripe, setStripe] = useState<any>(null);
+    const [stripeError, setStripeError] = useState(false);
 
     const [registeredCount] = useState(32);
     const totalSlots = 100;
     const remainingSlots = totalSlots - registeredCount;
 
     const registrationFormRef = useRef<HTMLDivElement>(null);
-
-    // --- Stripe.jsの読み込み ---
+    
+    // Stripeキーの存在チェック
     useEffect(() => {
-        const stripeKey = typeof __NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY__ !== 'undefined'
-            ? __NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY__
-            : null;
-
-        if (stripeKey) {
-            const stripeJs = document.createElement('script');
-            stripeJs.src = 'https://js.stripe.com/v3/';
-            stripeJs.async = true;
-            stripeJs.onload = () => {
-                // @ts-ignore
-                if (window.Stripe) { setStripe(window.Stripe(stripeKey)); }
-            };
-            document.head.appendChild(stripeJs);
-        } else {
-            // 決済キーが設定されていない場合、エラーメッセージは表示せず、コンソールにログを残します。
-            // これにより、決済ボタンは非活性になりますが、ページにエラーは表示されません。
+        if (!stripePromise) {
             console.error("Stripe public key is not defined. Payment form will be disabled.");
+            setStripeError(true);
         }
     }, []);
 
     // --- 住所からエリアを抽出 ---
     useEffect(() => {
         const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
-        if (match) { setArea(match[0]); } else { setArea(''); }
-    }, [address]);
+        if (match) {
+            setArea(match[0]);
+        } else if (address) {
+            setArea('');
+        }
+    }, [address, setArea]);
 
     // --- カテゴリ選択ロジック ---
     useEffect(() => {
         if (mainCategory) {
             // @ts-ignore
             setSubCategoryOptions(categoryData[mainCategory] || []);
-            setSelectedSubCategory('');
         } else {
             setSubCategoryOptions([]);
         }
@@ -137,7 +158,10 @@ const PartnerSignupPage: NextPage = () => {
         e.preventDefault();
         setError(null);
 
-        if (!stripe) { setError('決済システムの準備ができていません。'); return; }
+        if (!stripePromise) { 
+            setStripeError(true);
+            return; 
+        }
         if (email !== confirmEmail) { setError('メールアドレスが一致しません。'); return; }
         if (!agreed) { setError('利用規約への同意が必要です。'); return; }
         if (!area) { setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。'); return; }
@@ -158,7 +182,20 @@ const PartnerSignupPage: NextPage = () => {
             const { sessionId, error: apiError } = await response.json();
             if (apiError) throw new Error(apiError);
             if (sessionId) {
-                await stripe.redirectToCheckout({ sessionId });
+                Object.keys(window.sessionStorage).forEach(key => {
+                    if (key.startsWith('partnerForm_')) {
+                        window.sessionStorage.removeItem(key);
+                    }
+                });
+                const stripe = await stripePromise;
+                if(stripe) {
+                    const { error } = await stripe.redirectToCheckout({ sessionId });
+                    if(error){
+                         throw new Error(error.message);
+                    }
+                } else {
+                    throw new Error('Stripeの初期化に失敗しました。');
+                }
             } else {
                 throw new Error('決済セッションの作成に失敗しました。');
             }
@@ -166,6 +203,12 @@ const PartnerSignupPage: NextPage = () => {
             setError(err.message || '不明なエラーが発生しました。');
             setIsLoading(false);
         }
+    };
+    
+    const getButtonText = () => {
+        if (isLoading) return '処理中...';
+        if (stripeError) return '決済設定エラー';
+        return '初期費用0円で決済に進む (月額3,300円)';
     };
 
     return (
@@ -209,7 +252,6 @@ const PartnerSignupPage: NextPage = () => {
                 
                 <section className="mt-20 text-center">
                     <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様が参加を決めています</h3>
-                    {/* ▼▼▼ パートナーロゴ表示エリア ▼▼▼ */}
                     <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
                         {[
                             { name: 'パートナー 1', logo: '/logos/cafe-a-logo.png' },
@@ -238,12 +280,10 @@ const PartnerSignupPage: NextPage = () => {
                                 src={partner.logo} 
                                 alt={partner.name}
                                 className="h-12 w-auto object-contain" 
-                                // 画像が読み込めなかった場合のフォールバック
                                 onError={(e) => { e.currentTarget.src = 'https://placehold.co/120x48/f0f0f0/cccccc?text=Logo'; e.currentTarget.alt = 'ロゴの読み込みに失敗しました'; }}
                             />
                         ))}
                     </div>
-                    {/* ▲▲▲ ここまで ▲▲▲ */}
                 </section>
 
                 <section className="mt-20">
@@ -358,7 +398,7 @@ const PartnerSignupPage: NextPage = () => {
                                 </div>
                                  <div>
                                     <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数 *</label>
-                                    <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="1" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                    <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="0" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
                                 </div>
                             </div>
                             {mainCategory && (
@@ -403,15 +443,21 @@ const PartnerSignupPage: NextPage = () => {
                                 </label>
                             </div>
 
-                            {error && (
+                            {stripeError && (
+                                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
+                                    <XCircleIcon className="h-5 w-5 mr-3"/>
+                                    <p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p>
+                                </div>
+                            )}
+                             {error && !stripeError && (
                                 <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
                                     <XCircleIcon className="h-5 w-5 mr-3"/>
                                     <p className="text-sm">{error}</p>
                                 </div>
                             )}
                             
-                            <button type="submit" disabled={isLoading || !agreed || !stripe} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
-                                {isLoading ? '処理中...' : '初期費用0円で決済に進む (月額3,300円)'}
+                            <button type="submit" disabled={isLoading || !agreed || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
+                                {getButtonText()}
                             </button>
                              <p className="text-sm text-center -mt-2 text-gray-500">登録は3分で完了します</p>
                         </form>
