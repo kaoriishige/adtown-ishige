@@ -1,30 +1,33 @@
+import Link from 'next/link';
+import Image from 'next/image'; // エラー回避とパフォーマンス向上のため、Imageコンポーネントを使用
 import { NextPage } from 'next';
 import { useState, useEffect, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
+import React from 'react'; // FAQItemコンポーネントでReact.ReactNodeを使用するためインポート
 
 // --- インラインSVGアイコンコンポーネンﾄ ---
-const ZapIcon = (props: any) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+const ZapIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
 );
-const UsersIcon = (props: any) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
 );
-const BarChartIcon = (props: any) => (
+const BarChartIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
 );
-const XCircleIcon = (props: any) => (
+const XCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
 );
-const PhoneIcon = (props: any) => (
+const PhoneIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
 );
-const MessageCircleIcon = (props: any) => (
+const MessageCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
 );
-const UserCheckIcon = (props: any) => (
+const UserCheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
 );
-const ChevronDownIcon = (props: any) => (
+const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="6 9 12 15 18 9"></polyline></svg>
 );
 
@@ -47,16 +50,17 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
 };
 
 // --- カテゴリデータ ---
-const categoryData = {
-  "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
-  "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
-  "美容・健康関連": ["美容室・理容室", "ネイルサロン", "エステサロン", "リラクゼーション・マッサージ", "整体・整骨院・鍼灸院", "個人経営の薬局", "クリニック・歯科医院"],
-  "住まい・暮らし関連": ["工務店・建築・リフォーム", "水道・電気工事", "不動産会社", "クリーニング店", "造園・植木屋", "便利屋"],
-  "教育・習い事関連": ["学習塾・家庭教師", "ピアノ・音楽教室", "英会話教室", "書道・そろばん教室", "スポーツクラブ・道場", "パソコン教室", "料理教室"],
-  "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
-  "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
-  "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
-  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
+// 型定義を追加して@ts-ignoreを削除
+const categoryData: { [key: string]: string[] } = {
+    "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
+    "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
+    "美容・健康関連": ["美容室・理容室", "ネイルサロン", "エステサロン", "リラクゼーション・マッサージ", "整体・整骨院・鍼灸院", "個人経営の薬局", "クリニック・歯科医院"],
+    "住まい・暮らし関連": ["工務店・建築・リフォーム", "水道・電気工事", "不動産会社", "クリーニング店", "造園・植木屋", "便利屋"],
+    "教育・習い事関連": ["学習塾・家庭教師", "ピアノ・音楽教室", "英会話教室", "書道・そろばん教室", "スポーツクラブ・道場", "パソコン教室", "料理教室"],
+    "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
+    "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
+    "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
+    "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
 };
 const mainCategories = Object.keys(categoryData);
 
@@ -108,7 +112,7 @@ const PartnerSignupPage: NextPage = () => {
     const [mainCategory, setMainCategory] = usePersistentState('partnerForm_mainCategory', '');
     const [selectedSubCategory, setSelectedSubCategory] = usePersistentState('partnerForm_selectedSubCategory', '');
     const [agreed, setAgreed] = usePersistentState('partnerForm_agreed', false);
-    
+
     const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -119,7 +123,7 @@ const PartnerSignupPage: NextPage = () => {
     const remainingSlots = totalSlots - registeredCount;
 
     const registrationFormRef = useRef<HTMLDivElement>(null);
-    
+
     // Stripeキーの存在チェック
     useEffect(() => {
         if (!stripePromise) {
@@ -132,7 +136,7 @@ const PartnerSignupPage: NextPage = () => {
     useEffect(() => {
         const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
         if (match) {
-            setArea(match[0]);
+            setArea(match[0].replace('那須郡', '')); // '那須郡那須町'を'那須町'に統一
         } else if (address) {
             setArea('');
         }
@@ -141,13 +145,12 @@ const PartnerSignupPage: NextPage = () => {
     // --- カテゴリ選択ロジック ---
     useEffect(() => {
         if (mainCategory) {
-            // @ts-ignore
             setSubCategoryOptions(categoryData[mainCategory] || []);
         } else {
             setSubCategoryOptions([]);
         }
     }, [mainCategory]);
-    
+
     // --- 登録フォームへのスクロール ---
     const scrollToForm = () => {
         registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -158,9 +161,9 @@ const PartnerSignupPage: NextPage = () => {
         e.preventDefault();
         setError(null);
 
-        if (!stripePromise) { 
+        if (!stripePromise) {
             setStripeError(true);
-            return; 
+            return;
         }
         if (email !== confirmEmail) { setError('メールアドレスが一致しません。'); return; }
         if (!agreed) { setError('利用規約への同意が必要です。'); return; }
@@ -188,10 +191,10 @@ const PartnerSignupPage: NextPage = () => {
                     }
                 });
                 const stripe = await stripePromise;
-                if(stripe) {
+                if (stripe) {
                     const { error } = await stripe.redirectToCheckout({ sessionId });
-                    if(error){
-                         throw new Error(error.message);
+                    if (error) {
+                        throw new Error(error.message ?? 'Stripeへのリダイレクト中にエラーが発生しました。');
                     }
                 } else {
                     throw new Error('Stripeの初期化に失敗しました。');
@@ -204,7 +207,7 @@ const PartnerSignupPage: NextPage = () => {
             setIsLoading(false);
         }
     };
-    
+
     const getButtonText = () => {
         if (isLoading) return '処理中...';
         if (stripeError) return '決済設定エラー';
@@ -254,33 +257,20 @@ const PartnerSignupPage: NextPage = () => {
                     <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様が参加を決めています</h3>
                     <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
                         {[
-                            { name: 'パートナー 1', logo: '/logos/cafe-a-logo.png' },
-                            { name: 'パートナー 2', logo: '/logos/restaurant-b-logo.png' },
-                            { name: 'パートナー 3', logo: '/logos/shop-c-logo.svg' },
-                            { name: 'パートナー 4', logo: '/logos/hotel-d-logo.png' },
-                            { name: 'パートナー 5', logo: '/logos/salon-e-logo.png' },
-                            { name: 'パートナー 6', logo: '/logos/partner-6.png' },
-                            { name: 'パートナー 7', logo: '/logos/partner-7.svg' },
-                            { name: 'パートナー 8', logo: '/logos/partner-8.png' },
-                            { name: 'パートナー 9', logo: '/logos/partner-9.png' },
-                            { name: 'パートナー 10', logo: '/logos/partner-10.png' },
-                            { name: 'パートナー 11', logo: '/logos/partner-11.svg' },
-                            { name: 'パートナー 12', logo: '/logos/partner-12.png' },
-                            { name: 'パートナー 13', logo: '/logos/partner-13.png' },
-                            { name: 'パートナー 14', logo: '/logos/partner-14.png' },
-                            { name: 'パートナー 15', logo: '/logos/partner-15.svg' },
-                            { name: 'パートナー 16', logo: '/logos/partner-16.png' },
-                            { name: 'パートナー 17', logo: '/logos/partner-17.png' },
-                            { name: 'パートナー 18', logo: '/logos/partner-18.png' },
-                            { name: 'パートナー 19', logo: '/logos/partner-19.svg' },
-                            { name: 'パートナー 20', logo: '/logos/partner-20.png' }
+                            { name: 'おまかせオート石川', logo: '/images/partner-ishikawa.png' },
+                            { name: '那須ミッドシティホテル', logo: '/images/partner-midcity.png' },
+                            { name: 'オートギャラリーダイリン', logo: '/images/partner-dairin.png' },
+                            { name: '株式会社パン・アキモト', logo: '/images/partner-akimoto.png' },
+                            { name: '榊原会館', logo: '/images/partner-sakakibara.png' },
+                            { name: '株式会社セルシオール', logo: '/images/partner-serusio-ru.png' },
                         ].map((partner) => (
-                            <img 
+                            <Image
                                 key={partner.name}
-                                src={partner.logo} 
+                                src={partner.logo}
                                 alt={partner.name}
-                                className="h-12 w-auto object-contain" 
-                                onError={(e) => { e.currentTarget.src = 'https://placehold.co/120x48/f0f0f0/cccccc?text=Logo'; e.currentTarget.alt = 'ロゴの読み込みに失敗しました'; }}
+                                width={150}
+                                height={50}
+                                className="object-contain"
                             />
                         ))}
                     </div>
@@ -318,16 +308,16 @@ const PartnerSignupPage: NextPage = () => {
                         <div className="bg-orange-50 p-8 rounded-lg border-2 border-dashed border-orange-300">
                             <h4 className="font-bold text-xl text-center">例：カフェの場合</h4>
                             <p className="text-center text-sm text-gray-600">1日に2人が登録した場合...</p>
-                             <p className="mt-4 text-center text-lg text-gray-700">2人/日 × 30日 = <span className="font-bold text-2xl text-orange-600">60人</span>/月</p>
-                             <p className="mt-2 text-center text-xl font-bold text-gray-800">月間収益: <span className="text-red-600">8,640円</span></p>
-                             <p className="mt-4 text-center text-xl font-bold text-gray-800">年間収益: <span className="text-4xl font-extrabold text-red-600">103,680円</span></p>
+                                <p className="mt-4 text-center text-lg text-gray-700">2人/日 × 30日 = <span className="font-bold text-2xl text-orange-600">60人</span>/月</p>
+                                <p className="mt-2 text-center text-xl font-bold text-gray-800">月間収益: <span className="text-red-600">8,640円</span></p>
+                                <p className="mt-4 text-center text-xl font-bold text-gray-800">年間収益: <span className="text-4xl font-extrabold text-red-600">103,680円</span></p>
                         </div>
-                         <div className="bg-blue-50 p-8 rounded-lg border-2 border-dashed border-blue-300">
+                        <div className="bg-blue-50 p-8 rounded-lg border-2 border-dashed border-blue-300">
                             <h4 className="font-bold text-xl text-center">例：レストラン・居酒屋の場合</h4>
-                             <p className="text-center text-sm text-gray-600">1日に5人が登録した場合...</p>
-                             <p className="mt-4 text-center text-lg text-gray-700">5人/日 × 30日 = <span className="font-bold text-2xl text-blue-600">150人</span>/月</p>
-                             <p className="mt-2 text-center text-xl font-bold text-gray-800">月間収益: <span className="text-red-600">21,600円</span></p>
-                             <p className="mt-4 text-center text-xl font-bold text-gray-800">年間収益: <span className="text-4xl font-extrabold text-red-600">259,200円</span></p>
+                                <p className="text-center text-sm text-gray-600">1日に5人が登録した場合...</p>
+                                <p className="mt-4 text-center text-lg text-gray-700">5人/日 × 30日 = <span className="font-bold text-2xl text-blue-600">150人</span>/月</p>
+                                <p className="mt-2 text-center text-xl font-bold text-gray-800">月間収益: <span className="text-red-600">21,600円</span></p>
+                                <p className="mt-4 text-center text-xl font-bold text-gray-800">年間収益: <span className="text-4xl font-extrabold text-red-600">259,200円</span></p>
                         </div>
                     </div>
                     <p className="mt-4 text-sm text-gray-500 text-center">※紹介料は1人あたり144円 (月額480円×30%) で計算。これは広告掲載による集客効果とは別の収益です。</p>
@@ -351,20 +341,19 @@ const PartnerSignupPage: NextPage = () => {
                         </FAQItem>
                         <FAQItem question="支払いプランについて教えてください。">
                             <p className="leading-relaxed font-semibold text-gray-700">お支払い方法は、下記のプランからお選びいただけます。</p>
-                             <ul className="list-disc list-inside mt-4 space-y-3">
-                                <li><strong className="font-bold text-gray-800">月額プラン：</strong>月額3,300円（税込）。当社指定の決済代行サービス（Stripe）を通じたクレジットカードでの自動支払いとなります。</li>
-                                <li><strong className="font-bold text-gray-800">年額プラン：</strong>年額39,600円（税込）。当社発行の請求書に基づく銀行振り込みによる一括前払いとなります。ご希望の場合は、登録フォーム入力後、別途お問い合わせください。</li>
-                             </ul>
+                                <ul className="list-disc list-inside mt-4 space-y-3">
+                                    <li><strong className="font-bold text-gray-800">月額プラン：</strong>月額3,300円（税込）。当社指定の決済代行サービス（Stripe）を通じたクレジットカードでの自動支払いとなります。</li>
+                                    <li><strong className="font-bold text-gray-800">年額プラン：</strong>年額39,600円（税込）。当社発行の請求書に基づく銀行振り込みによる一括前払いとなります。ご希望の場合は、登録フォーム入力後、別途お問い合わせください。</li>
+                                </ul>
                         </FAQItem>
                         <FAQItem question="契約の途中で解約はできますか？">
                             <p className="leading-relaxed">はい、いつでも解約手続きが可能です。ただし、本契約は1年単位での自動更新となっており、契約期間中のご返金は致しかねますのでご了承ください。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
                         </FAQItem>
                         <FAQItem question="導入後のサポート体制はどうなっていますか？">
-                             <p className="leading-relaxed">ご安心ください。各店舗様に専任の担当者がつき、導入から運用までしっかりサポートいたします。操作方法がわからない、もっと集客効果を上げたいなど、どんなことでもお気軽にご相談いただけます。LINE、お電話、メールでのサポートに対応しております。</p>
+                                <p className="leading-relaxed">ご安心ください。各店舗様に専任の担当者がつき、導入から運用までしっかりサポートいたします。操作方法がわからない、もっと集客効果を上げたいなど、どんなことでもお気軽にご相談いただけます。LINE、お電話、メールでのサポートに対応しております。</p>
                         </FAQItem>
                     </div>
                 </section>
-
 
                 <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
@@ -396,7 +385,7 @@ const PartnerSignupPage: NextPage = () => {
                                         {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                     </select>
                                 </div>
-                                 <div>
+                                <div>
                                     <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数 *</label>
                                     <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="0" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
                                 </div>
@@ -449,7 +438,7 @@ const PartnerSignupPage: NextPage = () => {
                                     <p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p>
                                 </div>
                             )}
-                             {error && !stripeError && (
+                            {error && !stripeError && (
                                 <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
                                     <XCircleIcon className="h-5 w-5 mr-3"/>
                                     <p className="text-sm">{error}</p>
@@ -459,10 +448,11 @@ const PartnerSignupPage: NextPage = () => {
                             <button type="submit" disabled={isLoading || !agreed || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                 {getButtonText()}
                             </button>
-                             <p className="text-sm text-center -mt-2 text-gray-500">登録は3分で完了します</p>
+                            <p className="text-sm text-center -mt-2 text-gray-500">登録は3分で完了します</p>
                         </form>
                         <p className="text-sm text-center mt-6">
-                            すでにアカウントをお持ちですか？ <a href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</a>
+                            {/* ▼▼▼ 修正 ▼▼▼ */}
+                            すでにアカウントをお持ちですか？ <Link href="/partner/login/" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
                         </p>
                     </div>
                 </section>
@@ -472,8 +462,9 @@ const PartnerSignupPage: NextPage = () => {
                 <div className="container mx-auto px-6 py-8 text-center text-gray-600">
                     <p>&copy; {new Date().getFullYear()} 株式会社adtown. All Rights Reserved.</p>
                     <div className="mt-4">
-                        <a href="/legal" className="text-sm text-gray-500 hover:underline mx-2">利用規約</a>
-                        <a href="/privacy" className="text-sm text-gray-500 hover:underline mx-2">プライバシーポリシー</a>
+                        {/* ▼▼▼ 修正 ▼▼▼ */}
+                        <Link href="/legal/" className="text-sm text-gray-500 hover:underline mx-2">特定商取引法に基づく表記</Link>
+                        <Link href="/privacy" className="text-sm text-gray-500 hover:underline mx-2">プライバシーポリシー</Link>
                     </div>
                 </div>
             </footer>
