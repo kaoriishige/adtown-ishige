@@ -5,7 +5,7 @@ import Stripe from 'stripe';
 // Stripe SDKをシークレットキーで初期化
 // process.env.STRIPE_SECRET_KEY にキーが設定されている必要があります
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
+  apiVersion: '2024-04-10', // ← 新しいバージョンに修正
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

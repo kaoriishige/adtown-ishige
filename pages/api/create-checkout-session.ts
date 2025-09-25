@@ -42,8 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       ],
       customer_email: user.email || undefined,
-      // 決済後の移動先を「ありがとうページ」に設定します
-      success_url: `${req.headers.origin}/subscribe-success`,
+      // 決済後の移動先を合言葉(session_id)付きでマイページに設定します
+      success_url: `${req.headers.origin}/mypage?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.origin}/subscribe`,
     });
 

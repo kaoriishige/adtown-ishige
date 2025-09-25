@@ -6,7 +6,7 @@ type Store = {
   id: string;
   storeName: string;
   address: string;
-  galleryImageUrls: string[]; // photoUrlsから変更
+  galleryImageUrls: string[];
   budgetDinner: string;
   budgetLunch: string;
 };
@@ -48,7 +48,6 @@ export default async function handler(
         id: doc.id,
         storeName: data.storeName || '',
         address: data.address || '',
-        // ▼▼▼ galleryImageUrlsから取得するように変更 ▼▼▼
         galleryImageUrls: data.galleryImageUrls || [],
         budgetDinner: data.budgetDinner || '',
         budgetLunch: data.budgetLunch || '',

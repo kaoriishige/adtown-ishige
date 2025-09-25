@@ -1,6 +1,8 @@
-import { NextPage } from 'next';
+import { NextPage, GetServerSideProps } from 'next'; // GetServerSideProps をインポート
 import Link from 'next/link';
 import Head from 'next/head';
+import nookies from 'nookies'; // nookies をインポート
+import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin'; // firebase-admin をインポート
 
 const FoodLossTopPage: NextPage = () => {
   const areas = [
@@ -43,5 +45,45 @@ const FoodLossTopPage: NextPage = () => {
     </>
   );
 };
+
+// ▼▼▼ ここから追加 ▼▼▼
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  try {
+    const cookies = nookies.get(context);
+    if (!cookies.token) {
+      return { redirect: { destination: '/login', permanent: false } };
+    }
+
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+
+    if (!userDoc.exists) {
+      return { redirect: { destination: '/login', permanent: false } };
+    }
+
+    const userData = userDoc.data() || {};
+    const userPlan = userData.plan || 'free';
+
+    // 無料会員 (free) がこのページにアクセスしたら、無料トップページにリダイレクト
+    if (userPlan === 'free') {
+      return { redirect: { destination: '/home', permanent: false } };
+    }
+
+    // 有料会員はページを表示するためのpropsを返す（今回は空でOK）
+    return {
+      props: {},
+    };
+
+  } catch (error) {
+    // エラーが発生した場合はログインページにリダイレクト
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
+  }
+};
+// ▲▲▲ ここまで追加 ▲▲▲
 
 export default FoodLossTopPage;

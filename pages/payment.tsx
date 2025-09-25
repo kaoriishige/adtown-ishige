@@ -1,124 +1,140 @@
 import { NextPage } from 'next';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useState } from 'react';
-import { RiArrowLeftLine, RiCameraFill, RiAlertLine } from 'react-icons/ri';
+// ▼▼▼【修正点】ライブラリ名を 'react-qr-scanner' に変更 ▼▼▼
+import QrScanner from 'react-qr-scanner';
+import Link from 'next/link';
 
 const PaymentPage: NextPage = () => {
-  const [paymentAmount, setPaymentAmount] = useState('');
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState<string>('');
+  const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // QRコードリーダーを起動し、読み取ったデータを処理する関数
-  const handleScan = async () => {
-    // この部分は、実際のQRコードスキャナライブラリ（例: react-qr-reader）
-    // と連携する必要があります。
-    // ここでは、スキャンが成功したと仮定したダミーの処理を実装します。
-    
-    const amount = parseInt(paymentAmount, 10);
-    if (isNaN(amount) || amount <= 0) {
-      setError("正しい金額を入力してください。");
-      return;
+  const handleScan = async (result: any) => {
+    if (result) {
+      const scannedStoreId = result?.text;
+      setStoreId(scannedStoreId);
+      
+      try {
+        const res = await fetch(`/api/stores/${scannedStoreId}`);
+        if (!res.ok) throw new Error('店舗情報の取得に失敗しました。');
+        const data = await res.json();
+        setStoreName(data.storeName);
+      } catch (e: any) {
+        setPaymentStatus('error');
+        setErrorMessage(e.message || '無効なQRコードです。');
+      }
     }
+  };
+  
+  const handleError = (err: any) => {
+    console.error(err);
+    setPaymentStatus('error');
+    setErrorMessage('カメラの読み込みに失敗しました。ページの再読み込みや、カメラのアクセス許可を確認してください。');
+  }
 
-    // ダミーの店舗ID
-    const scannedStoreId = 'store_dummy_12345'; 
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
-    setError(null);
-    setSuccess(null);
+    setPaymentStatus('idle');
+    setErrorMessage('');
 
     try {
       const response = await fetch('/api/payment/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId: scannedStoreId,
-          amount: amount,
-        }),
+        body: JSON.stringify({ storeId, amount: Number(amount) }),
       });
 
       const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || '支払いに失敗しました。');
+        throw new Error(data.error || '決済に失敗しました。');
       }
-
-      setSuccess(`支払いが完了しました！ (${amount.toLocaleString()} pt)`);
-      setPaymentAmount(''); // 金額入力フィールドをクリア
-
+      setPaymentStatus('success');
     } catch (err: any) {
-      setError(err.message);
+      setPaymentStatus('error');
+      setErrorMessage(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (paymentStatus === 'success') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-center p-4">
+        <h1 className="text-3xl font-bold text-green-600 mb-4">支払い完了</h1>
+        <p className="text-lg">{storeName}への {Number(amount).toLocaleString()} ポイントの支払いが完了しました。</p>
+        <Link href="/mypage" className="mt-8 inline-block bg-blue-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-blue-700 transition">
+            マイページへ戻る
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-50">
       <Head>
         <title>ポイントで支払う</title>
       </Head>
+      <div className="max-w-md mx-auto p-4 pt-10">
+        <h1 className="text-3xl font-bold text-center mb-6">ポイントで支払う</h1>
 
-      {/* --- ヘッダー --- */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto p-4 flex items-center">
-          <Link href="/mypage" className="text-gray-600 hover:text-gray-900">
-            <RiArrowLeftLine size={24} />
-          </Link>
-          <h1 className="text-xl font-bold text-gray-800 mx-auto">
-            ポイントで支払う
-          </h1>
-        </div>
-      </header>
-
-      {/* --- メインコンテンツ --- */}
-      <main className="max-w-lg mx-auto p-4 w-full flex-grow flex flex-col justify-center">
-        <div className="bg-white p-8 rounded-2xl shadow-xl text-center">
-          
-          <h2 className="text-lg font-semibold text-gray-700 mb-4">支払い金額を入力</h2>
-          
-          <div className="relative mb-6">
-            <input
-              type="number"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              placeholder="例: 1500"
-              className="w-full text-5xl font-bold text-center p-4 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-            />
-            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-2xl font-bold text-gray-400">pt</span>
+        {!storeId ? (
+          <div>
+            <p className="text-center text-gray-600 mb-4">お店のQRコードをスキャンしてください</p>
+            <div className="border-4 border-gray-300 rounded-lg overflow-hidden">
+              <QrScanner
+                delay={300}
+                onError={handleError}
+                onScan={handleScan}
+                style={{ width: '100%' }}
+              />
+            </div>
           </div>
-
-          {error && (
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md text-left flex items-center">
-              <RiAlertLine className="mr-3" />
-              <span>{error}</span>
+        ) : (
+          <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">支払い先</label>
+              <p className="text-2xl font-bold">{storeName}</p>
             </div>
-          )}
-
-           {success && (
-            <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md text-left">
-              <p>{success}</p>
+            <div className="mb-6">
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700">支払いポイント数</label>
+              <input
+                type="number"
+                id="amount"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-3 px-4 text-2xl"
+                placeholder="例: 1000"
+                required
+                min="1"
+              />
             </div>
-          )}
+            <button
+              type="submit"
+              disabled={isLoading || !amount}
+              className="w-full py-3 text-lg font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
+            >
+              {isLoading ? '処理中...' : `${Number(amount).toLocaleString()} P 支払う`}
+            </button>
+          </form>
+        )}
 
-          <button
-            onClick={handleScan}
-            disabled={isLoading || !paymentAmount}
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-5 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none disabled:shadow-md"
-          >
-            <div className="flex items-center justify-center text-xl">
-              <RiCameraFill className="mr-3" />
-              <span>{isLoading ? '処理中...' : 'お店のQRコードをスキャン'}</span>
-            </div>
-          </button>
-          
-          <p className="text-xs text-gray-500 mt-4">
-            お店のレジでQRコードを提示されたら、このボタンを押してスキャンしてください。
-          </p>
+        {paymentStatus === 'error' && (
+          <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-md text-center">
+            <p>{errorMessage}</p>
+          </div>
+        )}
+         <div className="text-center mt-8">
+            {/* ▼▼▼【修正点】閉じタグを追加 ▼▼▼ */}
+            <Link href="/mypage" className="text-blue-600 hover:underline">
+                マイページへ戻る
+            </Link>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

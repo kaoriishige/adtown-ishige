@@ -7,11 +7,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).end();
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
     const cookies = nookies.get({ req });
+    // トークンがない、または無効な場合はエラーを返す
+    if (!cookies.token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
@@ -47,13 +51,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: {
         userId: uid,
         reissueAmount: expiredAmount,
-        type: 'point_reissue' // Webhookで識別するためのタイプ
+        type: 'point_reissue'
       }
     });
 
     res.status(200).json({ sessionId: session.id });
 
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Reissue API error:", error);
+    // ▼▼▼【修正点】一般的なエラーレスポンスに変更 ▼▼▼
+    if (error.code === 'auth/session-cookie-expired' || error.code === 'auth/session-cookie-revoked') {
+        return res.status(401).json({ error: 'Session expired, please log in again.' });
+    }
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 }

@@ -1,9 +1,9 @@
 import { NextPage } from 'next';
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 
-// --- パートナー登録画面と全く同じカテゴリデータを使用 ---
+// パートナー登録画面と全く同じカテゴリデータを使用
 const categoryData = {
   "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
   "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
@@ -13,19 +13,16 @@ const categoryData = {
   "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
   "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
   "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
-  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "クリーニング（衣類・布団など）", "写真館", "保険代理店","カウンセリング","コンサルティング"],
+  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "クリーニング（衣類・布団など）", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
 };
 
 const mainCategories = Object.keys(categoryData);
 
 const DealsCategoryPage: NextPage = () => {
   const router = useRouter();
-  // --- 展開されている大分類を管理するためのState ---
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-  // --- 大分類がクリックされたときの処理 ---
   const handleCategoryClick = (category: string) => {
-    // すでに開いているカテゴリを再度クリックした場合は閉じる
     setExpandedCategory(prev => (prev === category ? null : category));
   };
 
@@ -43,11 +40,9 @@ const DealsCategoryPage: NextPage = () => {
           </button>
         </div>
 
-        {/* --- カテゴリ選択エリア --- */}
         <div className="space-y-4">
           {mainCategories.map(mainCat => (
             <div key={mainCat}>
-              {/* --- 大分類ボタン --- */}
               <button
                 onClick={() => handleCategoryClick(mainCat)}
                 className="w-full p-5 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 text-left flex justify-between items-center"
@@ -58,14 +53,16 @@ const DealsCategoryPage: NextPage = () => {
                 </span>
               </button>
 
-              {/* --- 小分類リスト（選択された大分類の場合のみ表示）--- */}
               <div
                 className={`overflow-hidden transition-all duration-500 ease-in-out ${expandedCategory === mainCat ? 'max-h-96 mt-2' : 'max-h-0'}`}
               >
                 <div className="p-4 bg-gray-100 rounded-b-lg grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {/* @ts-ignore */}
                   {categoryData[mainCat].map((subCat: string) => (
-                    <Link key={subCat} href={`/deals/${mainCat}/${subCat}`}>
+                    <Link
+                      key={subCat}
+                      href={`/deals/select-area?main=${encodeURIComponent(mainCat)}&sub=${encodeURIComponent(subCat)}`}
+                    >
                       <a className="block p-3 bg-white text-gray-700 rounded-md hover:bg-blue-500 hover:text-white transition-colors">
                         {subCat}
                       </a>

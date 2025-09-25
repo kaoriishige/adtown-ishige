@@ -8,10 +8,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // ユーザーの認証情報をCookieから取得・検証
     const cookies = nookies.get({ req });
+    if (!cookies.token) {
+        return res.status(401).json({ error: 'Authentication required. No token provided.' });
+    }
     const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
+    // データベースからユーザーのドキュメントを取得
     const userDoc = await getAdminDb().collection('users').doc(uid).get();
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
@@ -19,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const userData = userDoc.data() || {};
     
-    // 必要なデータを全て抽出
+    // 必要なデータを全て抽出し、存在しない場合のデフォルト値を設定
     const pointsData = userData.points || {};
     const rewardsData = {
         total: userData.totalRewards || 0,
@@ -45,9 +50,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             expToNextLevel: treeData.expToNextLevel || 100,
             fruits: treeData.fruits || [],
             lastWatered: treeData.lastWatered || null,
-        }
+        },
+        lastLotteryPlayedAt: userData.lastLotteryPlayedAt || null,
     };
 
+    // データをJSON形式で返す
     res.status(200).json(responseData);
 
   } catch (error) {

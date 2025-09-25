@@ -1,14 +1,24 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminDb } from '../../../lib/firebase-admin';
-import * as admin from "firebase-admin";
-
-// このAPIは管理者権限を持つユーザーのみがアクセスできるように、
-// 実際の運用では認証チェックを追加する必要があります。
+import { getAdminDb, getAdminAuth } from '../../../lib/firebase-admin';
+import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
+
+  // ▼▼▼【重要】管理者認証チェックを追加 ▼▼▼
+  try {
+    const cookies = nookies.get({ req });
+    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+  } catch (error) {
+    return res.status(401).json({ error: 'Authentication failed' });
+  }
+  // ▲▲▲ ここまで追加 ▲▲▲
 
   try {
     const db = getAdminDb();
@@ -20,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 各KPIデータを非同期で並行して取得
     const [
       userSnapshot,
-      storeSnapshot,
+      storeSnapshot, // 注: storesコレクションが存在する前提のコードです
       donationsSnapshot,
       revenueSnapshot,
       usersTodaySnapshot,
@@ -39,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userChange = usersTodaySnapshot.size;
     let paidUsers = 0;
     userSnapshot.forEach(doc => {
-      if (doc.data().subscriptionStatus === 'active') { 
+      if (doc.data().subscriptionStatus === 'active') {
         paidUsers++;
       }
     });
