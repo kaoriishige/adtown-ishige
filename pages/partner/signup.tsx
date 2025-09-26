@@ -340,7 +340,7 @@ const PartnerSignupPage: NextPage = () => {
                             <p className="mt-2 leading-relaxed">もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（39,600円）に満たなかった場合、お支払いいただいた費用を<strong className="font-bold">全額返金</strong>いたします。これは、私達がこの仕組みに絶対的な自信を持っている証拠です。<br/><span className="text-xs text-gray-500">※全額返金保証は、お客様が来店される実店舗様が対象となります。</span></p>
                         </FAQItem>
                         <FAQItem question="QRコードスタンドは有料ですか？">
-                            <p className="leading-relaxed">いいえ、<strong className="font-bold">制作費は完全に無料</strong>です。お申し込み後、貴店専用のQRコードスタンドを必要数お作りし、お届けいたします。テーブルやレジ横に置くだけで、すぐに始められます。</p>
+                            <p className="leading-relaxed">いいえ、<strong className="font-bold">制作費は完全に無料</strong>です。お申し込み後、貴店専用のQRコードスタンドを必要数お作りし、お届けいたします。テーブルやレジ横に置くだけで、すぐに始められます。不足した場合は、追加も可能です。</p>
                         </FAQItem>
                         <FAQItem question="紹介料は本当に毎月振り込まれますか？">
                             <p className="leading-relaxed">はい、もちろんです。紹介料は月末締めで計算し、翌月15日にご登録いただいた銀行口座へ自動でお振込みいたします。振込額が3,000円に満たない場合は翌月に繰り越されますが、報酬が消えることはございませんのでご安心ください。</p>
