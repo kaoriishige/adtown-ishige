@@ -1,19 +1,13 @@
 import Link from 'next/link';
-import Image from 'next/image'; // エラー回避とパフォーマンス向上のため、Imageコンポーネントを使用
+import Image from 'next/image';
 import { NextPage } from 'next';
 import { useState, useEffect, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import React from 'react'; // FAQItemコンポーネントでReact.ReactNodeを使用するためインポート
+import React from 'react';
 
 // --- インラインSVGアイコンコンポーネンﾄ ---
-const ZapIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-);
 const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-);
-const BarChartIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
 );
 const XCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
@@ -50,7 +44,6 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
 };
 
 // --- カテゴリデータ ---
-// 型定義を追加して@ts-ignoreを削除
 const categoryData: { [key: string]: string[] } = {
     "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
     "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
@@ -243,38 +236,56 @@ const PartnerSignupPage: NextPage = () => {
                     </div>
                 </section>
 
-                <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
-                    <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
-                    <p className="mt-2 text-lg">今なら通常発生する初期費用が<span className="font-bold text-red-600">完全無料</span>。リスクなく始められる絶好の機会です。</p>
-                    <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
-                        <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
-                        <div className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wider bg-gray-100 px-3 py-1 rounded">{registeredCount}店舗</div>
-                        <p className="text-md md:text-lg font-semibold text-red-600">残り {remainingSlots} 枠！</p>
+               <section className="mt-20 text-center">
+    <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様が参加を決めています</h3>
+    <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
+        {[
+            // ここに、表示したいロゴ画像のパスを文字列で追加してください
+            '/images/partner-celsiall.png',
+            '/images/partner-dairin.png',
+            '/images/partner-midcityhotel.png',
+            '/images/partner-omakaseauto.png',
+            '/images/partner-kanon.png',
+            '/images/partner-aquas.png',
+            '/images/partner-aurevoir.png',
+            '/images/partner-kokoro.png',
+            '/images/partner-meithu.png',
+            '/images/partner-nikkou.png',
+            '/images/partner-oluolu.png',
+            '/images/partner-poppo.png',
+            '/images/partner-Quattro.png',
+            '/images/partner-sekiguchi02.png',
+            '/images/partner-tonbo.png',
+            '/images/partner-training_farm.png',
+            '/images/partner-transunet.png',
+            '/images/partner-yamabuki.png',
+            '/images/partner-yamakiya.png',
+        ].map((logoPath, index) => (
+            <Image
+                key={index}
+                src={logoPath}
+                alt={`パートナーロゴ ${index + 1}`}
+                width={150}
+                height={50}
+                className="object-contain"
+            />
+        ))}
+    </div>
+</section>
+
+                {/* ▼▼▼ ここに新しいセクションを追加しました ▼▼▼ */}
+                <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
+                    <div className="max-w-3xl mx-auto text-center">
+                        <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
+                        <h3 className="text-3xl font-extrabold">圧倒的なリーチ力</h3>
+                        <p className="mt-6 text-lg text-gray-600 leading-relaxed">
+                            みんなの那須アプリの先行登録者がすでに<strong className="text-orange-600 font-bold">3,000人</strong>を超えております。
+                            さらに基本は<strong className="text-orange-600 font-bold">無料</strong>で使用できるので、今後<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>、それ以上にアプリファンが増えていきます。
+                            貴店の情報を、まだお店を知らない未来のお客様へダイレクトに届けるチャンスです。
+                        </p>
                     </div>
                 </section>
-                
-                <section className="mt-20 text-center">
-                    <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様が参加を決めています</h3>
-                    <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
-                        {[
-                            { name: 'おまかせオート石川', logo: '/images/partner-ishikawa.png' },
-                            { name: '那須ミッドシティホテル', logo: '/images/partner-midcity.png' },
-                            { name: 'オートギャラリーダイリン', logo: '/images/partner-dairin.png' },
-                            { name: '株式会社パン・アキモト', logo: '/images/partner-akimoto.png' },
-                            { name: '榊原会館', logo: '/images/partner-sakakibara.png' },
-                            { name: '株式会社セルシオール', logo: '/images/partner-serusio-ru.png' },
-                        ].map((partner) => (
-                            <Image
-                                key={partner.name}
-                                src={partner.logo}
-                                alt={partner.name}
-                                width={150}
-                                height={50}
-                                className="object-contain"
-                            />
-                        ))}
-                    </div>
-                </section>
+                {/* ▲▲▲ 追加ここまで ▲▲▲ */}
 
                 <section className="mt-20">
                     <h3 className="text-3xl font-extrabold text-center">広告費が利益になる仕組み</h3>
@@ -350,7 +361,7 @@ const PartnerSignupPage: NextPage = () => {
                             <p className="leading-relaxed">はい、いつでも解約手続きが可能です。ただし、本契約は1年単位での自動更新となっており、契約期間中のご返金は致しかねますのでご了承ください。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
                         </FAQItem>
                         <FAQItem question="導入後のサポート体制はどうなっていますか？">
-                                <p className="leading-relaxed">ご安心ください。各店舗様に専任の担当者がつき、導入から運用までしっかりサポートいたします。操作方法がわからない、もっと集客効果を上げたいなど、どんなことでもお気軽にご相談いただけます。LINE、お電話、メールでサポートに対応しております。</p>
+                                <p className="leading-relaxed">ご安心ください。各店舗様に専任の担当者がつき、導入から運用までしっかりサポートいたします。操作方法がわからない、もっと集客効果を上げたいなど、どんなことでもお気軽にご相談いただけます。LINE、お電話、メールでのサポートに対応しております。</p>
                         </FAQItem>
                     </div>
                 </section>
@@ -451,7 +462,6 @@ const PartnerSignupPage: NextPage = () => {
                             <p className="text-sm text-center -mt-2 text-gray-500">登録は3分で完了します</p>
                         </form>
                         <p className="text-sm text-center mt-6">
-                            {/* ▼▼▼ 修正 ▼▼▼ */}
                             すでにアカウントをお持ちですか？ <Link href="/partner/login/" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
                         </p>
                     </div>
@@ -462,7 +472,6 @@ const PartnerSignupPage: NextPage = () => {
                 <div className="container mx-auto px-6 py-8 text-center text-gray-600">
                     <p>&copy; {new Date().getFullYear()} 株式会社adtown. All Rights Reserved.</p>
                     <div className="mt-4">
-                        {/* ▼▼▼ 修正 ▼▼▼ */}
                         <Link href="/legal/" className="text-sm text-gray-500 hover:underline mx-2">特定商取引法に基づく表記</Link>
                         <Link href="/privacy" className="text-sm text-gray-500 hover:underline mx-2">プライバシーポリシー</Link>
                     </div>
