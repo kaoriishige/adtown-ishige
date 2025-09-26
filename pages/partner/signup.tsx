@@ -24,11 +24,6 @@ const UserCheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="6 9 12 15 18 9"></polyline></svg>
 );
-// --- ▼▼▼ 新しいアイコンを追加 ▼▼▼ ---
-const DollarSignIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-);
-// --- ▲▲▲ 追加ここまで ▲▲▲ ---
 
 // --- FAQ Item Component ---
 const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
@@ -134,7 +129,7 @@ const PartnerSignupPage: NextPage = () => {
     useEffect(() => {
         const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
         if (match) {
-            setArea(match[0].replace('那須郡', '')); // '那須郡那須町'を'那須町'に統一
+            setArea(match[0].replace('那須郡', ''));
         } else if (address) {
             setArea('');
         }
@@ -159,12 +154,9 @@ const PartnerSignupPage: NextPage = () => {
         e.preventDefault();
         setError(null);
 
-        if (!stripePromise) {
-            setStripeError(true);
-            return;
-        }
+        if (!stripePromise) { setStripeError(true); return; }
         if (email !== confirmEmail) { setError('メールアドレスが一致しません。'); return; }
-        if (!agreed) { setError('利用規約への同意が必要です。'); return; }
+        if (!agreed) { setError('利用規約および返金保証の条件への同意が必要です。'); return; }
         if (!area) { setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。'); return; }
         if (!selectedSubCategory) { setError('カテゴリ（小分類）を選択してください。'); return; }
         if (password.length < 6) { setError('パスワードは6文字以上で入力してください。'); return; }
@@ -209,7 +201,7 @@ const PartnerSignupPage: NextPage = () => {
     const getButtonText = () => {
         if (isLoading) return '処理中...';
         if (stripeError) return '決済設定エラー';
-        return '初期費用0円で決済に進む (月額3,300円)';
+        return 'リスクゼロで申し込む (全額返金保証付き)';
     };
 
     return (
@@ -218,32 +210,32 @@ const PartnerSignupPage: NextPage = () => {
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-800">みんなの那須アプリ</h1>
                     <button onClick={scrollToForm} className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg animate-pulse">
-                        初期費用0円で申し込む
+                        リスクゼロで始める
                     </button>
                 </div>
             </header>
 
             <main className="container mx-auto px-6">
                 <section className="text-center py-16 md:py-24">
-                    <p className="text-orange-500 font-semibold">【新しい収益源をお探しの店舗様へ】</p>
+                    <p className="text-orange-500 font-semibold">【もし、毎月安定した収益が自動で入ってきたら？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        お店にQRコードを置くだけで、<br />
-                        <span className="text-orange-600">毎月の安定収入</span>が生まれる仕組みです。
+                        「広告費を払う」時代は終わりました。<br />
+                        これからは<span className="text-orange-600">広告が新しい収益源</span>になります。
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
-                        これは単なる「広告」のご提案ではありません。人手不足や物価高で苦しい今だからこそ、那須地域の店舗様と共に、<strong className="font-bold">広告費を「コスト」から「利益」に変える</strong>新しいプロジェクトをご提案します。
+                        これは単なる広告掲載のご提案ではありません。人手不足、物価高騰…そんな<strong className="font-bold">「痛み」</strong>を抱える今だからこそ、那須地域の店舗様と共に、広告費を「コスト」から「利益」に変える新しいプロジェクトをご提案します。
                     </p>
                     <div className="mt-8">
                         <button onClick={scrollToForm} className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
                             今すぐ新しい収益源を手に入れる
                         </button>
-                        <p className="mt-2 text-sm text-gray-500">登録はたった3分で完了！</p>
+                        <p className="mt-2 text-sm text-gray-500">登録は3分、リスクはゼロです。</p>
                     </div>
                 </section>
 
                 <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
                     <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
-                    <p className="mt-2 text-lg">今なら通常発生する初期費用が<span className="font-bold text-red-600">完全無料</span>。リスクなく始められる絶好の機会です。</p>
+                    <p className="mt-2 text-lg">今なら通常発生する初期費用が<span className="font-bold text-red-600">完全無料</span>。さらに、1年後の**全額返金保証**もご用意しました。</p>
                     <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
                         <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
                         <div className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wider bg-gray-100 px-3 py-1 rounded">{registeredCount}店舗</div>
@@ -251,100 +243,72 @@ const PartnerSignupPage: NextPage = () => {
                     </div>
                 </section>
                 
-                {/* ▼▼▼ 全面的に書き換えたセクション ▼▼▼ */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
-                        <h3 className="text-3xl font-extrabold">なぜ今、参加すべきなのか？<br/>その理由は「圧倒的な見込み客」にあります。</h3>
+                        <h3 className="text-3xl font-extrabold">なぜ今なのか？答えは「圧倒的な見込み客」です。</h3>
                         <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-                            『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、地域の住民にとって必須のアプリになりつつあります。
-                            先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。今後<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>へと、その輪は確実に広がっていきます。
-                            貴店の広告は、この<strong className="font-bold">爆発的に増え続けるユーザー</strong>の目に直接触れることになるのです。
+                            『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、地域の住民にとって「ないと損」なアプリになりつつあります。
+                            先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
+                            貴店の広告は、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
                         </p>
                     </div>
                 </section>
 
                 <section className="mt-20">
-                    <h3 className="text-3xl font-extrabold text-center">なぜ「広告費」が「収益」に変わるのか？</h3>
-                    <p className="mt-4 text-center text-gray-600 max-w-3xl mx-auto">お客様が貴店をきっかけに有料会員になると、その売上の一部が**永続的に貴店の収益**となります。その具体的な流れをご説明します。</p>
+                    <h3 className="text-3xl font-extrabold text-center">なぜ「広告費」が「毎月の安定収益」に変わるのか？</h3>
+                    <p className="mt-4 text-center text-gray-600 max-w-3xl mx-auto">お客様が貴店をきっかけに有料会員になると、その売上の一部が**永続的に貴店の収益**となります。その驚くほど簡単な仕組みをご覧ください。</p>
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                         {/* ステップ1 */}
-                        <div className="text-center">
-                            <div className="relative mb-4">
-                                <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto">1</div>
-                            </div>
-                            <h4 className="text-xl font-bold">お客様が無料アプリを登録</h4>
-                            <p className="mt-2 text-gray-600">貴店に置かれたQRコードから、お客様は地域のクーポンやお役立ち情報が満載の**無料アプリ**をインストールします。</p>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg">
+                            <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
+                            <h4 className="text-xl font-bold">お客様が「無料」で登録</h4>
+                            <p className="mt-2 text-gray-600">貴店に置かれたQRコード（無料提供）から、お客様は地域のクーポンやお役立ち満載の**無料プラン**に登録します。</p>
                         </div>
                         {/* ステップ2 */}
-                        <div className="text-center">
-                             <div className="relative mb-4">
-                                <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto">2</div>
-                            </div>
-                            <h4 className="text-xl font-bold">有料プランの魅力に気づく</h4>
-                            <p className="mt-2 text-gray-600">アプリを使ううち、お客様は「フリマ出品」や「お手伝い機能での収益化」など、月額480円で**年間93,000円+αも得する**プレミアムプランの価値に気づきます。</p>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg">
+                             <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
+                            <h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4>
+                            <p className="mt-2 text-gray-600">アプリを使ううち、お客様は「フリマで売って稼ぐ」「お手伝いで稼ぐ」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p>
                         </div>
                         {/* ステップ3 */}
-                        <div className="text-center">
-                            <div className="relative mb-4">
-                                <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto">3</div>
-                            </div>
-                            <h4 className="text-xl font-bold">貴店に継続的な収益が発生</h4>
-                            <p className="mt-2 text-gray-600">お客様が有料会員になった瞬間、貴店に**紹介料(売上の30%)**が発生。お客様が利用し続ける限り、**毎月144円**が貴店の収益として積み上がっていきます。</p>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg">
+                            <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
+                            <h4 className="text-xl font-bold">貴店に「継続収益」が発生</h4>
+                            <p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円**が自動で積み上がります。</p>
                         </div>
                     </div>
                      <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg">
-                        <p className="text-xl font-bold text-green-800">つまり、月額3,300円の広告費は、わずか23人のお客様が有料会員になるだけで元が取れ、それ以降はすべて貴店の「利益」に変わるのです。</p>
+                        <p className="text-xl font-bold text-green-800">つまり、月額3,300円のパートナー費用は、わずか23人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わるのです。</p>
                     </div>
                 </section>
-                {/* ▲▲▲ 書き換えここまで ▲▲▲ */}
 
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
-                    <h3 className="text-3xl font-extrabold text-center">店舗タイプ別 収益シミュレーション</h3>
+                    <h3 className="text-3xl font-extrabold text-center">もし、1日にたった2人のお客様が登録したら？</h3>
                     <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="bg-orange-50 p-8 rounded-lg border-2 border-dashed border-orange-300">
-                            <h4 className="font-bold text-xl text-center">例：カフェの場合</h4>
-                            <p className="text-center text-sm text-gray-600">1日に2人が有料会員になった場合...</p>
-                                <p className="mt-4 text-center text-lg text-gray-700">2人/日 × 30日 = <span className="font-bold text-2xl text-orange-600">60人</span>/月</p>
+                            <h4 className="font-bold text-xl text-center">例：カフェ・美容室の場合</h4>
+                            <p className="text-center text-sm text-gray-600">1日に2人が有料会員に移行</p>
+                                <p className="mt-4 text-center text-lg text-gray-700">2人/日 × 30日 = <span className="font-bold text-2xl text-orange-600">月60人</span>の紹介</p>
                                 <p className="mt-2 text-center text-xl font-bold text-gray-800">月間紹介料: <span className="text-red-600">8,640円</span></p>
                                 <p className="mt-4 text-center text-xl font-bold text-gray-800">年間収益: <span className="text-4xl font-extrabold text-red-600">103,680円</span></p>
                         </div>
                         <div className="bg-blue-50 p-8 rounded-lg border-2 border-dashed border-blue-300">
                             <h4 className="font-bold text-xl text-center">例：レストラン・居酒屋の場合</h4>
-                                <p className="text-center text-sm text-gray-600">1日に5人が有料会員になった場合...</p>
-                                <p className="mt-4 text-center text-lg text-gray-700">5人/日 × 30日 = <span className="font-bold text-2xl text-blue-600">150人</span>/月</p>
+                                <p className="text-center text-sm text-gray-600">1日に5人が有料会員に移行</p>
+                                <p className="mt-4 text-center text-lg text-gray-700">5人/日 × 30日 = <span className="font-bold text-2xl text-blue-600">月150人</span>の紹介</p>
                                 <p className="mt-2 text-center text-xl font-bold text-gray-800">月間紹介料: <span className="text-red-600">21,600円</span></p>
                                 <p className="mt-4 text-center text-xl font-bold text-gray-800">年間収益: <span className="text-4xl font-extrabold text-red-600">259,200円</span></p>
                         </div>
                     </div>
-                    <p className="mt-4 text-sm text-gray-500 text-center">※紹介料は1人あたり144円 (月額480円×30%) で計算。これは広告掲載による集客効果とは**別の収益**です。</p>
+                    <p className="mt-4 text-sm text-gray-500 text-center">※この収益は、広告掲載による本来の**集客効果とは別に**得られるものです。</p>
                 </section>
 
-                 {/* ▼▼▼ パートナーロゴを新しいリストに更新 ▼▼▼ */}
                 <section className="mt-20 text-center">
-                    <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様が参加を決めています</h3>
+                    <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様がこのチャンスに気づいています</h3>
                     <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
                         {[
-                            '/images/partner-adtown.jpg',
-                            '/images/partner-aquas.jpg',
-                            '/images/partner-aurevoir.jpg',
-                            '/images/partner-celsiall.jpg',
-                            '/images/partner-dairin.jpg',
-                            '/images/partner-kanon.jpg',
-                            '/images/partner-kokoro.jpg',
-                            '/images/partner-meithu.jpg',
-                            '/images/partner-midcityhotel.jpg',
-                            '/images/partner-nikkou.jpg',
-                            '/images/partner-oluolu.jpg',
-                            '/images/partner-omakaseauto.jpg',
-                            '/images/partner-poppo.jpg',
-                            '/images/partner-Quattro.jpg',
-                            '/images/partner-sekiguchi02.jpg',
-                            '/images/partner-tonbo.jpg',
-                            '/images/partner-training_farm.jpg',
-                            '/images/partner-transunet.jpg',
-                            '/images/partner-yamabuki.jpg',
-                            '/images/partner-yamakiya.jpg',
+                            '/images/partner-adtown.jpg', '/images/partner-aquas.jpg', '/images/partner-aurevoir.jpg', '/images/partner-celsiall.jpg', '/images/partner-dairin.jpg', '/images/partner-kanon.jpg', '/images/partner-kokoro.jpg', '/images/partner-meithu.jpg', '/images/partner-midcityhotel.jpg', '/images/partner-nikkou.jpg', '/images/partner-oluolu.jpg', '/images/partner-omakaseauto.jpg', '/images/partner-poppo.jpg', '/images/partner-Quattro.jpg', '/images/partner-sekiguchi02.jpg', '/images/partner-tonbo.jpg', '/images/partner-training_farm.jpg', '/images/partner-transunet.jpg', '/images/partner-yamabuki.jpg', '/images/partner-yamakiya.jpg',
                         ].map((logoPath, index) => (
                             <Image
                                 key={index}
@@ -357,7 +321,6 @@ const PartnerSignupPage: NextPage = () => {
                         ))}
                     </div>
                 </section>
-                {/* ▲▲▲ 更新ここまで ▲▲▲ */}
 
                 <section className="mt-20 text-center">
                     <h3 className="text-3xl font-extrabold">安心のトリプルサポート体制</h3>
@@ -372,21 +335,18 @@ const PartnerSignupPage: NextPage = () => {
                 <section className="mt-20 max-w-4xl mx-auto">
                     <h3 className="text-3xl font-extrabold text-center">よくあるご質問</h3>
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
-                        <FAQItem question="本当にお金（紹介料）は振り込まれるのですか？">
-                            <p className="leading-relaxed">はい、もちろんです。紹介料は月末締めで計算し、翌月15日にご登録いただいた銀行口座へ自動でお振込みいたします。振込額が3,000円に満たない場合は翌月に繰り越されますが、報酬が消えることはございませんのでご安心ください。</p>
+                        <FAQItem question="本当にリスクはないのですか？（全額返金保証について）">
+                            <p className="leading-relaxed font-bold text-orange-600">はい、貴店にリスクは一切ありません。</p>
+                            <p className="mt-2 leading-relaxed">もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（39,600円）に満たなかった場合、お支払いいただいた費用を<strong className="font-bold">全額返金</strong>いたします。これは、私達がこの仕組みに絶対的な自信を持っている証です。<br/><span className="text-xs text-gray-500">※全額返金保証は、お客様が来店される実店舗様が対象となります。</span></p>
                         </FAQItem>
-                        <FAQItem question="支払いプランについて教えてください。">
-                            <p className="leading-relaxed font-semibold text-gray-700">お支払い方法は、下記のプランからお選びいただけます。</p>
-                                <ul className="list-disc list-inside mt-4 space-y-3">
-                                    <li><strong className="font-bold text-gray-800">月額プラン：</strong>月額3,300円（税込）。当社指定の決済代行サービス（Stripe）を通じたクレジットカードでの自動支払いとなります。</li>
-                                    <li><strong className="font-bold text-gray-800">年額プラン：</strong>年額39,600円（税込）。当社発行の請求書に基づく銀行振り込みによる一括前払いとなります。ご希望の場合は、登録フォーム入力後、別途お問い合わせください。</li>
-                                </ul>
+                        <FAQItem question="QRコードスタンドは有料ですか？">
+                            <p className="leading-relaxed">いいえ、<strong className="font-bold">制作費は完全に無料</strong>です。お申し込み後、貴店専用のQRコードスタンドを必要数お作りし、お届けいたします。テーブルやレジ横に置くだけで、すぐに始められます。</p>
+                        </FAQItem>
+                        <FAQItem question="紹介料は本当に毎月振り込まれますか？">
+                            <p className="leading-relaxed">はい、もちろんです。紹介料は月末締めで計算し、翌々月15日にご登録いただいた銀行口座へ自動でお振込みいたします。振込額が3,000円に満たない場合は翌月に繰り越されますが、報酬が消えることはございませんのでご安心ください。</p>
                         </FAQItem>
                         <FAQItem question="契約の途中で解約はできますか？">
-                            <p className="leading-relaxed">はい、いつでも解約手続きが可能です。ただし、本契約は1年単位での自動更新となっており、契約期間中のご返金は致しかねますのでご了承ください。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
-                        </FAQItem>
-                        <FAQItem question="導入後のサポート体制はどうなっていますか？">
-                                <p className="leading-relaxed">ご安心ください。各店舗様に専任の担当者がつき、導入から運用までしっかりサポートいたします。操作方法がわからない、もっと集客効果を上げたいなど、どんなことでもお気軽にご相談いただけます。LINE、お電話、メールでのサポートに対応しております。</p>
+                            <p className="leading-relaxed">はい、いつでも解約手続きが可能です。ただし、本契約は1年単位での自動更新となっており、契約期間中のご返金は致しかねますのでご了承ください（全額返金保証を除く）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
                         </FAQItem>
                     </div>
                 </section>
@@ -394,7 +354,7 @@ const PartnerSignupPage: NextPage = () => {
                 <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
                         <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
-                        <p className="text-center text-gray-600 mb-8">全てのメリットを手に入れるために、以下のフォームをご入力ください。</p>
+                        <p className="text-center text-gray-600 mb-8">すべてのメリットを手に入れるために、以下のフォームをご入力ください。</p>
                         
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -463,7 +423,7 @@ const PartnerSignupPage: NextPage = () => {
                                 <label className="flex items-start">
                                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-5 w-5 text-orange-600 focus:ring-orange-500 rounded"/>
                                     <span className="ml-3 text-sm text-gray-600">
-                                        「<a href="/partner/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">パートナー利用規約</a>」に同意し、広告掲載および紹介料プログラム（月額3,300円/税込）へ申し込みます。本契約は1年単位での自動更新となります。
+                                        「<a href="/partner/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">パートナー利用規約</a>」および全額返金保証の条件に同意し、広告掲載および紹介料プログラム（月額3,300円/税込）へ申し込みます。
                                     </span>
                                 </label>
                             </div>
