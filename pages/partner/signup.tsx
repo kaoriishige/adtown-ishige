@@ -385,7 +385,7 @@ const PartnerSignupPage: NextPage = () => {
             <p className="text-gray-700 leading-relaxed">
                 ここまでお読みいただきありがとうございます。<br/>
                 限定100店舗の初期費用無料キャンペーン枠は、すぐに埋まってしまうことが予想されます。<br/>
-                <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目からは初期費用が発生いたします。</strong><br/>
+                <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目からは初期費用が発生いたします。もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（39,600円）に満たなかった場合、お支払いいただいた費用を全額返金いたします。</strong><br/>
                 ぜひ、リスクゼロのこの機会にご決断ください。
             </p>
         </div>
