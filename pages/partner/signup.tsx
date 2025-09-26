@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { NextPage } from 'next';
@@ -236,7 +237,17 @@ const PartnerSignupPage: NextPage = () => {
                     </div>
                 </section>
 
-               <section className="mt-20 text-center">
+                <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
+                    <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
+                    <p className="mt-2 text-lg">今なら通常発生する初期費用が<span className="font-bold text-red-600">完全無料</span>。リスクなく始められる絶好の機会です。</p>
+                    <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
+                        <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
+                        <div className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wider bg-gray-100 px-3 py-1 rounded">{registeredCount}店舗</div>
+                        <p className="text-md md:text-lg font-semibold text-red-600">残り {remainingSlots} 枠！</p>
+                    </div>
+                </section>
+                
+                <section className="mt-20 text-center">
     <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様が参加を決めています</h3>
     <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
         {[
@@ -272,6 +283,7 @@ const PartnerSignupPage: NextPage = () => {
         ))}
     </div>
 </section>
+
 
                 {/* ▼▼▼ ここに新しいセクションを追加しました ▼▼▼ */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
