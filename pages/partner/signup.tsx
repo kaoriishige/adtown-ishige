@@ -210,7 +210,7 @@ const PartnerSignupPage: NextPage = () => {
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-800">みんなの那須アプリ</h1>
                     <button onClick={scrollToForm} className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg animate-pulse">
-                        リスクゼロで始める
+                        リスクゼロですぐ始める
                     </button>
                 </div>
             </header>
