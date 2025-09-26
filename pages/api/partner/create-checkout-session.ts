@@ -1,103 +1,110 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { admin } from '../../../lib/firebase-admin'; // Firebase Admin SDKの初期化ファイルをインポート
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import getAdminStripe from '@/lib/stripe-admin';
 import Stripe from 'stripe';
 
-// Stripe SDKをシークレットキーで初期化
-// process.env.STRIPE_SECRET_KEY にキーが設定されている必要があります
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10', // ← 新しいバージョンに修正
-});
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // POSTリクエスト以外は拒否
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).end('Method Not Allowed');
-  }
+    // POSTリクエスト以外は許可しない
+    if (req.method !== 'POST') {
+        res.setHeader('Allow', 'POST');
+        return res.status(405).end('Method Not Allowed');
+    }
 
-  try {
-    // 1. フロントエンドから送信されたフォームデータを取得
     const {
-      storeName,
-      address,
-      area,
-      contactPerson,
-      phoneNumber,
-      qrStandCount,
-      email,
-      password,
-      category,
+        storeName, address, area, contactPerson, phoneNumber,
+        qrStandCount, email, password, category
     } = req.body;
 
-    // 2. サーバーサイドでの簡単なバリデーション
-    if (!email || !password || !storeName || !address) {
-        return res.status(400).json({ error: '必須項目が不足しています。' });
+    // --- 診断ログ 1 ---
+    // APIが受け取ったデータが正しいかを確認
+    console.log('[API DIAGNOSTIC] 1. Received request body:', req.body);
+
+    const db = getAdminDb();
+    const auth = getAdminAuth();
+    const stripe = getAdminStripe();
+
+    try {
+        // --- 1. Firebase Authenticationにユーザーを作成 ---
+        console.log(`[API DIAGNOSTIC] 2. Creating user in Firebase Auth for email: ${email}`);
+        const userRecord = await auth.createUser({
+            email: email,
+            password: password,
+            displayName: storeName,
+        });
+        console.log(`[API DIAGNOSTIC] 2-Success. Successfully created auth user with UID: ${userRecord.uid}`);
+
+        // --- 2. Firestoreに保存するデータを準備 ---
+        const userData = {
+            uid: userRecord.uid,
+            email,
+            storeName,
+            address,
+            area,
+            contactPerson,
+            phoneNumber,
+            qrStandCount,
+            category,
+            role: 'partner',
+            status: 'pending', // 支払い待ち状態
+            createdAt: new Date().toISOString(),
+        };
+
+        // --- 診断ログ 2 ---
+        // Firestoreに書き込む直前のデータを確認
+        console.log(`[API DIAGNOSTIC] 3. Preparing to write to Firestore with data:`, userData);
+        
+        // --- 3. Firestoreに店舗情報を保存 ---
+        await db.collection('users').doc(userRecord.uid).set(userData);
+        
+        console.log(`[API DIAGNOSTIC] 3-Success. Successfully wrote user data to Firestore.`);
+
+        // --- 4. Stripeの顧客を作成 ---
+        console.log(`[API DIAGNOSTIC] 4. Creating Stripe Customer for email: ${email}`);
+        const customer = await stripe.customers.create({
+            email: email,
+            name: storeName,
+            metadata: {
+                firebaseUID: userRecord.uid,
+            },
+        });
+        console.log(`[API DIAGNOSTIC] 4-Success. Successfully created Stripe Customer with ID: ${customer.id}`);
+
+        // --- 5. Stripeの決済セッションを作成 ---
+        const priceId = process.env.STRIPE_PRICE_ID;"price_1SAz0cJlUiZ4txnKRWvZQy4M"
+        if (!priceId) {
+            throw new Error('Stripe Price ID is not configured in environment variables.');
+        }
+
+        console.log(`[API DIAGNOSTIC] 5. Creating Stripe Checkout Session with Price ID: ${priceId}`);
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            customer: customer.id,
+            line_items: [{
+                price: priceId,
+                quantity: 1,
+            }],
+            mode: 'subscription',
+            success_url: `${req.headers.origin}/partner/dashboard?payment_success=true`,
+            cancel_url: `${req.headers.origin}/partner/signup`,
+            metadata: {
+                firebaseUID: userRecord.uid,
+            }
+        });
+        console.log(`[API DIAGNOSTIC] 5-Success. Successfully created Stripe Session.`);
+
+        // --- 6. 決済ページのURLを返す ---
+        res.status(200).json({ sessionId: session.id });
+
+    } catch (error: any) {
+        // --- 診断ログ 3 (最重要) ---
+        // エラーが発生した場合、その詳細をすべて記録
+        console.error("!!!!!!!!!! [API ERROR] !!!!!!!!!!");
+        console.error("An error occurred during partner signup process:");
+        console.error("Error Code:", error.code);
+        console.error("Error Message:", error.message);
+        console.error("Full Error Object:", error);
+        console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        
+        res.status(500).json({ error: error.message || 'An unexpected error occurred.' });
     }
-
-    // 3. Firebase Authenticationでユーザーを新規作成
-    const userRecord = await admin.auth().createUser({
-      email: email,
-      password: password,
-      displayName: storeName,
-    });
-    const uid = userRecord.uid;
-
-    // 4. Firestoreにパートナーの詳細情報を保存
-    const partnerRef = admin.firestore().collection('partners').doc(uid);
-    await partnerRef.set({
-      uid,
-      storeName,
-      email,
-      address,
-      area,
-      contactPerson,
-      phoneNumber,
-      qrStandCount,
-      category,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      subscriptionStatus: 'incomplete', // 決済前の初期ステータス
-      role: 'partner', // 権限管理用のロール
-    });
-
-    // 5. Stripe Checkout Sessionを作成
-    const priceId = process.env.STRIPE_AD_PRICE_ID;
-    if (!priceId) {
-        throw new Error('Stripeの料金ID(STRIPE_AD_PRICE_ID)が設定されていません。');
-    }
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription', // サブスクリプションモード
-      // 決済成功時とキャンセル時のリダイレクト先URL
-      success_url: `${req.headers.origin}/partner/dashboard?payment_success=true`,
-      cancel_url: `${req.headers.origin}/partner/signup`,
-      // FirebaseのUIDをStripe側に渡しておくことで、後でどのユーザーの決済か紐付けられる
-      client_reference_id: uid,
-      metadata: {
-        firebaseUID: uid,
-      }
-    });
-
-    // 6. フロントエンドにセッションIDを返す
-    return res.status(200).json({ sessionId: session.id });
-
-  } catch (error: any) {
-    console.error('Stripe Checkout Session作成エラー:', error);
-    let errorMessage = '登録処理中にサーバーエラーが発生しました。';
-    // Firebaseのエラーコードに応じたメッセージを返す
-    if (error.code === 'auth/email-already-exists') {
-        errorMessage = 'このメールアドレスは既に使用されています。別のメールアドレスをお試しください。';
-    } else if (error instanceof Stripe.errors.StripeError) {
-        errorMessage = `決済システムの接続に失敗しました: ${error.message}`;
-    } else if (error.message) {
-        errorMessage = error.message;
-    }
-    return res.status(500).json({ error: errorMessage });
-  }
 }

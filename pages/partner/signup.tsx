@@ -220,7 +220,7 @@ const PartnerSignupPage: NextPage = () => {
                     <p className="text-orange-500 font-semibold">【もし、毎月安定した収益が自動で入ってきたら？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         「広告費を払う」時代は終わりました。<br />
-                        これからは<span className="text-orange-600">広告が新しい収益源</span>になります。
+                        これからは<span className="text-orange-600">あなたのお店のテーブルが新しい収益源</span>になります。
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
                         これは単なる広告掲載のご提案ではありません。人手不足、物価高騰…そんな<strong className="font-bold">「痛み」</strong>を抱える今だからこそ、那須地域の店舗様と共に、広告費を「コスト」から「利益」に変える新しいプロジェクトをご提案します。
@@ -233,20 +233,24 @@ const PartnerSignupPage: NextPage = () => {
                     </div>
                 </section>
 
-                <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
-                    <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
-                    <p className="mt-2 text-lg">今なら通常発生する初期費用が<span className="font-bold text-red-600">完全無料</span>。さらに、1年後の**全額返金保証**もご用意しました。</p>
-                    <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
-                        <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
-                        <div className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wider bg-gray-100 px-3 py-1 rounded">{registeredCount}店舗</div>
-                        <p className="text-md md:text-lg font-semibold text-red-600">残り {remainingSlots} 枠！</p>
-                    </div>
-                </section>
+               <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
+    <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
+    {/* ▼▼▼ ここの文章を修正しました ▼▼▼ */}
+    <p className="mt-2 text-lg">
+        月額3,300円のパートナー制度を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。さらに、1年後の**全額返金保証**もご用意しました。
+    </p>
+    {/* ▲▲▲ 修正ここまで ▲▲▲ */}
+    <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
+        <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
+        <div className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wider bg-gray-100 px-3 py-1 rounded">{registeredCount}店舗</div>
+        <p className="text-md md:text-lg font-semibold text-red-600">残り {remainingSlots} 枠！</p>
+    </div>
+</section>
                 
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
-                        <h3 className="text-3xl font-extrabold">なぜ今なのか？答えは「圧倒的な見込み客」です。</h3>
+                        <h3 className="text-3xl font-extrabold">なぜ今、アプリ広告なのか？答えは「圧倒的な見込み客」です。</h3>
                         <p className="mt-6 text-lg text-gray-600 leading-relaxed">
                             『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、地域の住民にとって「ないと損」なアプリになりつつあります。
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
@@ -256,20 +260,20 @@ const PartnerSignupPage: NextPage = () => {
                 </section>
 
                 <section className="mt-20">
-                    <h3 className="text-3xl font-extrabold text-center">なぜ「広告費」が「毎月の安定収益」に変わるのか？</h3>
-                    <p className="mt-4 text-center text-gray-600 max-w-3xl mx-auto">お客様が貴店をきっかけに有料会員になると、その売上の一部が**永続的に貴店の収益**となります。その驚くほど簡単な仕組みをご覧ください。</p>
+                    <h3 className="text-3xl font-extrabold text-center">なぜ「QRコード」を置くだけで「毎月の安定収益」に変わるのか？</h3>
+                    <p className="mt-4 text-center text-gray-600 max-w-3xl mx-auto">お客様が貴店をきっかけにQRコードから無料登録して、有料会員になると、その売上の30%が**永続的に貴店の収益**となります。その驚くほど簡単な仕組みをご覧ください。</p>
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                         {/* ステップ1 */}
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
                             <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
                             <h4 className="text-xl font-bold">お客様が「無料」で登録</h4>
-                            <p className="mt-2 text-gray-600">貴店に置かれたQRコード（無料提供）から、お客様は地域のクーポンやお役立ち満載の**無料プラン**に登録します。</p>
+                            <p className="mt-2 text-gray-600">貴店に置かれたQRコードスタンド（無料提供）から、お客様はお役立ち満載の**無料プラン**に登録します。</p>
                         </div>
                         {/* ステップ2 */}
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
                              <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
                             <h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4>
-                            <p className="mt-2 text-gray-600">アプリを使ううち、お客様は「フリマで売って稼ぐ」「お手伝いで稼ぐ」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p>
+                            <p className="mt-2 text-gray-600">アプリを使ううち、お客様は「各店舗の割引クーポンや特典で節約」「フードロス割引商品の情報で節約」「フリマで売って稼ぐ」「お手伝いで稼ぐ」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p>
                         </div>
                         {/* ステップ3 */}
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
@@ -279,12 +283,12 @@ const PartnerSignupPage: NextPage = () => {
                         </div>
                     </div>
                      <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg">
-                        <p className="text-xl font-bold text-green-800">つまり、月額3,300円のパートナー費用は、わずか23人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わるのです。</p>
+                        <p className="text-xl font-bold text-green-800">つまり、月額3,300円のパートナー費用は、わずか23人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p>
                     </div>
                 </section>
 
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
-                    <h3 className="text-3xl font-extrabold text-center">もし、1日にたった2人のお客様が登録したら？</h3>
+                    <h3 className="text-3xl font-extrabold text-center">もし、1日にたった2人または5人のお客様が登録したら？</h3>
                     <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="bg-orange-50 p-8 rounded-lg border-2 border-dashed border-orange-300">
                             <h4 className="font-bold text-xl text-center">例：カフェ・美容室の場合</h4>
@@ -304,23 +308,44 @@ const PartnerSignupPage: NextPage = () => {
                     <p className="mt-4 text-sm text-gray-500 text-center">※この収益は、広告掲載による本来の**集客効果とは別に**得られるものです。</p>
                 </section>
 
-                <section className="mt-20 text-center">
-                    <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様がこのチャンスに気づいています</h3>
-                    <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
-                        {[
-                            '/images/partner-adtown.jpg', '/images/partner-aquas.jpg', '/images/partner-aurevoir.jpg', '/images/partner-celsiall.jpg', '/images/partner-dairin.jpg', '/images/partner-kanon.jpg', '/images/partner-kokoro.jpg', '/images/partner-meithu.jpg', '/images/partner-midcityhotel.jpg', '/images/partner-nikkou.jpg', '/images/partner-oluolu.jpg', '/images/partner-omakaseauto.jpg', '/images/partner-poppo.jpg', '/images/partner-Quattro.jpg', '/images/partner-sekiguchi02.jpg', '/images/partner-tonbo.jpg', '/images/partner-training_farm.jpg', '/images/partner-transunet.jpg', '/images/partner-yamabuki.jpg', '/images/partner-yamakiya.jpg',
-                        ].map((logoPath, index) => (
-                            <Image
-                                key={index}
-                                src={logoPath}
-                                alt={`パートナーロゴ ${index + 1}`}
-                                width={150}
-                                height={50}
-                                className="object-contain"
-                            />
-                        ))}
-                    </div>
-                </section>
+               <section className="mt-20 text-center">
+    <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様がこのチャンスに気づいています</h3>
+    <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
+        {[
+            // ▼▼▼ 拡張子をすべて.pngに修正しました ▼▼▼
+            // もし実際のファイルが.jpgの場合は、お手数ですが再度ご修正ください。
+            '/images/partner-adtown.png',
+            '/images/partner-aquas.png',
+            '/images/partner-aurevoir.png',
+            '/images/partner-celsiall.png',
+            '/images/partner-dairin.png',
+            '/images/partner-kanon.png',
+            '/images/partner-kokoro.png',
+            '/images/partner-meithu.png',
+            '/images/partner-midcityhotel.png',
+            '/images/partner-nikkou.png',
+            '/images/partner-oluolu.png',
+            '/images/partner-omakaseauto.png',
+            '/images/partner-poppo.png',
+            '/images/partner-Quattro.png',
+            '/images/partner-sekiguchi02.png',
+            '/images/partner-tonbo.png',
+            '/images/partner-training_farm.png',
+            '/images/partner-transunet.png',
+            '/images/partner-yamabuki.png',
+            '/images/partner-yamakiya.png',
+        ].map((logoPath, index) => (
+            <Image
+                key={index}
+                src={logoPath}
+                alt={`パートナーロゴ ${index + 1}`}
+                width={150}
+                height={50}
+                className="object-contain"
+            />
+        ))}
+    </div>
+</section>
 
                 <section className="mt-20 text-center">
                     <h3 className="text-3xl font-extrabold">安心のトリプルサポート体制</h3>
@@ -351,106 +376,119 @@ const PartnerSignupPage: NextPage = () => {
                     </div>
                 </section>
 
-                <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10">
-                    <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
-                        <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
-                        <p className="text-center text-gray-600 mb-8">すべてのメリットを手に入れるために、以下のフォームをご入力ください。</p>
-                        
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">店舗名・企業名 *</label>
-                                    <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label>
-                                    <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-gray-700 font-medium mb-2">住所 *</label>
-                                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
-                                {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須町、大田原市のいずれかを入力してください。</p>}
-                            </div>
+               <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10">
+    <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
+        
+        {/* ▼▼▼ ここに文章を追加しました ▼▼▼ */}
+        <div className="text-center mb-10">
+            <p className="text-gray-700 leading-relaxed">
+                ここまでお読みいただきありがとうございます。<br/>
+                限定100店舗の初期費用無料キャンペーン枠は、すぐに埋まってしまうことが予想されます。<br/>
+                <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目からは初期費用が発生いたします。</strong><br/>
+                ぜひ、リスクゼロのこの機会にご決断ください。
+            </p>
+        </div>
+        {/* ▲▲▲ 追加ここまで ▲▲▲ */}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">カテゴリ（大分類）*</label>
-                                    <select value={mainCategory} onChange={(e) => setMainCategory(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-orange-500 focus:border-orange-500">
-                                        <option value="">選択してください</option>
-                                        {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数 *</label>
-                                    <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="0" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
-                                </div>
-                            </div>
-                            {mainCategory && (
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">カテゴリ（小分類）*</label>
-                                    <div className="mt-2 p-4 border rounded-lg grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 bg-gray-50">
-                                        {subCategoryOptions.map(subCat => (
-                                            <label key={subCat} className="flex items-center space-x-3 cursor-pointer">
-                                                <input type="radio" name="subCategory" className="h-4 w-4 text-orange-600 focus:ring-orange-500" checked={selectedSubCategory === subCat} onChange={() => setSelectedSubCategory(subCat)} />
-                                                <span className="text-gray-700">{subCat}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+        <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
+        <p className="text-center text-gray-600 mb-8">全てのメリットを手に入れるために、以下のフォームをご入力ください。</p>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+            {/* ...フォームの残りの部分は変更ありません... */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">店舗名・企業名 *</label>
+                    <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                </div>
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label>
+                    <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                </div>
+            </div>
+            <div>
+                <label className="block text-gray-700 font-medium mb-2">住所 *</label>
+                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須町、大田原市のいずれかを入力してください。</p>}
+            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">電話番号 *</label>
-                                    <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上) *</label>
-                                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">メールアドレス *</label>
-                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）*</label>
-                                    <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
-                                </div>
-                            </div>
-
-                            <div className="pt-4">
-                                <label className="flex items-start">
-                                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-5 w-5 text-orange-600 focus:ring-orange-500 rounded"/>
-                                    <span className="ml-3 text-sm text-gray-600">
-                                        「<a href="/partner/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">パートナー利用規約</a>」および全額返金保証の条件に同意し、広告掲載および紹介料プログラム（月額3,300円/税込）へ申し込みます。
-                                    </span>
-                                </label>
-                            </div>
-
-                            {stripeError && (
-                                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
-                                    <XCircleIcon className="h-5 w-5 mr-3"/>
-                                    <p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p>
-                                </div>
-                            )}
-                            {error && !stripeError && (
-                                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
-                                    <XCircleIcon className="h-5 w-5 mr-3"/>
-                                    <p className="text-sm">{error}</p>
-                                </div>
-                            )}
-                            
-                            <button type="submit" disabled={isLoading || !agreed || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
-                                {getButtonText()}
-                            </button>
-                            <p className="text-sm text-center -mt-2 text-gray-500">登録は3分で完了します</p>
-                        </form>
-                        <p className="text-sm text-center mt-6">
-                            すでにアカウントをお持ちですか？ <Link href="/partner/login/" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
-                        </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">カテゴリ（大分類）*</label>
+                    <select value={mainCategory} onChange={(e) => setMainCategory(e.target.value)} required className="w-full px-4 py-2 border rounded-lg bg-white focus:ring-orange-500 focus:border-orange-500">
+                        <option value="">選択してください</option>
+                        {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">QRコードスタンド希望個数 *</label>
+                    <input type="number" value={qrStandCount} onChange={(e) => setQrStandCount(Number(e.target.value))} required min="0" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                </div>
+            </div>
+            {mainCategory && (
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">カテゴリ（小分類）*</label>
+                    <div className="mt-2 p-4 border rounded-lg grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 bg-gray-50">
+                        {subCategoryOptions.map(subCat => (
+                            <label key={subCat} className="flex items-center space-x-3 cursor-pointer">
+                                <input type="radio" name="subCategory" className="h-4 w-4 text-orange-600 focus:ring-orange-500" checked={selectedSubCategory === subCat} onChange={() => setSelectedSubCategory(subCat)} />
+                                <span className="text-gray-700">{subCat}</span>
+                            </label>
+                        ))}
                     </div>
-                </section>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">電話番号 *</label>
+                    <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                </div>
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上) *</label>
+                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                </div>
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">メールアドレス *</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                </div>
+                <div>
+                    <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）*</label>
+                    <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                </div>
+            </div>
+
+            <div className="pt-4">
+                <label className="flex items-start">
+                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-5 w-5 text-orange-600 focus:ring-orange-500 rounded"/>
+                    <span className="ml-3 text-sm text-gray-600">
+                        「<a href="/partner/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">パートナー利用規約</a>」および全額返金保証の条件に同意し、広告掲載および紹介料プログラム（月額3,300円/税込）へ申し込みます。
+                    </span>
+                </label>
+            </div>
+
+            {stripeError && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
+                    <XCircleIcon className="h-5 w-5 mr-3"/>
+                    <p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p>
+                </div>
+            )}
+            {error && !stripeError && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
+                    <XCircleIcon className="h-5 w-5 mr-3"/>
+                    <p className="text-sm">{error}</p>
+                </div>
+            )}
+            
+            <button type="submit" disabled={isLoading || !agreed || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
+                {getButtonText()}
+            </button>
+            <p className="text-sm text-center -mt-2 text-gray-500">登録は3分で完了します</p>
+        </form>
+        <p className="text-sm text-center mt-6">
+            すでにアカウントをお持ちですか？ <Link href="/partner/login/" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
+        </p>
+    </div>
+</section>
             </main>
 
             <footer className="bg-white mt-20 border-t">
