@@ -237,7 +237,7 @@ const PartnerSignupPage: NextPage = () => {
     <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
     {/* ▼▼▼ ここの文章を修正しました ▼▼▼ */}
     <p className="mt-2 text-lg">
-        月額3,300円のパートナー制度を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。さらに、1年後の**全額返金保証**もご用意しました。
+        月額3,300円のパートナー制度（アプリ広告出し放題＆紹介手数料で収入アップ）を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。さらに、1年後の**全額返金保証**もご用意しました。
     </p>
     {/* ▲▲▲ 修正ここまで ▲▲▲ */}
     <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
