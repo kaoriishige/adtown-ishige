@@ -219,7 +219,8 @@ const PartnerSignupPage: NextPage = () => {
                 <section className="text-center py-16 md:py-24">
                     <p className="text-orange-500 font-semibold">【もし、毎月安定した収益が自動で入ってきたら？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        「広告費を無駄に払う」時代は終わりました。<br />
+                        「広告費を無駄に
+                        払う」時代は終わりました。<br />
                         これからは<span className="text-orange-600">あなたのお店のテーブルが新しい収益源</span>になります。
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
@@ -267,7 +268,7 @@ const PartnerSignupPage: NextPage = () => {
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
                             <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
                             <h4 className="text-xl font-bold">お客様が「無料」で登録</h4>
-                            <p className="mt-2 text-gray-600">貴店に置かれたQRコードスタンド（無料提供）から、お客様はお役立ち満載の**無料プラン**に登録します。</p>
+                            <p className="mt-2 text-gray-600">貴店に置かれたQRコードスタンド（無料提供）から、お客様はお役立ち満載の約50個のアプリが永久無料で使い放題！**無料プラン**に登録します。</p>
                         </div>
                         {/* ステップ2 */}
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
@@ -279,7 +280,7 @@ const PartnerSignupPage: NextPage = () => {
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
                             <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
                             <h4 className="text-xl font-bold">貴店に「継続収益」が発生します</h4>
-                            <p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円**が自動で積み上がります。</p>
+                            <p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円×人数分**が自動で積み上がります。</p>
                         </div>
                     </div>
                      <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg">
