@@ -274,7 +274,7 @@ const PartnerSignupPage: NextPage = () => {
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
                              <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
                             <h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4>
-                            <p className="mt-2 text-gray-600">アプリを使ううち、お客様は「各店舗の割引クーポンや特典で節約」「フードロス割引商品の情報で節約」「フリマで売って稼ぐ」「お手伝いで稼ぐ」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p>
+                            <p className="mt-2 text-gray-600">アプリを使ううち、お客様は「各店舗の割引クーポンや特典で節約」「フードロスの割引商品の情報で節約」「フリマで売って稼ぐ」「お手伝いで稼ぐ」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p>
                         </div>
                         {/* ステップ3 */}
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
