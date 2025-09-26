@@ -287,7 +287,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
       solutionBenefit7_Desc: "地元の飲食店やお店で使えるお得なクーポンが満載。地域経済を応援しながら、賢くお買い物を楽しめます。<br><span class='text-sm text-gray-500'>※無料プランは情報閲覧のみ。アプリ限定クーポンはプレミアムプランでご利用いただけます。</span>",
       freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか？",
       freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
-      premiumTeaserTitle: "さらに、もっとお得に。",
+      premiumTeaserTitle: "さらに、もっともっとお得に。",
       premiumTeaserText: "年間93,000円＋αの損を「得」に変える\nプレミアムプランも要確認!!",
       premiumTeaserNote: "※プレミアムプランの詳細はアプリ内でご案内します。まずは「地域お守り無料プラン」で、アプリの便利さをご体験ください。",
       finalCtaTitle: "さあ、那須の暮らしをアップデートしよう。",
