@@ -359,7 +359,7 @@ const PartnerSignupPage: NextPage = () => {
                 </section>
 
                 <section className="mt-20 max-w-4xl mx-auto">
-                    <h3 className="text-3xl font-extrabold text-center">よくあるご質問</h3>
+                    <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
                         <FAQItem question="本当にリスクはないのですか？（全額返金保証について）">
                             <p className="leading-relaxed font-bold text-orange-600">はい、貴店にリスクは一切ありません。</p>
