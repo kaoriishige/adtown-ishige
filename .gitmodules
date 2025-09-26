@@ -1,3 +1,3 @@
 [submodule "contexts/minna-nasu-new/minna-nasu-app"]
 	path = contexts/minna-nasu-new/minna-nasu-app
-	url = git@github.com:your-org/minna-nasu-app.git
+	url = https://github.com/kaoriishige/adtown-ishige.git
