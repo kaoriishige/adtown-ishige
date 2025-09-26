@@ -278,7 +278,7 @@ const PartnerSignupPage: NextPage = () => {
                         {/* ステップ3 */}
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg">
                             <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
-                            <h4 className="text-xl font-bold">貴店に「継続収益」が発生</h4>
+                            <h4 className="text-xl font-bold">貴店に「継続収益」が発生します</h4>
                             <p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円**が自動で積み上がります。</p>
                         </div>
                     </div>
