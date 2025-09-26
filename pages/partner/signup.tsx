@@ -219,7 +219,7 @@ const PartnerSignupPage: NextPage = () => {
                 <section className="text-center py-16 md:py-24">
                     <p className="text-orange-500 font-semibold">【もし、毎月安定した収益が自動で入ってきたら？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        「広告費を払う」時代は終わりました。<br />
+                        「広告費を無駄に払う」時代は終わりました。<br />
                         これからは<span className="text-orange-600">あなたのお店のテーブルが新しい収益源</span>になります。
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
