@@ -121,24 +121,44 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               ></iframe>
             </div>
           </div>
-        </section>
-
-        <main>
-          <section className="py-16 bg-white border-y">
-            <div className="container mx-auto px-6 text-center">
-              <h3 className="text-sm tracking-widest text-gray-500 mb-8 font-semibold uppercase">那須地域のパートナー企業・団体様</h3>
-              <div className="flex flex-wrap justify-center items-center gap-x-10 md:gap-x-16 gap-y-6">
-                  <Image src="/images/partner-ishikawa.png" alt="おまかせオート石川" width={160} height={55} className="object-contain" />
-                  <Image src="/images/partner-midcity.png" alt="那須ミッドシティホテル" width={160} height={55} className="object-contain" />
-                  <Image src="/images/partner-dairin.png" alt="オートギャラリーダイリン" width={160} height={55} className="object-contain" />
-                  <Image src="/images/partner-akimoto.png" alt="株式会社パン・アキモト" width={160} height={55} className="object-contain" />
-                  <Image src="/images/partner-sakakibara.png" alt="榊原会館" width={160} height={55} className="object-contain" />
-                  <Image src="/images/partner-serusio-ru.png" alt="株式会社セルシオール" width={160} height={55} className="object-contain" />
-              </div>
+        <section className="mt-20 text-center">
+            <h3 className="text-2xl font-bold text-gray-700">那須地域のパートナー企業・店舗様</h3>
+            <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
+                {[
+                    // ▼▼▼ 拡張子をすべて.pngに修正しました ▼▼▼
+                    // もし実際のファイルが.jpgの場合は、お手数ですが再度ご修正ください。
+                    '/images/partner-adtown.png',
+                    '/images/partner-aquas.png',
+                    '/images/partner-aurevoir.png',
+                    '/images/partner-celsiall.png',
+                    '/images/partner-dairin.png',
+                    '/images/partner-kanon.png',
+                    '/images/partner-kokoro.png',
+                    '/images/partner-meithu.png',
+                    '/images/partner-midcityhotel.png',
+                    '/images/partner-nikkou.png',
+                    '/images/partner-oluolu.png',
+                    '/images/partner-omakaseauto.png',
+                    '/images/partner-poppo.png',
+                    '/images/partner-Quattro.png',
+                    '/images/partner-sekiguchi02.png',
+                    '/images/partner-tonbo.png',
+                    '/images/partner-training_farm.png',
+                    '/images/partner-transunet.png',
+                    '/images/partner-yamabuki.png',
+                    '/images/partner-yamakiya.png',
+                ].map((logoPath, index) => (
+                    <Image
+                        key={index}
+                        src={logoPath}
+                        alt={`パートナーロゴ ${index + 1}`}
+                        width={150}
+                        height={50}
+                        className="object-contain"
+                    />
+                ))}
             </div>
-          </section>
-
-          <section className="py-20 bg-gray-50">
+        </section>
             <div className="container mx-auto px-6 text-center">
               <div className="max-w-3xl mx-auto mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800">アプリの主な機能</h2>
