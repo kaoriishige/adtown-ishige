@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.4",
     "@stripe/stripe-js": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^18",
