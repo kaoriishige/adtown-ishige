@@ -220,7 +220,7 @@ const PartnerSignupPage: NextPage = () => {
 
             <main className="container mx-auto px-6">
                 <section className="text-center py-16 md:py-24">
-                    <p className="text-orange-500 font-semibold">【もし、毎月安定した収益が自動で入ってきたら？】</p>
+                    <p className="text-orange-500 font-semibold">adtownからのご提案【もし、毎月安定した収益が自動で入ってきたら？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         「広告費を無駄に
                         払う」時代は終わりました。<br />
