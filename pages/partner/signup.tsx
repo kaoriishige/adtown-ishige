@@ -112,30 +112,63 @@ const PartnerSignupPage: NextPage = () => {
         e.preventDefault();
         setError(null);
         if (!stripePromise) { setStripeError(true); return; }
-        if (email !== confirmEmail) { setError('メールアドレスが一致しません。'); return; }
+        if (email.trim() !== confirmEmail.trim()) { setError('メールアドレスが一致しません。'); return; }
         if (!agreed) { setError('利用規約および返金保証の条件への同意が必要です。'); return; }
         if (!area) { setError('住所は那須塩原市、那須町、大田原市のいずれかである必要があります。'); return; }
         if (!selectedSubCategory) { setError('カテゴリ（小分類）を選択してください。'); return; }
         if (password.length < 6) { setError('パスワードは6文字以上で入力してください。'); return; }
         setIsLoading(true);
+
         try {
-            const response = await fetch('/api/partner/create-checkout-session', {
+            const registerResponse = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ storeName, address, area, contactPerson, phoneNumber, qrStandCount, email, password, category: { main: mainCategory, sub: selectedSubCategory } }),
+                body: JSON.stringify({
+                    email,
+                    password,
+                    displayName: storeName,
+                    role: 'partner',
+                }),
             });
-            const { sessionId, error: apiError } = await response.json();
-            if (apiError) throw new Error(apiError);
+
+            if (!registerResponse.ok) {
+                const errorData = await registerResponse.json();
+                throw new Error(errorData.message || 'アカウント作成に失敗しました。');
+            }
+
+            const { uid } = await registerResponse.json();
+
+            const stripeResponse = await fetch('/api/partner/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    uid,
+                    email,
+                    storeName,
+                    address,
+                    area,
+                    contactPerson,
+                    phoneNumber,
+                    qrStandCount,
+                    category: { main: mainCategory, sub: selectedSubCategory }
+                }),
+            });
+            
+            const stripeData = await stripeResponse.json();
+            if (!stripeResponse.ok) {
+                throw new Error(stripeData.error?.message || '決済ページの作成に失敗しました。');
+            }
+
+            const { sessionId } = stripeData;
             if (sessionId) {
-                Object.keys(window.sessionStorage).forEach(key => { if (key.startsWith('partnerForm_')) { window.sessionStorage.removeItem(key); } });
                 const stripe = await stripePromise;
                 if (stripe) {
-                    const { error } = await stripe.redirectToCheckout({ sessionId });
-                    if (error) throw new Error(error.message ?? 'Stripeリダイレクトエラー');
-                } else throw new Error('Stripeの初期化に失敗');
-            } else throw new Error('決済セッションの作成に失敗');
+                    await stripe.redirectToCheckout({ sessionId });
+                }
+            }
         } catch (err: any) {
-            setError(err.message || '不明なエラーが発生');
+            setError(err.message);
+        } finally {
             setIsLoading(false);
         }
     };
@@ -194,7 +227,6 @@ const PartnerSignupPage: NextPage = () => {
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
                             貴店の広告は、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
                         </p>
-                        {/* ▼▼▼【ここが新しいセクションです】▼▼▼ */}
                         <div className="mt-8">
                              <p className="mb-4 text-gray-600">実際のアプリの利用者向けページも、ぜひその目でお確かめください。</p>
                             <a 
@@ -330,7 +362,7 @@ const PartnerSignupPage: NextPage = () => {
                                 </label>
                             </div>
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p></div> )}
-                            {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
+                            {error && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
                             <button type="submit" disabled={isLoading || !agreed || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                 {getButtonText()}
                             </button>

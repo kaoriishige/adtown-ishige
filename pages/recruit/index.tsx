@@ -56,8 +56,6 @@ const RecruitPartnerPage: NextPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [stripeError, setStripeError] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
-    
-    // ▼▼▼ 機能追加: 請求書メール関連のStateを追加 ▼▼▼
     const [showInvoiceEmail, setShowInvoiceEmail] = useState(false);
     const [invoiceEmailContent, setInvoiceEmailContent] = useState({ subject: '', body: '' });
     const [copied, setCopied] = useState('');
@@ -70,7 +68,6 @@ const RecruitPartnerPage: NextPage = () => {
         registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
-    // ▼▼▼ 機能追加: 請求書メールの作成処理 ▼▼▼
     const handleInvoiceClick = () => {
         if (!companyName || !contactPerson || !phoneNumber || !email) {
             setError('請求書払いをご希望の場合も、先にフォームの必須項目（企業名、担当者名、電話番号、メールアドレスなど）をご入力ください。');
@@ -85,7 +82,6 @@ const RecruitPartnerPage: NextPage = () => {
         setShowInvoiceEmail(true);
     };
 
-    // ▼▼▼ 機能追加: クリップボードへのコピー機能 ▼▼▼
     const handleCopy = (text: string, field: string) => {
         navigator.clipboard.writeText(text).then(() => {
             setCopied(field);
@@ -93,7 +89,7 @@ const RecruitPartnerPage: NextPage = () => {
         }).catch(err => { console.error('コピーに失敗しました', err); });
     };
 
-   const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         if (!stripePromise) { setStripeError(true); return; }
@@ -101,35 +97,52 @@ const RecruitPartnerPage: NextPage = () => {
         if (!agreed) { setError('利用規約への同意が必要です。'); return; }
         if (password.length < 6) { setError('パスワードは6文字以上で入力してください。'); return; }
         setIsLoading(true);
+
         try {
-            const response = await fetch('/api/recruit/create-subscription-session', {
+            const registerResponse = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ companyName, address, contactPerson, phoneNumber, email, password, trialEndDate: '2025-11-01' }),
+                body: JSON.stringify({
+                    email,
+                    password,
+                    displayName: companyName,
+                    role: 'recruit',
+                }),
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                // API側でエラーがあった場合、そのメッセージを表示
-                throw new Error(data.error?.message || '不明なサーバーエラーが発生しました。');
+            if (!registerResponse.ok) {
+                const errorData = await registerResponse.json();
+                throw new Error(errorData.message || 'アカウント作成に失敗しました。');
             }
-            
-            const { sessionId } = data;
 
+            const { uid } = await registerResponse.json();
+
+            const stripeResponse = await fetch('/api/recruit/create-subscription-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    uid,
+                    email,
+                    companyName,
+                    trialEndDate: '2025-11-01' 
+                }),
+            });
+            
+            const stripeData = await stripeResponse.json();
+            if (!stripeResponse.ok) {
+                throw new Error(stripeData.error?.message || '決済ページの作成に失敗しました。');
+            }
+
+            const { sessionId } = stripeData;
             if (sessionId) {
-                Object.keys(window.sessionStorage).forEach(key => { if (key.startsWith('recruitForm_')) { window.sessionStorage.removeItem(key); } });
                 const stripe = await stripePromise;
                 if (stripe) {
-                    const { error } = await stripe.redirectToCheckout({ sessionId });
-                    if (error) throw new Error(error.message ?? 'Stripeリダイレクトエラー');
-                } else throw new Error('Stripeの初期化に失敗');
-            } else {
-                throw new Error('決済セッションの作成に失敗');
+                    await stripe.redirectToCheckout({ sessionId });
+                }
             }
         } catch (err: any) {
-            // エラーオブジェクトではなく、エラーメッセージをStateにセットする
             setError(err.message);
+        } finally {
             setIsLoading(false);
         }
     };
@@ -152,9 +165,9 @@ const RecruitPartnerPage: NextPage = () => {
             </header>
             <main className="container mx-auto px-6">
                 <section className="text-center py-16 md:py-24">
-                    <p className="text-orange-500 font-semibold">広告代理店の株式会社adtownからのご提案です【2025年11月1日サービス開始】</p>
+                    <p className="text-orange-500 font-semibold">【2025年11月1日サービス開始】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        AIマッチング求人採用、はじまる。<br />
+                        AI採用、はじまる。<br />
                         <span className="text-orange-600">先行登録で、最高のスタートを。</span>
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
@@ -195,7 +208,7 @@ const RecruitPartnerPage: NextPage = () => {
                 <section className="mt-24">
                     <div className="text-center">
                         <ZapIcon className="w-12 h-12 mx-auto text-orange-500"/>
-                        <h2 className="mt-4 text-3xl font-extrabold text-gray-800">その悩み、AIマッチング求人が解決します。</h2>
+                        <h2 className="mt-4 text-3xl font-extrabold text-gray-800">その悩み、AIが解決します。</h2>
                         <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">従来の「待ち」の求人とは違い、AIが貴社に最適な人材を「探し出し」ます。<br/>採用活動が驚くほどシンプルに変わる、その仕組みをご覧ください。</p>
                     </div>
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -221,7 +234,7 @@ const RecruitPartnerPage: NextPage = () => {
                     <div className="text-center">
                         <h2 className="text-3xl font-extrabold text-gray-800">求人は、このアプリに掲載されます</h2>
                         <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
-                            作成された求人情報は、那須地域の情報アプリ『みんなの那須アプリ』内に新設される「お仕事さがし」コーナーに掲載。『みんなの那須アプリ』は、ほとんどの機能が無料で使えるため、地域の住民にとって「ないと損」なアプリになりつつあります。 先行登録者はすでに3,000人を突破。口コミでその輪は確実に広がり、5,000人、10,000人の巨大なユーザーコミュニティへと成長します。 
+                            作成された求人情報は、那須地域の情報アプリ『みんなの那須アプリ』内に新設される「お仕事さがし」コーナーに掲載。**すでに3,000人を超える地域ユーザー**が、未来のあなたの従業員候補です。
                         </p>
                     </div>
                     <div className="mt-8 flex justify-center">
@@ -245,12 +258,37 @@ const RecruitPartnerPage: NextPage = () => {
                     </div>
                 </section>
                 
+                <section className="mt-24 text-center">
+                    <h3 className="text-3xl font-extrabold">安心のトリプルサポート体制</h3>
+                    <p className="mt-4 text-gray-600 max-w-2xl mx-auto">導入後も、専任の担当者が貴社の採用活動を徹底的にサポート。初めてのAI利用でもご安心ください。</p>
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><PhoneIcon className="w-10 h-10 mx-auto text-blue-500"/><p className="mt-4 font-bold text-lg">お電話サポート</p></div>
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><MessageCircleIcon className="w-10 h-10 mx-auto text-green-500"/><p className="mt-4 font-bold text-lg">LINEチャットサポート</p></div>
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><UserCheckIcon className="w-10 h-10 mx-auto text-orange-500"/><p className="mt-4 font-bold text-lg">専任担当者</p></div>
+                    </div>
+                </section>
+
+                <section className="mt-24 max-w-4xl mx-auto">
+                    <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
+                    <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
+                        <FAQItem question="先行登録の課金は本当に11月1日からですか？">
+                            <p className="leading-relaxed">はい、お約束します。**2025年11月1日**になるまで、料金が請求されることは一切ありません。サービス開始前にキャンセルいただければ、費用は全くかかりません。</p>
+                        </FAQItem>
+                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？">
+                            <p className="leading-relaxed"><strong className="font-bold">はい、月額3,300円（または年額39,600円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p>
+                        </FAQItem>
+                        <FAQItem question="契約の途中で解約（停止）はできますか？">
+                             <p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください。</p>
+                        </FAQItem>
+                    </div>
+                </section>
+                
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
                          <div className="text-center mb-10">
                             <ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
                             <h2 className="text-3xl font-bold text-center mb-2">先行パートナー登録</h2>
-                            <p className="text-center text-gray-600">アカウントと決済情報を登録し、11月1日のサービス開始に備えましょう。登録が完了すると、パートナー管理画面から貴社の求める人材採用データを入力することができます。</p>
+                            <p className="text-center text-gray-600">アカウントと決済情報を登録し、11月1日のサービス開始に備えましょう。</p>
                         </div>
                         <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 mb-8 rounded-md">
                             <p className="font-bold">最初の課金は【2025年11月1日】です。</p>
@@ -280,7 +318,7 @@ const RecruitPartnerPage: NextPage = () => {
                                 </label>
                             </div>
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。</p></div> )}
-                            {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
+                            {error && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
                             <button type="submit" disabled={isLoading || !agreed || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                 {getButtonText()}
                             </button>
