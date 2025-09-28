@@ -188,7 +188,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             ],
             popularStores: [],
             actionItems: [
-                { id: '1', text: '新規加盟店の承認待ち', count: 0, link: '/admin/review-approval', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800', buttonColor: 'bg-yellow-500 hover:bg-yellow-600' },
+                { id: '1', text: '新規加盟店からの承認待ち', count: 0, link: '/admin/review-approval', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800', buttonColor: 'bg-yellow-500 hover:bg-yellow-600' },
                 { id: '2', text: 'ユーザー作成クエストの承認待ち', count: 0, link: '/admin/quest-review', bgColor: 'bg-blue-100', textColor: 'text-blue-800', buttonColor: 'bg-blue-500 hover:bg-blue-600' },
                 { id: '3', text: 'ユーザーからの問い合わせ', count: 0, link: '/admin/inquiry-list', bgColor: 'bg-gray-200', textColor: 'text-gray-800', buttonColor: 'bg-gray-600 hover:bg-gray-700' },
             ],
