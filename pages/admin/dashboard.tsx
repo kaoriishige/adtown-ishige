@@ -188,7 +188,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 { iconName: 'FiUsers', title: '総ユーザー数', value: '0 人', change: '前日比 +0人', subText: '有料: 0 / 無料: 0', iconBgColor: 'bg-blue-100' },
                 { iconName: 'FiHome', title: '総加盟店数', value: '0 店舗', change: '前週比 +0店舗', subText: '飲食: 0 / 物販: 0 / 他: 0', iconBgColor: 'bg-orange-100' },
                 { iconName: 'FiTrendingUp', title: '今月のポイント流通総額', value: '¥0', change: '先月同期間比 +0%', iconBgColor: 'bg-green-100' },
-                { iconName: 'FiHeart', title: 'オンライン子ども食堂 支援総額', value: '¥0', subText: '0食分 / 0人から', iconBgColor: 'bg-pink-100' },
+                { iconName: 'FiHeart', title: 'オンライン子ども食堂の支援総額', value: '¥0', subText: '0食分 / 0人から', iconBgColor: 'bg-pink-100' },
             ],
             weeklyNewUsers: [
                 { day: '月', referral: 0, normal: 0 },
