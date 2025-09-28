@@ -119,7 +119,6 @@ const ActionItemsList = ({ items }: { items: ActionItem[] }) => (
 );
 
 // --- ダッシュボードページ本体 ---
-
 const AdminDashboardPage: NextPage<{ dashboardData: DashboardData }> = ({ dashboardData }) => {
     return (
         <div className="min-h-screen bg-gray-100">
@@ -166,10 +165,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
         
-        // ▼▼▼ ここを修正 ▼▼▼
         const token = await adminAuth.verifyIdToken(cookies.token, true);
         const userDoc = await adminDb.collection('users').doc(token.uid).get();
 
+        // ▼▼▼ ここを修正 ▼▼▼
+        // userDoc.exists() から () を削除しました
         if (!userDoc.exists || !userDoc.data()?.roles?.includes('admin')) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
