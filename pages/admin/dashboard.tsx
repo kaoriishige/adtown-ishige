@@ -2,7 +2,7 @@ import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { FiUsers, FiHome, FiTrendingUp, FiHeart, FiArrowUp } from 'react-icons/fi';
 
@@ -170,15 +170,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         if (!cookies.token) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-        const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
-        if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
+        
+        // verifyIdToken を使うのがより一般的で安全です
+        const token = await adminAuth.verifyIdToken(cookies.token);
+        const userDoc = await adminDb.collection('users').doc(token.uid).get();
+        
+        // ▼▼▼ ここを修正 ▼▼▼
+        // userDoc.exists() から () を削除し、役割のチェックを roles 配列に含まれるかで判定
+        if (!userDoc.exists || !userDoc.data()?.roles?.includes('admin')) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
 
         // --- ここで表示する数字をすべてゼロに初期化しています ---
         const dashboardData: DashboardData = {
-            operatorName: userDoc.data()?.name || '山田 太郎',
+            operatorName: userDoc.data()?.name || '管理者',
             stats: [
                 { iconName: 'FiUsers', title: '総ユーザー数', value: '0 人', change: '前日比 +0人', subText: '有料: 0 / 無料: 0', iconBgColor: 'bg-blue-100' },
                 { iconName: 'FiHome', title: '総加盟店数', value: '0 店舗', change: '前週比 +0店舗', subText: '飲食: 0 / 物販: 0 / 他: 0', iconBgColor: 'bg-orange-100' },
@@ -194,9 +199,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 { day: '土', referral: 0, normal: 0 },
                 { day: '日', referral: 0, normal: 0 },
             ],
-            // ランキングは空の配列にします
             popularStores: [],
-            // 対応項目もすべて0件にします
             actionItems: [
                 { id: '1', text: '新規加盟店の承認待ち', count: 0, link: '/admin/review-approval', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800', buttonColor: 'bg-yellow-500 hover:bg-yellow-600' },
                 { id: '2', text: 'ユーザー作成クエストの承認待ち', count: 0, link: '/admin/quest-review', bgColor: 'bg-blue-100', textColor: 'text-blue-800', buttonColor: 'bg-blue-500 hover:bg-blue-600' },
