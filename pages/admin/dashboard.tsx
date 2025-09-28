@@ -141,20 +141,15 @@ const AdminDashboardPage: NextPage<{ dashboardData: DashboardData }> = ({ dashbo
             </header>
 
             <main className="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
-                {/* 統計カードセクション */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
                     {dashboardData.stats.map(stat => (
                         <StatCard key={stat.title} {...stat} />
                     ))}
                 </div>
-
-                {/* グラフセクション */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <NewUsersChart data={dashboardData.weeklyNewUsers} />
                     <PopularStoresChart data={dashboardData.popularStores} />
                 </div>
-
-                {/* 対応項目セクション */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <ActionItemsList items={dashboardData.actionItems} />
                 </div>
@@ -171,33 +166,25 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
         
-        // verifyIdToken を使うのがより一般的で安全です
-        const token = await adminAuth.verifyIdToken(cookies.token);
-        const userDoc = await adminDb.collection('users').doc(token.uid).get();
-        
         // ▼▼▼ ここを修正 ▼▼▼
-        // userDoc.exists() から () を削除し、役割のチェックを roles 配列に含まれるかで判定
+        const token = await adminAuth.verifyIdToken(cookies.token, true);
+        const userDoc = await adminDb.collection('users').doc(token.uid).get();
+
         if (!userDoc.exists || !userDoc.data()?.roles?.includes('admin')) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
 
-        // --- ここで表示する数字をすべてゼロに初期化しています ---
         const dashboardData: DashboardData = {
             operatorName: userDoc.data()?.name || '管理者',
             stats: [
                 { iconName: 'FiUsers', title: '総ユーザー数', value: '0 人', change: '前日比 +0人', subText: '有料: 0 / 無料: 0', iconBgColor: 'bg-blue-100' },
                 { iconName: 'FiHome', title: '総加盟店数', value: '0 店舗', change: '前週比 +0店舗', subText: '飲食: 0 / 物販: 0 / 他: 0', iconBgColor: 'bg-orange-100' },
                 { iconName: 'FiTrendingUp', title: '今月のポイント流通総額', value: '¥0', change: '先月同期間比 +0%', iconBgColor: 'bg-green-100' },
-                { iconName: 'FiHeart', title: 'オンライン子ども食堂の支援総額', value: '¥0', subText: '0食分 / 0人から', iconBgColor: 'bg-pink-100' },
+                { iconName: 'FiHeart', title: 'オンライン子ども食堂 支援総額', value: '¥0', subText: '0食分 / 0人から', iconBgColor: 'bg-pink-100' },
             ],
             weeklyNewUsers: [
-                { day: '月', referral: 0, normal: 0 },
-                { day: '火', referral: 0, normal: 0 },
-                { day: '水', referral: 0, normal: 0 },
-                { day: '木', referral: 0, normal: 0 },
-                { day: '金', referral: 0, normal: 0 },
-                { day: '土', referral: 0, normal: 0 },
-                { day: '日', referral: 0, normal: 0 },
+                { day: '月', referral: 0, normal: 0 }, { day: '火', referral: 0, normal: 0 }, { day: '水', referral: 0, normal: 0 },
+                { day: '木', referral: 0, normal: 0 }, { day: '金', referral: 0, normal: 0 }, { day: '土', referral: 0, normal: 0 }, { day: '日', referral: 0, normal: 0 },
             ],
             popularStores: [],
             actionItems: [
