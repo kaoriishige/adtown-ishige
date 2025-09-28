@@ -1,9 +1,9 @@
 import type { NextPage } from 'next';
 import Link from 'next/link';
-import { useState } from 'react';
-import { useRouter } from 'next/router'; // ページ遷移のためにインポート
-import { getAuth, signOut } from 'firebase/auth'; // Firebase Authのログアウト機能をインポート
-import { app } from '@/lib/firebase'; // あなたのFirebase初期化設定に合わせてパスを調整してください
+import { useState, useEffect } from 'react'; // useEffect をインポート
+import { useRouter } from 'next/router';
+import { getAuth, signOut, onAuthStateChanged, User } from 'firebase/auth'; // onAuthStateChanged と User をインポート
+import { app } from '@/lib/firebase';
 
 // アイコン用のSVGコンポーネント（変更なし）
 const StoreIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /> </svg> );
@@ -25,36 +25,57 @@ const ActionButton: React.FC<ActionButtonProps> = ({ href, icon, title, descript
 
 const PartnerDashboard: NextPage = () => {
   const [rewards, setRewards] = useState({ total: 0, unpaid: 0 });
-  const router = useRouter(); // routerインスタンスを取得
+  const router = useRouter();
 
-  // ★★★ ここからが修正箇所 ★★★
+  // ▼▼▼ ここからが修正箇所 1 ▼▼▼
+  const [partnerName, setPartnerName] = useState<string | null>(null);
+  const auth = getAuth(app);
+
+  useEffect(() => {
+    // ログイン状態を監視し、ユーザー情報を取得する
+    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+      if (user) {
+        // ユーザー情報から表示名（店舗名）を取得してStateにセット
+        setPartnerName(user.displayName);
+      } else {
+        // ログインしていない場合はログインページにリダイレクト
+        router.push('/partner/login');
+      }
+    });
+
+    // クリーンアップ関数
+    return () => unsubscribe();
+  }, [auth, router]);
+  // ▲▲▲ ここまでが修正箇所 1 ▲▲▲
+  
   const handleLogout = async () => {
-    const auth = getAuth(app);
     try {
-      // 1. サーバー側のセッションクッキーを無効にするAPIを叩く
       await fetch('/api/auth/sessionLogout', {
         method: 'POST',
       });
-      
-      // 2. Firebaseクライアントからサインアウトする
       await signOut(auth);
-
-      // 3. ログアウト後にログインページにリダイレクトする
       router.push('/partner/login');
-
     } catch (error) {
       console.error('ログアウトに失敗しました:', error);
       alert('ログアウト処理中にエラーが発生しました。');
     }
   };
-  // ★★★ ここまでが修正箇所 ★★★
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div>
             <h1 className="text-2xl font-bold text-gray-900">店舗パートナー ダッシュボード</h1>
+            {/* ▼▼▼ ここからが修正箇所 2 ▼▼▼ */}
+            {partnerName && (
+              <p className="text-sm text-gray-600 mt-1">
+                ようこそ、<span className="font-bold">{partnerName}</span> 様
+              </p>
+            )}
+            {/* ▲▲▲ ここまでが修正箇所 2 ▲▲▲ */}
           </div>
+        </div>
       </header>
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -77,8 +98,8 @@ const PartnerDashboard: NextPage = () => {
 
           <section>
             <h2 className="text-xl font-bold text-gray-700 mb-3">２．お客様へのお知らせを更新する</h2>
-             <div className="space-y-4">
-               <ActionButton href="/partner/deals" icon={<MegaphoneIcon />} title="お得情報・クーポン・フードロスを登録・管理" description="日々のセール、クーポン、フードロス情報などを発信します" bgColorClass="bg-green-500" />
+              <div className="space-y-4">
+                  <ActionButton href="/partner/deals" icon={<MegaphoneIcon />} title="お得情報・クーポン・フードロスを登録・管理" description="日々のセール、クーポン、フードロス情報などを発信します" bgColorClass="bg-green-500" />
             </div>
           </section>
 
@@ -90,17 +111,16 @@ const PartnerDashboard: NextPage = () => {
             </div>
           </section>
 
-           <section>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12">
-                <Link href="/contact" className="w-full text-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-100">
-                    お問い合わせ
-                </Link>
-                {/* ↓ このボタンのonClickが修正後のhandleLogoutを呼び出す */}
-                <button onClick={handleLogout} className="w-full text-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700">
-                  ログアウト
-                </button>
-             </div>
-           </section>
+          <section>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12">
+              <Link href="/contact" className="w-full text-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-100">
+                  お問い合わせ
+              </Link>
+              <button onClick={handleLogout} className="w-full text-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700">
+                ログアウト
+              </button>
+            </div>
+          </section>
         </div>
       </main>
     </div>
