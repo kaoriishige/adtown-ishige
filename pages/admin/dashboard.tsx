@@ -78,7 +78,7 @@ const NewUsersChart = ({ data }: { data: any[] }) => (
 
 const PopularStoresChart = ({ data }: { data: any[] }) => (
     <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="font-bold text-gray-700 mb-4">人気加盟店のランキング（今月）</h3>
+        <h3 className="font-bold text-gray-700 mb-4">人気加盟店ランキング（今月）</h3>
         {data.length === 0 ? (
             <p className="text-gray-500 text-center py-10">まだデータがありません。</p>
         ) : (
