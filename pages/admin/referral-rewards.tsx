@@ -1,8 +1,9 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; // 正しいインポート文に修正
 import { Timestamp } from 'firebase-admin/firestore';
+
 
 // --- 型定義 ---
 interface MonthlySummary {
@@ -12,9 +13,11 @@ interface MonthlySummary {
   grandTotal: number;
 }
 
+
 interface ReferralRewardsPageProps {
   summaries: MonthlySummary[];
 }
+
 
 // --- ページコンポーネント ---
 const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ summaries }) => {
@@ -24,6 +27,7 @@ const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ summaries }) 
         ← 管理メニューに戻る
       </Link>
       <h1 className="text-3xl font-bold my-6 text-center">紹介報酬管理</h1>
+
 
       <div className="overflow-x-auto bg-white shadow-md rounded-lg">
         <table className="min-w-full">
@@ -56,40 +60,48 @@ const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ summaries }) 
   );
 };
 
+
 // --- サーバーサイドでのデータ集計 ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     // 認証チェック
     const cookies = nookies.get(context);
-    await adminAuth().verifySessionCookie(cookies.token, true);
+    // 修正1: adminAuth()をadminAuthに修正
+    await adminAuth.verifySessionCookie(cookies.token, true);
 
-    const adminDb = getAdminDb();
-    
+
+    // 修正2: getAdminDb()をadminDbに修正
+    const adminDbInstance = adminDb;
+   
     // 1. 全ユーザーのIDと役割(role)を取得
-    const usersSnapshot = await adminDb.collection('users').get();
+    const usersSnapshot = await adminDbInstance.collection('users').get();
     const userRoles = new Map<string, string>();
     usersSnapshot.forEach(doc => {
-      userRoles.set(doc.id, doc.data().role || 'user'); // roleがなければ一般ユーザーとみなす
+      userRoles.set(doc.id, doc.data().role || 'user');
     });
 
+
     // 2. 全報酬レコードを取得
-    const rewardsSnapshot = await adminDb.collection('referralRewards').get();
-    
+    const rewardsSnapshot = await adminDbInstance.collection('referralRewards').get();
+   
     // 3. 月ごとに集計
     const monthlyData: { [key: string]: { partnerTotal: number; userTotal: number } } = {};
+
 
     rewardsSnapshot.forEach(doc => {
       const reward = doc.data();
       const referrerUid = reward.referrerUid;
       const rewardAmount = reward.rewardAmount || 0;
       const createdAt = (reward.createdAt as Timestamp).toDate();
-      
+     
       // 'YYYY-MM' 形式のキーを作成
       const monthKey = `${createdAt.getFullYear()}-${(createdAt.getMonth() + 1).toString().padStart(2, '0')}`;
+
 
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = { partnerTotal: 0, userTotal: 0 };
       }
+
 
       // ユーザーの役割に応じて金額を加算
       if (userRoles.get(referrerUid) === 'partner') {
@@ -99,6 +111,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     });
 
+
     // 4. ページに渡す形式に整形
     const summaries: MonthlySummary[] = Object.entries(monthlyData).map(([month, totals]) => ({
       month,
@@ -106,14 +119,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       grandTotal: totals.partnerTotal + totals.userTotal,
     }));
 
+
     // 月の降順でソート
     summaries.sort((a, b) => b.month.localeCompare(a.month));
+
 
     return {
       props: {
         summaries: JSON.parse(JSON.stringify(summaries)),
       },
     };
+
 
   } catch (err) {
     return {
@@ -124,5 +140,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 };
+
 
 export default ReferralRewardsPage;
