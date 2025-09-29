@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -105,7 +105,7 @@ const PartnerPayoutSettingsPage: NextPage<PayoutSettingsProps> = ({ user, payout
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const adminAuth = adminAuth();
-    const adminDb = getAdminDb();
+    const adminDb = adminDb();
     const cookies = nookies.get(context);
     const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;

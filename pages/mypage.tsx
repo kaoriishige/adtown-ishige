@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import {
     RiQrCodeLine, RiFileList3Line, RiCopperCoinLine, RiGiftLine,
     RiLogoutCircleRLine, RiMoneyCnyCircleLine, RiInformationLine,
@@ -275,7 +275,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const { uid, email } = token;
 
-    const userRef = getAdminDb().collection('users').doc(uid);
+    const userRef = adminDb().collection('users').doc(uid);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import nookies from 'nookies';
 import admin from 'firebase-admin';
 import { IncomingForm } from 'formidable';

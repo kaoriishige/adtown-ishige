@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,7 +17,7 @@ export default async function handler(
   }
 
   try {
-    const adminDb = getAdminDb();
+    const adminDb = adminDb();
     const adminAuth = adminAuth();
 
     // 1. Firestoreにユーザードキュメントを作成

@@ -1,7 +1,7 @@
 import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { getAdminDb } from '../../lib/firebase-admin';
+import { adminDb } from '../../lib/firebase-admin';
 
 // 型定義
 interface Deal {
@@ -72,7 +72,7 @@ const TicketsPage: NextPage<TicketsPageProps> = ({ deals }) => {
 
 // サーバーサイドでデータを事前に取得
 export const getServerSideProps: GetServerSideProps = async () => {
-  const db = getAdminDb();
+  const db = adminDb();
   const snapshot = await db.collection('deals').where('isActive', '==', true).orderBy('createdAt', 'desc').get();
   
   const deals = snapshot.docs.map(doc => {

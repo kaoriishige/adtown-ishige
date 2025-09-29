@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminDb } from '../../../lib/firebase-admin';
+import { adminDb } from '../../../lib/firebase-admin';
 
 // このAPIは認証されたユーザーのみがアクセスできるように、
 // 実際の運用では認証チェックを追加するのが望ましいです。
@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // 実際の運用では、Firestoreの 'treasureChests' コレクションからデータを取得します。
-    // const db = getAdminDb();
+    // const db = adminDb();
     // const snapshot = await db.collection('treasureChests').where('active', '==', true).get();
     // const locations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 

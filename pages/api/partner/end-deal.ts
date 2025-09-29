@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: '情報IDが指定されていません。' });
     }
 
-    const adminDb = getAdminDb();
+    const adminDb = adminDb();
     const dealRef = adminDb.collection('foodLossDeals').doc(dealId);
     const dealDoc = await dealRef.get();
 

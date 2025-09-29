@@ -70,7 +70,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     await adminAuth.verifySessionCookie(cookies.token, true);
 
 
-    // 修正2: getAdminDb()をadminDbに修正
+    // 修正2: adminDb()をadminDbに修正
     const adminDbInstance = adminDb;
    
     // 1. 全ユーザーのIDと役割(role)を取得

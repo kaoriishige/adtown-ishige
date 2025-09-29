@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import * as admin from 'firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Firestoreにユーザーデータを保存
         console.log("--- 7. Saving data to Firestore... ---");
-        await getAdminDb().collection('users').doc(userRecord.uid).set(userData);
+        await adminDb().collection('users').doc(userRecord.uid).set(userData);
         console.log("--- 8. Data Saved to Firestore Successfully! ---");
         
         res.status(200).json({ uid: userRecord.uid });

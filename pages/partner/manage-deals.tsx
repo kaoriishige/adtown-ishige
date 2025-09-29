@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { useState } from 'react';
 import { Timestamp } from 'firebase-admin/firestore';
 
@@ -87,12 +87,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     // ▼▼▼【重要】ここが修正点です ▼▼▼
     // ログイン情報ではなく、データベースを直接確認して役割をチェックします。
-    const userDoc = await getAdminDb().collection('users').doc(uid).get();
+    const userDoc = await adminDb().collection('users').doc(uid).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'partner') {
         return { redirect: { destination: '/partner/login', permanent: false } };
     }
 
-    const snapshot = await getAdminDb().collection('foodLossDeals')
+    const snapshot = await adminDb().collection('foodLossDeals')
       .where('partnerUid', '==', uid)
       .where('isActive', '==', true)
       .orderBy('createdAt', 'desc')

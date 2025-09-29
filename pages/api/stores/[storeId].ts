@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminDb } from '../../../lib/firebase-admin';
+import { adminDb } from '../../../lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const db = getAdminDb();
+    const db = adminDb();
     // 店舗(パートナー)もusersコレクションにある前提
     const storeDoc = await db.collection('users').doc(storeId).get();
 

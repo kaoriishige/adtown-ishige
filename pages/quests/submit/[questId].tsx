@@ -1,6 +1,6 @@
 import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
@@ -93,7 +93,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const { uid } = token;
         const { questId } = context.params as { questId: string };
 
-        const questDoc = await getAdminDb().collection('users').doc(uid).collection('acceptedQuests').doc(questId).get();
+        const questDoc = await adminDb().collection('users').doc(uid).collection('acceptedQuests').doc(questId).get();
         if (!questDoc.exists) { return { props: { quest: null } }; }
         
         const data = questDoc.data();

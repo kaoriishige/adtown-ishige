@@ -27,7 +27,7 @@ function adminAuth(): admin.auth.Auth | null {
     return admin.auth(app!);
   } catch (e) { return null; }
 }
-function getAdminDb(): admin.firestore.Firestore | null {
+function adminDb(): admin.firestore.Firestore | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.firestore(app!);
@@ -58,7 +58,7 @@ export default async function handler(
 
   // 新しい方法でFirebaseを呼び出す
   const adminAuth = adminAuth();
-  const adminDb = getAdminDb();
+  const adminDb = adminDb();
 
   if (!adminAuth || !adminDb) {
     return res.status(500).json({ error: 'サーバーの初期化に失敗しました。' });

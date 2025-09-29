@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import * as admin from 'firebase-admin';
 
@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const cookies = nookies.get({ req });
     const token = await adminAuth().verifySessionCookie(cookies.token, true);
-    const adminDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    const adminDoc = await adminDb().collection('users').doc(token.uid).get();
     if (!adminDoc.exists || adminDoc.data()?.role !== 'admin') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Authentication failed' });
   }
 
-  const db = getAdminDb();
+  const db = adminDb();
 
   // 新しい宝箱の作成 (POST)
   if (req.method === 'POST') {

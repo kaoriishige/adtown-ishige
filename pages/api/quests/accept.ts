@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import * as admin from 'firebase-admin';
 
@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Quest ID is required' });
     }
 
-    const db = getAdminDb();
+    const db = adminDb();
     const questRef = db.collection('quests').doc(questId);
     const userQuestRef = db.collection('users').doc(uid).collection('acceptedQuests').doc(questId);
 

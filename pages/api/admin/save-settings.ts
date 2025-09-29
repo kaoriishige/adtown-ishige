@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const settings = req.body;
     // TODO: バリデーションを追加（例：報酬率が0-100の間かなど）
 
-    const adminDb = getAdminDb();
+    const adminDb = adminDb();
     await adminDb.collection('settings').doc('referral').set(settings);
 
     res.status(200).json({ success: true });

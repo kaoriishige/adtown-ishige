@@ -194,7 +194,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         // 修正1: adminAuth()をadminAuthに修正
         const token = await adminAuth.verifySessionCookie(cookies.token, true);
         
-        // 修正2: getAdminDb()をadminDbに修正
+        // 修正2: adminDb()をadminDbに修正
         const userDoc = await adminDb.collection('users').doc(token.uid).get();
         if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
             return { redirect: { destination: '/admin/login', permanent: false } };

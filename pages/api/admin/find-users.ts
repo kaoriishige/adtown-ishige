@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 type UserData = {
@@ -69,7 +69,7 @@ export default async function handler(
     }
 
     // Firestoreから追加情報を取得
-    const db = getAdminDb();
+    const db = adminDb();
     for (const authUser of authUsers) {
       const userDocRef = db.collection('users').doc(authUser.uid);
       const userDoc = await userDocRef.get();

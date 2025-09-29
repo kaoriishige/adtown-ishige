@@ -26,7 +26,7 @@ function adminAuth(): admin.auth.Auth | null {
     return admin.auth(app!);
   } catch (e) { return null; }
 }
-function getAdminDb(): admin.firestore.Firestore | null {
+function adminDb(): admin.firestore.Firestore | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.firestore(app!);
@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const adminAuth = adminAuth();
-  const adminDb = getAdminDb();
+  const adminDb = adminDb();
 
   if (!adminAuth || !adminDb) {
     return res.status(500).json({ error: 'Firebase Admin SDK not initialized' });

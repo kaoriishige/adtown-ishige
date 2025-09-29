@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../lib/firebase-admin';
 
 // Stripe SDKを初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -21,7 +21,7 @@ export default async function handler(
   }
 
   const adminAuth = adminAuth();
-  const adminDb = getAdminDb();
+  const adminDb = adminDb();
 
   if (!adminAuth || !adminDb) {
     console.error("Firebase Admin on cancel-subscription failed to initialize.");

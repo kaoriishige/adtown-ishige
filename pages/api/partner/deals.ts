@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== 'POST') {
@@ -18,7 +18,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             return res.status(400).json({ error: 'タイトルと種別は必須です。' });
         }
 
-        const db = getAdminDb();
+        const db = adminDb();
         const dealsCollection = db.collection('partners').doc(partnerId).collection('deals');
         
         const newDealData = {

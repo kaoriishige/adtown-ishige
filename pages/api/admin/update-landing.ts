@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // POSTメソッド以外は許可しない
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const contentData = req.body;
 
     // 3. Firestoreにデータを保存
-    const adminDb = getAdminDb();
+    const adminDb = adminDb();
     const docRef = adminDb.collection('settings').doc('landingV2');
     await docRef.set(contentData, { merge: true }); // merge:trueでドキュメントを上書き
 

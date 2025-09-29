@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { getAdminDb } from '../lib/firebase-admin';
+import { adminDb } from '../lib/firebase-admin';
 import AppCard from '../components/AppCard';
 
 // アプリデータの型
@@ -70,7 +70,7 @@ const StoresPage: NextPage<StoresPageProps> = ({ appsByStore }) => {
 };
 
 export const getServerSideProps: GetServerSideProps = async () => {
-  const adminDb = getAdminDb();
+  const adminDb = adminDb();
 
   if (!adminDb) {
     console.error("Firebase Admin for StoresPage failed to initialize.");

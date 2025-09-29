@@ -1,15 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import stripe from '@/lib/stripe';
-// ★ 修正点: getAdminDb関数をインポートするように変更
-import { getAdminDb } from '@/lib/firebase-admin';
+// ★ 修正点: adminDb関数をインポートするように変更
+import { adminDb } from '@/lib/firebase-admin';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
     return res.status(405).setHeader('Allow', 'POST').json({ error: 'Method Not Allowed' });
   }
 
-  // ★ 修正点: getAdminDb関数を呼び出してdbインスタンスを取得
-  const db = getAdminDb();
+  // ★ 修正点: adminDb関数を呼び出してdbインスタンスを取得
+  const db = adminDb();
 
   const { name, furigana, email, uid, paymentMethodId, referrerId } = req.body;
 

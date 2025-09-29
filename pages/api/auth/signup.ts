@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 
 // --- ★★★ ここを修正 ★★★ ---
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const adminAuth = adminAuth();
-    const adminDb = getAdminDb();
+    const adminDb = adminDb();
     
     const userRecord = await adminAuth.createUser({
       email: email,

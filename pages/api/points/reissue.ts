@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
-    const userDoc = await getAdminDb().collection('users').doc(uid).get();
+    const userDoc = await adminDb().collection('users').doc(uid).get();
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }

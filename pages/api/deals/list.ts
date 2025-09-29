@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminDb } from '../../../lib/firebase-admin';
+import { adminDb } from '../../../lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const db = getAdminDb();
+    const db = adminDb();
     const dealsRef = db.collection('deals');
     const snapshot = await dealsRef.where('isActive', '==', true).orderBy('createdAt', 'desc').get();
 

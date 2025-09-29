@@ -1,6 +1,6 @@
 import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { adminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../lib/firebase-admin';
 import nookies from 'nookies';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useRouter } from 'next/router';
@@ -75,7 +75,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const { uid } = token;
         const { ticketId } = context.params as { ticketId: string };
 
-        const dealDoc = await getAdminDb()
+        const dealDoc = await adminDb()
             .collection('users')
             .doc(uid)
             .collection('purchasedDeals')

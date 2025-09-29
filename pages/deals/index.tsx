@@ -2,7 +2,7 @@ import { NextPage, GetServerSideProps } from 'next';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../lib/firebase-admin';
 
 // カテゴリデータは省略
 const categoryData = {
@@ -125,7 +125,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     const token = await adminAuth().verifySessionCookie(cookies.token, true);
-    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    const userDoc = await adminDb().collection('users').doc(token.uid).get();
 
     if (!userDoc.exists) {
       return { redirect: { destination: '/login', permanent: false } };

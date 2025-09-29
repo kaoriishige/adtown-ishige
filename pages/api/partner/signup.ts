@@ -1,6 +1,6 @@
 // pages/api/partner/signup.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import getAdminStripe from '@/lib/stripe-admin';
 
 // メールの基本チェック用
@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: '業種カテゴリ（main, sub）は必須です。' });
   }
 
-  const db = getAdminDb();
+  const db = adminDb();
   const auth = adminAuth();
   const stripe = getAdminStripe();
 

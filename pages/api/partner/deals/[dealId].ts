@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 // 私たちが作成した管理者用のヘルパー関数をインポート
 import { 
   adminAuth, 
-  getAdminDb, 
+  adminDb, 
   getAdminStorageBucket 
 } from '@/lib/firebase-admin';
 
@@ -34,7 +34,7 @@ export default async function handler(
     }
 
     // 3. データベースを操作する (管理者SDK)
-    const db = getAdminDb();
+    const db = adminDb();
     const dealDocRef = db.collection('storeDeals').doc(dealId);
     const dealDoc = await dealDocRef.get();
 

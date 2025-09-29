@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import * as admin from 'firebase-admin';
 
@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 管理者認証
     const cookies = nookies.get({ req });
     const token = await adminAuth().verifySessionCookie(cookies.token, true);
-    const adminDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    const adminDoc = await adminDb().collection('users').doc(token.uid).get();
     if (!adminDoc.exists || adminDoc.data()?.role !== 'admin') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    const db = getAdminDb();
+    const db = adminDb();
     const userQuestRef = db.collection('users').doc(userId).collection('acceptedQuests').doc(questId);
     
     if (action === 'approve') {

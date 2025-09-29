@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 // Stripe SDKのインポートはStripe連携時に再度有効化します
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 3. ユーザー自身のドキュメントに口座情報を保存
-    const adminDb = getAdminDb();
+    const adminDb = adminDb();
     const userRef = adminDb.collection('users').doc(uid);
     
     await userRef.update({

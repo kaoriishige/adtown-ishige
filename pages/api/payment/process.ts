@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import * as admin from 'firebase-admin';
 
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid request parameters' });
     }
 
-    const db = getAdminDb();
+    const db = adminDb();
     const userRef = db.collection('users').doc(uid);
     const storeRef = db.collection('users').doc(storeId); // 店舗もusersコレクションにある前提
 

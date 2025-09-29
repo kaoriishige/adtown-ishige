@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminDb } from '../../../lib/firebase-admin';
+import { adminDb } from '../../../lib/firebase-admin';
 
 // このAPIは認証されたユーザーのみがアクセスできるように、
 // 実際の運用では認証チェックを追加するのが望ましいです。
@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const db = getAdminDb();
+    const db = adminDb();
     
     // "active"状態のクエストのみを取得
     const questsSnapshot = await db.collection('quests').where('status', '==', 'active').get();

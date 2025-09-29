@@ -1,5 +1,5 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { getAdminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import Head from 'next/head';
 
 // --- 型定義 ---
@@ -79,7 +79,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const { storeId } = context.params as { storeId: string };
 
-    const db = getAdminDb();
+    const db = adminDb();
     const storeDocRef = db.collection('stores').doc(storeId);
     const docSnap = await storeDocRef.get();
 

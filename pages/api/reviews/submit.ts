@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import { getStorage } from 'firebase-admin/storage';
 import nookies from 'nookies';
 import formidable from 'formidable';
@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
-        const db = getAdminDb();
+        const db = adminDb();
         await db.collection('reviews').add({
             userId: uid,
             storeId: Array.isArray(storeId) ? storeId[0] : storeId,

@@ -2,7 +2,7 @@ import { NextPage, GetServerSideProps } from 'next'; // GetServerSideProps を�
 import Link from 'next/link';
 import Head from 'next/head';
 import nookies from 'nookies'; // nookies をインポート
-import { adminAuth, getAdminDb } from '../../lib/firebase-admin'; // firebase-admin をインポート
+import { adminAuth, adminDb } from '../../lib/firebase-admin'; // firebase-admin をインポート
 
 const FoodLossTopPage: NextPage = () => {
   const areas = [
@@ -55,7 +55,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     const token = await adminAuth().verifySessionCookie(cookies.token, true);
-    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    const userDoc = await adminDb().collection('users').doc(token.uid).get();
 
     if (!userDoc.exists) {
       return { redirect: { destination: '/login', permanent: false } };

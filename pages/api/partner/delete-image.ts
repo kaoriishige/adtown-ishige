@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 // `admin`本体もインポートして、arrayRemoveなどの特殊な操作に備えます
-import { admin, adminAuth, getAdminDb, getAdminStorageBucket } from '@/lib/firebase-admin';
+import { admin, adminAuth, adminDb, getAdminStorageBucket } from '@/lib/firebase-admin';
 // ブラウザ用の 'firebase/firestore' からのインポートは不要なので削除します
 
 export default async function handler(
@@ -25,7 +25,7 @@ export default async function handler(
         return res.status(400).json({ error: '必要な情報が不足しています。' });
     }
 
-    const db = getAdminDb();
+    const db = adminDb();
     // ▼▼▼ ここから書き方を `firebase-admin` SDKの作法に統一します ▼▼▼
     const storeDocRef = db.collection('stores').doc(storeId);
 

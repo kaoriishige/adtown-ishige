@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminDb, adminAuth } from '../../../lib/firebase-admin';
+import { adminDb, adminAuth } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const cookies = nookies.get({ req });
     const token = await adminAuth().verifySessionCookie(cookies.token, true);
-    const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+    const userDoc = await adminDb().collection('users').doc(token.uid).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // ▲▲▲ ここまで追加 ▲▲▲
 
   try {
-    const db = getAdminDb();
+    const db = adminDb();
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

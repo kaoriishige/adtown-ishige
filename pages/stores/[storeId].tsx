@@ -1,5 +1,5 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { getAdminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import { ParsedUrlQuery } from 'querystring';
 import { useState } from 'react';
 import { FiMapPin, FiPhone, FiClock, FiGlobe, FiXCircle, FiCreditCard, FiAward, FiUsers, FiLock } from 'react-icons/fi';
@@ -140,7 +140,7 @@ export const getServerSideProps: GetServerSideProps<Props, ParsedUrlQuery> = asy
         const { storeId } = context.params!;
         if (typeof storeId !== 'string') { return { notFound: true }; }
 
-        const db = getAdminDb();
+        const db = adminDb();
         const storeDocRef = db.collection('stores').doc(storeId);
         
         // 店舗情報と口コミ情報を並行して取得

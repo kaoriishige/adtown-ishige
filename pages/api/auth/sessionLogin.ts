@@ -1,7 +1,7 @@
 // pages/api/auth/sessionLogin.ts
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const decodedToken = await adminAuth().verifyIdToken(idToken);
     const { uid } = decodedToken;
 
-    const userDoc = await getAdminDb().collection('users').doc(uid).get();
+    const userDoc = await adminDb().collection('users').doc(uid).get();
 
     if (!userDoc.exists) {
         throw new Error('User data not found.');

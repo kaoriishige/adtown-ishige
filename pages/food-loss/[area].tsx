@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import Head from 'next/head';
-import { getAdminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 
 // --- 型定義 ---
@@ -88,7 +88,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   }
 
   try {
-    const snapshot = await getAdminDb().collection('foodLossDeals')
+    const snapshot = await adminDb().collection('foodLossDeals')
       .where('area', '==', area)
       .where('isActive', '==', true) // **完売していない情報のみ取得**
       .orderBy('createdAt', 'desc')

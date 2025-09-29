@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { getAdminDb } from '../../lib/firebase-admin';
+import { adminDb } from '../../lib/firebase-admin';
 import nookies from 'nookies';
 import { adminAuth } from '../../lib/firebase-admin';
 
@@ -55,7 +55,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             return { notFound: true };
         }
 
-        const db = getAdminDb();
+        const db = adminDb();
         const questDoc = await db.collection('quests').doc(questId).get();
 
         if (!questDoc.exists) {

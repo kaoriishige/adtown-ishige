@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import * as admin from 'firebase-admin';
 
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
-    const userDoc = await getAdminDb().collection('users').doc(uid).get();
+    const userDoc = await adminDb().collection('users').doc(uid).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'partner') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const partnerData = userDoc.data();
-    const db = getAdminDb();
+    const db = adminDb();
 
     const dealData = {
       partnerId: uid,

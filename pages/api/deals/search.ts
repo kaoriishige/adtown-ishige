@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 
 // 返すデータの型を定義
 type Store = {
@@ -26,7 +26,7 @@ export default async function handler(
       return res.status(400).json({ error: 'すべての検索パラメータが必要です。' });
     }
     
-    const db = getAdminDb();
+    const db = adminDb();
     
     let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = db.collection('stores');
     
