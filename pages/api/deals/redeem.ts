@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import * as admin from 'firebase-admin';
 
@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 認証：このAPIを呼び出すのがパートナー（店舗）であることを確認
     const cookies = nookies.get({ req });
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const partnerId = token.uid;
 
     const partnerDoc = await getAdminDb().collection('users').doc(partnerId).get();

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
 import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 管理者認証
     const cookies = nookies.get({ req });
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     if (token.role !== 'admin') {
       return res.status(403).json({ error: 'アクセス権がありません。' });
     }

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 // Stripe SDKのインポートはStripe連携時に再度有効化します
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 1. ユーザーを認証
     const cookies = nookies.get({ req });
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
     // 2. リクエストから口座情報を取得

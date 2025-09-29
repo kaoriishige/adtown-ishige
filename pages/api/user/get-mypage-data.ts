@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!cookies.token) {
         return res.status(401).json({ error: 'Authentication required. No token provided.' });
     }
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
     // データベースからユーザーのドキュメントを取得

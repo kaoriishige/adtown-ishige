@@ -21,7 +21,7 @@ function initializeFirebaseAdmin(): admin.app.App {
   });
   return app;
 }
-function getAdminAuth(): admin.auth.Auth | null {
+function adminAuth(): admin.auth.Auth | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.auth(app!);
@@ -57,7 +57,7 @@ export default async function handler(
   }
 
   // 新しい方法でFirebaseを呼び出す
-  const adminAuth = getAdminAuth();
+  const adminAuth = adminAuth();
   const adminDb = getAdminDb();
 
   if (!adminAuth || !adminDb) {

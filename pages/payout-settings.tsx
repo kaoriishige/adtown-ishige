@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../lib/firebase-admin';
 import { useState } from 'react';
 
 // --- 型定義 ---
@@ -120,7 +120,7 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialSettings
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     
     const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
     const payoutSettings = userDoc.data()?.payoutSettings || null;

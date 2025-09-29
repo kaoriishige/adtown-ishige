@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
 import * as admin from 'firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,12 +21,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         // Firebase Authenticationに新しいユーザーを作成
         console.log("--- 3. Creating Firebase Auth user... ---");
-        const userRecord = await getAdminAuth().createUser({ email, password });
+        const userRecord = await adminAuth().createUser({ email, password });
         console.log(`--- 4. Auth User Created Successfully! UID: ${userRecord.uid} ---`);
         
         // カスタムクレームを設定
         console.log("--- 5. Setting Custom Claims... ---");
-        await getAdminAuth().setCustomUserClaims(userRecord.uid, { role: 'partner' });
+        await adminAuth().setCustomUserClaims(userRecord.uid, { role: 'partner' });
         console.log("--- 6. Custom Claims Set Successfully! ---");
 
         // Firestoreに保存するユーザーデータ

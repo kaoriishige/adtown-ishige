@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 
 // --- 型定義 ---
@@ -61,7 +61,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     // 認証チェック
     const cookies = nookies.get(context);
-    await getAdminAuth().verifySessionCookie(cookies.token, true);
+    await adminAuth().verifySessionCookie(cookies.token, true);
 
     const adminDb = getAdminDb();
     

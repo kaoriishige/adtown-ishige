@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 // `admin`本体もインポートして、arrayRemoveなどの特殊な操作に備えます
-import { admin, getAdminAuth, getAdminDb, getAdminStorageBucket } from '@/lib/firebase-admin';
+import { admin, adminAuth, getAdminDb, getAdminStorageBucket } from '@/lib/firebase-admin';
 // ブラウザ用の 'firebase/firestore' からのインポートは不要なので削除します
 
 export default async function handler(
@@ -16,7 +16,7 @@ export default async function handler(
     if (!token) {
       return res.status(401).json({ error: '認証トークンがありません。' });
     }
-    const decodedToken = await getAdminAuth().verifyIdToken(token);
+    const decodedToken = await adminAuth().verifyIdToken(token);
     const uid = decodedToken.uid;
 
     const { storeId, imageUrl, imageType } = req.body;

@@ -3,7 +3,7 @@ import { NextPage, GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../lib/firebase-admin';
 import Head from 'next/head';
 
 // ▼▼▼ アイコンのインポートを追加 ▼▼▼
@@ -206,7 +206,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
 
     if (!userDoc.exists) {

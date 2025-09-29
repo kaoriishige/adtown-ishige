@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth } from '@/lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
 import { useState, ChangeEvent } from 'react';
 import Head from 'next/head'; // Headをインポート
 
@@ -189,7 +189,7 @@ const SubmitDealPage: NextPage = () => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     if (token.role !== 'partner') {
       return { redirect: { destination: '/partner/login', permanent: false } };
     }

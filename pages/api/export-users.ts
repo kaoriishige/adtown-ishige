@@ -21,7 +21,7 @@ function initializeFirebaseAdmin(): admin.app.App {
   });
   return app;
 }
-function getAdminAuth(): admin.auth.Auth | null {
+function adminAuth(): admin.auth.Auth | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.auth(app!);
@@ -30,7 +30,7 @@ function getAdminAuth(): admin.auth.Auth | null {
 // --- ここまでが直接書き込んだコード ---
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const adminAuth = getAdminAuth();
+  const adminAuth = adminAuth();
   if (!adminAuth) {
     return res.status(500).json({ error: 'Firebase Admin SDK not initialized' });
   }

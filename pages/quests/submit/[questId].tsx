@@ -1,6 +1,6 @@
 import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
@@ -89,7 +89,7 @@ const QuestSubmitPage: NextPage<QuestSubmitPageProps> = ({ quest }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth().verifySessionCookie(cookies.token, true);
         const { uid } = token;
         const { questId } = context.params as { questId: string };
 

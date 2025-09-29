@@ -3,7 +3,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
 import { QRCodeCanvas } from 'qrcode.react';
-import { getAdminAuth } from '../lib/firebase-admin';
+import { adminAuth } from '../lib/firebase-admin';
 
 // --- 型定義 ---
 interface User {
@@ -83,7 +83,7 @@ const ReferralInfoPage: NextPage<ReferralInfoPageProps> = ({ user }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     
     return {
       props: {

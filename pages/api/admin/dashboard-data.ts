@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminDb, getAdminAuth } from '../../../lib/firebase-admin';
+import { getAdminDb, adminAuth } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // ▼▼▼【重要】管理者認証チェックを追加 ▼▼▼
   try {
     const cookies = nookies.get({ req });
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
       return res.status(403).json({ error: 'Unauthorized' });

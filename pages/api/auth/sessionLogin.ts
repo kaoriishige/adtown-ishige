@@ -1,7 +1,7 @@
 // pages/api/auth/sessionLogin.ts
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const idToken = authorization.split('Bearer ')[1];
 
-    const decodedToken = await getAdminAuth().verifyIdToken(idToken);
+    const decodedToken = await adminAuth().verifyIdToken(idToken);
     const { uid } = decodedToken;
 
     const userDoc = await getAdminDb().collection('users').doc(uid).get();
@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userRole = userData?.role || 'user';
 
     const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 days
-    const sessionCookie = await getAdminAuth().createSessionCookie(idToken, { expiresIn });
+    const sessionCookie = await adminAuth().createSessionCookie(idToken, { expiresIn });
 
     // ▼▼▼ ここが修正箇所です ▼▼▼
     const options = { 

@@ -1,6 +1,6 @@
 // pages/api/partner/signup.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
 import getAdminStripe from '@/lib/stripe-admin';
 
 // メールの基本チェック用
@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const db = getAdminDb();
-  const auth = getAdminAuth();
+  const auth = adminAuth();
   const stripe = getAdminStripe();
 
   try {

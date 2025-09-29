@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { getAdminDb } from '../../lib/firebase-admin';
 import nookies from 'nookies';
-import { getAdminAuth } from '../../lib/firebase-admin';
+import { adminAuth } from '../../lib/firebase-admin';
 
 interface Quest {
     id: string;
@@ -49,7 +49,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         if (!cookies.token) {
             return { redirect: { destination: '/login', permanent: false } };
         }
-        await getAdminAuth().verifySessionCookie(cookies.token, true);
+        await adminAuth().verifySessionCookie(cookies.token, true);
 
         if (!questId) {
             return { notFound: true };

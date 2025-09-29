@@ -6,7 +6,7 @@ import { RiArrowLeftLine, RiCheckboxCircleFill, RiCloseCircleFill, RiLoader4Line
 import Link from 'next/link';
 import nookies from 'nookies';
 import { GetServerSideProps } from 'next';
-import { getAdminAuth } from '../../lib/firebase-admin';
+import { adminAuth } from '../../lib/firebase-admin';
 
 const RedeemPage: NextPage = () => {
     const [scanResult, setScanResult] = useState<{ message: string; dealTitle: string; storeName: string; } | null>(null);
@@ -158,8 +158,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         if (!cookies.token) {
             return { redirect: { destination: '/partner/login', permanent: false } };
         }
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-        const userDoc = await getAdminAuth().getUser(token.uid);
+        const token = await adminAuth().verifySessionCookie(cookies.token, true);
+        const userDoc = await adminAuth().getUser(token.uid);
         if (userDoc.customClaims?.role !== 'partner') {
              return { redirect: { destination: '/partner/login', permanent: false } };
         }

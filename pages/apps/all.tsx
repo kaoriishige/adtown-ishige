@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../lib/firebase-admin';
 import { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // --- 型定義 ---
@@ -70,7 +70,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     if (!cookies.token) {
         return { redirect: { destination: '/login', permanent: false } };
     }
-    await getAdminAuth().verifySessionCookie(cookies.token, true);
+    await adminAuth().verifySessionCookie(cookies.token, true);
     
     // ログインさえしていればOK
 

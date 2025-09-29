@@ -19,7 +19,7 @@ function initializeFirebaseAdmin(): admin.app.App {
   });
   return app;
 }
-function getAdminAuth(): admin.auth.Auth | null {
+function adminAuth(): admin.auth.Auth | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.auth(app!);
@@ -48,7 +48,7 @@ export default async function handler(
 
   try {
     // ここに管理者認証のロジックを追加することを推奨します
-    // 例: const token = await getAdminAuth().verifyIdToken(req.cookies.token);
+    // 例: const token = await adminAuth().verifyIdToken(req.cookies.token);
     // if (!token.admin) throw new Error('Unauthorized');
 
     const usersSnapshot = await adminDb.collection('users').get();

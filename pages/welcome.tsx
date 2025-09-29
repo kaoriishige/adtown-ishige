@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { GetServerSideProps, NextPage } from 'next';
-import { getAdminAuth } from '../lib/firebase-admin';
+import { adminAuth } from '../lib/firebase-admin';
 import Stripe from 'stripe';
 
 // ページが受け取るPropsの型

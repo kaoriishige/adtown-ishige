@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../lib/firebase-admin';
 
 // Stripe SDKを初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -20,7 +20,7 @@ export default async function handler(
     return res.status(405).end('Method Not Allowed');
   }
 
-  const adminAuth = getAdminAuth();
+  const adminAuth = adminAuth();
   const adminDb = getAdminDb();
 
   if (!adminAuth || !adminDb) {

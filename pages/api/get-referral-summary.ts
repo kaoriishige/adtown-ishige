@@ -20,7 +20,7 @@ function initializeFirebaseAdmin(): admin.app.App {
   });
   return app;
 }
-function getAdminAuth(): admin.auth.Auth | null {
+function adminAuth(): admin.auth.Auth | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.auth(app!);
@@ -35,7 +35,7 @@ function getAdminDb(): admin.firestore.Firestore | null {
 // --- ここまでが直接書き込んだコード ---
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const adminAuth = getAdminAuth();
+  const adminAuth = adminAuth();
   const adminDb = getAdminDb();
 
   if (!adminAuth || !adminDb) {

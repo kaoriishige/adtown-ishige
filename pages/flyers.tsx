@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { GetServerSideProps, NextPage } from 'next'; // ★ NextPage, GetServerSideProps をインポート
 import nookies from 'nookies'; // ★ nookies をインポート
-import { getAdminAuth, getAdminDb } from '../lib/firebase-admin'; // ★ firebase-admin をインポート
+import { adminAuth, getAdminDb } from '../lib/firebase-admin'; // ★ firebase-admin をインポート
 import Head from 'next/head'; // ★ Head をインポート
 import Link from 'next/link'; // ★ Link をインポート
 import { RiArrowLeftLine } from 'react-icons/ri'; // ★ アイコンをインポート
@@ -126,7 +126,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             return { redirect: { destination: '/login', permanent: false } };
         }
 
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth().verifySessionCookie(cookies.token, true);
         const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
 
         if (!userDoc.exists) {

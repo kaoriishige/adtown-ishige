@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getAdminAuth, getAdminDb } from '../../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../../lib/firebase-admin';
 import nookies from 'nookies';
 import * as admin from 'firebase-admin';
 
@@ -26,8 +26,8 @@ export default async function handler(
     if (!cookies.token) {
       return res.status(401).json({ error: 'Unauthorized: No token provided' });
     }
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-    const adminUser = await getAdminAuth().getUser(token.uid);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const adminUser = await adminAuth().getUser(token.uid);
     if (adminUser.customClaims?.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden: User is not an admin' });
     }

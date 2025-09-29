@@ -20,7 +20,7 @@ function initializeFirebaseAdmin(): admin.app.App {
   });
   return app;
 }
-function getAdminAuth(): admin.auth.Auth | null {
+function adminAuth(): admin.auth.Auth | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.auth(app!);
@@ -42,7 +42,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const adminAuth = getAdminAuth();
+  const adminAuth = adminAuth();
   const adminDb = getAdminDb();
 
   if (!adminAuth || !adminDb) {

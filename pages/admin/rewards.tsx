@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin'; // ★ 新しいインポート
+import { adminAuth, getAdminDb } from '../../lib/firebase-admin'; // ★ 新しいインポート
 
 // 型定義
 interface RewardSummary {
@@ -48,7 +48,7 @@ const RewardsPage: NextPage<RewardsPageProps> = ({ summary }) => {
 // サーバーサイドでのデータ取得
 export const getServerSideProps: GetServerSideProps = async (context) => {
   // ★ 新しい方法でAuthとDBを呼び出す
-  const adminAuth = getAdminAuth();
+  const adminAuth = adminAuth();
   const adminDb = getAdminDb();
 
   if (!adminAuth || !adminDb) {

@@ -2,7 +2,7 @@ import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../lib/firebase-admin';
 
 const QuestReviewPage: NextPage = () => {
     return (
@@ -36,7 +36,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         if (!cookies.token) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth().verifySessionCookie(cookies.token, true);
         
         // FirestoreのDBで 'role' をチェックする方法に統一
         const userDoc = await getAdminDb().collection('users').doc(token.uid).get();

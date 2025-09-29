@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== 'POST') {
@@ -9,7 +9,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     try {
         const cookies = nookies.get({ req });
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth().verifySessionCookie(cookies.token, true);
         const { uid: partnerId } = token;
 
         const { title, type, description, imageUrl } = req.body;

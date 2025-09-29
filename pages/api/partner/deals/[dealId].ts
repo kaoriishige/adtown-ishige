@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 // 私たちが作成した管理者用のヘルパー関数をインポート
 import { 
-  getAdminAuth, 
+  adminAuth, 
   getAdminDb, 
   getAdminStorageBucket 
 } from '@/lib/firebase-admin';
@@ -23,7 +23,7 @@ export default async function handler(
       return res.status(401).json({ error: '認証トークンが見つかりません。' });
     }
     const token = authorization.split('Bearer ')[1];
-    const auth = getAdminAuth();
+    const auth = adminAuth();
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
 

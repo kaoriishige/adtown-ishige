@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
 import {
     RiQrCodeLine, RiFileList3Line, RiCopperCoinLine, RiGiftLine,
     RiLogoutCircleRLine, RiMoneyCnyCircleLine, RiInformationLine,
@@ -272,7 +272,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       return { redirect: { destination: '/login?from=/mypage', permanent: false } };
     }
 
-    const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth().verifySessionCookie(cookies.token, true);
     const { uid, email } = token;
 
     const userRef = getAdminDb().collection('users').doc(uid);

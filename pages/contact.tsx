@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin'; // 絶対パスを使用
+import { adminAuth, getAdminDb } from '@/lib/firebase-admin'; // 絶対パスを使用
 
 // --- ★★★ ここからが重要な変更点 ★★★ ---
 // ページが受け取るpropsの型に、ユーザーの役割(role)を追加
@@ -55,7 +55,7 @@ const ContactPage: NextPage<ContactPageProps> = ({ user }) => {
 // サーバーサイドで、ユーザーの役割(role)を取得する処理を追加
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const adminAuth = getAdminAuth();
+    const adminAuth = adminAuth();
     const adminDb = getAdminDb();
     const cookies = nookies.get(context);
     const token = await adminAuth.verifySessionCookie(cookies.token, true);

@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import { useState } from 'react';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, getAdminDb } from '../../lib/firebase-admin';
 import { RiUserSearchLine } from 'react-icons/ri';
 import Link from 'next/link';
 
@@ -191,7 +191,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         if (!cookies.token) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth().verifySessionCookie(cookies.token, true);
         
         const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
         if (!userDoc.exists || userDoc.data()?.role !== 'admin') {

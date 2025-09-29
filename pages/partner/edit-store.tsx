@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { collection, query, where, getDocs, doc, updateDoc, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import nookies from 'nookies';
-import { getAdminAuth } from '@/lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
 
 // --- カテゴリとエリアのデータ ---
 const categories = [
@@ -131,7 +131,7 @@ const PartnerEditStorePage: NextPage<EditStorePageProps> = ({ store }) => {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const adminAuth = getAdminAuth();
+    const adminAuth = adminAuth();
     const cookies = nookies.get(context);
     
     // ログイン中のパートナーの情報を取得
