@@ -14,7 +14,7 @@ export default function AdminHelpPage() {
 ChatGPTがやってくれない理由①②③を理解した前提で進めてください。
 
 ✅やってほしいこと：/admin/landing-editor にLINE登録セクションを追加したい  
-✅現在地：LINEセクションは未追加、他は完成済み  
+✅現在地：LINEセクションは未追加、他は完成済みです  
 ✅ゴール：LINEセクションをデザイン付きで挿入し、保存 → 反映されること
 
 ✅Canvasを使わず、ここに全コードを貼ってください。説明不要です。
