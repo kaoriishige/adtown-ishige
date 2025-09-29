@@ -178,7 +178,7 @@ const ManageTreasurePage: NextPage = () => {
             <div className="bg-white p-6 rounded-lg shadow">
                 <h2 className="text-2xl font-semibold mb-4">既存アイテム一覧</h2>
                 {loading ? (
-                    <div className="text-center py-10">アイテムを読み込み中...</div>
+                    <div className="text-center py-10">アイテム読み込み中...</div>
                 ) : (
                     <ul className="divide-y divide-gray-200">
                         {items.map(item => (
