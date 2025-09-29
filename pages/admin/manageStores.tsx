@@ -1,185 +1,110 @@
-import { GetServerSideProps, NextPage } from 'next';
-import Link from 'next/link';
+import { NextPage, GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
-import { useState } from 'react';
-import { getAdminDb } from '@/lib/firebase-admin';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // 削除処理のためにクライアント用も必要
+import { useState, useEffect } from 'react';
+import nookies from 'nookies';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { getAuth } from 'firebase/auth'; // クライアント側のFirebase Authをインポート
 
-// 店舗データの型定義にQRスタンド個数を追加
-interface Store {
-  id: string;
-  name: string;
-  category: string;
-  area: string;
-  ownerUid: string;
-  createdAt: string;
-  phoneNumber: string;
-  qrStandCount: number; // QRスタンド個数を追加
-}
+const ManageStoresPage: NextPage = () => {
+    const [stores, setStores] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
-interface ManageStoresProps {
-  stores: Store[];
-}
+    // クライアント側で実行されるデータ取得関数
+    const fetchStores = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const auth = getAuth();
+            const user = auth.currentUser;
 
-// URLのslugから日本語の名前に変換するための対応表
-const categoryNames: { [key: string]: string } = {
-  'restaurant': '飲食店',
-  'hair-salon': '美容室',
-  'beauty': 'Beauty',
-  'health': 'Health',
-  'living': '暮らし',
-  'leisure': 'レジャー',
-};
-const areaNames: { [key: string]: string } = {
-  'nasushiobara': '那須塩原市',
-  'ohtawara': '大田原市',
-  'nasu': '那須町',
-};
+            if (!user) {
+                // ログインしていない場合はログインページにリダイレクト
+                router.push('/admin/login');
+                return;
+            }
 
-const ManageStoresPage: NextPage<ManageStoresProps> = ({ stores }) => {
-  const router = useRouter();
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+            const storesCollection = collection(db, 'stores');
+            const storeSnapshot = await getDocs(storesCollection);
+            const storesList = storeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setStores(storesList);
+        } catch (e) {
+            console.error("Error fetching stores: ", e);
+            setError("店舗情報の取得中にエラーが発生しました。");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const handleDelete = async (storeId: string, storeName: string) => {
-    if (confirm(`本当に店舗「${storeName}」を削除しますか？この操作は元に戻せません。`)) {
-      try {
-        await deleteDoc(doc(db, 'stores', storeId));
-        alert('店舗を削除しました');
-        router.reload();
-      } catch (error) {
-        console.error("店舗の削除中にエラーが発生しました: ", error);
-        alert('削除中にエラーが発生しました');
-      }
+    const handleDeleteStore = async (storeId: string) => {
+        if (window.confirm("この店舗を削除してもよろしいですか？")) {
+            setLoading(true);
+            try {
+                const storeDoc = doc(db, 'stores', storeId);
+                await deleteDoc(storeDoc);
+                // 削除後、再度リストをフェッチ
+                await fetchStores();
+            } catch (e) {
+                console.error("Error deleting store: ", e);
+                setError("店舗の削除中にエラーが発生しました。");
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    useEffect(() => {
+        fetchStores();
+    }, []);
+
+    if (loading) {
+        return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
     }
-  };
 
-  const handleCopyUrl = (id: string, type: 'store' | 'referral') => {
-    const baseUrl = `https://minna-no-nasu-app.netlify.app`;
-    const url = type === 'store' 
-      ? `${baseUrl}/store/${id}` 
-      : `${baseUrl}/signup?ref=${id}`;
+    if (error) {
+        return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
+    }
 
-    const textArea = document.createElement("textarea");
-    textArea.value = url;
-    document.body.appendChild(textArea);
-    textArea.select();
+    return (
+        <div className="min-h-screen bg-gray-100 p-8">
+            <h1 className="text-3xl font-bold mb-6">店舗管理</h1>
+            <ul className="bg-white rounded-lg shadow divide-y divide-gray-200">
+                {stores.map(store => (
+                    <li key={store.id} className="p-4 flex justify-between items-center">
+                        <span>{store.storeName}</span>
+                        <button onClick={() => handleDeleteStore(store.id)} className="text-red-500 hover:text-red-700">削除</button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
+// サーバー側での認証チェックのみを行う
+export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
-      document.execCommand('copy');
-      setCopiedId(`${id}-${type}`);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error('URLのコピーに失敗しました', err);
+        const cookies = nookies.get(context);
+        if (!cookies.token) {
+            return { redirect: { destination: '/admin/login', permanent: false } };
+        }
+        
+        const token = await adminAuth.verifyIdToken(cookies.token, true);
+        const userDoc = await adminDb.collection('users').doc(token.uid).get();
+
+        if (!userDoc.exists || !userDoc.data()?.roles?.includes('admin')) {
+            return { redirect: { destination: '/admin/login', permanent: false } };
+        }
+
+        return {
+            props: {},
+        };
+    } catch (error) {
+        console.error('認証エラー:', error);
+        return { redirect: { destination: '/admin/login', permanent: false } };
     }
-    document.body.removeChild(textArea);
-  };
-
-  return (
-    <div className="p-5">
-      <Link href="/admin" className="text-blue-500 hover:underline">
-        ← 管理メニューに戻る
-      </Link>
-      <h1 className="text-3xl font-bold my-6 text-center">店舗管理</h1>
-      <div className="text-center mb-6">
-        <Link href="/admin/addStore">
-          <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            新規店舗追加
-          </button>
-        </Link>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">店舗名</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">カテゴリ</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">エリア</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">電話番号</th>
-              {/* ▼▼▼ QRスタンド個数の列ヘッダーを追加 ▼▼▼ */}
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">QR個数</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">登録日</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">紹介URL</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stores.map((store) => (
-              <tr key={store.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 border-b border-gray-200">{store.name}</td>
-                <td className="px-6 py-4 border-b border-gray-200">{store.category}</td>
-                <td className="px-6 py-4 border-b border-gray-200">{store.area}</td>
-                <td className="px-6 py-4 border-b border-gray-200">{store.phoneNumber}</td>
-                {/* ▼▼▼ QRスタンド個数を表示するセルを追加 ▼▼▼ */}
-                <td className="px-6 py-4 border-b border-gray-200 text-center">{store.qrStandCount}</td>
-                <td className="px-6 py-4 border-b border-gray-200">{store.createdAt}</td>
-                <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">
-                  <button 
-                    onClick={() => handleCopyUrl(store.ownerUid, 'referral')} 
-                    className="text-purple-600 hover:text-purple-900"
-                    disabled={!store.ownerUid} 
-                    title={!store.ownerUid ? "この店舗には紹介者が紐付いていません" : ""}
-                  >
-                    {copiedId === `${store.ownerUid}-referral` ? 'コピーしました！' : '紹介URLをコピー'}
-                  </button>
-                </td>
-                <td className="px-6 py-4 border-b border-gray-200 whitespace-nowrap">
-                  <Link href={`/admin/editStore/${store.id}`}>
-                    <button className="text-indigo-600 hover:text-indigo-900 mr-4">編集</button>
-                  </Link>
-                  <button onClick={() => handleCopyUrl(store.id, 'store')} className="text-green-600 hover:text-green-900 mr-4">
-                    {copiedId === `${store.id}-store` ? 'コピー！' : '店舗URL'}
-                  </button>
-                  <button onClick={() => handleDelete(store.id, store.name)} className="text-red-600 hover:text-red-900">削除</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  try {
-    const adminDb = getAdminDb();
-    const storesCollectionRef = adminDb.collection('stores');
-    const querySnapshot = await storesCollectionRef.orderBy('createdAt', 'desc').get();
-
-    const stores = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      
-      const createdAtTimestamp = data.createdAt;
-      const formattedDate = createdAtTimestamp 
-        ? new Date(createdAtTimestamp.seconds * 1000).toLocaleDateString('ja-JP') 
-        : 'N/A';
-
-      return {
-        id: doc.id,
-        name: data.name || '',
-        category: categoryNames[data.category] || data.category,
-        area: areaNames[data.area] || data.area,
-        ownerUid: data.ownerUid || '',
-        createdAt: formattedDate,
-        phoneNumber: data.phoneNumber || '未登録',
-        // ▼▼▼ QRスタンド個数を取得 ▼▼▼
-        qrStandCount: data.qrStandCount || 1, // 未登録の場合はデフォルトで1を表示
-      };
-    });
-
-    return {
-      props: {
-        stores: JSON.parse(JSON.stringify(stores)),
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching stores:", error);
-    return {
-      props: {
-        stores: [],
-      },
-    };
-  }
 };
 
 export default ManageStoresPage;
