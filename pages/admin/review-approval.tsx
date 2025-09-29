@@ -34,7 +34,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
         if (!cookies.token) {
-            return { redirect: { destination: '/admin/login', permanent: false } };
+        return { redirect: { destination: '/admin/login', permanent: false } };
         }
         const token = await adminAuth.verifySessionCookie(cookies.token, true);
 
