@@ -1,7 +1,8 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '../../lib/firebase-admin'; // ★ 新しいインポート
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; // 正しいインポートに修正
+import { Timestamp } from 'firebase-admin/firestore';
 
 // 型定義
 interface RewardSummary {
@@ -47,18 +48,13 @@ const RewardsPage: NextPage<RewardsPageProps> = ({ summary }) => {
 
 // サーバーサイドでのデータ取得
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  // ★ 新しい方法でAuthとDBを呼び出す
-  const adminAuth = adminAuth();
-  const adminDb = getAdminDb();
-
-  if (!adminAuth || !adminDb) {
-    console.error("Firebase Admin on RewardsPage failed to initialize.");
-    return { redirect: { destination: '/login', permanent: false } };
-  }
-
   try {
-    // 管理者認証
     const cookies = nookies.get(context);
+    if (!cookies.token) {
+        return { redirect: { destination: '/admin/login', permanent: false } };
+    }
+    
+    // 認証チェックを正しい呼び出しに修正
     await adminAuth.verifyIdToken(cookies.token);
 
     // Admin SDKを使ってFirestoreからデータを取得
@@ -86,7 +82,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.error("Error fetching rewards summary:", error);
     return {
       redirect: {
-        destination: '/login',
+        destination: '/admin/login',
         permanent: false,
       },
     };
