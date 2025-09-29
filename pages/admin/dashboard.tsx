@@ -2,7 +2,7 @@ import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; // ★ここを修正しました
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { FiUsers, FiHome, FiTrendingUp, FiHeart, FiArrowUp } from 'react-icons/fi';
 
@@ -78,7 +78,7 @@ const NewUsersChart = ({ data }: { data: any[] }) => (
 
 const PopularStoresChart = ({ data }: { data: any[] }) => (
     <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="font-bold text-gray-700 mb-4">人気加盟店ランキング（今月）</h3>
+        <h3 className="font-bold text-gray-700 mb-4">人気加盟店のランキング（今月）</h3>
         {data.length === 0 ? (
             <p className="text-gray-500 text-center py-10">まだデータがありません。</p>
         ) : (
@@ -169,8 +169,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const token = await adminAuth.verifyIdToken(cookies.token, true);
         const userDoc = await adminDb.collection('users').doc(token.uid).get();
 
-        // ▼▼▼ ここを修正 ▼▼▼
-        // userDoc.exists() から () を削除しました
         if (!userDoc.exists || !userDoc.data()?.roles?.includes('admin')) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
