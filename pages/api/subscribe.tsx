@@ -20,7 +20,7 @@ export default function SubscribePage() {
       </a>
 
       <p className="text-xs text-gray-500 mt-6">
-        ※ Stripe Checkoutを使用しています。登録後は自動的に課金が開始されます。
+        ※ Stripe Checkoutを使用しています。登録後は自動的に課金開始されます。
       </p>
 
       <div className="mt-10">
