@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import { useState } from 'react';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; // 正しいインポートに修正
 import { RiUserSearchLine } from 'react-icons/ri';
 import Link from 'next/link';
 
@@ -45,11 +45,11 @@ const UserManagementPage: NextPage = () => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '検索に失敗しました。');
-            
+
             if (data.users.length === 0) {
                 setError('該当するユーザーが見つかりませんでした。');
             } else {
-              setError(null);
+                setError(null);
             }
             setUsers(data.users);
         } catch (err: any) {
@@ -77,7 +77,7 @@ const UserManagementPage: NextPage = () => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'ポイントの操作に失敗しました。');
-            
+
             alert('ポイントの操作が完了しました。');
             setSelectedUser(null);
             setPointsToAdd(0);
@@ -191,9 +191,11 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         if (!cookies.token) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
-        const token = await adminAuth().verifySessionCookie(cookies.token, true);
+        // 修正1: adminAuth()をadminAuthに修正
+        const token = await adminAuth.verifySessionCookie(cookies.token, true);
         
-        const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+        // 修正2: getAdminDb()をadminDbに修正
+        const userDoc = await adminDb.collection('users').doc(token.uid).get();
         if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
