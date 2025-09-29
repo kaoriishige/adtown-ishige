@@ -1,14 +1,14 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { useState } from 'react';
 
 // --- 型定義 ---
 interface ReferralSettings {
   partnerRewardRate: number; // 0.3 for 30%
-  userRewardRate: number;    // 0.2 for 20%
-  payoutThreshold: number;   // 3000
+  userRewardRate: number; // 0.2 for 20%
+  payoutThreshold: number; // 3000
 }
 
 interface SettingsPageProps {
@@ -23,7 +23,6 @@ const AdminSettingsPage: NextPage<SettingsPageProps> = ({ initialSettings }) => 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    // パーセント入力は100で割って小数に変換
     const isRate = id.includes('RewardRate');
     const numericValue = isRate ? parseFloat(value) / 100 : parseInt(value, 10);
     setSettings(prev => ({ ...prev, [id]: numericValue }));
@@ -85,12 +84,13 @@ const AdminSettingsPage: NextPage<SettingsPageProps> = ({ initialSettings }) => 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    await adminAuth().verifySessionCookie(cookies.token, true);
+    await adminAuth.verifySessionCookie(cookies.token, true);
     
-    const settingsDoc = await getAdminDb().collection('settings').doc('referral').get();
+    const settingsDoc = await adminDb.collection('settings').doc('referral').get();
+    
     const defaultSettings = {
-      partnerRewardRate: 0.3, // 30%
-      userRewardRate: 0.2,    // 20%
+      partnerRewardRate: 0.3,
+      userRewardRate: 0.2,
       payoutThreshold: 3000,
     };
     
