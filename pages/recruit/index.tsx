@@ -4,6 +4,10 @@ import { NextPage } from 'next';
 import { useState, useEffect, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import React from 'react';
+// ▼▼▼ Firebase Auth関連のインポート ▼▼▼
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { app } from '@/lib/firebase';
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 // --- インラインSVGアイコンコンポーネンﾄ ---
 const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> );
@@ -99,6 +103,7 @@ const RecruitPartnerPage: NextPage = () => {
         setIsLoading(true);
 
         try {
+            // 1. Firebaseにユーザーアカウントを作成
             const registerResponse = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -117,6 +122,11 @@ const RecruitPartnerPage: NextPage = () => {
 
             const { uid } = await registerResponse.json();
 
+            // 2. 作成したアカウントで即座にログインする
+            const auth = getAuth(app);
+            await signInWithEmailAndPassword(auth, email, password);
+
+            // 3. ログイン状態を維持したままStripeセッションを作成
             const stripeResponse = await fetch('/api/recruit/create-subscription-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -133,6 +143,7 @@ const RecruitPartnerPage: NextPage = () => {
                 throw new Error(stripeData.error?.message || '決済ページの作成に失敗しました。');
             }
 
+            // 4. Stripe決済ページへリダイレクト
             const { sessionId } = stripeData;
             if (sessionId) {
                 const stripe = await stripePromise;
@@ -175,7 +186,7 @@ const RecruitPartnerPage: NextPage = () => {
                     </p>
                     <div className="mt-8">
                         <button onClick={scrollToForm} className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-                           今すぐ無料で先行登録する
+                            今すぐ無料で先行登録する
                         </button>
                         <p className="mt-2 text-sm text-gray-500">課金は11月1日から。いつでもキャンセル可能。</p>
                     </div>

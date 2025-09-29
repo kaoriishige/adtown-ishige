@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import stripe from '@/lib/stripe'; // ★ 修正: デフォルトインポートにする
-import { adminAuth } from '@/lib/firebase-admin';
+import stripe from '@/lib/stripe';
+import { adminAuth } from '@/lib/firebase-admin'; // ★ここを修正しました
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,9 +17,7 @@ export default async function handler(
   }
 
   try {
-    // stripe変数をそのまま使う
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-
     const firebaseUid = session.metadata?.firebaseUID;
     
     if (!firebaseUid) {
@@ -27,7 +25,6 @@ export default async function handler(
     }
 
     const customToken = await adminAuth.createCustomToken(firebaseUid);
-
     res.status(200).json({ customToken });
 
   } catch (error: any) {
