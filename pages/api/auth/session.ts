@@ -20,7 +20,7 @@ function initializeFirebaseAdmin(): admin.app.App {
   });
   return app;
 }
-function adminAuth(): admin.auth.Auth | null {
+function adminAuth: admin.auth.Auth | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.auth(app!);
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end();
   }
 
-  const adminAuth = adminAuth();
+  const adminAuth = adminAuth;
   if (!adminAuth) {
     return res.status(500).json({ error: 'Firebase Admin not initialized' });
   }

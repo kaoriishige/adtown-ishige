@@ -104,8 +104,6 @@ const PartnerPayoutSettingsPage: NextPage<PayoutSettingsProps> = ({ user, payout
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const adminAuth = adminAuth();
-    const adminDb = adminDb();
     const cookies = nookies.get(context);
     const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;

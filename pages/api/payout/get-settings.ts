@@ -20,13 +20,13 @@ function initializeFirebaseAdmin(): admin.app.App {
   });
   return app;
 }
-function adminAuth(): admin.auth.Auth | null {
+function adminAuth: admin.auth.Auth | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.auth(app!);
   } catch (e) { return null; }
 }
-function adminDb(): admin.firestore.Firestore | null {
+function adminDb: admin.firestore.Firestore | null {
   try {
     if (!app) initializeFirebaseAdmin();
     return admin.firestore(app!);
@@ -42,8 +42,8 @@ export default async function handler(
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const adminAuth = adminAuth();
-  const adminDb = adminDb();
+  const adminAuth = adminAuth;
+  const adminDb = adminDb;
 
   if (!adminAuth || !adminDb) {
     return res.status(500).json({ error: 'Firebase Admin SDK not initialized' });

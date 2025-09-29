@@ -140,7 +140,7 @@ export const getServerSideProps: GetServerSideProps<Props, ParsedUrlQuery> = asy
         const { storeId } = context.params!;
         if (typeof storeId !== 'string') { return { notFound: true }; }
 
-        const db = adminDb();
+        const db = adminDb;
         const storeDocRef = db.collection('stores').doc(storeId);
         
         // 店舗情報と口コミ情報を並行して取得

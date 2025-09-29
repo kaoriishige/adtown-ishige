@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const db = adminDb();
+    const db = adminDb;
     
     // "active"状態のクエストのみを取得
     const questsSnapshot = await db.collection('quests').where('status', '==', 'active').get();

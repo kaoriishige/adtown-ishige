@@ -158,8 +158,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         if (!cookies.token) {
             return { redirect: { destination: '/partner/login', permanent: false } };
         }
-        const token = await adminAuth().verifySessionCookie(cookies.token, true);
-        const userDoc = await adminAuth().getUser(token.uid);
+        const token = await adminAuth.verifySessionCookie(cookies.token, true);
+        const userDoc = await adminAuth.getUser(token.uid);
         if (userDoc.customClaims?.role !== 'partner') {
              return { redirect: { destination: '/partner/login', permanent: false } };
         }

@@ -66,11 +66,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     // 認証チェック
     const cookies = nookies.get(context);
-    // 修正1: adminAuth()をadminAuthに修正
+    // 修正1: adminAuthをadminAuthに修正
     await adminAuth.verifySessionCookie(cookies.token, true);
 
 
-    // 修正2: adminDb()をadminDbに修正
+    // 修正2: adminDbをadminDbに修正
     const adminDbInstance = adminDb;
    
     // 1. 全ユーザーのIDと役割(role)を取得

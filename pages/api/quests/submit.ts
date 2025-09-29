@@ -8,13 +8,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const cookies = nookies.get({ req });
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;
     const { questId, reportText } = req.body;
 
     if (!questId) { return res.status(400).json({ error: 'Quest ID is required' }); }
 
-    const db = adminDb();
+    const db = adminDb;
     const userQuestRef = db.collection('users').doc(uid).collection('acceptedQuests').doc(questId);
     
     const userQuestDoc = await userQuestRef.get();

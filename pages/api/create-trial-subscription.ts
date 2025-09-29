@@ -9,7 +9,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   // ★ 修正点: adminDb関数を呼び出してdbインスタンスを取得
-  const db = adminDb();
+  const db = adminDb;
 
   const { name, furigana, email, uid, paymentMethodId, referrerId } = req.body;
 

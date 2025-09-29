@@ -258,7 +258,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // ▼▼▼【ここを修正】adminDb() → adminDb に変更 ▼▼▼
+    // ▼▼▼【ここを修正】adminDb → adminDb に変更 ▼▼▼
     const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
     

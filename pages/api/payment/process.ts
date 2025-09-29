@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!cookies.token) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;
     const { storeId, amount } = req.body;
 
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid request parameters' });
     }
 
-    const db = adminDb();
+    const db = adminDb;
     const userRef = db.collection('users').doc(uid);
     const storeRef = db.collection('users').doc(storeId); // 店舗もusersコレクションにある前提
 

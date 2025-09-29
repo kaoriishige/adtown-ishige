@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const cookies = nookies.get({ req });
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;
     const { dealId } = req.body;
 
@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Deal ID is required' });
     }
 
-    const db = adminDb();
+    const db = adminDb;
     const userRef = db.collection('users').doc(uid);
     const dealRef = db.collection('deals').doc(dealId);
 

@@ -72,7 +72,7 @@ const TicketsPage: NextPage<TicketsPageProps> = ({ deals }) => {
 
 // サーバーサイドでデータを事前に取得
 export const getServerSideProps: GetServerSideProps = async () => {
-  const db = adminDb();
+  const db = adminDb;
   const snapshot = await db.collection('deals').where('isActive', '==', true).orderBy('createdAt', 'desc').get();
   
   const deals = snapshot.docs.map(doc => {

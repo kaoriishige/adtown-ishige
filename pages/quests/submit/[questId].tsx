@@ -89,11 +89,11 @@ const QuestSubmitPage: NextPage<QuestSubmitPageProps> = ({ quest }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
-        const token = await adminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth.verifySessionCookie(cookies.token, true);
         const { uid } = token;
         const { questId } = context.params as { questId: string };
 
-        const questDoc = await adminDb().collection('users').doc(uid).collection('acceptedQuests').doc(questId).get();
+        const questDoc = await adminDb.collection('users').doc(uid).collection('acceptedQuests').doc(questId).get();
         if (!questDoc.exists) { return { props: { quest: null } }; }
         
         const data = questDoc.data();

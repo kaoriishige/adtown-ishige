@@ -11,10 +11,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 認証：このAPIを呼び出すのがパートナー（店舗）であることを確認
     const cookies = nookies.get({ req });
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const partnerId = token.uid;
 
-    const partnerDoc = await adminDb().collection('users').doc(partnerId).get();
+    const partnerDoc = await adminDb.collection('users').doc(partnerId).get();
     if (!partnerDoc.exists || partnerDoc.data()?.role !== 'partner') {
       return res.status(403).json({ error: 'Unauthorized: Not a partner account' });
     }
@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'User ID and Purchased Deal ID are required' });
     }
 
-    const db = adminDb();
+    const db = adminDb;
     const purchasedDealRef = db.collection('users').doc(userId).collection('purchasedDeals').doc(purchasedDealId);
 
     await db.runTransaction(async (transaction) => {

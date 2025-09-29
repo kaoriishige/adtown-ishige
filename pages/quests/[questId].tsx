@@ -49,13 +49,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         if (!cookies.token) {
             return { redirect: { destination: '/login', permanent: false } };
         }
-        await adminAuth().verifySessionCookie(cookies.token, true);
+        await adminAuth.verifySessionCookie(cookies.token, true);
 
         if (!questId) {
             return { notFound: true };
         }
 
-        const db = adminDb();
+        const db = adminDb;
         const questDoc = await db.collection('quests').doc(questId).get();
 
         if (!questDoc.exists) {

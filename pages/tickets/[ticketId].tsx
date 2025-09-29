@@ -71,11 +71,11 @@ const TicketDetailPage: NextPage<TicketDetailPageProps> = ({ deal }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
-        const token = await adminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth.verifySessionCookie(cookies.token, true);
         const { uid } = token;
         const { ticketId } = context.params as { ticketId: string };
 
-        const dealDoc = await adminDb()
+        const dealDoc = await adminDb
             .collection('users')
             .doc(uid)
             .collection('purchasedDeals')

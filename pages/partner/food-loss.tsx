@@ -266,15 +266,15 @@ const FoodLossPage: NextPage<FoodLossPageProps> = ({ initialDeals }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
-    const userDoc = await adminDb().collection('users').doc(uid).get();
+    const userDoc = await adminDb.collection('users').doc(uid).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'partner') {
         return { redirect: { destination: '/partner/login', permanent: false } };
     }
 
-    const snapshot = await adminDb().collection('foodLossDeals')
+    const snapshot = await adminDb.collection('foodLossDeals')
       .where('partnerUid', '==', uid)
       .where('isActive', '==', true)
       .orderBy('createdAt', 'desc')

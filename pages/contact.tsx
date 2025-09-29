@@ -55,8 +55,8 @@ const ContactPage: NextPage<ContactPageProps> = ({ user }) => {
 // サーバーサイドで、ユーザーの役割(role)を取得する処理を追加
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const adminAuth = adminAuth();
-    const adminDb = adminDb();
+    const adminAuth = adminAuth;
+    const adminDb = adminDb;
     const cookies = nookies.get(context);
     const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid, email } = token;

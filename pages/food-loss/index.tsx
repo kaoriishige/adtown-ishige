@@ -54,8 +54,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       return { redirect: { destination: '/login', permanent: false } };
     }
 
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
-    const userDoc = await adminDb().collection('users').doc(token.uid).get();
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
+    const userDoc = await adminDb.collection('users').doc(token.uid).get();
 
     if (!userDoc.exists) {
       return { redirect: { destination: '/login', permanent: false } };

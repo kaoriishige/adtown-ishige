@@ -16,7 +16,7 @@ export default async function handler(
     if (!token) {
       return res.status(401).json({ error: '認証トークンがありません。' });
     }
-    const decodedToken = await adminAuth().verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
     const uid = decodedToken.uid;
 
     const { storeId, imageUrl, imageType } = req.body;
@@ -25,7 +25,7 @@ export default async function handler(
         return res.status(400).json({ error: '必要な情報が不足しています。' });
     }
 
-    const db = adminDb();
+    const db = adminDb;
     // ▼▼▼ ここから書き方を `firebase-admin` SDKの作法に統一します ▼▼▼
     const storeDocRef = db.collection('stores').doc(storeId);
 

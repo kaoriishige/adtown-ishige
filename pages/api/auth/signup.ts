@@ -13,8 +13,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { email, password, name, kana } = req.body;
 
   try {
-    const adminAuth = adminAuth();
-    const adminDb = adminDb();
     
     const userRecord = await adminAuth.createUser({
       email: email,

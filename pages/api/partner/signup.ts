@@ -43,8 +43,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: '業種カテゴリ（main, sub）は必須です。' });
   }
 
-  const db = adminDb();
-  const auth = adminAuth();
+  const db = adminDb;
+  const auth = adminAuth;
   const stripe = getAdminStripe();
 
   try {

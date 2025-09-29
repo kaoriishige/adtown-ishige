@@ -10,10 +10,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const cookies = nookies.get({ req });
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
-    const userDoc = await adminDb().collection('users').doc(uid).get();
+    const userDoc = await adminDb.collection('users').doc(uid).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'partner') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const partnerData = userDoc.data();
-    const db = adminDb();
+    const db = adminDb;
 
     const dealData = {
       partnerId: uid,

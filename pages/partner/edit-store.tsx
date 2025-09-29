@@ -131,7 +131,6 @@ const PartnerEditStorePage: NextPage<EditStorePageProps> = ({ store }) => {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const adminAuth = adminAuth();
     const cookies = nookies.get(context);
     
     // ログイン中のパートナーの情報を取得

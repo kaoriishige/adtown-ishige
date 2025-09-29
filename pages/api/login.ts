@@ -17,7 +17,6 @@ export default async function handler(
     const { token } = req.body as { token: string };
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5日間
 
-    const adminAuth = adminAuth(); // 修正: 初期化済みのインスタンスを使用
     const sessionCookie = await adminAuth.createSessionCookie(token, { expiresIn });
 
     // クッキーオプション (ローカルと本番で切り替え)

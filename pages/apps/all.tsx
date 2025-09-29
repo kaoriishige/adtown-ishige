@@ -70,11 +70,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     if (!cookies.token) {
         return { redirect: { destination: '/login', permanent: false } };
     }
-    await adminAuth().verifySessionCookie(cookies.token, true);
+    await adminAuth.verifySessionCookie(cookies.token, true);
     
     // ログインさえしていればOK
 
-    const db = adminDb();
+    const db = adminDb;
     const appsCollectionRef = db.collection('apps').withConverter(appConverter);
     const querySnapshot = await appsCollectionRef.orderBy('name').get();
     const allApps = querySnapshot.docs.map(doc => doc.data());

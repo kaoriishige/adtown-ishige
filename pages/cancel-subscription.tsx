@@ -46,7 +46,7 @@ const CancelSubscriptionPage: NextPage<CancelPageProps> = ({ user }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     
     return {
       props: {

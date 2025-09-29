@@ -1,56 +1,57 @@
-// pages/api/auth/sessionLogin.ts
-
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; // 正しいインポート文に修正
 import nookies from 'nookies';
+import * as admin from 'firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).end();
+    return res.status(405).end('Method Not Allowed');
   }
-  
+
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
   try {
-    const { authorization } = req.headers;
+    // 修正: adminAuthを直接使用
+    const userRecord = await adminAuth.getUserByEmail(email);
 
-    if (!authorization || !authorization.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authorization header is missing or invalid.' });
+    // 修正: adminAuthを直接使用
+    if (!userRecord) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
-    
-    const idToken = authorization.split('Bearer ')[1];
 
-    const decodedToken = await adminAuth().verifyIdToken(idToken);
-    const { uid } = decodedToken;
-
-    const userDoc = await adminDb().collection('users').doc(uid).get();
-
-    if (!userDoc.exists) {
-        throw new Error('User data not found.');
+    // クライアントからIDトークンを取得
+    const idToken = req.body.idToken;
+    if (!idToken) {
+      return res.status(400).json({ error: 'ID token is required for session login' });
     }
+
+    // IDトークンを検証
+    // 修正: adminAuthを直接使用
+    await adminAuth.verifyIdToken(idToken, true);
+
+    // セッションクッキーを作成
+    // 修正: adminAuthを直接使用
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: 60 * 60 * 24 * 5 * 1000 });
     
-    const userData = userDoc.data();
-    const userRole = userData?.role || 'user';
-
-    const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 days
-    const sessionCookie = await adminAuth().createSessionCookie(idToken, { expiresIn });
-
-    // ▼▼▼ ここが修正箇所です ▼▼▼
-    const options = { 
-      maxAge: expiresIn / 1000, 
-      httpOnly: true, 
-      secure: process.env.NODE_ENV === 'production', 
+    // セッションクッキーをクライアントに設定
+    nookies.set({ res }, 'token', sessionCookie, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
       path: '/',
-      sameSite: 'lax' as 'lax', // sameSite属性を追加してローカル環境でのCookie保存を確実にする
-    };
-    // ▲▲▲ ここまでが修正箇所です ▲▲▲
+      maxAge: 60 * 60 * 24 * 5,
+      sameSite: 'strict',
+    });
 
-    nookies.set({ res }, 'token', sessionCookie, options);
-
-    return res.status(200).json({ success: true, role: userRole });
+    res.status(200).json({ status: 'success' });
 
   } catch (error) {
     console.error('Session login error:', error);
-    return res.status(401).json({ error: 'Authentication failed.' });
+    return res.status(401).json({ error: 'Authentication failed' });
   }
 }
 

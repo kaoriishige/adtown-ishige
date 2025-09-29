@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 1. ユーザーを認証
     const cookies = nookies.get({ req });
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
     // 2. リクエストから口座情報を取得
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 3. ユーザー自身のドキュメントに口座情報を保存
-    const adminDb = adminDb();
+    const adminDb = adminDb;
     const userRef = adminDb.collection('users').doc(uid);
     
     await userRef.update({

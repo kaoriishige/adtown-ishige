@@ -9,7 +9,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     try {
         const cookies = nookies.get({ req });
-        const token = await adminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth.verifySessionCookie(cookies.token, true);
         const { uid: partnerId } = token;
 
         const { title, type, description, imageUrl } = req.body;
@@ -18,7 +18,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             return res.status(400).json({ error: 'タイトルと種別は必須です。' });
         }
 
-        const db = adminDb();
+        const db = adminDb;
         const dealsCollection = db.collection('partners').doc(partnerId).collection('deals');
         
         const newDealData = {

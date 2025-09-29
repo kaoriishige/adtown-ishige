@@ -17,8 +17,6 @@ export default async function handler(
   }
 
   try {
-    const adminDb = adminDb();
-    const adminAuth = adminAuth();
 
     // 1. Firestoreにユーザードキュメントを作成
     await adminDb.collection('users').doc(uid).set({

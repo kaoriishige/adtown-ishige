@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         const cookies = nookies.get({ req });
-        const token = await adminAuth().verifySessionCookie(cookies.token, true);
+        const token = await adminAuth.verifySessionCookie(cookies.token, true);
         const { uid } = token;
 
         const form = formidable({});
@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         const imageUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
-        const db = adminDb();
+        const db = adminDb;
         await db.collection('reviews').add({
             userId: uid,
             storeId: Array.isArray(storeId) ? storeId[0] : storeId,

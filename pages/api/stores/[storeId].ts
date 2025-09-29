@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const db = adminDb();
+    const db = adminDb;
     // 店舗(パートナー)もusersコレクションにある前提
     const storeDoc = await db.collection('users').doc(storeId).get();
 

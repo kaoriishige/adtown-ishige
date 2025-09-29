@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 1. ユーザー認証とパートナー判定
     const cookies = nookies.get({ req });
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     if (token.role !== 'partner') {
       return res.status(403).json({ error: 'アクセス権がありません。' });
     }
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: '情報IDが指定されていません。' });
     }
 
-    const adminDb = adminDb();
+    const adminDb = adminDb;
     const dealRef = adminDb.collection('foodLossDeals').doc(dealId);
     const dealDoc = await dealRef.get();
 

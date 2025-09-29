@@ -88,7 +88,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   }
 
   try {
-    const snapshot = await adminDb().collection('foodLossDeals')
+    const snapshot = await adminDb.collection('foodLossDeals')
       .where('area', '==', area)
       .where('isActive', '==', true) // **完売していない情報のみ取得**
       .orderBy('createdAt', 'desc')

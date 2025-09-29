@@ -79,7 +79,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const { storeId } = context.params as { storeId: string };
 
-    const db = adminDb();
+    const db = adminDb;
     const storeDocRef = db.collection('stores').doc(storeId);
     const docSnap = await storeDocRef.get();
 

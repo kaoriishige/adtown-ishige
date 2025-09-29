@@ -13,11 +13,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!cookies.token) {
         return res.status(401).json({ error: 'Authentication required. No token provided.' });
     }
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;
 
     // データベースからユーザーのドキュメントを取得
-    const userDoc = await adminDb().collection('users').doc(uid).get();
+    const userDoc = await adminDb.collection('users').doc(uid).get();
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }

@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const db = adminDb();
+    const db = adminDb;
     const dealsRef = db.collection('deals');
     const snapshot = await dealsRef.where('isActive', '==', true).orderBy('createdAt', 'desc').get();
 

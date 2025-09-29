@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // 実際の運用では、Firestoreの 'treasureChests' コレクションからデータを取得します。
-    // const db = adminDb();
+    // const db = adminDb;
     // const snapshot = await db.collection('treasureChests').where('active', '==', true).get();
     // const locations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 

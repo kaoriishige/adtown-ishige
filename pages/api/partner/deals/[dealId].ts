@@ -23,7 +23,7 @@ export default async function handler(
       return res.status(401).json({ error: '認証トークンが見つかりません。' });
     }
     const token = authorization.split('Bearer ')[1];
-    const auth = adminAuth();
+    const auth = adminAuth;
     const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
 
@@ -34,7 +34,7 @@ export default async function handler(
     }
 
     // 3. データベースを操作する (管理者SDK)
-    const db = adminDb();
+    const db = adminDb;
     const dealDocRef = db.collection('storeDeals').doc(dealId);
     const dealDoc = await dealDocRef.get();
 

@@ -97,7 +97,7 @@ const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
 // サーバーサイドでログイン状態をチェックし、ユーザーIDを取得する
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const adminAuth = adminAuth();
+    const adminAuth = adminAuth;
     const cookies = nookies.get(context);
     const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid } = token;

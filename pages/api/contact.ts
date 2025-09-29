@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'すべてのフィールドを入力してください。' });
     }
 
-    const adminDb = adminDb();
+    const adminDb = adminDb;
     
     // 1. 問い合わせ内容を 'inquiries' コレクションに保存
     await adminDb.collection('inquiries').add({
