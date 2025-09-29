@@ -154,7 +154,7 @@ const UserManagementPage: NextPage = () => {
                         <p className="text-sm mb-4">現在の利用可能ポイント: <span className="font-semibold">{selectedUser.points?.usableBalance?.toLocaleString() || 0} pt</span></p>
                         
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">操作ポイント数</label>
+                            <label className="block text-sm font-medium text-gray-700">操作のポイント数</label>
                             <input
                                 type="number"
                                 value={pointsToAdd}
