@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import Head from 'next/head';
 import Image from 'next/image';
 import { RiShieldCheckFill, RiHeartPulseFill, RiChatHeartFill, RiRocketFill } from 'react-icons/ri';
@@ -235,12 +235,11 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    await getAdminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifyIdToken(cookies.token, true);
   } catch (err) {
     return { redirect: { destination: '/admin/login', permanent: false } };
   }
 
-  const adminDb = getAdminDb();
   try {
     const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
