@@ -1,211 +1,225 @@
-import { GetServerSideProps, NextPage } from 'next';
-import Head from 'next/head';
+import { NextPage, GetServerSideProps } from 'next';
 import { useState, useEffect } from 'react';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, DocumentData } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
-import { app } from '../../lib/firebase'; // Firebaseクライアントのappをインポート
+import { app } from '@/lib/firebase';
+import { useRouter } from 'next/router';
 
-// --- 型定義 ---
-interface Treasure extends DocumentData {
-    id: string;
+// トレジャーアイテムの型定義から'id'を削除
+interface TreasureItem extends DocumentData {
     name: string;
-    hint: string;
-    latitude: number;
-    longitude: number;
+    description: string;
     points: number;
+    rarity: 'common' | 'rare' | 'epic';
+    isActive: boolean;
 }
 
 const ManageTreasurePage: NextPage = () => {
-    const [treasures, setTreasures] = useState<Treasure[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingTreasure, setEditingTreasure] = useState<Treasure | null>(null);
+    const router = useRouter();
+    const [items, setItems] = useState<TreasureItem[]>([]);
+    const [newItem, setNewItem] = useState({ name: '', description: '', points: 0, rarity: 'common', isActive: true });
+    const [editingItem, setEditingItem] = useState<TreasureItem | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // --- Firestoreからデータを取得 ---
-    const fetchTreasures = async () => {
-        setIsLoading(true);
+    const firestore = getFirestore(app);
+
+    const fetchItems = async () => {
+        setLoading(true);
+        setError(null);
         try {
-            const db = getFirestore(app);
-            const treasuresCollection = collection(db, 'treasures');
-            const snapshot = await getDocs(treasuresCollection);
-            const treasuresData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Treasure));
-            setTreasures(treasuresData);
-        } catch (error) {
-            console.error("Error fetching treasures:", error);
-            alert('お宝情報の取得に失敗しました。');
+            const itemsCollection = collection(firestore, 'treasures');
+            const itemSnapshot = await getDocs(itemsCollection);
+            // 'id'プロパティを正しく追加
+            const itemList = itemSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as TreasureItem }));
+            setItems(itemList);
+        } catch (e) {
+            console.error("Error fetching items: ", e);
+            setError("アイテムの取得中にエラーが発生しました。");
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchTreasures();
+        fetchItems();
     }, []);
 
-    // --- 新規追加・編集フォームの処理 ---
-    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleCreateItem = async (e: React.FormEvent) => {
         e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        const data = {
-            name: formData.get('name') as string,
-            hint: formData.get('hint') as string,
-            latitude: Number(formData.get('latitude')),
-            longitude: Number(formData.get('longitude')),
-            points: Number(formData.get('points')),
-        };
-
-        if (!data.name || !data.hint || isNaN(data.latitude) || isNaN(data.longitude) || isNaN(data.points)) {
-            alert('すべての項目を正しく入力してください。');
-            return;
-        }
-
+        setLoading(true);
+        setError(null);
         try {
-            const db = getFirestore(app);
-            if (editingTreasure) {
-                // 更新
-                const treasureDoc = doc(db, 'treasures', editingTreasure.id);
-                await updateDoc(treasureDoc, data);
-            } else {
-                // 新規追加
-                await addDoc(collection(db, 'treasures'), data);
+            await addDoc(collection(firestore, 'treasures'), newItem);
+            setNewItem({ name: '', description: '', points: 0, rarity: 'common', isActive: true });
+            fetchItems();
+        } catch (e) {
+            console.error("Error adding item: ", e);
+            setError("アイテムの追加中にエラーが発生しました。");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingItem) return;
+        setLoading(true);
+        setError(null);
+        try {
+            const itemDoc = doc(firestore, 'treasures', editingItem.id);
+            await updateDoc(itemDoc, { ...editingItem });
+            setEditingItem(null);
+            fetchItems();
+        } catch (e) {
+            console.error("Error updating item: ", e);
+            setError("アイテムの更新中にエラーが発生しました。");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteItem = async (id: string) => {
+        if (window.confirm("このアイテムを削除してもよろしいですか？")) {
+            setLoading(true);
+            setError(null);
+            try {
+                await deleteDoc(doc(firestore, 'treasures', id));
+                fetchItems();
+            } catch (e) {
+                console.error("Error deleting item: ", e);
+                setError("アイテムの削除中にエラーが発生しました。");
+            } finally {
+                setLoading(false);
             }
-            closeModal();
-            fetchTreasures(); // リストを再読み込み
-        } catch (error) {
-            console.error("Error saving treasure:", error);
-            alert('お宝情報の保存に失敗しました。');
         }
-    };
-
-    // --- 削除処理 ---
-    const handleDelete = async (id: string) => {
-        if (!confirm('このお宝を削除してもよろしいですか？')) return;
-        try {
-            const db = getFirestore(app);
-            await deleteDoc(doc(db, 'treasures', id));
-            fetchTreasures(); // リストを再読み込み
-        } catch (error) {
-            console.error("Error deleting treasure:", error);
-            alert('お宝の削除に失敗しました。');
-        }
-    };
-
-    // --- モーダルの制御 ---
-    const openModal = (treasure: Treasure | null = null) => {
-        setEditingTreasure(treasure);
-        setIsModalOpen(true);
-    };
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditingTreasure(null);
     };
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <Head>
-                <title>お宝さがし管理</title>
-            </Head>
-            <header className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                    <h1 className="text-xl font-bold text-gray-900">お宝さがし管理</h1>
-                    <button
-                        onClick={() => openModal()}
-                        className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        新しいお宝を追加
-                    </button>
-                </div>
-            </header>
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                {isLoading ? (
-                    <p className="text-center">読み込み中...</p>
-                ) : (
-                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                        <ul role="list" className="divide-y divide-gray-200">
-                            {treasures.map((treasure) => (
-                                <li key={treasure.id} className="px-4 py-4 sm:px-6">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-lg font-medium text-blue-600 truncate">{treasure.name}</p>
-                                            <p className="text-sm text-gray-500 mt-1">ヒント: {treasure.hint}</p>
-                                            <p className="text-sm text-gray-500">座標: ({treasure.latitude}, {treasure.longitude})</p>
-                                            <p className="text-sm text-gray-500">ポイント: {treasure.points} pt</p>
-                                        </div>
-                                        <div className="flex-shrink-0 ml-4 flex space-x-2">
-                                            <button onClick={() => openModal(treasure)} className="text-indigo-600 hover:text-indigo-900">編集</button>
-                                            <button onClick={() => handleDelete(treasure.id)} className="text-red-600 hover:text-red-900">削除</button>
-                                        </div>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-            </main>
+        <div className="min-h-screen bg-gray-100 p-8">
+            <h1 className="text-3xl font-bold mb-6">トレジャーアイテム管理</h1>
+            <p className="text-sm text-gray-500 mb-4">このページは、アプリ内でユーザーが獲得できるトレジャーアイテムの作成、編集、削除を行うための管理画面です。</p>
 
-            {/* --- 追加・編集モーダル --- */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                    <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-                        <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                            {editingTreasure ? 'お宝を編集' : '新しいお宝を追加'}
-                        </h3>
-                        <form onSubmit={handleFormSubmit}>
-                            <div className="space-y-4">
-                                <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">お宝の名前</label>
-                                    <input type="text" name="name" id="name" defaultValue={editingTreasure?.name || ''} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-                                </div>
-                                <div>
-                                    <label htmlFor="hint" className="block text-sm font-medium text-gray-700">ヒント</label>
-                                    <textarea name="hint" id="hint" defaultValue={editingTreasure?.hint || ''} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">緯度 (Latitude)</label>
-                                        <input type="number" step="any" name="latitude" id="latitude" defaultValue={editingTreasure?.latitude || ''} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">経度 (Longitude)</label>
-                                        <input type="number" step="any" name="longitude" id="longitude" defaultValue={editingTreasure?.longitude || ''} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label htmlFor="points" className="block text-sm font-medium text-gray-700">獲得ポイント</label>
-                                    <input type="number" name="points" id="points" defaultValue={editingTreasure?.points || ''} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-                                </div>
-                            </div>
-                            <div className="mt-6 flex justify-end space-x-2">
-                                <button type="button" onClick={closeModal} className="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">
-                                    キャンセル
-                                </button>
-                                <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">
-                                    保存
-                                </button>
-                            </div>
-                        </form>
+            <div className="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 className="text-2xl font-semibold mb-4">{editingItem ? 'アイテムを編集' : '新しいアイテムを追加'}</h2>
+                <form onSubmit={editingItem ? handleUpdateItem : handleCreateItem} className="space-y-4">
+                    <div className="flex flex-col">
+                        <label htmlFor="name" className="mb-1 text-sm font-medium text-gray-700">アイテム名</label>
+                        <input
+                            id="name"
+                            type="text"
+                            value={editingItem ? editingItem.name : newItem.name}
+                            onChange={(e) => editingItem ? setEditingItem({...editingItem, name: e.target.value}) : setNewItem({...newItem, name: e.target.value})}
+                            required
+                            className="p-2 border rounded-md"
+                        />
                     </div>
-                </div>
-            )}
+                    <div className="flex flex-col">
+                        <label htmlFor="description" className="mb-1 text-sm font-medium text-gray-700">説明</label>
+                        <textarea
+                            id="description"
+                            value={editingItem ? editingItem.description : newItem.description}
+                            onChange={(e) => editingItem ? setEditingItem({...editingItem, description: e.target.value}) : setNewItem({...newItem, description: e.target.value})}
+                            required
+                            className="p-2 border rounded-md h-24"
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col">
+                            <label htmlFor="points" className="mb-1 text-sm font-medium text-gray-700">獲得ポイント</label>
+                            <input
+                                id="points"
+                                type="number"
+                                value={editingItem ? editingItem.points : newItem.points}
+                                onChange={(e) => editingItem ? setEditingItem({...editingItem, points: Number(e.target.value)}) : setNewItem({...newItem, points: Number(e.target.value)})}
+                                required
+                                min="0"
+                                className="p-2 border rounded-md"
+                            />
+                        </div>
+                        <div className="flex flex-col">
+                            <label htmlFor="rarity" className="mb-1 text-sm font-medium text-gray-700">レア度</label>
+                            <select
+                                id="rarity"
+                                value={editingItem ? editingItem.rarity : newItem.rarity}
+                                onChange={(e) => editingItem ? setEditingItem({...editingItem, rarity: e.target.value as 'common' | 'rare' | 'epic'}) : setNewItem({...newItem, rarity: e.target.value as 'common' | 'rare' | 'epic'})}
+                                className="p-2 border rounded-md bg-white"
+                            >
+                                <option value="common">Common</option>
+                                <option value="rare">Rare</option>
+                                <option value="epic">Epic</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="flex items-center">
+                        <input
+                            id="isActive"
+                            type="checkbox"
+                            checked={editingItem ? editingItem.isActive : newItem.isActive}
+                            onChange={(e) => editingItem ? setEditingItem({...editingItem, isActive: e.target.checked}) : setNewItem({...newItem, isActive: e.target.checked})}
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="isActive" className="ml-2 text-sm font-medium text-gray-700">有効</label>
+                    </div>
+                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                    <button type="submit" disabled={loading} className="w-full bg-blue-500 text-white font-bold p-3 rounded-md hover:bg-blue-600 disabled:bg-gray-400">
+                        {loading ? '処理中...' : (editingItem ? '更新' : '追加')}
+                    </button>
+                    {editingItem && (
+                        <button type="button" onClick={() => setEditingItem(null)} className="w-full mt-2 bg-gray-500 text-white font-bold p-3 rounded-md hover:bg-gray-600">
+                            キャンセル
+                        </button>
+                    )}
+                </form>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h2 className="text-2xl font-semibold mb-4">既存アイテム一覧</h2>
+                {loading ? (
+                    <div className="text-center py-10">アイテムを読み込み中...</div>
+                ) : (
+                    <ul className="divide-y divide-gray-200">
+                        {items.map(item => (
+                            <li key={item.id} className="py-4 flex justify-between items-center">
+                                <div>
+                                    <p className="text-lg font-medium">{item.name}</p>
+                                    <p className="text-sm text-gray-500">ポイント: {item.points} | レア度: {item.rarity} | 状態: {item.isActive ? '有効' : '無効'}</p>
+                                </div>
+                                <div className="space-x-2">
+                                    <button onClick={() => setEditingItem(item)} className="text-blue-500 hover:text-blue-600">編集</button>
+                                    <button onClick={() => handleDeleteItem(item.id)} className="text-red-500 hover:text-red-600">削除</button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
         </div>
     );
 };
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
+export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
-        const cookies = nookies.get(ctx);
+        const cookies = nookies.get(context);
         if (!cookies.token) {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-        const user = await getAdminAuth().getUser(token.uid);
-        if (user.customClaims?.role !== 'admin') {
-             return { redirect: { destination: '/admin/login', permanent: false } };
+        
+        const token = await adminAuth.verifyIdToken(cookies.token, true);
+
+        const userDoc = await adminDb.collection('users').doc(token.uid).get();
+
+        if (!userDoc.exists || !userDoc.data()?.roles?.includes('admin')) {
+            return { redirect: { destination: '/admin/login', permanent: false } };
         }
-        return { props: {} };
+
+        return {
+            props: {},
+        };
     } catch (error) {
+        console.error('認証エラー:', error);
         return { redirect: { destination: '/admin/login', permanent: false } };
     }
 };
