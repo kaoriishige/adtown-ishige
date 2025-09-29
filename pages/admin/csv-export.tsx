@@ -12,7 +12,7 @@ const CsvExportPage = () => {
       const response = await fetch('/api/export-users');
       if (!response.ok) {
         throw new Error('CSVの作成に失敗しました。');
-      }
+    }
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
