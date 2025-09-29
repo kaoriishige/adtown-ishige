@@ -5,7 +5,7 @@ import Head from 'next/head';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import nookies from 'nookies';
-import { getAdminAuth, getAdminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
 const AdminLoginPage: NextPage = () => {
   const router = useRouter();
@@ -75,8 +75,8 @@ const AdminLoginPage: NextPage = () => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
-        const token = await getAdminAuth().verifySessionCookie(cookies.token, true);
-        const userDoc = await getAdminDb().collection('users').doc(token.uid).get();
+        const token = await adminAuth.verifyIdToken(cookies.token, true);
+　　　　 const userDoc = await adminDb.collection('users').doc(token.uid).get();
         
         if (userDoc.exists && userDoc.data()?.role === 'admin') {
             return { redirect: { destination: '/admin', permanent: false } };
