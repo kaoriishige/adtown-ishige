@@ -41,7 +41,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         // FirestoreのDBで 'role' をチェックする方法に統一
         const userDoc = await adminDb.collection('users').doc(token.uid).get();
         if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
-            return { redirect: { destination: '/admin/login', permanent: false } };
+        return { redirect: { destination: '/admin/login', permanent: false } };
         }
 
         return { props: {} };
