@@ -12,7 +12,7 @@ import {
     RiLogoutCircleRLine, RiMoneyCnyCircleLine, RiInformationLine,
     RiMailSendLine, RiHome2Line, RiTicketLine, RiTaskLine,
     RiStore2Line, RiRecycleLine,
-    RiShoppingBasketLine // フリマ用のアイコンを追加
+    RiShoppingBasketLine
 } from 'react-icons/ri';
 import { loadStripe } from '@stripe/stripe-js';
 import Stripe from 'stripe';
@@ -20,7 +20,6 @@ import getAdminStripe from "../lib/stripe-admin";
 
 const stripePromise = typeof window !== 'undefined' ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!) : null;
 
-// --- 型定義 (変更なし) ---
 interface PurchasedDeal {
   id: string;
   title: string;
@@ -40,9 +39,7 @@ interface MyPageProps {
   acceptedQuests: AcceptedQuest[];
 }
 
-// --- コンポーネント ---
 const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStatus, purchasedDeals, acceptedQuests }) => {
-  // --- ロジック部分 (お客様のコードから変更なし) ---
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isReissuing, setIsReissuing] = useState(false);
@@ -264,65 +261,55 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
   );
 };
 
-// --- サーバーサイド処理 (お客様のコードから一切変更ありません) ---
+// --- サーバーサイド処理 (ここがエラー修正箇所です) ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    if (!cookies.token) {
-      return { redirect: { destination: '/login?from=/mypage', permanent: false } };
-    }
-
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
-    const { uid, email } = token;
-
-    const userRef = adminDb().collection('users').doc(uid);
-    const userDoc = await userRef.get();
+    const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
+    const userDoc = await adminDb.collection('users').doc(token.uid).get();
 
     if (!userDoc.exists) {
-      return { redirect: { destination: '/login', permanent: false } };
+      throw new Error('User not found in Firestore');
     }
-
+    
     let userData = userDoc.data() || {};
     let userPlan = userData.plan || 'free';
 
     const { session_id } = context.query;
-
     if (session_id && userPlan === 'free') {
-      const stripe = getAdminStripe();
-      try {
-        const session = await stripe.checkout.sessions.retrieve(session_id as string, {
-          expand: ['subscription'],
-        });
-
-        const subscription = session.subscription as Stripe.Subscription;
-        if (subscription && ['active', 'trialing'].includes(subscription.status)) {
-          await userRef.update({
-            plan: 'paid',
-            subscriptionStatus: subscription.status,
-          });
-          userPlan = 'paid';
+        const stripe = getAdminStripe();
+        try {
+            const session = await stripe.checkout.sessions.retrieve(session_id as string, { expand: ['subscription'], });
+            const subscription = session.subscription as Stripe.Subscription;
+            if (subscription && ['active', 'trialing'].includes(subscription.status)) {
+                await adminDb.collection('users').doc(token.uid).update({
+                    plan: 'paid',
+                    subscriptionStatus: subscription.status,
+                });
+                userPlan = 'paid';
+            }
+        } catch (error) {
+            console.error("Stripe session retrieval failed:", error);
         }
-      } catch (error) {
-        console.error("Stripe session retrieval failed:", error);
-      }
     }
 
     if (userPlan === 'free') {
-      return { redirect: { destination: '/home', permanent: false } };
+        return { redirect: { destination: '/home', permanent: false } };
     }
 
     const pointsData = userData.points || {};
     const points = {
-      balance: pointsData.balance || 0,
-      usableBalance: pointsData.usableBalance || 0,
-      pendingBalance: pointsData.pendingBalance || 0,
-      activationStatus: pointsData.activationStatus || '',
-      expiredAmount: pointsData.expiredAmount || 0,
+        balance: pointsData.balance || 0,
+        usableBalance: pointsData.usableBalance || 0,
+        pendingBalance: pointsData.pendingBalance || 0,
+        activationStatus: pointsData.activationStatus || '',
+        expiredAmount: pointsData.expiredAmount || 0,
     };
 
     const rewards = { total: userData.totalRewards || 0, pending: userData.unpaidRewards || 0 };
     const subscriptionStatus = userData.subscriptionStatus || null;
 
+    const userRef = adminDb.collection('users').doc(token.uid);
     const purchasedDealsSnapshot = await userRef.collection('purchasedDeals').where('used', '==', false).get();
     const purchasedDeals = purchasedDealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PurchasedDeal[];
 
@@ -331,7 +318,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     return {
       props: {
-        user: { uid, email: email || '' },
+        user: { uid: token.uid, email: token.email || '' },
         points,
         rewards,
         subscriptionStatus,
@@ -341,7 +328,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   } catch (error) {
     console.error("An error occurred in mypage.tsx getServerSideProps:", error);
-    return { redirect: { destination: '/login', permanent: false } };
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
   }
 };
 
