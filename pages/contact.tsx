@@ -16,7 +16,7 @@ interface ContactPageProps {
 const ContactPage: NextPage<ContactPageProps> = ({ user }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('お問い合わせを送信しました（実際の処理は未実装です）');
+    alert('お問い合わせを送信しました（実際の処理は未実装）');
   };
 
   // ユーザーの役割に応じて、戻るページのURLを決定
@@ -55,8 +55,6 @@ const ContactPage: NextPage<ContactPageProps> = ({ user }) => {
 // サーバーサイドで、ユーザーの役割(role)を取得する処理を追加
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const adminAuth = adminAuth;
-    const adminDb = adminDb;
     const cookies = nookies.get(context);
     const token = await adminAuth.verifySessionCookie(cookies.token, true);
     const { uid, email } = token;
