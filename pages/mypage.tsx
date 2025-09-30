@@ -194,7 +194,7 @@ const MyPage: NextPage<MyPageProps> = ({ user, points, rewards, subscriptionStat
                 disabled={isReissuing}
                 className="w-full mt-3 p-2 text-sm font-bold text-blue-600 bg-white rounded-lg hover:bg-gray-100 transition-colors disabled:bg-gray-300"
               >
-                {isReissuing ? '処理中...' : '失効ポイントを再発行する'}
+                {isReissuing ? '処理中...' : '失効ポイントを再発行'}
               </button>
             </div>
           )}
