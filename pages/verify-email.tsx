@@ -6,7 +6,7 @@ import { auth } from '../lib/firebase';
 import { useState } from 'react';
 
 const VerifyEmailPage: NextPage = () => {
-  // useAuth フックがない場合は、ログインページに飛ばすなどの処理を検討
+  // useAuth フックがない場合、ログインページに飛ばすなどの処理を検討
   // const { user } = useAuth(); 
   const [sendStatus, setSendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   const router = useRouter();
