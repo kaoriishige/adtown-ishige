@@ -1,79 +1,58 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Parser } from 'json2csv';
-import nookies from 'nookies';
-import * as admin from 'firebase-admin'; // firebase-adminを直接インポート
+import { adminAuth } from '../../lib/firebase-admin';
+import { UserRecord } from 'firebase-admin/auth';
 
-// --- ここからが直接書き込んだコード ---
-let app: admin.app.App | null = null;
-function initializeFirebaseAdmin(): admin.app.App {
-  if (admin.apps.length > 0) {
-    app = admin.app();
-    return app;
+const escapeCsvValue = (value: any): string => {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
   }
-  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  if (!serviceAccountBase64) {
-    throw new Error('環境変数 FIREBASE_SERVICE_ACCOUNT_BASE64 が設定されていません。');
-  }
-  const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
-  const serviceAccount = JSON.parse(serviceAccountJson);
-  app = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  return app;
-}
-function adminAuth: admin.auth.Auth | null {
-  try {
-    if (!app) initializeFirebaseAdmin();
-    return admin.auth(app!);
-  } catch (e) { return null; }
-}
-// --- ここまでが直接書き込んだコード ---
+  return str;
+};
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const adminAuth = adminAuth;
-  if (!adminAuth) {
-    return res.status(500).json({ error: 'Firebase Admin SDK not initialized' });
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).end('Method Not Allowed');
   }
 
   try {
-    // 管理者認証
-    const cookies = nookies.get({ req });
-    if (!cookies.token) {
-        return res.status(401).json({ error: 'Unauthorized: No token provided' });
-    }
-    const token = await adminAuth.verifyIdToken(cookies.token);
-    // adminカスタムクレームをチェック
-    if (token.admin !== true) {
-      return res.status(403).json({ error: 'Forbidden: Admin access required' });
-    }
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) throw new Error('No token provided');
+    await adminAuth.verifyIdToken(idToken);
 
-    // 全てのユーザー情報を取得
-    const listUsersResult = await adminAuth.listUsers(1000); // 最大1000件
-    const users = listUsersResult.users.map(userRecord => {
-      return {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        emailVerified: userRecord.emailVerified,
-        displayName: userRecord.displayName,
-        photoURL: userRecord.photoURL,
-        disabled: userRecord.disabled,
-        creationTime: new Date(userRecord.metadata.creationTime).toLocaleString('ja-JP'),
-        lastSignInTime: new Date(userRecord.metadata.lastSignInTime).toLocaleString('ja-JP'),
-      };
+    const allUsers: UserRecord[] = [];
+    let pageToken;
+    do {
+      const listUsersResult = await adminAuth.listUsers(1000, pageToken);
+      allUsers.push(...listUsersResult.users);
+      pageToken = listUsersResult.pageToken;
+    } while (pageToken);
+
+    const headers = ['uid', 'email', 'displayName', 'creationTime', 'lastSignInTime'];
+    const csvRows = allUsers.map(user => {
+      const row = [
+        user.uid,
+        user.email,
+        user.displayName,
+        new Date(user.metadata.creationTime).toISOString(),
+        new Date(user.metadata.lastSignInTime).toISOString(),
+      ];
+      return row.map(escapeCsvValue).join(',');
     });
+    
+    const csvData = [headers.join(','), ...csvRows].join('\n');
 
-    // CSVに変換
-    const fields = ['uid', 'email', 'displayName', 'creationTime', 'lastSignInTime', 'disabled'];
-    const json2csvParser = new Parser({ fields });
-    const csv = json2csvParser.parse(users);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="users.csv"');
+    return res.status(200).send(csvData);
 
-    // CSVファイルをダウンロードさせる
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename=users.csv');
-    res.status(200).send(csv);
-
-  } catch (error) {
-    console.error('Error exporting users:', error);
-    res.status(500).json({ error: 'Failed to export users data' });
+  } catch (error: any) {
+    console.error('Failed to export users:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
