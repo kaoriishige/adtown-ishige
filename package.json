@@ -45,6 +45,7 @@
   "devDependencies": {
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/typography": "^0.5.19",
+    "@types/cookie": "^0.6.0",
     "@types/formidable": "^3.4.5",
     "@types/json2csv": "^5.0.7",
     "@types/uuid": "^10.0.0"

@@ -1,74 +1,50 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import nookies from 'nookies';
-import * as admin from 'firebase-admin'; // firebase-adminを直接インポート
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
+import Stripe from 'stripe';
 
-// --- ここからが直接書き込んだコード ---
-let app: admin.app.App | null = null;
-function initializeFirebaseAdmin(): admin.app.App {
-  if (admin.apps.length > 0) {
-    app = admin.app();
-    return app;
-  }
-  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  if (!serviceAccountBase64) {
-    throw new Error('環境変数 FIREBASE_SERVICE_ACCOUNT_BASE64 が設定されていません。');
-  }
-  const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf-8');
-  const serviceAccount = JSON.parse(serviceAccountJson);
-  app = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  return app;
-}
-function adminAuth: admin.auth.Auth | null {
-  try {
-    if (!app) initializeFirebaseAdmin();
-    return admin.auth(app!);
-  } catch (e) { return null; }
-}
-function adminDb: admin.firestore.Firestore | null {
-  try {
-    if (!app) initializeFirebaseAdmin();
-    return admin.firestore(app!);
-  } catch (e) { return null; }
-}
-// --- ここまでが直接書き込んだコード ---
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+  apiVersion: '2024-04-10',
+});
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
-
-  const adminAuth = adminAuth;
-  const adminDb = adminDb;
-
-  if (!adminAuth || !adminDb) {
-    return res.status(500).json({ error: 'Firebase Admin SDK not initialized' });
+    res.setHeader('Allow', 'GET');
+    return res.status(405).end('Method Not Allowed');
   }
 
   try {
-    const cookies = nookies.get({ req });
-    if (!cookies.token) {
-        return res.status(401).json({ error: 'Unauthorized' });
+    // パートナー本人を認証
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) throw new Error('No token provided');
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const uid = decodedToken.uid;
+
+    // FirestoreからパートナーのStripeアカウントIDを取得
+    const partnerDoc = await adminDb.collection('partners').doc(uid).get();
+    if (!partnerDoc.exists) {
+      return res.status(404).json({ error: 'Partner not found.' });
     }
-    const decodedToken = await adminAuth.verifyIdToken(cookies.token);
-    
-    // adminカスタムクレームをチェック
-    if (decodedToken.admin !== true) {
-      return res.status(403).json({ error: 'Forbidden' });
+    const stripeAccountId = partnerDoc.data()?.stripeAccountId;
+
+    if (!stripeAccountId) {
+      return res.status(404).json({ error: 'Stripe account not connected.' });
     }
 
-    const docSnap = await adminDb.collection('settings').doc('payout').get();
-    
-    if (docSnap.exists) {
-      res.status(200).json(docSnap.data());
-    } else {
-      res.status(200).json({});
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    // Stripe APIからアカウント情報を取得
+    const account = await stripe.accounts.retrieve(stripeAccountId);
+
+    return res.status(200).json({
+      stripeAccountId: account.id,
+      payoutsEnabled: account.payouts_enabled,
+      detailsSubmitted: account.details_submitted,
+      email: account.email,
+    });
+
+  } catch (error: any) {
+    console.error('Failed to get payout settings:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
