@@ -1,4 +1,5 @@
-import { NextPage } from 'next';
+import Image from 'next/image';import { NextPage } 
+from 'next';
 import Head from 'next/head';
 import { useState, useEffect, useCallback } from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -98,7 +99,13 @@ const TreePage: NextPage = () => {
                     
                     <div className="my-6">
                         {/* 木のレベルに応じて画像を変更する（仮） */}
-                        <img src={`https://placehold.co/256x256/a7f3d0/166534?text=🌳`} alt={`レベル${tree.level}の木`} className="mx-auto h-48 w-48 rounded-full bg-green-100" />
+                        <Image 
+  src="/images/some-image.png" 
+  alt="説明" 
+  width={500} 
+  height={300}
+  className="..." 
+/>
                         <p className="font-bold text-2xl mt-4">Level {tree.level}</p>
                     </div>
                     

@@ -1,166 +1,111 @@
-import { useState } from 'react';
-import { GetServerSideProps, NextPage } from 'next'; // ★ NextPage, GetServerSideProps をインポート
-import nookies from 'nookies'; // ★ nookies をインポート
-import { adminAuth, adminDb } from '../lib/firebase-admin'; // ★ firebase-admin をインポート
-import Head from 'next/head'; // ★ Head をインポート
-import Link from 'next/link'; // ★ Link をインポート
-import { RiArrowLeftLine } from 'react-icons/ri'; // ★ アイコンをインポート
-
-// Firebaseのクライアントサイド初期化は不要になります。
-// サーバーサイドで認証が完了し、propsでユーザー情報が渡されるためです。
+import { GetStaticProps, NextPage } from 'next';
+import Head from 'next/head';
+import Image from 'next/image';
+import Link from 'next/link';
+import { adminDb } from '@/lib/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 // --- 型定義 ---
+// チラシデータの型
 interface Flyer {
   id: string;
-  shopName: string;
   imageUrl: string;
-  region?: string;
+  storeName: string;
+  validUntil: string; // 日付は文字列としてページに渡す
 }
 
+// ページが受け取るpropsの型
 interface FlyersPageProps {
-  user: { // ★ getServerSidePropsから渡されるユーザー情報
-    email: string;
-  };
+  flyers: Flyer[];
 }
 
-const FlyersPage: NextPage<FlyersPageProps> = ({ user }) => {
-  const [flyers, setFlyers] = useState<Flyer[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('上のボタンからエリアを選択してください。');
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
-  const getFlyers = async (region: string) => {
-    setLoading(true);
-    setFlyers([]);
-    setSelectedRegion(region);
-    setMessage('読み込み中...');
-
-    try {
-      const response = await fetch(`/api/getFlyers?region=${encodeURIComponent(region)}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `API request failed with status ${response.status}`);
-      }
-
-      const data: Flyer[] = await response.json();
-      
-      if (data.length > 0) {
-        setFlyers(data);
-      } else {
-        setMessage(`<b>${region}</b>の一致する情報が見つかりませんでした。`);
-        setFlyers([]);
-      }
-    } catch (error) {
-      console.error("Error getting flyers from API route: ", error);
-      setMessage("データの取得中にエラーが発生しました。");
-    }
-    setLoading(false);
-  };
-
+// --- ページコンポーネント ---
+const FlyersPage: NextPage<FlyersPageProps> = ({ flyers }) => {
   return (
-    <div className="min-h-screen bg-gray-100">
-        <Head>
-            <title>スーパーのチラシ - みんなの那須アプリ</title>
-        </Head>
+    <>
+      <Head>
+        <title>本日のチラシ - みんなの那須アプリ</title>
+      </Head>
+      <div className="bg-gray-100 min-h-screen">
+        <div className="max-w-5xl mx-auto p-4 md:p-6">
+          <header className="text-center py-6 md:py-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800">本日のチラシ</h1>
+            <p className="text-gray-600 mt-2">気になるお店のお得情報をチェック！</p>
+          </header>
 
-        <header className="bg-white shadow-sm sticky top-0 z-10">
-            <div className="max-w-4xl mx-auto p-4 flex items-center">
-                <Link href="/mypage" className="text-gray-600 hover:text-blue-500 mr-4">
-                    <RiArrowLeftLine size={24} />
+          {flyers.length > 0 ? (
+            <main className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {flyers.map((flyer) => (
+                <Link key={flyer.id} href={`/flyers/${flyer.id}`} className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+                  <div className="relative w-full aspect-[3/4]">
+                    <Image
+                      src={flyer.imageUrl}
+                      alt={`${flyer.storeName}のチラシ`}
+                      layout="fill"
+                      objectFit="cover"
+                      className="group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="p-3">
+                    <h2 className="text-md font-bold text-gray-900 truncate">{flyer.storeName}</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      有効期限: {new Date(flyer.validUntil).toLocaleDateString('ja-JP')}
+                    </p>
+                  </div>
                 </Link>
-                <h1 className="text-xl font-bold text-gray-800">スーパーのチラシ</h1>
+              ))}
+            </main>
+          ) : (
+            <div className="text-center py-20">
+              <p className="text-lg text-gray-500">現在、閲覧できるチラシはありません。</p>
             </div>
-        </header>
-
-        <main className="max-w-4xl mx-auto p-4 sm:p-6">
-            <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-                <p className="text-center text-gray-700 mb-4">閲覧したいエリアを選択してください。</p>
-                <div className="flex justify-center space-x-2 sm:space-x-4">
-                    {['那須塩原市', '大田原市', '那須町'].map((region) => (
-                        <button 
-                            key={region}
-                            onClick={() => getFlyers(region)} 
-                            className={`px-4 py-2 text-sm sm:text-base font-bold rounded-lg transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5
-                                ${selectedRegion === region 
-                                    ? 'bg-blue-600 text-white' 
-                                    : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}`
-                                }
-                        >
-                            {region}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="mt-6">
-                {loading && <p className="text-center text-gray-600">読み込み中...</p>}
-                
-                {!loading && flyers.length === 0 && (
-                    <p className="text-center text-gray-600" dangerouslySetInnerHTML={{ __html: message }}></p>
-                )}
-                
-                {!loading && flyers.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                        {flyers.map(flyer => (
-                            <div key={flyer.id} className="bg-white rounded-lg shadow-md overflow-hidden transition transform hover:scale-105">
-                                <img src={flyer.imageUrl} alt={`${flyer.shopName}のチラシ`} className="w-full h-auto object-cover" />
-                                <div className="p-4">
-                                    <h3 className="font-bold text-lg text-gray-800">{flyer.shopName}</h3>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </main>
-    </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 };
 
-// ★★★ ここから新規追加 ★★★
-export const getServerSideProps: GetServerSideProps = async (context) => {
-    try {
-        const cookies = nookies.get(context);
-        if (!cookies.token) {
-            return { redirect: { destination: '/login', permanent: false } };
-        }
 
-        const token = await adminAuth.verifySessionCookie(cookies.token, true);
-        const userDoc = await adminDb.collection('users').doc(token.uid).get();
+// --- データ取得 (ビルド時にサーバーサイドで実行) ---
+export const getStaticProps: GetStaticProps<FlyersPageProps> = async () => {
+  try {
+    const flyersSnapshot = await adminDb
+      .collection('flyers')
+      .where('validUntil', '>=', new Date()) // 有効期限が切れていないものだけを取得
+      .orderBy('validUntil', 'asc') // 期限が近い順に並べる
+      .get();
 
-        if (!userDoc.exists) {
-            return { redirect: { destination: '/login', permanent: false } };
-        }
+    const flyers = flyersSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      // FirestoreのTimestamp型を、ページに渡せる文字列(ISO形式)に変換
+      const validUntil = (data.validUntil as Timestamp).toDate().toISOString();
+      
+      return {
+        id: doc.id,
+        imageUrl: data.imageUrl || '',
+        storeName: data.storeName || '店舗名未設定',
+        validUntil: validUntil,
+      };
+    });
 
-        const userData = userDoc.data() || {};
-        const userPlan = userData.plan || 'free';
-
-        // 無料会員 (free) がこのページにアクセスしたら、無料トップページにリダイレクト
-        if (userPlan === 'free') {
-            return { redirect: { destination: '/home', permanent: false } };
-        }
-
-        // 有料会員はページを表示
-        return {
-            props: {
-                user: {
-                    email: token.email || '',
-                },
-            },
-        };
-
-    } catch (error) {
-        console.error("flyers.tsx getServerSideProps エラー:", error);
-        // エラーが発生した場合はログインページにリダイレクト
-        return {
-            redirect: {
-                destination: '/login',
-                permanent: false,
-            },
-        };
-    }
+    return {
+      props: {
+        flyers,
+      },
+      // 3600秒 (1時間) ごとにページを再生成して、新しいチラシを反映
+      revalidate: 3600,
+    };
+  } catch (error) {
+    console.error("チラシの取得に失敗しました:", error);
+    // エラーが発生した場合は、空のチラシリストを渡してページを表示
+    return {
+      props: {
+        flyers: [],
+      },
+    };
+  }
 };
-// ★★★ ここまで新規追加 ★★★
 
 export default FlyersPage;

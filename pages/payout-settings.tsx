@@ -120,9 +120,9 @@ const PayoutSettingsPage: NextPage<PayoutSettingsPageProps> = ({ initialSettings
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await adminAuth().verifySessionCookie(cookies.token, true);
+    const token = await adminAuth.verifySessionCookie(cookies.token, true);
     
-    const userDoc = await adminDb().collection('users').doc(token.uid).get();
+    const userDoc = await adminDb.collection('users').doc(token.uid).get();
     const payoutSettings = userDoc.data()?.payoutSettings || null;
 
     return { 
