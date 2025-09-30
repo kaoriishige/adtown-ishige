@@ -1,24 +1,26 @@
 import * as admin from 'firebase-admin';
+// 型情報をインポートする (ここが追加点)
+import { Auth } from 'firebase-admin/auth';
+import { Firestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
-// すでに初期化されているかをチェックし、重複初期化を防ぐ
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // privateKeyの改行文字(\n)を正しく処理する
-        privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-      }),
-    });
-    console.log('Firebase Admin SDK initialized successfully.');
-  } catch (error: any) {
-    console.error('Firebase Admin SDK initialization error:', error.stack);
+export const initializeAdminApp = () => {
+  if (admin.apps.length > 0) {
+    return;
   }
-}
 
-// 初期化されたAdmin Appから各サービスを取得してエクスポートする
-const adminDb = admin.firestore();
-const adminAuth = admin.auth();
+  const serviceAccount = JSON.parse(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON as string
+  );
 
-export { adminDb, adminAuth };
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+};
+
+initializeAdminApp();
+
+// 定数に型を明記する (ここが変更点)
+export const adminAuth: Auth = getAuth();
+export const adminDb: Firestore = getFirestore();
