@@ -14,7 +14,7 @@ interface LandingData {
   heroCampaignText: string;
   problemTitle: string;
   problemIntro: string;
-  // ▼▼▼ 変更点：「ひみつ道具」の形式に戻します ▼▼▼
+  // ▼▼▼ 変更点：「ひみつ道具」形式に戻します ▼▼▼
   featureItem1_Title: string;
   featureItem1_Amount: string;
   featureItem1_Desc: string;
