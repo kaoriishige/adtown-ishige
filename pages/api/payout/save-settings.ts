@@ -1,51 +1,46 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { adminAuth, adminDb } from '../../../lib/firebase-admin';
-import nookies from 'nookies';
 
-// Stripe SDKのインポートはStripe連携時に再度有効化します
-// import Stripe from 'stripe';
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    res.setHeader('Allow', 'POST');
+    return res.status(405).end('Method Not Allowed');
   }
 
   try {
-    // 1. ユーザーを認証
-    const cookies = nookies.get({ req });
-    const token = await adminAuth.verifySessionCookie(cookies.token, true);
-    const { uid } = token;
-
-    // 2. リクエストから口座情報を取得
-    const { bankName, branchName, accountType, accountNumber, accountName } = req.body;
-    if (!bankName || !branchName || !accountType || !accountNumber || !accountName) {
-      return res.status(400).json({ error: 'すべての必須フィールドを入力してください。' });
+    // ユーザーを認証
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+      return res.status(401).json({ error: 'Authentication token is required.' });
     }
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const uid = decodedToken.uid;
 
-    // 3. ユーザー自身のドキュメントに口座情報を保存
-    const adminDb = adminDb;
+    // リクエストのボディから設定情報を取得 (例)
+    const { accountHolderName, accountNumber } = req.body;
+
+    if (!accountHolderName || !accountNumber) {
+        return res.status(400).json({ error: 'Required payout information is missing.' });
+    }
+    
+    // インポートしたadminDbを直接使ってユーザーのドキュメントを更新
     const userRef = adminDb.collection('users').doc(uid);
     
     await userRef.update({
-      payoutSettings: { // payoutSettingsというオブジェクトにまとめて保存
-        bankName,
-        branchName,
-        accountType,
+      payoutSettings: {
+        accountHolderName,
         accountNumber,
-        accountName,
-        updatedAt: new Date(), // 更新日時を記録
+        updatedAt: new Date().toISOString(),
       }
     });
 
-    res.status(200).json({ success: true, message: '口座情報を保存しました。' });
+    return res.status(200).json({ message: 'Payout settings saved successfully.' });
 
   } catch (error: any) {
     console.error('Error saving payout settings:', error);
-    // 認証エラーの場合も考慮
-    if (error.code === 'auth/session-cookie-expired' || error.code === 'auth/session-cookie-revoked') {
-      return res.status(401).json({ error: 'セッションの有効期限が切れました。再度ログインしてください。' });
-    }
-    res.status(500).json({ error: 'サーバー内部でエラーが発生しました。' });
+    return res.status(500).json({ error: 'Internal Server Error', message: error.message });
   }
 }
-
