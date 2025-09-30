@@ -6,7 +6,7 @@ import Link from 'next/link';
 export default function SubscribePage() {
   return (
     <div className="max-w-xl mx-auto p-6 text-center">
-      <h1 className="text-2xl font-bold mb-4">プレミアム登録</h1>
+      <h1 className="text-2xl font-bold mb-4">プレミアムに登録</h1>
       <p className="mb-6 text-gray-700">
         7日間の無料お試し後は、初月 ¥480、その後は月額 ¥980 のプランです。
       </p>
