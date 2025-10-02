@@ -13,7 +13,7 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// projectIdが設定されているか確認します（ビルドエラー防止のため）
+// projectIdが設定されているか確認します（ビルドエラー防止）
 if (!firebaseConfig.projectId) {
   throw new Error('FirebaseのprojectIdが環境変数に設定されていません。Netlifyの環境変数設定を確認してください。');
 }
