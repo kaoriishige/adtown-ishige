@@ -1,95 +1,103 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import getAdminStripe from '@/lib/stripe-admin';
 import Stripe from 'stripe';
 
-// Stripeのシークレットキーで初期化します
-// 環境変数（.env.local）に `STRIPE_SECRET_KEY` を設定してください
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10', // プロジェクトのStripeライブラリに合わせたバージョン
-});
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
   }
 
   try {
-    // フロントエンドのフォームから送信される情報を取得します
-    const { email, companyName, uid, trialEndDate } = req.body;
-
-    // 環境変数の名前を STRIPE_JOB_PRICE_ID に変更
-    const priceId = process.env.STRIPE_JOB_PRICE_ID;
-
-    // --- バリデーション ---
-    if (!priceId) {
-      // エラーメッセージも分かりやすく更新
-      throw new Error('Stripeの価格ID(STRIPE_JOB_PRICE_ID)が環境変数に設定されていません。');
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    if (!idToken) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
-    if (!uid || !email || !companyName || !trialEndDate) {
-      return res.status(400).json({ error: { message: 'リクエストに必要な情報が不足しています。' } });
-    }
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const uid = decodedToken.uid;
 
-    // --- Stripe顧客の作成 ---
-    // このユーザーがStripe上にすでに存在するかどうかを確認
-    let customer;
-    const existingCustomers = await stripe.customers.list({ email: email, limit: 1 });
-    if (existingCustomers.data.length > 0) {
-        customer = existingCustomers.data[0];
-    } else {
-        // 存在しない場合は、新しい顧客を作成します
-        customer = await stripe.customers.create({
-            email: email,
-            name: companyName,
-            metadata: {
-                firebaseUID: uid, // FirebaseのUIDをメタデータとして保存
-            },
-        });
-    }
-
-    // --- リダイレクトURLの設定 ---
-    // ▼▼▼ 【修正点】環境変数の名前を NEXT_PUBLIC_APP_URL に変更 ▼▼▼
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.origin || 'http://localhost:3000';
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+    const {
+      email,
+      companyName,
+      address,
+      contactPerson,
+      phoneNumber,
+      trialEndDate,
+    } = req.body;
     
-    // 【重要】決済成功後に正しいダッシュボードへ遷移させます
-    const successUrl = `${baseUrl}/recruit/dashboard?payment_success=true`;
-    const cancelUrl = `${baseUrl}/recruit`; // 登録ページに戻る
+    // 保存するすべての情報をまとめる
+    const recruiterData = {
+        uid,
+        email,
+        displayName: companyName, // usersコレクション用にdisplayNameも追加
+        companyName,
+        address,
+        contactPerson,
+        phoneNumber,
+        roles: ['recruit'],
+        createdAt: new Date().toISOString(),
+    };
 
-    // --- トライアル終了日時の設定 ---
-    // '2025-11-01' のような文字列をUNIXタイムスタンプに変換します
-    const trialEndTimestamp = Math.floor(new Date(trialEndDate).getTime() / 1000);
+    // 'users' コレクションにすべての情報を保存
+    await adminDb.collection('users').doc(uid).set(recruiterData, { merge: true });
 
-    // --- Stripeチェックアウトセッションの作成 ---
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      customer: customer.id, // 作成したStripe顧客のIDを指定
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      subscription_data: {
-        trial_end: trialEndTimestamp, // 無料トライアル終了日を設定
-      },
-      success_url: successUrl, // 成功時のリダイレクト先
-      cancel_url: cancelUrl,   // キャンセル時のリダイレクト先
-      metadata: {
-        firebaseUID: uid, // 念のためセッションにもUIDを保存
-      }
+    // 'recruiters' コレクションにも詳細情報を保存
+    await adminDb.collection('recruiters').doc(uid).set(recruiterData, { merge: true });
+
+    // Stripeの顧客を作成
+    const stripe = getAdminStripe();
+    const customer = await stripe.customers.create({
+      email,
+      name: companyName,
+      metadata: { firebaseUID: uid },
     });
 
-    // フロントエンドにセッションIDを返します
-    res.status(200).json({ sessionId: session.id });
+    // 作成したStripeの顧客IDをusersドキュメントに保存
+    await adminDb.collection('users').doc(uid).update({
+        stripeCustomerId: customer.id
+    });
+
+    const trialEndTimestamp = Math.floor(new Date(trialEndDate).getTime() / 1000);
+
+    const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        // ★★★ 修正点: 正しい環境変数名に変更 ★★★
+        items: [{ price: process.env.STRIPE_JOB_PRICE_ID }],
+        trial_end: trialEndTimestamp,
+        metadata: { firebaseUID: uid },
+    });
+
+    await adminDb.collection('users').doc(uid).update({
+        subscriptionId: subscription.id,
+        subscriptionStatus: 'trialing',
+    });
+
+    // 決済方法登録のためのセットアップセッションを作成
+    const setupSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'setup',
+        customer: customer.id,
+        setup_intent_data: {
+            metadata: {
+                subscription_id: subscription.id,
+                firebaseUID: uid,
+            },
+        },
+        success_url: `${req.headers.origin}/recruit/dashboard?payment=success`,
+        cancel_url: `${req.headers.origin}/recruit`,
+    });
+
+    res.status(200).json({ sessionId: setupSession.id });
 
   } catch (error: any) {
-    console.error('Stripeセッションの作成に失敗しました:', error);
+    console.error('Subscription session creation failed:', error);
     res.status(500).json({ error: { message: error.message } });
   }
 }
-
-
 
 
 

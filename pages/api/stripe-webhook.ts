@@ -1,13 +1,19 @@
+// pages/api/stripe-webhook.ts
+
 import { NextApiRequest, NextApiResponse } from 'next';
+import { buffer } from 'micro';
 import Stripe from 'stripe';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '../../lib/firebase-admin'; // Firebase Adminをインポート
 
-// 環境変数からStripeのシークレットキーとWebhookシークレットを取得
+// Stripeの初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
+  apiVersion: '2024-04-10', // お使いのバージョンに合わせる
 });
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+// Webhookの署名検証に使うシークレットキー
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+// Next.jsのデフォルトのBody Parserを無効にする
 export const config = {
   api: {
     bodyParser: false,
@@ -20,58 +26,66 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(405).end('Method Not Allowed');
   }
 
-  // リクエストボディをBufferとして取得
-  const buf = await new Promise<Buffer>((resolve, reject) => {
-    let chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
+  const buf = await buffer(req);
+  const sig = req.headers['stripe-signature']!;
 
-  const sig = req.headers['stripe-signature'] as string;
   let event: Stripe.Event;
 
   try {
-    // Webhookの署名を確認
-    event = stripe.webhooks.constructEvent(buf, sig, webhookSecret!);
+    // Stripeからのリクエストであることを署名で検証
+    event = stripe.webhooks.constructEvent(buf.toString(), sig, webhookSecret);
   } catch (err: any) {
-    console.error(`⚠️ Webhook signature verification failed.`, err.message);
+    console.error(`Webhook signature verification failed.`, err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // イベントの種類によって処理を分岐
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object as Stripe.Checkout.Session;
-      
-      console.log('✅ Checkout session completed:', session.id);
-
-      try {
-        const firebaseUID = session.metadata?.firebaseUID;
-        const customerId = session.customer as string;
-
-        if (firebaseUID) {
-          // Firebaseのユーザー情報を更新
-          await adminDb.collection('partners').doc(firebaseUID).update({
-            stripeCustomerId: customerId,
-            status: 'active', // サブスクリプションが開始されたことを示す
-            lastPaymentDate: new Date(),
+  // --- イベントの種類に応じて処理を分岐 ---
+  try {
+    switch (event.type) {
+      // 例：決済が成功したときの処理
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        // メタデータからFirebaseのUIDを取得
+        const firebaseUid = session.metadata?.firebase_uid;
+        if (firebaseUid) {
+          // ここでデータベースを更新するなどの処理を行う
+          // 例: usersコレクションのステータスを 'active' に更新
+          await adminDb.collection('users').doc(firebaseUid).update({
+            subscriptionStatus: 'active',
           });
-          
-          console.log(`✅ Partner status for UID ${firebaseUID} updated to 'active'.`);
-        } else {
-          console.error('❌ Firebase UID not found in session metadata.');
+          console.log(`User ${firebaseUid} subscription is now active.`);
         }
-      } catch (error) {
-        console.error('❌ Error updating partner status:', error);
-        return res.status(500).json({ error: 'Failed to update partner status.' });
+        break;
       }
-      break;
+      
+      // 例：サブスクリプションが更新されたときの処理
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const firebaseUid = subscription.metadata?.firebaseUID;
+        if (firebaseUid) {
+          // データベースのサブスクリプションステータスを更新
+          await adminDb.collection('users').doc(firebaseUid).update({
+            subscriptionStatus: subscription.status,
+          });
+          console.log(`User ${firebaseUid} subscription was updated to ${subscription.status}.`);
+        }
+        break;
+      }
 
-    default:
-      console.log(`Unhandled event type ${event.type}`);
+      // 他のイベントタイプもここに追加できます
+      // case 'customer.subscription.deleted':
+      //   // ...
+      //   break;
+
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+  } catch (error) {
+    console.error('Webhook handler error:', error);
+    return res.status(500).json({ error: 'Webhook handler failed.' });
   }
 
+  // Stripeに「正常に受け取りました」と返事をする
   res.status(200).json({ received: true });
 };
 
