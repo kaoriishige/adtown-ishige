@@ -7,7 +7,6 @@ export default async function handler(
 ) {
   try {
     // 2. ここで直接使います。
-    // "const adminDb = adminDb;" の行は追加しないでください。
     await adminDb.collection('contacts').add({
       name: req.body.name,
       email: req.body.email,
