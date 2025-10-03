@@ -19,11 +19,12 @@ interface GroupedApps {
 }
 
 // ページが受け取るpropsの型
-interface StoresPageProps {
+interface StoreListPageProps {
   appsByStore: GroupedApps;
 }
 
-const StoresPage: NextPage<StoresPageProps> = ({ appsByStore }) => {
+// ★コンポーネント名をファイル名に合わせて変更
+const StoreListPage: NextPage<StoreListPageProps> = ({ appsByStore }) => {
   const stores = Object.keys(appsByStore);
 
   return (
@@ -70,10 +71,10 @@ const StoresPage: NextPage<StoresPageProps> = ({ appsByStore }) => {
 };
 
 export const getServerSideProps: GetServerSideProps = async () => {
-  const adminDb = adminDb();
+  // ★エラーの原因だった行は、ご提示のコード通り削除済みです。
 
   if (!adminDb) {
-    console.error("Firebase Admin for StoresPage failed to initialize.");
+    console.error("Firebase Admin for StoreListPage failed to initialize.");
     return { props: { appsByStore: {} } };
   }
 
@@ -96,7 +97,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
           iconUrl: data.iconUrl || '',
           shopName: shopName,
         };
-        
+      
         if (!appsByStore[shopName]) {
           appsByStore[shopName] = [];
         }
@@ -119,4 +120,5 @@ export const getServerSideProps: GetServerSideProps = async () => {
   }
 };
 
-export default StoresPage;
+// ★コンポーネント名をファイル名に合わせて変更
+export default StoreListPage;
