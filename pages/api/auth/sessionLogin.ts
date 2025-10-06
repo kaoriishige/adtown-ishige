@@ -1,58 +1,56 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '@/lib/firebase-admin'; // 正しいインポート文に修正
-import nookies from 'nookies';
-import * as admin from 'firebase-admin';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { getAuth } from 'firebase-admin/auth';
+import { adminDb, initializeAdminApp } from '@/lib/firebase-admin';
+
+initializeAdminApp();
+const adminAuth = getAuth();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).end('Method Not Allowed');
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { email, password } = req.body;
+  const { idToken, loginType } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  if (!idToken) {
+    return res.status(401).json({ error: 'IDトークンは必須です。' });
   }
+
+  const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5日間
 
   try {
-    // 修正: adminAuthを直接使用
-    const userRecord = await adminAuth.getUserByEmail(email);
+    // 通常は verifyIdToken(idToken) で十分
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const uid = decodedToken.uid;
 
-    // 修正: adminAuthを直接使用
-    if (!userRecord) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    if (loginType && loginType !== 'user') {
+      const userDoc = await adminDb.collection('users').doc(uid).get();
+      if (!userDoc.exists) {
+        return res.status(403).json({ error: 'ユーザー情報が存在しません。' });
+      }
+      const userRoles = userDoc.data()?.roles || [];
+      if (!userRoles.includes(loginType)) {
+        const serviceName = loginType === 'ad' ? '広告パートナー' : '求人パートナー';
+        return res.status(403).json({ error: `このアカウントは${serviceName}として登録されていません。` });
+      }
     }
 
-    // クライアントからIDトークンを取得
-    const idToken = req.body.idToken;
-    if (!idToken) {
-      return res.status(400).json({ error: 'ID token is required for session login' });
-    }
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    // IDトークンを検証
-    // 修正: adminAuthを直接使用
-    await adminAuth.verifyIdToken(idToken, true);
-
-    // セッションクッキーを作成
-    // 修正: adminAuthを直接使用
-    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: 60 * 60 * 24 * 5 * 1000 });
-    
-    // セッションクッキーをクライアントに設定
-    nookies.set({ res }, 'token', sessionCookie, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 5,
-      sameSite: 'strict',
-    });
+    res.setHeader('Set-Cookie', [
+      `token=${sessionCookie}; Max-Age=${expiresIn / 1000}; Path=/; HttpOnly; SameSite=Lax${isProduction ? '; Secure' : ''}`
+    ]);
 
     res.status(200).json({ status: 'success' });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Session login error:', error);
-    return res.status(401).json({ error: 'Authentication failed' });
+    res.status(401).json({ error: '認証に失敗しました: ' + error.message });
   }
 }
+
+
+
 
 
