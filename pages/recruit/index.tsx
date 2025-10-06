@@ -253,7 +253,7 @@ const RecruitPartnerPage: NextPage = () => {
                         <p className="mt-6 text-lg text-gray-600 leading-relaxed">
                             『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、地域の住民にとって「ないと損」なアプリになりつつあります。
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
-                            貴店の求人マッチングは、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
+                            貴店の求人マッチングは、この<strong className="font-bold">爆発的に増え続ける「未来の求職者」</strong>に直接届くのです。
                         </p>
                         <div className="mt-8">
                             <p className="text-lg text-gray-700 mb-4 font-semibold">地元の住民がすでに使っています。ぜひご確認ください。</p>
