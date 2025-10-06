@@ -1,90 +1,77 @@
+// pages/api/users/add-service.ts
+
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { admin, adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; // adminを削除
 import getAdminStripe from '@/lib/stripe-admin';
+import { FieldValue } from 'firebase-admin/firestore'; // FieldValueをインポート
 import Stripe from 'stripe';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).end('Method Not Allowed');
-  }
-
-  try {
-    // 1. 本人確認
-    const idToken = req.headers.authorization?.split('Bearer ')[1];
-    if (!idToken) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    const uid = decodedToken.uid;
-
-    // 2. 追加したいサービスの種類を取得
-    const { service } = req.body; // 'recruit' または 'partner'
-    if (!service || !['recruit', 'partner'].includes(service)) {
-        return res.status(400).json({ error: 'Invalid service specified.' });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    if (req.method !== 'POST') {
+        res.setHeader('Allow', 'POST');
+        return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const userRef = adminDb.collection('users').doc(uid);
-    const userDoc = await userRef.get();
+    const { email, serviceType } = req.body;
 
-    if (!userDoc.exists) {
-        throw new Error('User data not found.');
-    }
-    const userData = userDoc.data();
-
-    // 3. すでにそのサービスに登録済みかチェック
-    const currentRoles = userData?.roles || [];
-    if (currentRoles.includes(service)) {
-        return res.status(409).json({ error: `You are already registered for the ${service} service.` });
+    if (!email || !serviceType) {
+        return res.status(400).json({ error: 'メールアドレスとサービスタイプは必須です。' });
     }
 
-    // 4. Stripeで決済ページを作成
-    const stripe = getAdminStripe();
-    const customerId = userData?.stripeCustomerId;
-    
-    if (!customerId) {
-        return res.status(400).json({ error: 'Stripe customer ID not found.' });
+    // `serviceType`が不正な値でないか検証
+    if (serviceType !== 'ad-partner' && serviceType !== 'recruit-partner') {
+        return res.status(400).json({ error: '無効なサービスタイプです。' });
     }
 
-    // サービスに応じた価格IDと成功URLを設定
-    let priceId = '';
-    let successUrl = '';
-    if (service === 'recruit') {
-        priceId = process.env.RECRUIT_PRICE_ID!;
-        successUrl = `${req.headers.origin}/recruit/dashboard?payment=success`;
-    } else { // service === 'partner'
-        priceId = process.env.STRIPE_PRICE_ID!;
-        successUrl = `${req.headers.origin}/partner/dashboard?payment=success`;
+    try {
+        // 1. Firebase Authでユーザー情報を取得
+        let userRecord;
+        try {
+            userRecord = await adminAuth.getUserByEmail(email);
+        } catch (authError: any) {
+            if (authError.code === 'auth/user-not-found') {
+                return res.status(404).json({ error: '指定されたメールアドレスのユーザーが見つかりません。' });
+            }
+            throw authError;
+        }
+
+        // 2. Firestoreからユーザーのドキュメントを取得
+        const userDocRef = adminDb.collection('users').doc(userRecord.uid);
+        const userDoc = await userDocRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'ユーザーのFirestoreドキュメントが見つかりません。' });
+        }
+
+        const userData = userDoc.data();
+        const existingRoles: string[] = userData?.roles || [];
+
+        // 既に同じサービスに登録済みかチェック
+        if (existingRoles.includes(serviceType)) {
+            return res.status(409).json({ error: 'このユーザーは既にこのサービスに登録されています。' });
+        }
+
+        // 3. Firestoreのrolesフィールドを更新
+        await userDocRef.update({
+            roles: FieldValue.arrayUnion(serviceType) // 新しいロールを追加
+        });
+
+        // 4. Stripeの顧客情報にメタデータを追加
+        const stripe = getAdminStripe();
+        let stripeCustomerId = userData?.stripeCustomerId;
+
+        if (stripeCustomerId) {
+            await stripe.customers.update(stripeCustomerId, {
+                metadata: {
+                    ...userData?.metadata, // 既存のメタデータを保持
+                    [serviceType]: true, // 新しいサービスタイプを追加
+                },
+            });
+        }
+
+        res.status(200).json({ status: 'success', message: `ユーザーにサービスタイプ「${serviceType}」を追加しました。` });
+
+    } catch (error: any) {
+        console.error('サービス追加エラー:', error);
+        res.status(500).json({ error: `サービス追加に失敗しました: ${error.message}` });
     }
-
-    const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        customer: customerId, // 既存のStripe顧客IDを使用
-        line_items: [{ price: priceId, quantity: 1 }],
-        mode: 'subscription',
-        success_url: successUrl,
-        cancel_url: req.headers.referer || '/', // 元のページに戻る
-        subscription_data: {
-          metadata: { 
-            firebaseUID: uid,
-            serviceToAdd: service, // Webhookでどのサービスが追加されたか判別するため
-          }
-        },
-    });
-
-    // ★重要: 決済成功後にWebhookで役割(role)を追加するのがより安全ですが、
-    // ここでは簡略化のため、決済ページ作成と同時に役割を追加しています。
-    await userRef.update({
-        roles: admin.firestore.FieldValue.arrayUnion(service)
-    });
-
-    res.status(200).json({ sessionId: session.id });
-
-  } catch (error: any) {
-    console.error('Add service failed:', error);
-    res.status(500).json({ error: { message: error.message } });
-  }
 }
