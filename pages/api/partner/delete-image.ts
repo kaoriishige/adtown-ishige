@@ -1,7 +1,7 @@
 // pages/api/partner/delete-image.ts
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '@/lib/firebase-admin'; // Removed getAdminStorageBucket
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
@@ -21,13 +21,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const url = new URL(imageUrl);
         const path = decodeURIComponent(url.pathname.split('/o/')[1].split('?')[0]);
 
-        // Get the storage bucket from the initialized admin app
         const bucket = getStorage().bucket();
-
-        // Delete the image from Firebase Storage
         await bucket.file(path).delete();
 
-        // Delete the image URL from the Firestore document
         const storeRef = adminDb.collection('stores').doc(storeId);
         await storeRef.update({
             images: FieldValue.arrayRemove(imageUrl)
