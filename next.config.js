@@ -6,7 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     // クライアントサイドでのみ設定を適用
     if (!isServer) {
       config.resolve.fallback = {
@@ -15,7 +15,7 @@ const nextConfig = {
         tls: false,
         child_process: false,
         http2: false,
-        // ここに他のNode.jsモジュールを追加
+        // これまでのフォールバック設定
       };
     }
 
@@ -24,6 +24,16 @@ const nextConfig = {
       ...config.experiments,
       asyncWebAssembly: true,
     };
+
+    // Node.jsの内部モジュールを解決するルールを追加
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /^node:/,
+        (resource) => {
+          resource.request = resource.request.replace(/^node:/, "");
+        }
+      )
+    );
 
     config.module.rules.push({
       test: /\.wasm$/,
@@ -35,7 +45,6 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-
 
 
 
