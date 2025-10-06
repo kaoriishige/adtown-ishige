@@ -3,8 +3,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { 
   adminAuth, 
   adminDb, 
-  getAdminStorageBucket 
+  // getAdminStorageBucket // ★★★【エラー原因】この存在しない関数を削除します ★★★
 } from '@/lib/firebase-admin';
+// ★★★【修正点】Firebase Admin SDKから、Storageを操作するための公式な関数をインポートします ★★★
+import { getStorage } from 'firebase-admin/storage';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,8 +25,7 @@ export default async function handler(
       return res.status(401).json({ error: '認証トークンが見つかりません。' });
     }
     const token = authorization.split('Bearer ')[1];
-    const auth = adminAuth;
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
     const userId = decodedToken.uid;
 
     // 2. リクエストから削除対象のIDを取得
@@ -34,8 +35,7 @@ export default async function handler(
     }
 
     // 3. データベースを操作する (管理者SDK)
-    const db = adminDb;
-    const dealDocRef = db.collection('storeDeals').doc(dealId);
+    const dealDocRef = adminDb.collection('storeDeals').doc(dealId);
     const dealDoc = await dealDocRef.get();
 
     if (!dealDoc.exists) {
@@ -45,8 +45,7 @@ export default async function handler(
     const dealData = dealDoc.data()!;
 
     // 4. 権限をチェックする (管理者SDK)
-    //    お得情報が紐づく店舗のオーナーが、操作者本人であるかを確認
-    const storeDocRef = db.collection('stores').doc(dealData.storeId);
+    const storeDocRef = adminDb.collection('stores').doc(dealData.storeId);
     const storeDoc = await storeDocRef.get();
     if (!storeDoc.exists || storeDoc.data()?.ownerId !== userId) {
       return res.status(403).json({ error: 'このデータを削除する権限がありません。' });
@@ -55,7 +54,8 @@ export default async function handler(
     // 5. 画像が設定されていれば、ストレージから削除する (管理者SDK)
     if (dealData.imageUrl) {
       try {
-        const bucket = getAdminStorageBucket();
+        // ★★★【修正点】公式な方法でストレージのバケットを取得します ★★★
+        const bucket = getStorage().bucket();
         const decodedUrl = decodeURIComponent(dealData.imageUrl);
         const filePath = decodedUrl.split('/o/')[1]?.split('?')[0];
         

@@ -50,9 +50,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             await userDocRef.update({ stripeCustomerId: customerId });
         }
 
-        // ★★★【最終修正】URLを環境変数に依存しない固定値に変更しました ★★★
-        const success_url = 'https://minna-no-nasu-app.netlify.app/partner/login';
-        const cancel_url = 'https://minna-no-nasu-app.netlify.app/partner/signup';
+        // ★★★【最終修正】実行環境に応じてURLを自動で設定するように変更しました ★★★
+        const protocol = process.env.NODE_ENV === 'production' ? 'https://' : 'http://';
+        const host = req.headers.host;
+        const baseURL = `${protocol}${host}`;
+
+        const success_url = `${baseURL}/partner/login`;
+        const cancel_url = `${baseURL}/partner/signup`;
+        // ★★★ ここまで ★★★
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
