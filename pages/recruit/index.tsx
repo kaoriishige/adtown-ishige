@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { NextPage } from 'next';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import React from 'react';
 import Head from 'next/head';
 
 // --- SVGアイコン ---
@@ -230,7 +229,7 @@ const RecruitPartnerPage: NextPage = () => {
             </header>
             <main className="container mx-auto px-6">
                 <section className="text-center py-16 md:py-24">
-                    <p className="text-orange-500 font-semibold">地域の企業を応援する広告代理店 株式会社adtownからのご提案【高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
+                    <p className="text-orange-500 font-semibold">地元の企業を応援する広告代理店 株式会社adtownからのご提案【大手企業に高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         月額3,300円で、<br />
                         <span className="text-orange-600">理想の人材が見つかるまで。</span>
@@ -245,8 +244,34 @@ const RecruitPartnerPage: NextPage = () => {
                         <p className="mt-2 text-sm text-gray-500">いつでもキャンセル可能・成功報酬なし。</p>
                     </div>
                 </section>
+                
+                {/* --- START: なぜ今、アプリ広告なのか？ --- */}
+                <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
+                        <h3 className="text-3xl font-extrabold">なぜ今、アプリ求人なのか？答えは「圧倒的な見込み客」です。</h3>
+                        <p className="mt-6 text-lg text-gray-600 leading-relaxed">
+                            『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、地域の住民にとって「ないと損」なアプリになりつつあります。
+                            先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
+                            貴店の求人マッチングは、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
+                        </p>
+                        <div className="mt-8">
+                            <p className="text-lg text-gray-700 mb-4 font-semibold">地元の住民がすでに使っています。ぜひご確認ください。</p>
+                            <a 
+                                href="https://minna-no-nasu-app.netlify.app/" // 指定されたリンク先
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center bg-orange-600 text-white font-bold py-3 px-8 rounded-full hover:bg-orange-700 transition duration-300 shadow-md text-base"
+                            >
+                                アプリを確認
+                            </a>
+                        </div>
+                    </div>
+                </section>
+                {/* --- END: なぜ今、アプリ広告なのか？ --- */}
 
-                <section className="py-16 bg-white rounded-2xl shadow-lg">
+                {/* --- START: 採用の悩み --- */}
+                <section className="py-16 bg-white rounded-2xl shadow-lg mt-20">
                     <div className="text-center">
                         <h2 className="text-3xl font-extrabold text-gray-800">こんな「採用の悩み」ありませんか？</h2>
                         <p className="mt-4 text-gray-600 max-w-2xl mx-auto">一つでも当てはまれば、AIマッチングが解決します。</p>
@@ -257,6 +282,7 @@ const RecruitPartnerPage: NextPage = () => {
                         <div className="p-6 text-center"><UserCheckIcon className="w-12 h-12 mx-auto text-red-500" /><h3 className="mt-4 text-xl font-bold">ミスマッチが多い</h3><p className="mt-2 text-gray-600">応募は来るが、求めるスキルや人柄と合わず、採用に至らない。</p></div>
                     </div>
                 </section>
+                {/* --- END: 採用の悩み --- */}
 
                 <section className="mt-24">
                     <div className="text-center"><ZapIcon className="w-12 h-12 mx-auto text-orange-500"/><h2 className="mt-4 text-3xl font-extrabold text-gray-800">その悩み、AIが解決します。</h2><p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">従来の「待ち」の求人とは違い、AIが貴社に最適な人材を「探し出し」ます。<br/>採用活動が驚くほどシンプルに変わる、その仕組みをご覧ください。</p></div>
@@ -369,7 +395,7 @@ const RecruitPartnerPage: NextPage = () => {
                 <div className="container mx-auto px-6 py-8 text-center text-gray-600">
                     <p>&copy; {new Date().getFullYear()} 株式会社adtown. All Rights Reserved.</p>
                     <div className="mt-4">
-                        <Link href="/legal" className="text-sm text-gray-500 hover:underline mx-2">特定商取引法に基づく表記</Link>
+                        <Link href="/legal/" className="text-sm text-gray-500 hover:underline mx-2">特定商取引法に基づく表記</Link>
                         <Link href="/privacy" className="text-sm text-gray-500 hover:underline mx-2">プライバシーポリシー</Link>
                     </div>
                 </div>
@@ -379,7 +405,7 @@ const RecruitPartnerPage: NextPage = () => {
                     <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
                         <h2 className="text-xl font-bold mb-4 border-b pb-2">AIマッチング求人 利用規約</h2>
                         <div className="overflow-y-auto space-y-4 pr-2">
-                            <p><strong>第1条（適用）</strong><br/>本規約は、株式会社adtown（以下「当社」）が提供するAIマッチング求人サービス（以下「本サービス」）の利用に関する一切の関係に適用されます。</p>
+                            <p><strong>第1条（適用）</strong><br/>本規約は、株式会社adtown（以下「当社」といいます。）が提供するAIマッチング求人サービス（以下「本サービス」といいます。）の利用に関する一切の関係に適用されます。</p>
                             <p><strong>第2条（利用登録）</strong><br/>本サービスの利用を希望する者（以下「登録希望者」）は、本規約に同意の上、当社の定める方法によって利用登録を申請し、当社がこれを承認することによって、利用登録が完了するものとします。</p>
                             <p><strong>第3条（利用料金と支払方法）</strong><br/>1. 本サービスの利用料金は、月額3,300円（税込）とします。<br/>2. 支払方法はクレジットカード決済または銀行振込（年額一括のみ）とし、登録希望者は当社が指定する方法で支払うものとします。<br/>3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも次回の更新をキャンセルすることができます。</p>
                             <p>（その他の条文は省略）</p>

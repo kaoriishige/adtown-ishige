@@ -244,7 +244,7 @@ const PartnerSignupPage = () => {
             <main className="container mx-auto px-6">
                 {/* Hero Section */}
                 <section className="text-center py-16 md:py-24">
-                    <p className="text-orange-500 font-semibold">adtownからのご提案【もし、毎月安定した収益が自動で入ってきたら？】</p>
+                    <p className="text-orange-500 font-semibold">地元企業＆店舗を応援するadtownからのご提案【もし、毎月安定した収益が自動で入ってきたら？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         「お金を無駄に
                         払う」時代は終わりました。<br />
@@ -274,7 +274,7 @@ const PartnerSignupPage = () => {
                     </div>
                 </section>
 
-                {/* App Advantage Section */}
+                {/* App Advantage Section - CORRECTED */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
@@ -284,6 +284,17 @@ const PartnerSignupPage = () => {
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
                             貴店の広告は、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
                         </p>
+                        <div className="mt-8">
+                            <p className="text-lg text-gray-700 mb-4 font-semibold">地元の住民がすでに使っています。ぜひご確認ください。</p>
+                            <a
+                                href="https://minna-no-nasu-app.netlify.app/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center bg-orange-600 text-white font-bold py-3 px-8 rounded-full hover:bg-orange-700 transition duration-300 shadow-md text-base"
+                            >
+                                アプリを確認
+                            </a>
+                        </div>
                     </div>
                 </section>
 
@@ -327,17 +338,6 @@ const PartnerSignupPage = () => {
                         <div className="bg-white p-6 rounded-lg shadow-md border"><PhoneIcon className="w-10 h-10 mx-auto text-blue-500"/><p className="mt-4 font-bold text-lg">お電話サポート</p></div>
                         <div className="bg-white p-6 rounded-lg shadow-md border"><MessageCircleIcon className="w-10 h-10 mx-auto text-green-500"/><p className="mt-4 font-bold text-lg">LINEチャットサポート</p></div>
                         <div className="bg-white p-6 rounded-lg shadow-md border"><UserCheckIcon className="w-10 h-10 mx-auto text-orange-500"/><p className="mt-4 font-bold text-lg">専任担当者</p></div>
-                    </div>
-                </section>
-
-                {/* FAQ Section */}
-                <section className="mt-20 max-w-4xl mx-auto">
-                    <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
-                    <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
-                        <FAQItem question="本当にリスクはないのですか？（全額返金保証について）"><p className="leading-relaxed font-bold text-orange-600">はい、貴店にリスクは一切ありません。</p><p className="mt-2 leading-relaxed">もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（39,600円）に満たなかった場合、お支払いいただいた費用を<strong className="font-bold">全額返金</strong>いたします。これは、私達がこの仕組みに絶対的な自信を持っている証拠です。<br/><span className="text-xs text-gray-500">※全額返金保証は、お客様が来店される実店舗様が対象となります。</span></p></FAQItem>
-                        <FAQItem question="QRコードスタンドは有料ですか？"><p className="leading-relaxed">いいえ、<strong className="font-bold">制作費は完全に無料</strong>です。お申し込み後、貴店専用のQRコードスタンドを必要数お作りし、お届けいたします。テーブルやレジ横に置くだけで、すぐに始められます。不足した場合は、追加も可能です。</p></FAQItem>
-                        <FAQItem question="紹介料は本当に毎月振り込まれますか？"><p className="leading-relaxed">はい、もちろんです。紹介料は月末締めで計算し、翌月15日にご登録いただいた銀行口座へ自動でお振込みいたします。振込額が3,000円に満たない場合は翌月以降に繰り越されますが、報酬が消えることはございませんのでご安心ください。</p></FAQItem>
-                        <FAQItem question="契約の途中で解約はできますか？"><p className="leading-relaxed">はい、いつでも解約手続きが可能です。ただし、本契約は1年単位での自動更新となっており、契約期間中のご返金は致しかねますのでご了承ください（全額返金保証を除く）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p></FAQItem>
                     </div>
                 </section>
 
@@ -393,32 +393,32 @@ const PartnerSignupPage = () => {
                         <p className="text-sm text-center mt-6">
                             すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
                         </p>
+                        
+                        {/* Invoice Payment Section (PDF Download UI) */}
+                        <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 w-full max-w-3xl mx-auto border border-gray-200 text-center">
+                            <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
+                            <p className="text-gray-600 mb-6">
+                                御請求書にてのお支払いについては、年間39,600円を前払にてのご精算になります。<br />
+                                ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してください。
+                            </p>
+                            {invoiceDownloadSuccess && (
+                                <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md flex items-center justify-center mb-4 max-w-md mx-auto">
+                                    <DownloadIcon className="h-5 w-5 mr-3"/>
+                                    <p className="text-sm font-bold">請求書のダウンロードを開始しました！</p>
+                                </div>
+                            )}
+                            <button
+                                onClick={handleRegisterAndInvoice}
+                                disabled={isInvoiceProcessing || !isFormValid}
+                                className="inline-flex items-center justify-center w-full max-w-md py-4 text-white text-lg font-bold bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg hover:shadow-lg disabled:opacity-50 transition-all duration-300"
+                            >
+                                {isInvoiceProcessing && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                                <DownloadIcon className="w-5 h-5 mr-2" />
+                                {getInvoiceButtonText()}
+                            </button>
+                            {!isFormValid && <p className="text-red-500 text-sm mt-2">※ PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。</p>}
+                        </section>
                     </div>
-                </section>
-
-                {/* Invoice Payment Section (PDF Download UI) */}
-                <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200 text-center">
-                    <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
-                    <p className="text-gray-600 mb-6">
-                        御請求書にてのお支払いについては、年間39,600円を前払にてのご精算になります。<br />
-                        ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してください。
-                    </p>
-                    {invoiceDownloadSuccess && (
-                        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md flex items-center justify-center mb-4 max-w-md mx-auto">
-                            <DownloadIcon className="h-5 w-5 mr-3"/>
-                            <p className="text-sm font-bold">請求書のダウンロードを開始しました！</p>
-                        </div>
-                    )}
-                    <button
-                        onClick={handleRegisterAndInvoice}
-                        disabled={isInvoiceProcessing || !isFormValid}
-                        className="inline-flex items-center justify-center w-full max-w-md py-4 text-white text-lg font-bold bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg hover:shadow-lg disabled:opacity-50 transition-all duration-300"
-                    >
-                        {isInvoiceProcessing && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                        <DownloadIcon className="w-5 h-5 mr-2" />
-                        {getInvoiceButtonText()}
-                    </button>
-                    {!isFormValid && <p className="text-red-500 text-sm mt-2">※ PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。</p>}
                 </section>
             </main>
             <footer className="bg-white mt-20 border-t">
@@ -441,7 +441,8 @@ const PartnerSignupPage = () => {
                             <p><strong>第4条（禁止事項）</strong><br />パートナーは、本サービスの利用にあたり、以下の行為を行ってはなりません。<br />1. 法令または公序良俗に違反する行為<br />2. 犯罪行為に関連する行為<br />3. 当社のサーバーまたはネットワークの機能を破壊したり、妨害したりする行為<br />4. 当社のサービスの運営を妨害するおそれのある行為<br />5. 他のパートナーに関する個人情報等を収集または蓄積する行為<br />6. 不正な目的を持って本サービスを利用する行為<br />7. 当社または第三者の知的財産権、肖像権、プライバシー、名誉その他の権利または利益を侵害する行為<br />8. その他、当社が不適切と判断する行為</p>
                             <p><strong>第5条（紹介手数料）</strong><br />1. パートナーは、当社が提供する専用のQRコードを経由してアプリ利用者が有料会員登録を行った場合、当社所定の紹介手数料（以下「手数料」といいます。）を受け取ることができます。<br />2. 手数料は、有料会員の月額利用料金の30%とします。<br />3. 手数料は、月末締めで計算し、翌々月15日にパートナーが指定する銀行口座へ振り込むものとします。ただし、振込額の合計が3,000円に満たない場合は、支払いは翌月以降に繰り越されるものとします。</p>
                             <p><strong>第6条（全額返金保証）</strong><br />1. 本サービスの利用開始から1年経過した時点で、パートナーが受け取った手数料の累計額が、支払った年間のパートナー費用（39,600円）に満たなかった場合、パートナーは当社に対し、支払った費用の全額返金を請求することができます。<br />2. 本保証は、実店舗を有し、来店客への案内が可能なパートナーを対象とします。<br />3. 返金請求は、利用開始から1年経過後、30日以内に当社所定の方法で行うものとします。</p>
-                            <p><strong>第7条（契約期間と解約）</strong><br />1. 本サービスの契約期間は、申込日を起算日として1年間とします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとし、以後も同様とします。<br />2. パートナーは、いつでも解約を申し出ることができますが、契約期間中の利用料金の返金は行わないものとします（第6条の全額返金保証を除く）。</p>
+                            <p><strong>第7条（契約期間と解約）</strong><br />1. 本サービスの契約期間は、申込日を起算日として1年間とします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。
+                            <br />2. パートナーは、いつでも解約を申し出ることができますが、契約期間中の利用料金の返金は行わないものとします（第6条の全額返金保証を除く）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
                             <p><strong>第8条（本サービスの提供の停止等）</strong><br />当社は、以下のいずれかの事由があると判断した場合、パートナーに事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。<br />1. 本サービスにかかるコンピュータシステムの保守点検または更新を行う場合<br />2. 地震、落雷、火災、停電または天災などの不可抗力により、本サービスの提供が困難となった場合<br />3. その他、当社が本サービスの提供が困難と判断した場合</p>
                             <p><strong>第9条（免責事項）</strong><br />当社は、本サービスに起因してパートナーに生じたあらゆる損害について一切の責任を負いません。ただし、本サービスに関する当社とパートナーとの間の契約が消費者契約法に定める消費者契約となる場合、この免責規定は適用されません。</p>
                             <p><strong>第10条（準拠法・裁判管轄）</strong><br />本規約の解釈にあたっては、日本法を準拠法とします。本サービスに関して紛争が生じた場合には、当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</p>
@@ -459,4 +460,3 @@ const PartnerSignupPage = () => {
 };
 
 export default PartnerSignupPage;
-
