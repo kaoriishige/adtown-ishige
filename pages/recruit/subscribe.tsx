@@ -1,28 +1,14 @@
-import { GetServerSideProps, NextPage } from 'next';
-import Head from 'next/head';
+// pages/recruit/subscribe.tsx
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { NextPage, GetServerSideProps } from 'next';
 import { useState, useEffect, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import React from 'react';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app } from '../../lib/firebase';
-import { adminDb, getPartnerUidFromCookie } from '../../lib/firebase-admin';
-
-// --- 型定義 ---
-interface UserData {
-    uid: string;
-    companyName: string;
-    address: string;
-    contactPerson: string;
-    phoneNumber: string;
-    email: string;
-}
-
-interface PageProps {
-    userData?: UserData;
-    error?: string;
-}
+import Head from 'next/head';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { parseCookies } from 'nookies';
 
 // --- SVGアイコン ---
 const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> );
@@ -33,9 +19,20 @@ const UserCheckIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="ht
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="6 9 12 15 18 9"></polyline></svg> );
 const ZapIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> );
 const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
 );
 
+interface UserData {
+    companyName: string;
+    address: string;
+    contactPerson: string;
+    phoneNumber: string;
+    email: string;
+}
+
+interface RecruitSubscribePageProps {
+    userData: UserData | null;
+}
 
 const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -44,99 +41,51 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) : null;
 
-// --- サーバーサイドでのデータ取得 ---
-export const getServerSideProps: GetServerSideProps<PageProps> = async (context) => {
-    try {
-        const uid = await getPartnerUidFromCookie(context);
-        if (!uid) { return { redirect: { destination: '/partner/login?redirect=/recruit/subscribe', permanent: false } }; }
-        
-        const userDoc = await adminDb.collection('users').doc(uid).get();
-        if (!userDoc.exists) {
-            context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
-            return { redirect: { destination: '/partner/login?error=user_not_found', permanent: false } };
-        }
-        const data = userDoc.data()!;
-
-        // 既に求人パートナーとして登録済みの場合はダッシュボードへリダイレクト
-        if (data.roles?.includes('recruit')) { return { redirect: { destination: '/recruit/dashboard', permanent: false } }; }
-
-        const userData: UserData = {
-            uid: uid,
-            companyName: data.companyName || data.storeName || '',
-            address: data.address || '',
-            contactPerson: data.displayName || '', // displayNameを担当者として使用
-            phoneNumber: data.phoneNumber || '',
-            email: data.email || '',
-        };
-        return { props: { userData } };
-    } catch (error) {
-        console.error('Subscribe page getServerSideProps error:', error);
-        context.res.setHeader('Set-Cookie', 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT');
-        return { redirect: { destination: '/partner/login', permanent: false } };
-    }
-};
-
-const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverError }) => {
+const RecruitSubscribePage: NextPage<RecruitSubscribePageProps> = ({ userData }) => {
     const [agreed, setAgreed] = useState(false);
-    const [isLoading, setIsLoading] = useState(false); // クレカ決済処理中
-    const [error, setError] = useState<string | null>(serverError || null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [stripeError, setStripeError] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
-    
-    // 請求書PDFダウンロード機能用
-    const [isInvoiceProcessing, setIsInvoiceProcessing] = useState(false); // 請求書処理中
-    const [invoiceDownloadSuccess, setInvoiceDownloadSuccess] = useState(false); // ダウンロード成功
-    
-    const registrationFormRef = useRef<HTMLDivElement>(null);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isInvoiceProcessing, setIsInvoiceProcessing] = useState(false);
+    const [invoiceDownloadSuccess, setInvoiceDownloadSuccess] = useState(false);
 
-    useEffect(() => {
-        const auth = getAuth(app);
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
-        });
-        if (!stripePromise) { console.error("Stripe key missing"); setStripeError(true); }
-        return () => unsubscribe();
+    const registrationFormRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => { 
+        if (!stripePromise) { 
+            console.error("Stripe key missing"); 
+            setStripeError(true); 
+        } 
     }, []);
 
-    const scrollToForm = () => { registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
-
-    // フォームの入力完了チェック (同意のみチェック)
-    const isFormValid = !!(agreed && userData);
-
+    const scrollToForm = () => {
+        // ここを修正: `scrollIntoView`を正しいキャメルケースで記述
+        registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     /**
-     * 【請求書払い】ログイン済みのユーザー情報を使って請求書を作成・ダウンロードさせる処理
+     * 【請求書払い】ユーザー情報を使ってStripeで請求書を作成し、PDFをダウンロードさせる処理
      */
     const handleCreateInvoice = async () => {
         setError(null);
-
-        if (!isFormValid || !userData) { 
-            setError('請求書ダウンロードには、利用規約への同意が必要です。'); 
-            scrollToForm(); 
-            return; 
+        if (!agreed) {
+            setError('請求書PDFをダウンロードするには、利用規約に同意してください。');
+            scrollToForm();
+            return;
         }
 
         setIsInvoiceProcessing(true);
         setInvoiceDownloadSuccess(false);
 
         try {
-            const idToken = await currentUser?.getIdToken();
-            if (!idToken) throw new Error("ユーザー認証に失敗しました。再ログインしてください。");
-
-            // APIを呼び出し、請求書PDFのURLを取得
-            const response = await fetch('/api/auth/register-and-create-invoice', { 
+            // ログイン済みユーザーのUIDをサーバーに送信
+            const response = await fetch('/api/partner/create-invoice', { 
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`, // 認証情報
-                },
-                body: JSON.stringify({ 
-                    serviceType: 'recruit', // 求人サービスとして指定
-                    // 既存ユーザーとして処理するために必要な情報を渡す
-                    companyName: userData.companyName, 
-                    email: userData.email,
-                    isExistingUser: true, // 既存ユーザーであることをAPIに伝える
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: userData?.email,
+                    serviceType: 'recruit',
                 }),
             });
             const data = await response.json();
@@ -148,14 +97,13 @@ const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverErro
             // 成功：PDFダウンロードURLを使ってダウンロードを開始
             const link = document.createElement('a');
             link.href = data.pdfUrl;
-            link.setAttribute('download', `invoice_${userData.companyName}_${Date.now()}.pdf`);
+            link.setAttribute('download', `invoice_${userData?.companyName || 'invoice'}_${Date.now()}.pdf`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
             setInvoiceDownloadSuccess(true);
             setError(null);
-
         } catch (err: any) {
             console.error('請求書ダウンロードエラー:', err);
             setError(err.message || '請求書の自動生成に失敗しました。サイト管理者にお問い合わせください。');
@@ -167,42 +115,51 @@ const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverErro
 
 
     /**
-     * 【クレカ決済】申し込み処理
+     * 【クレカ決済】ユーザー情報を使ってStripe Checkoutセッションを作成
      */
     const handleSubmit = async () => {
         setError(null);
-        if (!isFormValid || !userData) { 
-            setError('クレジットカード決済へ進むには、利用規約への同意が必要です。'); 
-            scrollToForm(); 
-            return; 
+        if (!agreed) {
+            setError('クレジットカード決済へ進むには、利用規約に同意してください。');
+            scrollToForm();
+            return;
         }
-        if (!stripePromise || !currentUser) { setStripeError(true); return; }
+        if (!stripePromise) { setStripeError(true); return; }
 
         setIsLoading(true);
         try {
-            const idToken = await currentUser.getIdToken();
-
-            // 統一APIを呼び出し、Stripe Checkoutセッションを作成
-            const response = await fetch('/api/recruit/create-subscription', { // 既存のサブスクAPIを使用
+            const response = await fetch('/api/auth/register-and-subscribe', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`,
-                },
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    serviceType: 'recruit',
+                    companyName: userData?.companyName, 
+                    address: userData?.address, 
+                    contactPerson: userData?.contactPerson, 
+                    phoneNumber: userData?.phoneNumber, 
+                    email: userData?.email, 
+                }),
             });
-
+            
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'サーバーエラーが発生しました。');
+
+            if (!response.ok) {
+                throw new Error(data.error || 'サーバーでエラーが発生しました。');
+            }
 
             const { sessionId } = data;
+            
             if (sessionId) {
                 const stripe = await stripePromise;
                 if (stripe) {
-                    await stripe.redirectToCheckout({ sessionId });
-                } else { throw new Error('Stripeの初期化に失敗しました。'); }
-            } else { throw new Error('決済セッションの作成に失敗しました。'); }
+                    const { error } = await stripe.redirectToCheckout({ sessionId });
+                    if (error) throw new Error(error.message ?? 'Stripeリダイレクトエラー');
+                } else throw new Error('Stripeの初期化に失敗');
+            } else {
+                throw new Error('決済セッションの作成に失敗');
+            }
         } catch (err: any) {
-            setError(err.message || '不明なエラーが発生しました');
+            setError(err.message || '不明なエラーが発生');
             setIsLoading(false);
         }
     };
@@ -210,27 +167,22 @@ const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverErro
     const getButtonText = () => {
         if (isLoading) return '処理中...';
         if (stripeError) return '決済設定エラー';
-        return 'カードで支払う (月額3,300円)';
+        return '月額プランに登録して求人を掲載する';
     };
 
     const getInvoiceButtonText = () => {
-        if (isInvoiceProcessing) return '請求書を作成中...';
+        if (isInvoiceProcessing) return '登録・請求書を作成中...';
         if (invoiceDownloadSuccess) return 'ダウンロード完了！再発行';
         return '請求書PDFをダウンロードして登録';
     };
 
-
-    if (serverError || !userData) {
+    if (!userData) {
         return (
-            <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 p-4">
-                <div className="bg-white p-8 rounded-lg shadow-xl text-center max-w-2xl border">
-                    <h2 className="text-2xl font-bold mb-4 text-red-600">エラー</h2>
-                    <p className="text-gray-800 mb-6 bg-red-50 p-4 rounded-md text-left">
-                        <strong>エラー内容:</strong> {serverError || "ユーザー情報を取得できませんでした。再度ログインしてください。"}
-                    </p>
-                    <Link href="/partner/login?redirect=/recruit/subscribe" className="text-blue-600 hover:underline">
-                        ログインページに戻る
-                    </Link>
+            <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+                <div className="text-center p-8 bg-white rounded-lg shadow-lg">
+                    <p className="text-xl font-bold text-red-600">エラー：ログインが必要です。</p>
+                    <p className="mt-4 text-gray-600">広告パートナーとしてログインしてからこのページにアクセスしてください。</p>
+                    <Link href="/partner/login" className="mt-6 inline-block bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300">ログインページへ</Link>
                 </div>
             </div>
         );
@@ -266,25 +218,49 @@ const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverErro
                         <p className="mt-2 text-sm text-gray-500">いつでもキャンセル可能・成功報酬なし。</p>
                     </div>
                 </section>
-
-                <section className="mt-24 max-w-4xl mx-auto">
-                    <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
-                    <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
-                        <FAQItem question="本当に求める人材に出会えますか？"><p className="leading-relaxed">はい。当社のAIは、スキルや経験といった表面的な情報だけでなく、求職者の価値観や希望する働き方、貴社の社風などを多角的に分析し、マッチング精度を最大限に高めています。これにより、定着率の高い、貴社にとって本当に価値のある採用を実現します。</p></FAQItem>
-                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額3,300円（または年額39,600円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p></FAQItem>
-                        <FAQItem question="契約の途中で解約（停止）はできますか？"><p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください。</p></FAQItem>
+                
+                <section className="py-16 bg-white rounded-2xl shadow-lg">
+                    <div className="text-center">
+                        <h2 className="text-3xl font-extrabold text-gray-800">こんな「採用の悩み」ありませんか？</h2>
+                        <p className="mt-4 text-gray-600 max-w-2xl mx-auto">一つでも当てはまれば、AIマッチングが解決します。</p>
+                    </div>
+                    <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                        <div className="p-6 text-center"><XCircleIcon className="w-12 h-12 mx-auto text-red-500" /><h3 className="mt-4 text-xl font-bold">コストが高い</h3><p className="mt-2 text-gray-600">多額の広告費を払っても、良い人材からの応募があるとは限らない。</p></div>
+                        <div className="p-6 text-center"><UsersIcon className="w-12 h-12 mx-auto text-red-500" /><h3 className="mt-4 text-xl font-bold">応募が来ない</h3><p className="mt-2 text-gray-600">そもそも求人を見てもらえず、応募が全く集まらない。</p></div>
+                        <div className="p-6 text-center"><UserCheckIcon className="w-12 h-12 mx-auto text-red-500" /><h3 className="mt-4 text-xl font-bold">ミスマッチが多い</h3><p className="mt-2 text-gray-600">応募は来るが、求めるスキルや人柄と合わず、採用に至らない。</p></div>
+                    </div>
+                </section>
+                <section className="mt-24">
+                    <div className="text-center"><ZapIcon className="w-12 h-12 mx-auto text-orange-500"/><h2 className="mt-4 text-3xl font-extrabold text-gray-800">その悩み、AIが解決します。</h2><p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">従来の「待ち」の求人とは違い、AIが貴社に最適な人材を「探し出し」ます。<br/>採用活動が驚くほどシンプルに変わる、その仕組みをご覧ください。</p></div>
+                    <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div><h4 className="text-xl font-bold">カンタン求人作成</h4><p className="mt-2 text-gray-600">求めるスキルや人物像を数分で入力。AIが貴社のニーズを深く学習し、最適な人材像を定義します。</p></div>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h4 className="text-xl font-bold">AIが候補者を自動提案</h4><p className="mt-2 text-gray-600">AIが地域の求職者データベースから、貴社にマッチする可能性の高い人材を自動でリストアップ。待っているだけで、会いたい人材の情報が届きます。</p></div>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div><h4 className="text-xl font-bold">いつでも更新を停止</h4><p className="mt-2 text-gray-600">採用が決まればいつでも次回の更新を停止。必要な期間だけ利用でき、無駄なコストはかかりません。</p></div>
+                    </div>
+                </section>
+                <section className="mt-24 text-center">
+                    <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの企業様が、新しい採用の形を始めています</h3>
+                    <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
+                        {['/images/partner-adtown.png', '/images/partner-aquas.png', '/images/partner-aurevoir.png', '/images/partner-celsiall.png', '/images/partner-dairin.png', '/images/partner-kanon.png', '/images/partner-kokoro.png', '/images/partner-meithu.png', '/images/partner-midcityhotel.png', '/images/partner-nikkou.png', '/images/partner-oluolu.png', '/images/partner-omakaseauto.png', '/images/partner-poppo.png', '/images/partner-Quattro.png', '/images/partner-sekiguchi02.png', '/images/partner-tonbo.png', '/images/partner-training_farm.png', '/images/partner-transunet.png', '/images/partner-yamabuki.png', '/images/partner-yamakiya.png'].map((logoPath, index) => (
+                            <Image key={index} src={logoPath} alt={`パートナーロゴ ${index + 1}`} width={150} height={50} className="object-contain" />
+                        ))}
+                    </div>
+                </section>
+                <section className="mt-24 text-center">
+                    <h3 className="text-3xl font-extrabold">安心のトリプルサポート体制</h3>
+                    <p className="mt-4 text-gray-600 max-w-2xl mx-auto">導入後も、専任の担当者が貴社の採用活動を徹底的にサポート。初めてのAI利用でもご安心ください。</p>
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><PhoneIcon className="w-10 h-10 mx-auto text-blue-500"/><p className="mt-4 font-bold text-lg">お電話サポート</p></div>
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><MessageCircleIcon className="w-10 h-10 mx-auto text-green-500"/><p className="mt-4 font-bold text-lg">LINEチャットサポート</p></div>
+                        <div className="bg-white p-6 rounded-lg shadow-md border"><UserCheckIcon className="w-10 h-10 mx-auto text-orange-500"/><p className="mt-4 font-bold text-lg">専任担当者</p></div>
                     </div>
                 </section>
 
-                <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
-                    <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
-                        <div className="text-center mb-10">
-                            <ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
-                            <h2 className="text-3xl font-bold">AI求人サービス お申し込み</h2>
-                            <p className="text-gray-600 mt-2">ご登録済みの情報が自動入力されています。内容をご確認の上、お支払い方法を選択してください。</p>
-                        </div>
-                        
-                        {/* 登録情報表示 */}
+                <section ref={registrationFormRef} className="my-24 max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow-xl">
+                    <h3 className="text-3xl font-extrabold text-center mb-6">AI求人サービス お申し込みフォーム</h3>
+                    <p className="text-gray-600 text-center mb-8">下記フォームにご記入後、お支払い方法を選択してください。<br className="hidden md:inline"/>ご登録後すぐにAI求人のご利用が可能です。</p>
+
+                    <div className="space-y-5">
                         <div className="space-y-5 border-b pb-8 mb-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div><label className="block text-sm font-medium text-gray-600 mb-1">企業名・店舗名</label><input type="text" readOnly value={userData.companyName} className="w-full px-4 py-3 border rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"/></div>
@@ -316,7 +292,7 @@ const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverErro
                             {/* クレカ決済フォーム */}
                             <div className="mt-4 border p-4 rounded-lg">
                                 <h4 className="font-bold text-center mb-2">クレジットカードでお支払い</h4>
-                                <button onClick={handleSubmit} disabled={isLoading || !isFormValid || stripeError} className="w-full py-3 mt-4 text-white font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg disabled:opacity-50">
+                                <button onClick={handleSubmit} disabled={isLoading || !agreed || stripeError} className="w-full py-3 mt-4 text-white font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg disabled:opacity-50">
                                     {getButtonText()}
                                 </button>
                             </div>
@@ -324,7 +300,6 @@ const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverErro
                             {/* 請求書払いボタン */}
                             <div className="mt-6 border p-4 rounded-lg">
                                 <h4 className="font-bold text-center mb-2">請求書でお支払い (年一括)</h4>
-
                                 {invoiceDownloadSuccess && (
                                     <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md flex items-center justify-center mb-4 max-w-md mx-auto">
                                         <DownloadIcon className="h-5 w-5 mr-3"/>
@@ -333,14 +308,14 @@ const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverErro
                                 )}
                                 <button 
                                     onClick={handleCreateInvoice} 
-                                    disabled={isInvoiceProcessing || !isFormValid} 
+                                    disabled={isInvoiceProcessing || !agreed} 
                                     className="inline-flex items-center justify-center w-full py-3 mt-4 text-white font-bold bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg disabled:opacity-50"
                                 >
                                     {isInvoiceProcessing && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
                                     <DownloadIcon className="w-5 h-5 mr-2" />
                                     {getInvoiceButtonText()}
                                 </button>
-                                {!isFormValid && <p className="text-red-500 text-sm mt-2">※ PDFダウンロードには、利用規約への同意が必要です。</p>}
+                                {!agreed && <p className="text-red-500 text-sm mt-2">※ PDFダウンロードには、利用規約への同意が必要です。</p>}
                             </div>
                         </div>
                     </div>
@@ -373,6 +348,65 @@ const RecruitSubscribePage: NextPage<PageProps> = ({ userData, error: serverErro
             )}
         </div>
     );
+};
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+    try {
+        const cookies = parseCookies(context);
+        const token = cookies.token;
+        if (!token) {
+            return {
+                redirect: {
+                    destination: '/partner/login',
+                    permanent: false,
+                },
+            };
+        }
+
+        const decodedToken = await adminAuth.verifySessionCookie(token, true);
+        const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+        
+        if (!userDoc.exists) {
+            return {
+                redirect: {
+                    destination: '/partner/login',
+                    permanent: false,
+                },
+            };
+        }
+
+        const userData = userDoc.data();
+
+        const isRecruitPartner = userData?.roles?.includes('recruit-partner');
+        if (!isRecruitPartner) {
+            return {
+                redirect: {
+                    destination: '/partner/dashboard', 
+                    permanent: false,
+                },
+            };
+        }
+        
+        return {
+            props: {
+                userData: {
+                    companyName: userData?.companyName || '',
+                    address: userData?.address || '',
+                    contactPerson: userData?.displayName || '',
+                    phoneNumber: userData?.phoneNumber || '',
+                    email: userData?.email || '',
+                },
+            },
+        };
+    } catch (error) {
+        console.error("Failed to retrieve user data from session:", error);
+        return {
+            redirect: {
+                destination: '/partner/login',
+                permanent: false,
+            },
+        };
+    }
 };
 
 export default RecruitSubscribePage;
