@@ -216,6 +216,15 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
           </div>
         )}
 
+        {/* --- START: 修正箇所 --- */}
+        <div className="mb-8 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-800 rounded-md">
+            <p className="text-sm">
+                <strong>お知らせ:</strong> 再ログインは、<a href="https://www.adtown.co.jp/" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-blue-900">adtownのホームページ</a>から行えます。
+            </p>
+        </div>
+        {/* --- END: 修正箇所 --- */}
+
+
         {/* セクション1 */}
         <section>
           <h2 className="text-xl font-bold text-gray-700 mb-3">１．お店の基本情報を設定する</h2>
@@ -268,13 +277,11 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
             <p className="mt-2 text-gray-600">
               月額3,300円で、AIがあなたの会社に最適な人材を見つけます。
             </p>
-            {/* ▼▼▼▼▼【最重要修正点】リンク先を/recruit/subscribeに変更しました ▼▼▼▼▼ */}
             <Link href="/recruit/subscribe" legacyBehavior>
               <a className="inline-block mt-4 bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600 transition duration-150 cursor-pointer">
                 AI求人サービスを追加する
               </a>
             </Link>
-             {/* ▲▲▲▲▲ ここまで ▲▲▲▲▲ */}
           </section>
         )}
 

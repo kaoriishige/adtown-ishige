@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { NextPage } from 'next';
 import Link from 'next/link';
 import { db, auth, storage } from '@/lib/firebase';
@@ -13,6 +13,8 @@ import { v4 as uuidv4 } from 'uuid';
 interface Store {
   id: string;
   ownerId: string;
+  mainCategory?: string;
+  subCategory?: string;
 }
 
 interface Deal {
@@ -23,6 +25,24 @@ interface Deal {
   imageUrl?: string;
   createdAt: string;
 }
+
+// 説明文のプレースホルダー
+const dealPlaceholders: { [key: string]: { [key: string]: string } } = {
+    'お得情報': {
+        '飲食関連': '【例文】本日限定！とちおとめを贅沢に使った新作パフェが登場しました！数量限定ですのでお早めにどうぞ。',
+        '買い物関連': '【例文】明日から3日間限定で、店内全品10%OFFのセールを開催します！この機会をお見逃しなく。',
+        '美容・健康関連': '【例文】新生活応援キャンペーン！4月中にご予約いただくと、新しいヘッドスパメニューを特別価格でお試しいただけます。',
+        'デフォルト': '【例文】期間限定のイベントが始まります！詳しくは店頭スタッフまでお問い合わせください。'
+    },
+    'クーポン': {
+        'デフォルト': '【例文】この画面を提示していただいたお客様限定で、お会計から500円割引いたします。\n\n利用条件：\n・お一人様一回限り\n・他のクーポンとの併用不可\n・有効期限：YYYY年MM月DD日まで'
+    },
+    'フードロス': {
+        '飲食関連': '【例文】本日、パンの在庫が多めのため、18時以降パン全品30%OFFでご提供します！ご協力お願いします！',
+        '買い物関連': '【例文】本日入荷したお野菜ですが、少し形が不揃いなため特別価格で販売いたします。味は一級品です！',
+        'デフォルト': '【例文】賞味期限が近いため、〇〇を本日限定で半額にて販売いたします。'
+    }
+};
 
 // --- ページコンポーネント ---
 const PartnerDealsPage: NextPage = () => {
@@ -40,6 +60,17 @@ const PartnerDealsPage: NextPage = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // プレースホルダーの動的生成
+  const descriptionPlaceholder = useMemo(() => {
+    const dealTypePlaceholders = dealPlaceholders[newDealType];
+    const mainCategory = store?.mainCategory;
+
+    if (mainCategory && dealTypePlaceholders[mainCategory]) {
+        return dealTypePlaceholders[mainCategory];
+    }
+    return dealTypePlaceholders['デフォルト'];
+  }, [newDealType, store]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -152,7 +183,6 @@ const PartnerDealsPage: NextPage = () => {
     }
   };
 
-  // ▼▼▼ ここを修正しました ▼▼▼
   const handleDeleteDeal = async (dealId: string) => {
     if (!user) {
       alert("ログインしていません。");
@@ -186,7 +216,6 @@ const PartnerDealsPage: NextPage = () => {
       setError(err.message);
     }
   };
-  // ▲▲▲ 修正はここまで ▲▲▲
   
   if (loading) return <div>読み込み中...</div>;
   if (!user) return <div>このページにアクセスするにはログインが必要です。</div>;
@@ -210,7 +239,7 @@ const PartnerDealsPage: NextPage = () => {
             </select>
         </div>
         <div><label>タイトル</label><input type="text" value={newDealTitle} onChange={(e) => setNewDealTitle(e.target.value)} required className="w-full p-2 border rounded mt-1" /></div>
-        <div><label>説明文</label><textarea value={newDealDescription} onChange={(e) => setNewDealDescription(e.target.value)} required className="w-full p-2 border rounded mt-1" rows={3}></textarea></div>
+        <div><label>説明文</label><textarea value={newDealDescription} onChange={(e) => setNewDealDescription(e.target.value)} required className="w-full p-2 border rounded mt-1" rows={5} placeholder={descriptionPlaceholder}></textarea></div>
         <div>
           <label>画像 (任意)</label>
           <input type="file" onChange={handleFileChange} accept="image/*" className="w-full p-2 border rounded mt-1" />

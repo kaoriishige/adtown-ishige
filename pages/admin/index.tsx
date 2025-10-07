@@ -1,4 +1,4 @@
-import { NextPage, GetServerSideProps } from 'next';
+import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
@@ -17,6 +17,15 @@ const AdminPage: NextPage = () => {
                 <title>管理メニュー</title>
             </Head>
             <h1 className="text-4xl font-extrabold mb-10 text-center text-gray-800">管理メニュー</h1>
+
+            {/* --- ▼▼▼ 追加 ▼▼▼ --- */}
+            <div className="max-w-md mx-auto mb-8">
+                <p className="text-red-600 bg-red-100 p-4 rounded-md text-center">
+                    <strong>注意：</strong> 現在、認証が一時的に解除されています。<br/>開発が完了したら、必ず認証処理を元に戻してください。
+                </p>
+            </div>
+            {/* --- ▲▲▲ ここまで ▲▲▲ --- */}
+            
             <nav className="space-y-5">
                 <Link href="/mypage" target="_blank" rel="noopener noreferrer" className={userViewLinkStyle}>
                     👁️ 一般ユーザーのマイページを確認
@@ -69,7 +78,8 @@ const AdminPage: NextPage = () => {
     );
 };
 
-// --- 管理者専用の認証保護 ---
+// --- ▼▼▼ 修正: 管理者専用の認証保護を一時的にコメントアウト ▼▼▼ ---
+/*
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
@@ -89,6 +99,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         return { redirect: { destination: '/admin/login', permanent: false } };
     }
 };
+*/
+// --- ▲▲▲ ここまで ▲▲▲ ---
 
 export default AdminPage;
 

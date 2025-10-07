@@ -17,6 +17,8 @@ const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
 );
 
+const SERVICE_START_DATE = new Date('2025-11-01T00:00:00+09:00');
+const SERVICE_START_DATE_STRING = '2025年11月1日';
 
 const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -162,6 +164,8 @@ const RecruitPartnerPage: NextPage = () => {
 
         setIsLoading(true);
         try {
+            const trialEndDate = Math.floor(SERVICE_START_DATE.getTime() / 1000);
+            
             // 統一APIを呼び出し、ユーザー登録とStripe Checkoutセッションを作成
             const response = await fetch('/api/auth/register-and-subscribe', {
                 method: 'POST',
@@ -174,7 +178,8 @@ const RecruitPartnerPage: NextPage = () => {
                     contactPerson, 
                     phoneNumber, 
                     email, 
-                    password 
+                    password,
+                    trialEndDate, // 課金開始日をAPIに渡す
                 }),
             });
             
@@ -205,46 +210,50 @@ const RecruitPartnerPage: NextPage = () => {
     const getButtonText = () => {
         if (isLoading) return '処理中...';
         if (stripeError) return '決済設定エラー';
-        return '月額プランに登録して求人を掲載する';
+        return `先行予約する (初回課金日: ${SERVICE_START_DATE_STRING})`;
     };
 
     const getInvoiceButtonText = () => {
         if (isInvoiceProcessing) return '登録・請求書を作成中...';
         if (invoiceDownloadSuccess) return 'ダウンロード完了！再発行';
-        return '請求書PDFをダウンロードして登録';
+        return '請求書PDFをダウンロードして先行予約';
     };
 
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
             <Head>
-                <title>AI求人サービス お申し込み</title>
+                <title>AI求人サービス 先行予約</title>
             </Head>
             <header className="bg-white shadow-md sticky top-0 z-50">
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-800">AIマッチング求人</h1>
                     <button onClick={scrollToForm} className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg">
-                        今すぐ申し込む
+                        先行予約に申し込む
                     </button>
                 </div>
             </header>
             <main className="container mx-auto px-6">
                 <section className="text-center py-16 md:py-24">
+                    <div className="mb-8 p-4 bg-indigo-100 border-l-4 border-indigo-500 rounded-r-lg max-w-4xl mx-auto">
+                        <p className="font-bold text-indigo-800 text-lg">【先行予約受付中】サービス開始日: {SERVICE_START_DATE_STRING}</p>
+                        <p className="text-sm text-indigo-700 mt-1">今お申し込みいただくと、サービス開始日からすぐにご利用いただけます。初回のお支払いはサービス開始日となります。</p>
+                    </div>
                     <p className="text-orange-500 font-semibold">地元の企業を応援する広告代理店 株式会社adtownからのご提案【大手企業に高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        月額3,300円で、<br />
+                        【先行予約】月額3,300円で、<br />
                         <span className="text-orange-600">理想の人材が見つかるまで。</span>
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
-                        求人広告の高騰、応募が来ない、理想の人材と出会えない…。そんな採用の<strong className="font-bold">「痛み」</strong>を、最先端のマッチングAIが根本から解決。必要な時にいつでも始められ、採用が決まればいつでも停止できる、新しい採用の形をご提案します。
+                        求人広告の高騰、応募が来ない、理想の人材と出会えない…。そんな採用の<strong className="font-bold">「痛み」</strong>を、最先端のマッチングAIが根本から解決。必要な時にいつでも始められ、複数職種を登録することができ、採用が決まればいつでも停止できる、新しい採用の形をご提案します。
                     </p>
                     <div className="mt-8">
                         <button onClick={scrollToForm} className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-                            サービスに申し込む
+                            先行予約に申し込む
                         </button>
                         <p className="mt-2 text-sm text-gray-500">いつでもキャンセル可能・成功報酬なし。</p>
                     </div>
                 </section>
-                
+
                 {/* --- START: なぜ今、アプリ求人なのか？ --- */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
@@ -323,7 +332,7 @@ const RecruitPartnerPage: NextPage = () => {
 
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
-                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス お申し込み</h2><p className="text-center text-gray-600">アカウントを作成し、月額3,300円のプランにお申し込みください。</p></div>
+                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">アカウント情報を登録し、先行予約を完了してください。</p></div>
                         
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -355,6 +364,12 @@ const RecruitPartnerPage: NextPage = () => {
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
 
                             {/* クレジットカード決済ボタン */}
+                            <div className="my-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
+                                <p className="text-sm text-blue-800">
+                                    サービス開始日は <strong>{SERVICE_START_DATE_STRING}</strong> です。<br/>
+                                    初回のお支払いはサービス開始日に行われます。
+                                </p>
+                            </div>
                             <button type="button" onClick={handleSubmit} disabled={isLoading || !isFormValid || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                 {getButtonText()}
                             </button>
@@ -370,8 +385,8 @@ const RecruitPartnerPage: NextPage = () => {
                 <section className="mt-12 bg-white rounded-2xl shadow-xl p-8 md:p-12 w-full max-w-3xl mx-auto border border-gray-200 text-center">
                     <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
                     <p className="text-gray-600 mb-6">
-                        御請求書にてのお支払いについては、年間39,600円を前払にてのご精算になります。<br />
-                        ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してください。
+                        御請求書でのお支払い（年一括払い）の場合、サービスの利用開始は **{SERVICE_START_DATE_STRING}** からとなります。<br/>
+                        ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してご予約ください。
                     </p>
                     {invoiceDownloadSuccess && (
                         <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md flex items-center justify-center mb-4 max-w-md mx-auto">
@@ -413,7 +428,7 @@ const RecruitPartnerPage: NextPage = () => {
                                 <li>過去当社との契約に違反した者またはその関係者であると当社が判断した場合</li>
                                 <li>その他、当社が登録を適当でないと判断した場合</li>
                             </ul>
-                            <p><strong>第3条（利用料金及び支払方法）</strong><br/>1. 利用者は、本サービスの利用の対価として、当社が別途定める利用料金を、当社が指定する支払方法により当社に支払うものとします。利用料金は月額3,300円（税込）とします。<br/>2. 支払方法はクレジットカード決済または銀行振込（年額一括39,600円（税込）のみ）とします。<br/>3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも管理画面から次回の更新をキャンセルすることができます。月の途中で解約した場合でも、日割り返金は行われません。</p>
+                            <p><strong>第3条（利用料金及び支払方法）</strong><br/>1. 利用者は、本サービスの利用の対価として、当社が別途定める利用料金を、当社が指定する支払方法により当社に支払うものとします。利用料金は月額3,300円（税込）とします。<br/>2. 支払方法はクレジットカード決済または銀行振込（年額一括39,600円（税込）のみ「求人を停止しても返金はございません」）とします。<br/>3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも管理画面から次回の更新をキャンセルすることができます。月の途中で解約した場合でも、日割り返金は行われません。</p>
                             <p><strong>第4条（ユーザーID及びパスワードの管理）</strong><br/>1. 利用者は、自己の責任において、本サービスのユーザーID及びパスワードを適切に管理及び保管するものとし、これを第三者に利用させ、または貸与、譲渡、名義変更、売買等をしてはならないものとします。<br/>2. ユーザーIDまたはパスワードの管理不十分、使用上の過誤、第三者の使用等によって生じた損害に関する責任は利用者が負うものとし、当社は一切の責任を負いません。</p>
                             <p><strong>第5条（禁止事項）</strong><br/>利用者は、本サービスの利用にあたり、以下の各号のいずれかに該当する行為または該当すると当社が判断する行為をしてはなりません。<br/>
                             <ul className="list-disc list-inside pl-4 text-sm">

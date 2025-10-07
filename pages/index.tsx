@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
-import { adminDb } from '@/lib/firebase-admin'; // ここは変更なし
+import { adminDb } from '@/lib/firebase-admin';
 import { 
   RiShieldCheckFill, 
   RiHeartPulseFill, 
@@ -94,7 +94,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 {data.heroSubheadline}
               </p>
               <div className="mt-10">
-                <Link href="/signup" passHref legacyBehavior>
+                <Link href="/users/signup" passHref legacyBehavior>
                   <a className="bg-lime-400 text-black font-bold py-4 px-8 rounded-md shadow-lg transition-all transform hover:scale-105 inline-block max-w-xs w-full">
                     今すぐ無料で登録する
                   </a>
@@ -231,7 +231,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 <h2 className="text-3xl md:text-4xl font-bold">{data.finalCtaTitle}</h2>
                 <p className="mt-4 text-gray-300">{data.finalCtaSubtext}</p>
                 <div className="mt-8">
-                  <Link href="/signup" passHref legacyBehavior>
+                  <Link href="/users/signup" passHref legacyBehavior>
                     <a className="bg-lime-400 text-black font-bold text-lg py-4 px-10 rounded-md shadow-lg transition-transform transform hover:scale-105 inline-block">
                       今すぐ無料で登録する
                     </a>
@@ -258,11 +258,9 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    // ▼▼▼【ここを修正】adminDb → adminDb に変更 ▼▼▼
     const docRef = adminDb.collection('settings').doc('landingV3');
     const docSnap = await docRef.get();
     
-    // データがない場合のデフォルト値
     const fallbackData: LandingData = {
       mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
       areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
@@ -301,7 +299,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
     };
   } catch (error) {
     console.error("Landing page data fetch error:", error);
-    // エラー発生時も最低限のデータでページが表示されるようにする
     const fallbackData: LandingData = { mainTitle: "みんなの那須アプリ" };
     return { props: { data: fallbackData } };
   }

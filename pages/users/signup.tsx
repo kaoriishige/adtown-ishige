@@ -2,19 +2,20 @@ import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth'; // signIn... は不要
-import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 import Head from 'next/head';
+import { RiUserAddLine } from 'react-icons/ri';
 
 const SignupPage: NextPage = () => {
   const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [referrerId, setReferrerId] = useState<string | null>(null);
+  const auth = getAuth(app);
 
   useEffect(() => {
     const refId = sessionStorage.getItem('referrerId');
@@ -39,7 +40,7 @@ const SignupPage: NextPage = () => {
     setIsLoading(true);
 
     try {
-      // 1. Firebase Authでユーザー作成（この時点でクライアントはログイン状態になる）
+      // 1. Firebase Authでユーザー作成
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -59,17 +60,24 @@ const SignupPage: NextPage = () => {
       }
 
       // 3. セッションクッキーを作成するためのAPIを呼び出す
-      const idToken = await user.getIdToken(); // userオブジェクトから直接取得
+      const idToken = await user.getIdToken(true); // トークンを強制更新
       const sessionResponse = await fetch('/api/auth/sessionLogin', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${idToken}` },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}` 
+          },
+          body: JSON.stringify({ loginType: 'user' }),
+          credentials: 'include', // Cookieを送受信するために必要
       });
 
-      // 4. セッション作成が成功したことを確認してから、ページを移動
       if (sessionResponse.ok) {
-        router.replace('/home'); // SPA遷移で/homeを正しく表示
+        // 4. Cookieがブラウザに反映されるのを少し待ってから、ページを完全にリロードしてホームページへ
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        window.location.href = '/home';
       } else {
-        throw new Error('セッションの作成に失敗しました。');
+        const errorData = await sessionResponse.json();
+        throw new Error(errorData.error || 'セッションの作成に失敗しました。');
       }
 
     } catch (err: any) {
@@ -78,8 +86,7 @@ const SignupPage: NextPage = () => {
         message = 'このメールアドレスは既に使用されています。';
       }
       setError(message);
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // エラー時にローディングを解除
     }
   };
 
@@ -131,12 +138,17 @@ const SignupPage: NextPage = () => {
               disabled={isLoading}
               className="w-full py-3 px-4 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 font-bold"
             >
-              {isLoading ? '処理中...' : '同意して無料で登録する'}
+              {isLoading ? '処理中...' : (
+                <span className="flex items-center justify-center">
+                  <RiUserAddLine className="mr-2"/>
+                  同意して無料で登録する
+                </span>
+              )}
             </button>
           </form>
 
           <p className="text-sm text-center">
-            すでにアカウントをお持ちですか？ <Link href="/login" className="text-blue-600 hover:underline">ログイン</Link>
+            すでにアカウントをお持ちですか？ <Link href="/users/login" className="text-blue-600 hover:underline">ログイン</Link>
           </p>
         </div>
       </div>
