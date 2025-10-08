@@ -1,147 +1,139 @@
-import { NextPage, GetServerSideProps } from 'next';
+import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
-import Link from 'next/link';
-import { useState } from 'react';
-import nookies from 'nookies';
-import { adminAuth, adminDb } from '../../lib/firebase-admin';
+import React, { useState } from 'react';
+import { adminDb, getUidFromCookie } from '../../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
-import { useRouter } from 'next/router';
+// ★★★ 修正箇所1: Firebaseの型をインポート ★★★
+import * as admin from 'firebase-admin';
 
-// --- 型定義 ---
 interface Inquiry {
-  id: string;
-  name: string;
-  email: string;
-  message: string;
-  status: 'pending' | 'resolved';
-  createdAt: string; // シリアライズのために文字列にする
+    id: string;
+    name: string;
+    email: string;
+    message: string;
+    createdAt: string; // 日付は文字列として扱う
+    isResolved: boolean;
 }
 
-interface InquiryListPageProps {
-  initialInquiries: Inquiry[];
+interface InquiryListProps {
+    initialInquiries: Inquiry[];
 }
 
-// --- ダッシュボードページ本体 ---
-const AdminInquiryListPage: NextPage<InquiryListPageProps> = ({ initialInquiries }) => {
+const InquiryListPage: NextPage<InquiryListProps> = ({ initialInquiries }) => {
     const [inquiries, setInquiries] = useState(initialInquiries);
-    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleStatusChange = async (id: string, newStatus: 'pending' | 'resolved') => {
-        // TODO: ここにステータスを更新するAPI呼び出しを実装
-        console.log(`Updating inquiry ${id} to ${newStatus}`);
+    const handleToggleResolved = async (id: string, currentStatus: boolean) => {
+        const originalInquiries = [...inquiries];
         
         // UIを即時反映
-        setInquiries(currentInquiries =>
-            currentInquiries.map(inquiry =>
-                inquiry.id === id ? { ...inquiry, status: newStatus } : inquiry
-            )
-        );
+        setInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, isResolved: !currentStatus } : inq));
+
+        try {
+            const response = await fetch(`/api/admin/inquiries/${id}/resolve`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isResolved: !currentStatus }),
+            });
+
+            if (!response.ok) {
+                throw new Error('ステータスの更新に失敗しました。');
+            }
+        } catch (err) {
+            setError('更新に失敗しました。ページを再読み込みしてください。');
+            // エラー時にUIを元に戻す
+            setInquiries(originalInquiries);
+        }
     };
     
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-100 p-8">
             <Head>
-                <title>問い合わせ管理</title>
+                <title>お問い合わせ管理</title>
+                <script src="https://cdn.tailwindcss.com"></script>
             </Head>
+            <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+                <h1 className="text-2xl font-bold text-gray-800 mb-6">お問い合わせ管理</h1>
+                
+                {error && <p className="text-red-500 mb-4">{error}</p>}
 
-            <header className="bg-white shadow-sm sticky top-0 z-10">
-                <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-800">問い合わせ管理</h1>
-                    <Link href="/admin" className="text-sm text-blue-600 hover:underline">
-                        管理メニューへ戻る
-                    </Link>
-                </div>
-            </header>
-
-            <main className="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">日時</th>
-                                    <th scope="col" className="px-6 py-3">氏名</th>
-                                    <th scope="col" className="px-6 py-3">メールアドレス</th>
-                                    <th scope="col" className="px-6 py-3">ステータス</th>
-                                    <th scope="col" className="px-6 py-3">詳細</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {inquiries.map((inquiry) => (
-                                    <tr key={inquiry.id} className="bg-white border-b hover:bg-gray-50">
-                                        <td className="px-6 py-4">{inquiry.createdAt}</td>
-                                        <td className="px-6 py-4 font-medium text-gray-900">{inquiry.name}</td>
-                                        <td className="px-6 py-4">{inquiry.email}</td>
-                                        <td className="px-6 py-4">
-                                            <select 
-                                                value={inquiry.status} 
-                                                onChange={(e) => handleStatusChange(inquiry.id, e.target.value as 'pending' | 'resolved')}
-                                                className={`border text-sm rounded-lg block w-full p-2.5 ${inquiry.status === 'pending' ? 'bg-yellow-100 border-yellow-300 text-yellow-800' : 'bg-green-100 border-green-300 text-green-800'}`}
-                                            >
-                                                <option value="pending">未対応</option>
-                                                <option value="resolved">対応済み</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {/* TODO: 詳細ページのリンク先を設定 */}
-                                            <Link href={`/admin/inquiries/${inquiry.id}`} className="font-medium text-blue-600 hover:underline">
-                                                確認する
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                     {inquiries.length === 0 && (
-                        <p className="text-center text-gray-500 py-10">新しい問い合わせはありません。</p>
+                <div className="space-y-4">
+                    {inquiries.length > 0 ? (
+                        inquiries.map(inquiry => (
+                            <div key={inquiry.id} className={`p-4 rounded-lg border ${inquiry.isResolved ? 'bg-gray-50' : 'bg-white'}`}>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-sm text-gray-500">{inquiry.createdAt}</p>
+                                        <p className="font-bold text-gray-800">{inquiry.name} ({inquiry.email})</p>
+                                        <p className="mt-2 text-gray-600 whitespace-pre-wrap">{inquiry.message}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleToggleResolved(inquiry.id, inquiry.isResolved)}
+                                        className={`px-3 py-1 text-sm font-semibold rounded-full text-white transition-colors ${
+                                            inquiry.isResolved 
+                                            ? 'bg-gray-400 hover:bg-gray-500' 
+                                            : 'bg-green-500 hover:bg-green-600'
+                                        }`}
+                                    >
+                                        {inquiry.isResolved ? '未対応に戻す' : '対応済みにする'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-gray-500">現在、新しいお問い合わせはありません。</p>
                     )}
                 </div>
-            </main>
+            </div>
         </div>
     );
 };
 
-// --- サーバーサイドでのデータ取得と認証 ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
-        const cookies = nookies.get(context);
-        if (!cookies.token) {
-            return { redirect: { destination: '/admin/login', permanent: false } };
+        const uid = await getUidFromCookie(context);
+        if (!uid) {
+            return { redirect: { destination: '/partner/login', permanent: false } };
         }
-        
-        const token = await adminAuth.verifyIdToken(cookies.token, true);
-        const userDoc = await adminDb.collection('users').doc(token.uid).get();
 
+        const userDoc = await adminDb.collection('users').doc(uid).get();
         if (!userDoc.exists || !userDoc.data()?.roles?.includes('admin')) {
-            return { redirect: { destination: '/admin/login', permanent: false } };
+            return { redirect: { destination: '/partner/login?error=permission_denied', permanent: false } };
         }
-        
+
         // Firestoreから問い合わせ一覧を取得
         const inquiriesSnapshot = await adminDb.collection('inquiries').orderBy('createdAt', 'desc').get();
-        const initialInquiries = inquiriesSnapshot.docs.map(doc => {
+        
+        // ★★★ 修正箇所2: 'doc'に型を明示的に指定 ★★★
+        const initialInquiries = inquiriesSnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => {
             const data = doc.data();
             const createdAt = data.createdAt as Timestamp;
             return {
                 id: doc.id,
-                name: data.name || '',
-                email: data.email || '',
-                message: data.message || '',
-                status: data.status || 'pending',
-                createdAt: createdAt.toDate().toLocaleString('ja-JP'), // シリアライズ可能な形式に変換
+                name: data.name || '（名前なし）',
+                email: data.email || '（メアドなし）',
+                message: data.message || '（本文なし）',
+                createdAt: createdAt.toDate().toLocaleString('ja-JP'),
+                isResolved: data.isResolved || false,
             };
         });
 
         return {
             props: {
-                initialInquiries
+                initialInquiries,
             },
         };
     } catch (error) {
-        return { redirect: { destination: '/admin/login', permanent: false } };
+        console.error('Error fetching inquiries:', error);
+        return {
+            props: {
+                initialInquiries: [],
+            },
+        };
     }
 };
 
-export default AdminInquiryListPage;
+export default InquiryListPage;
 
 

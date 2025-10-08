@@ -21,3 +21,6 @@
 
 
 
+
+# Local Netlify folder
+.netlify
