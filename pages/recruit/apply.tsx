@@ -273,7 +273,7 @@ const RecruitPartnerPage: NextPage = () => {
                 <section className="text-center py-16 md:py-24">
                     <div className="mb-8 p-4 bg-indigo-100 border-l-4 border-indigo-500 rounded-r-lg max-w-4xl mx-auto">
                         <p className="font-bold text-indigo-800 text-lg">【先行予約受付中】サービス開始日: {SERVICE_START_DATE_STRING}</p>
-                        <p className="text-sm text-indigo-700 mt-1">今お申し込みいただくと、サービス開始日からすぐにご利用いただけます。初回のお支払いはサービス開始日となります。</p>
+                        <p className="text-sm text-indigo-700 mt-1">今お申し込みいただくと、サービス開始日からすぐにご利用いただけます。初回のお支払いはサービス開始日となります。請求書払いの方は、入金確認後からご利用可能となります。</p>
                     </div>
                     <p className="text-orange-500 font-semibold">地元の企業を応援する広告代理店 株式会社adtownからのご提案【大手企業に高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">

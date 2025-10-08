@@ -3,56 +3,13 @@ import { loadStripe } from '@stripe/stripe-js';
 import Link from 'next/link';
 import Image from 'next/image';
 import Head from 'next/head';
-import { NextPage, GetServerSideProps } from 'next';
-import { adminDb } from '@/lib/firebase-admin'; // Firebase Admin SDKをインポート
 
-// --- データ型定義 ---
-interface UserData {
-    companyName?: string;
-    address?: string;
-    contactPerson?: string;
-    phoneNumber?: string;
-    email?: string;
-}
+// --- Firebase関連のインポートを追加 ---
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../lib/firebase'; // Firebase設定ファイルをインポート
 
-interface PartnerSignupPageProps {
-    initialData?: UserData;
-}
-
-// --- サーバーサイド処理 (企業情報の事前取得) ---
-export const getServerSideProps: GetServerSideProps<PartnerSignupPageProps> = async (context) => {
-    const { userId } = context.query;
-    let initialData: UserData | undefined = undefined;
-
-    if (userId && typeof userId === 'string') {
-        try {
-            // usersコレクションから該当するuserIdのドキュメントを取得
-            const userDoc = await adminDb.collection('users').doc(userId).get();
-            if (userDoc.exists) {
-                const data = userDoc.data();
-                // 取得したデータをinitialDataとして設定
-                initialData = {
-                    companyName: data?.companyName || '',
-                    address: data?.address || '',
-                    contactPerson: data?.contactPerson || '',
-                    phoneNumber: data?.phoneNumber || '',
-                    email: data?.email || '',
-                };
-            }
-        } catch (error) {
-            console.error("Error fetching user data for prefill:", error);
-        }
-    }
-
-    return {
-        props: {
-            initialData,
-        },
-    };
-};
-
-
-// --- Inline SVG Icon Components ---
+// --- Inline SVG Icon Components (完全コピー) ---
 const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> );
 const XCircleIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> );
 const PhoneIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81 .7A2 2 0 0 1 22 16.92z"></path></svg> );
@@ -62,10 +19,6 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="
 const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
 );
-
-// ★ 修正: 欠落していた定数を追加
-const SERVICE_START_DATE = new Date('2025-11-01T00:00:00+09:00');
-const SERVICE_START_DATE_STRING = '2025年11月1日';
 
 
 const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
@@ -81,7 +34,6 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
     )
 };
 
-// Custom hook for persistent state using sessionStorage
 const usePersistentState = (key: string, defaultValue: any) => {
     const [state, setState] = useState(() => {
         if (typeof window === 'undefined') { return defaultValue; }
@@ -97,36 +49,68 @@ const usePersistentState = (key: string, defaultValue: any) => {
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) : null;
 
-// コンポーネントの型にpropsを追加
-const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) => {
-    // initialDataが存在する場合、それをデフォルト値として使用し、フォームの状態を初期化
-    // フォームのキーを 'partnerForm_' に変更
-    const [storeName, setStoreName] = usePersistentState('partnerForm_storeName', initialData?.companyName || '');
-    const [address, setAddress] = usePersistentState('partnerForm_address', initialData?.address || '');
+const PartnerAdSubscribePage = () => {
+    // Form state management
+    const [storeName, setStoreName] = usePersistentState('partnerForm_storeName', '');
+    const [address, setAddress] = usePersistentState('partnerForm_address', '');
     const [area, setArea] = usePersistentState('partnerForm_area', '');
-    const [contactPerson, setContactPerson] = usePersistentState('partnerForm_contactPerson', initialData?.contactPerson || '');
-    const [phoneNumber, setPhoneNumber] = usePersistentState('partnerForm_phoneNumber', initialData?.phoneNumber || '');
-    const [email, setEmail] = usePersistentState('partnerForm_email', initialData?.email || '');
-    const [confirmEmail, setConfirmEmail] = usePersistentState('partnerForm_confirmEmail', initialData?.email || '');
-    
+    const [contactPerson, setContactPerson] = usePersistentState('partnerForm_contactPerson', '');
+    const [phoneNumber, setPhoneNumber] = usePersistentState('partnerForm_phoneNumber', '');
+    const [email, setEmail] = usePersistentState('partnerForm_email', '');
+    const [confirmEmail, setConfirmEmail] = usePersistentState('partnerForm_confirmEmail', '');
     const [password, setPassword] = usePersistentState('partnerForm_password', '');
     const [agreed, setAgreed] = usePersistentState('partnerForm_agreed', false);
     
     // UI state management
-    const [isLoading, setIsLoading] = useState(false); // For credit card payment processing
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [stripeError, setStripeError] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
-    
-    // For invoice PDF download functionality
-    const [isInvoiceProcessing, setIsInvoiceProcessing] = useState(false); // For invoice processing
-    const [invoiceDownloadSuccess, setInvoiceDownloadSuccess] = useState(false); // For download success
+    const [isInvoiceProcessing, setIsInvoiceProcessing] = useState(false);
+    const [invoiceDownloadSuccess, setInvoiceDownloadSuccess] = useState(false);
 
-    const [registeredCount] = useState(32); // Dummy value for registered stores
+    const [registeredCount] = useState(32);
     const totalSlots = 100;
     const remainingSlots = totalSlots - registeredCount;
 
     const registrationFormRef = useRef<HTMLDivElement>(null);
+
+    // --- ★ここから追加：Firebaseから企業データを取得してフォームに自動入力する処理 ---
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
+            if (user) {
+                try {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+
+                    if (userDocSnap.exists()) {
+                        const data = userDocSnap.data();
+                        console.log("企業データを取得しました:", data);
+                        
+                        setStoreName(data.companyName || '');
+                        setAddress(data.address || '');
+                        setContactPerson(data.displayName || '');
+                        setPhoneNumber(data.phoneNumber || '');
+                        setEmail(user.email || data.email || '');
+                        setConfirmEmail(user.email || data.email || '');
+                    } else {
+                        console.log("ユーザーデータが見つかりません。メールアドレスのみセットします。");
+                        if(user.email) {
+                            setEmail(user.email);
+                            setConfirmEmail(user.email);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Firestoreからのデータ取得に失敗しました:", err);
+                    setError("企業情報の読み込みに失敗しました。ページを再読み込みしてください。");
+                }
+            } else {
+                console.log("ユーザーはログインしていません。");
+            }
+        });
+        return () => unsubscribe();
+    }, [setStoreName, setAddress, setContactPerson, setPhoneNumber, setEmail, setConfirmEmail]);
+    // --- ★ここまで追加 ---
 
     // Initial setup
     useEffect(() => { if (!stripePromise) { console.error("Stripe key missing"); setStripeError(true); } }, []);
@@ -135,10 +119,8 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
     useEffect(() => { 
         const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/); 
         if (match) { 
-            // Set area excluding '那須郡'
             setArea(match[0].replace('那須郡', '')); 
         } else if (address) { 
-            // Clear area if address is entered but doesn't match
             setArea(''); 
         } 
     }, [address, setArea]);
@@ -147,33 +129,24 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
         registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
-    // Check if form is complete (to control button's disabled state)
     const isFormValid = !!(storeName && contactPerson && address && phoneNumber && email && confirmEmail && password.length >= 6 && area && agreed && email === confirmEmail);
 
 
-    /**
-     * 【Invoice Payment】Validate form input, create invoice via Stripe, and initiate download.
-     */
     const handleRegisterAndInvoice = async () => {
         setError(null);
-
-        // Client-side validation
         if (!isFormValid) { 
             setError('PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。'); 
             scrollToForm(); 
             return; 
         }
-        
         setIsInvoiceProcessing(true);
         setInvoiceDownloadSuccess(false);
-
         try {
-            // Call API to register user and create Stripe invoice/return PDF URL simultaneously
             const response = await fetch('/api/auth/register-and-create-invoice', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    serviceType: 'ad', // 広告サービスとして登録
+                    serviceType: 'ad', 
                     companyName: storeName,
                     address, 
                     area, 
@@ -184,26 +157,18 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
                 }),
             });
             const data = await response.json();
-            
             if (!response.ok || !data.pdfUrl) {
-                // If registration or invoice creation fails
                 throw new Error(data.error || '登録および請求書の作成に失敗しました。');
             }
-
-            // Success: Start download using the PDF URL
             const link = document.createElement('a');
             link.href = data.pdfUrl;
             link.setAttribute('download', `invoice_${storeName}_${Date.now()}.pdf`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-
             setInvoiceDownloadSuccess(true);
             setError(null);
-
-            // Clear sessionStorage on success
             Object.keys(window.sessionStorage).forEach(key => { if (key.startsWith('partnerForm_')) { window.sessionStorage.removeItem(key); } });
-
         } catch (err: any) {
             console.error('Invoice download error:', err);
             setError(err.message || '登録および請求書の自動生成に失敗しました。サイト管理者にお問い合わせください。');
@@ -214,29 +179,21 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
     };
 
 
-    /**
-     * 【Credit Card Payment】Handle application submission.
-     */
     const handleSubmit = async () => {
         setError(null);
-        
-        // Re-validate on client-side
         if (!isFormValid) { 
             setError('クレジットカード決済へ進むには、フォームの必須項目を全て満たし、規約に同意してください。'); 
             scrollToForm(); 
             return; 
         }
-
         if (!stripePromise) { setStripeError(true); return; }
-
         setIsLoading(true);
         try {
-            // Call unified API to register user and create Stripe Checkout session
             const response = await fetch('/api/auth/register-and-subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    serviceType: 'ad', // 広告サービスとして登録
+                    serviceType: 'ad', 
                     companyName: storeName,
                     address, 
                     area, 
@@ -247,13 +204,10 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
                 }),
             });
             const data = await response.json();
-
             if (!response.ok) {
                 throw new Error(data.error || 'サーバーでエラーが発生しました。');
             }
-
             const { sessionId } = data;
-            
             if (sessionId) {
                 Object.keys(window.sessionStorage).forEach(key => { if (key.startsWith('partnerForm_')) { window.sessionStorage.removeItem(key); } });
                 const stripe = await stripePromise;
@@ -324,7 +278,7 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
                     </p>
                     <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
                         <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
-                        <div className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wider bg-gray-100 px-3 py-1 rounded">32店舗</div>
+                        <div className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wider bg-gray-100 px-3 py-1 rounded">{registeredCount}店舗</div>
                         <p className="text-md md:text-lg font-semibold text-red-600">残り {remainingSlots} 枠！</p>
                     </div>
                 </section>
@@ -429,84 +383,18 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
                         <p className="text-center text-gray-600 mb-8">
                             全てのアドバンテージを手に入れるために、以下のフォームをご入力ください。
                         </p>
-                        <form className="space-y-6" onSubmit={(e) => e.preventDefault()}> {/* Prevent form submission */}
+                        <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div> 
-                                    <label className="block text-gray-700 font-medium mb-2">店舗名・企業名 *</label> 
-                                    <input 
-                                        type="text" 
-                                        value={storeName} 
-                                        onChange={(e) => setStoreName(e.target.value)} 
-                                        required 
-                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500 ${initialData?.companyName ? 'bg-gray-100' : ''}`}
-                                        readOnly={!!initialData?.companyName}
-                                /> 
-                                </div>
-                                <div> 
-                                    <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label> 
-                                    <input 
-                                        type="text" 
-                                        value={contactPerson} 
-                                        onChange={(e) => setContactPerson(e.target.value)} 
-                                        required 
-                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500 ${initialData?.contactPerson ? 'bg-gray-100' : ''}`}
-                                        readOnly={!!initialData?.contactPerson}
-                                /> 
-                                </div>
+                                <div> <label className="block text-gray-700 font-medium mb-2">店舗名・企業名 *</label> <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
+                                <div> <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label> <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                             </div>
-                            <div> 
-                                <label className="block text-gray-700 font-medium mb-2">住所 *</label> 
-                                <input 
-                                    type="text" 
-                                    value={address} 
-                                    onChange={(e) => setAddress(e.target.value)} 
-                                    required 
-                                    placeholder="例：栃木県那須塩原市共墾社108-2" 
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500 ${initialData?.address ? 'bg-gray-100' : ''}`}
-                                    readOnly={!!initialData?.address}
-                                /> 
-                                {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須町、大田原市のいずれかである必要があります。</p>} 
-                            </div>
+                            <div> <label className="block text-gray-700 font-medium mb-2">住所 *</label> <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須町、大田原市のいずれかである必要があります。</p>} </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                                <div> 
-                                    <label className="block text-gray-700 font-medium mb-2">電話番号 *</label> 
-                                    <input 
-                                        type="tel" 
-                                        value={phoneNumber} 
-                                        onChange={(e) => setPhoneNumber(e.target.value)} 
-                                        required 
-                                        placeholder="例: 09012345678" 
-                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500 ${initialData?.phoneNumber ? 'bg-gray-100' : ''}`}
-                                        readOnly={!!initialData?.phoneNumber}
-                                /> 
-                                </div>
-                                <div> 
-                                    <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上) *</label> 
-                                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> 
-                                </div>
-                                <div> 
-                                    <label className="block text-gray-700 font-medium mb-2">メールアドレス *</label> 
-                                    <input 
-                                        type="email" 
-                                        value={email} 
-                                        onChange={(e) => setEmail(e.target.value)} 
-                                        required 
-                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500 ${initialData?.email ? 'bg-gray-100' : ''}`}
-                                        readOnly={!!initialData?.email}
-                                /> 
-                                </div>
-                                <div> 
-                                    <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）*</label> 
-                                    <input 
-                                        type="email" 
-                                        value={confirmEmail} 
-                                        onChange={(e) => setConfirmEmail(e.target.value)} 
-                                        required 
-                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500 ${initialData?.email ? 'bg-gray-100' : ''}`}
-                                        readOnly={!!initialData?.email}
-                                /> 
-                                </div>
+                                <div> <label className="block text-gray-700 font-medium mb-2">電話番号 *</label> <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
+                                <div> <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上) *</label> <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
+                                <div> <label className="block text-gray-700 font-medium mb-2">メールアドレス *</label> <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
+                                <div> <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）*</label> <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                             </div>
                             <div className="pt-4">
                                 <label className="flex items-start">
@@ -520,11 +408,9 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
                                 </label>
                             </div>
                             
-                            {/* Error display area */}
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p></div> )}
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
 
-                            {/* クレジットカード決済ボタン */}
                             <button type="button" onClick={handleSubmit} disabled={isLoading || !isFormValid || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                 {getButtonText()}
                             </button>
@@ -534,7 +420,6 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
                             すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
                         </p>
                         
-                        {/* Invoice Payment Section (PDF Download UI) */}
                         <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 w-full max-w-3xl mx-auto border border-gray-200 text-center">
                             <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
                             <p className="text-gray-600 mb-6">
@@ -573,15 +458,16 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
             {showTerms && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
-                        <h2 className="text-xl font-bold mb-4 border-b pb-2">AIマッチング求人 利用規約</h2>
+                        <h2 className="text-xl font-bold mb-4 border-b pb-2">パートナー利用規約</h2>
                         <div className="overflow-y-auto space-y-4 pr-2">
                             <p><strong>第1条（本規約の適用範囲）</strong><br />本規約は、株式会社adtown（以下「当社」といいます。）が提供する「みんなの那須アプリ」パートナープログラム（以下「本サービス」といいます。）の利用に関する一切の関係に適用されます。</p>
                             <p><strong>第2条（本サービスの利用資格）</strong><br />本サービスは、当社が別途定める審査基準を満たした法人または個人事業主（以下「パートナー」といいます。）のみが利用できるものとします。申込者は、当社が要求する情報が真実かつ正確であることを保証するものとします。</p>
                             <p><strong>第3条（利用料金）</strong><br />パートナーは、当社に対し、別途定める利用料金（月額3,300円（税込）または年額39,600円（税込））を支払うものとします。支払い方法は、クレジットカード決済または銀行振込（年額一括のみ）とします。</p>
-                            <p><strong>第4条（禁止事項）</strong><br />パートナーは、本サービスの利用にあたり、以下の行為を行ってはなりません。<br />1. 法令または公序良俗に違反する行為<br />2. 犯罪行為に関連する行為<br />3. 当社のサーバーまたはネットワークの機能を破壊したり、妨害したりする行為<br />4. 当社のサービスの運営を妨害するおそれのある行為<br />5. 他のパートナーに関する個人情報等を収集または蓄積する行為<br />6. 不正な目的を持って本サービスを利用する行為<br />7. 当社または第三者の知的財産権、肖像権、プライバシーの権利、名誉その他の権利または利益を侵害する行為<br />8. その他、当社が不適切と判断する行為</p>
+                            <p><strong>第4条（禁止事項）</strong><br />パートナーは、本サービスの利用にあたり、以下の行為を行ってはなりません。<br />1. 法令または公序良俗に違反する行為<br />2. 犯罪行為に関連する行為<br />3. 当社のサーバーまたはネットワークの機能を破壊したり、妨害したりする行為<br />4. 当社のサービスの運営を妨害するおそれのある行為<br />5. 他のパートナーに関する個人情報等を収集または蓄積する行為<br />6. 不正な目的を持って本サービスを利用する行為<br />7. 当社または第三者の知的財産権、肖像権、プライバシー、名誉その他の権利または利益を侵害する行為<br />8. その他、当社が不適切と判断する行為</p>
                             <p><strong>第5条（紹介手数料）</strong><br />1. パートナーは、当社が提供する専用のQRコードを経由してアプリ利用者が有料会員登録を行った場合、当社所定の紹介手数料（以下「手数料」といいます。）を受け取ることができます。<br />2. 手数料は、有料会員の月額利用料金の30%とします。<br />3. 手数料は、月末締めで計算し、翌々月15日にパートナーが指定する銀行口座へ振り込むものとします。ただし、振込額の合計が3,000円に満たない場合は、支払いは翌月以降に繰り越されるものとします。</p>
                             <p><strong>第6条（全額返金保証）</strong><br />1. 本サービスの利用開始から1年経過した時点で、パートナーが受け取った手数料の累計額が、支払った年間のパートナー費用（39,600円）に満たなかった場合、パートナーは当社に対し、支払った費用の全額返金を請求することができます。<br />2. 本保証は、実店舗を有し、来店客への案内が可能なパートナーで、QRコードスタンドをお客様の見える場所に設置することを対象とします。<br />3. 返金請求は、利用開始から1年経過後、30日以内に当社所定の方法で行うものとします。</p>
-                            <p><strong>第7条（契約期間と解約）</strong><br />1. 本サービスの契約期間は、申込日を起算日として1年間とします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。<br />2. パートナーは、いつでも解約を申し出ることができますが、契約期間中の利用料金の返金は行わないものとします（第6条の全額返金保証を除く）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
+                            <p><strong>第7条（契約期間と解約）</strong><br />1. 本サービスの契約期間は、申込日を起算日として1年間とします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。
+                            <br />2. パートナーは、いつでも解約を申し出ることができますが、契約期間中の利用料金の返金は行わないものとします（第6条の全額返金保証を除く）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
                             <p><strong>第8条（本サービスの提供の停止等）</strong><br />当社は、以下のいずれかの事由があると判断した場合、パートナーに事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。<br />1. 本サービスにかかるコンピュータシステムの保守点検または更新を行う場合<br />2. 地震、落雷、火災、停電または天災などの不可抗力により、本サービスの提供が困難となった場合<br />3. その他、当社が本サービスの提供が困難と判断した場合</p>
                             <p><strong>第9条（免責事項）</strong><br />当社は、本サービスに起因してパートナーに生じたあらゆる損害について一切の責任を負いません。ただし、本サービスに関する当社とパートナーとの間の契約が消費者契約法に定める消費者契約となる場合、この免責規定は適用されません。</p>
                             <p><strong>第10条（準拠法・裁判管轄）</strong><br />本規約の解釈にあたっては、日本法を準拠法とします。本サービスに関して紛争が生じた場合には、当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</p>
@@ -598,4 +484,4 @@ const PartnerSignupPage: NextPage<PartnerSignupPageProps> = ({ initialData }) =>
     );
 };
 
-export default PartnerSignupPage;
+export default PartnerAdSubscribePage;

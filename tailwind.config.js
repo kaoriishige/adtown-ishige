@@ -1,5 +1,3 @@
-// tailwind.config.js
-
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -9,13 +7,10 @@ module.exports = {
   theme: {
     extend: {},
   },
-  // ▼▼ この plugins の部分に追記します ▼▼
   plugins: [
     require('@tailwindcss/typography'),
+    require('@tailwindcss/aspect-ratio'),
   ],
-  plugins: [
-  require('@tailwindcss/aspect-ratio'),
-],
 };
 
 

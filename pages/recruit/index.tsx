@@ -69,39 +69,6 @@ const RecruitPartnerPage: NextPage = () => {
     const [invoiceDownloadSuccess, setInvoiceDownloadSuccess] = useState(false); // ダウンロード成功
 
     const registrationFormRef = useRef<HTMLDivElement>(null);
-    // ↓↓↓ このコードブロックを貼り付けてください ↓↓↓
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-            if (user) {
-                try {
-                    // Firestoreの 'users' コレクションからドキュメントを取得
-                    const userDocRef = doc(db, 'users', user.uid);
-                    const userDocSnap = await getDoc(userDocRef);
-
-                    if (userDocSnap.exists()) {
-                        const data = userDocSnap.data();
-                        
-                        setCompanyName(data.companyName || '');
-                        setAddress(data.address || '');
-                        setContactPerson(data.displayName || data.contactPerson || ''); 
-                        setPhoneNumber(data.phoneNumber || '');
-                        setEmail(user.email || data.email || '');
-                        setConfirmEmail(user.email || data.email || '');
-                    } else {
-                        if(user.email) {
-                            setEmail(user.email);
-                            setConfirmEmail(user.email);
-                        }
-                    }
-                } catch (err) {
-                    console.error("Firestoreからのデータ取得に失敗しました:", err);
-                    setError("企業情報の読み込みに失敗しました。");
-                }
-            }
-        });
-        return () => unsubscribe();
-    }, [setCompanyName, setAddress, setContactPerson, setPhoneNumber, setEmail, setConfirmEmail]);
-    // ↑↑↑ このコードブロックを貼り付けてください ↑↑↑
     // 初期処理
     useEffect(() => { if (!stripePromise) { console.error("Stripe key missing"); setStripeError(true); } }, []);
     

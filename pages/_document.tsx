@@ -4,7 +4,7 @@ export default function Document() {
   return (
     <Html lang="ja">
       <Head>
-        {/* manifest.jsonへのリンクが完全に削除された状態 */}
+        {/* manifest.jsonは削除済み */}
       </Head>
       <body>
         <Main />
