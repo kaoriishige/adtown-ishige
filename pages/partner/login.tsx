@@ -3,11 +3,13 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
+import Head from 'next/head';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loginType, setLoginType] = useState<'ad' | 'recruit'>('ad'); 
+    // 'ad' を 'adver' に変更
+    const [loginType, setLoginType] = useState<'adver' | 'recruit'>('adver'); 
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
@@ -21,29 +23,44 @@ const LoginPage = () => {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-            const idToken = await user.getIdToken();
+            const idToken = await user.getIdToken(true); // トークンを強制更新
 
+            // サーバーにIDトークンを送信してセッションCookieを設定
             const response = await fetch('/api/auth/sessionLogin', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken, loginType }),
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}` // ヘッダーでトークンを送信
+                },
+                body: JSON.stringify({ loginType }), // bodyにはloginType（adverまたはrecruit）のみ
+                credentials: 'include', // Cookieを送受信するために必要
             });
 
             if (!response.ok) {
                 const data = await response.json();
+                // サーバーからの具体的なエラーメッセージをそのまま表示
                 throw new Error(data.error || 'セッションの作成に失敗しました。');
             }
-
-            if (loginType === 'ad') {
-                router.push('/partner/dashboard');
-            } else {
-                router.push('/recruit/dashboard');
+            
+            // Cookieがブラウザに反映されるのを少し待つ
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            
+            // ページを完全にリロードして各ダッシュボードへ遷移
+            // loginTypeに合わせてリダイレクト先を決定
+            if (loginType === 'adver') {
+                window.location.href = '/partner/dashboard';
+            } else { // loginType === 'recruit'
+                window.location.href = '/recruit/dashboard';
             }
 
         } catch (error: any) {
             console.error("Login Error:", error);
-            if (error.code === 'auth/invalid-credential' || error.message.includes('違います') || error.message.includes('登録されていません')) {
-                setError(error.message || 'メールアドレスまたはパスワードが違います。');
+            // エラーハンドリングを簡略化
+            if (error.code === 'auth/invalid-credential') {
+                setError('メールアドレスまたはパスワードが違います。');
+            } else if (error.message.includes('登録されていません')) {
+                // サーバーサイドからの権限エラーメッセージを表示
+                setError(error.message);
             } else {
                 setError('ログインに失敗しました。時間をおいて再度お試しください。');
             }
@@ -53,6 +70,9 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <Head>
+                <title>パートナーログイン</title>
+            </Head>
             <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
                 <h2 className="text-2xl font-bold text-center mb-6">パートナーログイン</h2>
                 <form onSubmit={handleLogin} className="space-y-6">
@@ -61,9 +81,10 @@ const LoginPage = () => {
                             <input
                                 type="radio"
                                 name="loginType"
-                                value="ad"
-                                checked={loginType === 'ad'}
-                                onChange={() => setLoginType('ad')}
+                                // valueを 'adver' に変更
+                                value="adver"
+                                checked={loginType === 'adver'}
+                                onChange={() => setLoginType('adver')}
                                 className="form-radio h-5 w-5 text-orange-600 focus:ring-orange-500"
                             />
                             <span className="ml-2 text-gray-700">広告パートナー</span>

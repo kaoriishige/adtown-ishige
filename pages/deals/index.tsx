@@ -1,10 +1,10 @@
-import { NextPage, GetServerSideProps } from 'next';
-import { useState, useEffect } from 'react';
+import { NextPage } from 'next';
+import { useState } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
-import nookies from 'nookies';
-import { adminAuth, adminDb } from '../../lib/firebase-admin';
+import Head from 'next/head';
 
-// カテゴリデータは省略
+// パートナー登録画面と一致させたカテゴリデータ
 const categoryData = {
   "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
   "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
@@ -15,145 +15,75 @@ const categoryData = {
   "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
   "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
   "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
+  "その他": []
 };
+
 const mainCategories = Object.keys(categoryData);
-const areas = ["那須塩原市", "大田原市", "那須町"];
 
-interface Store {
-    id: string;
-    storeName: string;
-    address: string;
-    galleryImageUrls?: string[];
-    budgetDinner?: string;
-    budgetLunch?: string;
-}
+const DealsCategoryPage: NextPage = () => {
+  const router = useRouter();
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-const DealsSearchPage: NextPage = () => {
-    const [mainCategory, setMainCategory] = useState('');
-    const [subCategory, setSubCategory] = useState('');
-    const [area, setArea] = useState('');
-    const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
-    const [stores, setStores] = useState<Store[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [searched, setSearched] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const handleCategoryClick = (category: string) => {
+    if (category === 'その他') {
+        router.push(`/deals/select-area?main=${encodeURIComponent(category)}&sub=${encodeURIComponent('その他')}`);
+        return;
+    }
+    setExpandedCategory(prev => (prev === category ? null : category));
+  };
 
-    useEffect(() => {
-        if (mainCategory) {
-            // @ts-ignore
-            setSubCategoryOptions(categoryData[mainCategory] || []);
-            setSubCategory('');
-        } else { setSubCategoryOptions([]); }
-    }, [mainCategory]);
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans">
+      <Head>
+        <title>カテゴリ選択 - 地域のお店を探す</title>
+      </Head>
+      <header className="bg-white p-4 text-center sticky top-0 z-10 shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-800">地域のお店を探す</h1>
+        <p className="text-gray-600 mt-1">カテゴリを選択してください</p>
+      </header>
 
-    const handleSearch = async () => {
-        if (!mainCategory || !subCategory || !area) {
-            setError("すべての項目を選択してください。");
-            return;
-        }
-        setIsLoading(true);
-        setSearched(true);
-        setError(null);
-        setStores([]);
-        try {
-            const response = await fetch(`/api/deals/search?mainCategory=${mainCategory}&subCategory=${subCategory}&area=${area}`);
-            const data = await response.json();
-            if (!response.ok) { throw new Error(data.error || "検索に失敗しました。"); }
-            setStores(data);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <div className="min-h-screen bg-gray-50 p-4">
-            <header className="text-center py-6"><h1 className="text-2xl font-bold text-gray-800">お店を探す</h1></header>
-            <main className="max-w-4xl mx-auto">
-                <div className="bg-white p-6 rounded-lg shadow-md space-y-4 mb-8">
-                    <select value={mainCategory} onChange={e => setMainCategory(e.target.value)} className="w-full p-2 border rounded"><option value="">大分類を選択</option>{mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
-                    {mainCategory && (<select value={subCategory} onChange={e => setSubCategory(e.target.value)} className="w-full p-2 border rounded"><option value="">小分類を選択</option>{subCategoryOptions.map(sub => <option key={sub} value={sub}>{sub}</option>)}</select>)}
-                    <select value={area} onChange={e => setArea(e.target.value)} className="w-full p-2 border rounded"><option value="">エリアを選択</option>{areas.map(a => <option key={a} value={a}>{a}</option>)}</select>
-                    <button onClick={handleSearch} disabled={isLoading} className="w-full p-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 disabled:bg-blue-400">{isLoading ? '検索中...' : 'この条件で探す'}</button>
-                    {error && <p className="text-red-500 text-center">{error}</p>}
-                </div>
-
-                <div className="mt-8">
-                    {isLoading ? (<p className="text-center">検索中...</p>) : searched && stores.length > 0 ? (
-                        <div className="space-y-6">
-                            {stores.map(store => (
-                                <Link key={store.id} href={`/stores/${store.id}`} legacyBehavior>
-                                    <a className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow overflow-hidden block">
-                                        <div className="flex bg-gray-200">
-                                            {(store.galleryImageUrls && store.galleryImageUrls.length > 0) ? (
-                                                store.galleryImageUrls.slice(0, 3).map((url, index) => (
-                                                    <div key={index} className="w-1/3 h-40">
-                                                        <img src={url} alt={`${store.storeName} ${index + 1}`} className="h-full w-full object-cover" />
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="w-full h-40 flex items-center justify-center"><span className="text-gray-400 text-sm">NO IMAGE</span></div>
-                                            )}
-                                        </div>
-                                        <div className="p-4">
-                                            <h2 className="text-xl font-bold text-gray-800 truncate">{store.storeName}</h2>
-                                            <div className="text-sm text-gray-500 my-2"><span>⭐ (口コミ評価は後ほど実装)</span></div>
-                                            <p className="text-xs text-gray-600 truncate">{store.address}</p>
-                                            <div className="mt-4 border-t pt-2 text-sm text-gray-700">
-                                                {store.budgetDinner && <p>夜: <span className="font-bold text-red-600">{store.budgetDinner}</span></p>}
-                                                {store.budgetLunch && <p>昼: <span className="font-bold text-orange-600">{store.budgetLunch}</span></p>}
-                                            </div>
-                                        </div>
-                                    </a>
-                                </Link>
-                            ))}
-                        </div>
-                    ) : searched && (<p className="text-center bg-white p-8 rounded-lg shadow-md">この条件に合う店舗は見つかりませんでした。</p>)}
-                </div>
-            </main>
+      <main className="p-4 max-w-4xl mx-auto">
+        <div className="text-center my-4">
+          <button onClick={() => router.push('/home')} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg text-sm">
+            ← ホームに戻る
+          </button>
         </div>
-    );
+
+        <div className="space-y-4">
+          {mainCategories.map(mainCat => (
+            <div key={mainCat}>
+              <button
+                onClick={() => handleCategoryClick(mainCat)}
+                className="w-full p-5 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 text-left flex justify-between items-center"
+              >
+                <span className="text-xl font-bold text-gray-800">{mainCat}</span>
+                {mainCat !== 'その他' && (
+                    <span className={`transform transition-transform duration-300 ${expandedCategory === mainCat ? 'rotate-180' : ''}`}>▼</span>
+                )}
+              </button>
+
+              {mainCat !== 'その他' && (
+                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${expandedCategory === mainCat ? 'max-h-96 mt-2' : 'max-h-0'}`}>
+                  <div className="p-4 bg-gray-100 rounded-b-lg grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {/* @ts-ignore */}
+                    {categoryData[mainCat].map((subCat: string) => (
+                      <Link
+                        key={subCat}
+                        href={`/deals/select-area?main=${encodeURIComponent(mainCat)}&sub=${encodeURIComponent(subCat)}`}
+                         className="block p-3 bg-white text-gray-700 rounded-md hover:bg-blue-500 hover:text-white transition-colors"
+                      >
+                        {subCat}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
 };
 
-// ▼▼▼ ここからが、このファイルに追加する部分です ▼▼▼
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  try {
-    const cookies = nookies.get(context);
-    if (!cookies.token) {
-      return { redirect: { destination: '/login', permanent: false } };
-    }
-
-    const token = await adminAuth.verifySessionCookie(cookies.token, true);
-    const userDoc = await adminDb.collection('users').doc(token.uid).get();
-
-    if (!userDoc.exists) {
-      return { redirect: { destination: '/login', permanent: false } };
-    }
-
-    const userData = userDoc.data() || {};
-    const userPlan = userData.plan || 'free';
-
-    // 無料会員 (free) がこのページにアクセスしたら、無料トップページにリダイレクト
-    if (userPlan === 'free') {
-      return { redirect: { destination: '/home', permanent: false } };
-    }
-
-    // 有料会員はページを表示するためのpropsを返す（今回は空でOK）
-    return {
-      props: {},
-    };
-
-  } catch (error) {
-    // エラーが発生した場合はログインページにリダイレクト
-    return {
-      redirect: {
-        destination: '/login',
-        permanent: false,
-      },
-    };
-  }
-};
-// ▲▲▲ ここまでが、このファイルに追加する部分です ▲▲▲
-
-export default DealsSearchPage;
+export default DealsCategoryPage;

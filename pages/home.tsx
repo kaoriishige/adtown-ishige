@@ -11,7 +11,7 @@ import { FcGoogle } from 'react-icons/fc';
 import { FaYahoo } from 'react-icons/fa';
 import { IoSparklesSharp } from 'react-icons/io5';
 
-// --- Type Definitions ---
+// --- 型定義 ---
 interface HomePageProps {
   user: {
     uid: string;
@@ -84,7 +84,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
           </header>
 
           <main className="p-4 space-y-6">
-
+            
             <section className="bg-white p-6 rounded-xl shadow-md">
               <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center text-center text-red-800 font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 bg-red-100 hover:bg-red-200">
                 <RiAlarmWarningLine className="mr-2 text-red-500" /> お困りのときは (緊急連絡先)
@@ -104,8 +104,9 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               </Link>
             </section>
 
+            {/* --- ▼▼▼ ここから修正 ▼▼▼ --- */}
             <section>
-              <Link href="/store-list" className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+              <Link href="/deals" className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
                    <div className="flex items-center">
                       <RiCoupon3Line className="text-4xl mr-4 flex-shrink-0" />
                       <div>
@@ -115,6 +116,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                   </div>
               </Link>
             </section>
+            {/* --- ▲▲▲ ここまで修正 ▲▲▲ --- */}
 
             <section className="bg-white p-6 rounded-xl shadow-md">
               <h2 className="text-xl font-bold text-gray-800 text-center mb-4">
@@ -181,14 +183,12 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 </Link>
               </section>
 
-              {/* --- ▼▼▼ ここから修正 ▼▼▼ --- */}
               <section>
                   <h3 className="text-sm font-semibold text-gray-600 mb-2">アプリ協賛企業様</h3>
                   <a href="https://www.adtown2006.com/" target="_blank" rel="noopener noreferrer" className="inline-block hover:opacity-80 transition-opacity">
                       <Image src="/images/partner-adtown.png" alt="株式会社adtown" width={200} height={50} className="object-contain" />
                   </a>
               </section>
-              {/* --- ▲▲▲ ここまで修正 ▲▲▲ --- */}
               
               <p className="text-xs text-gray-400 pt-4">© 2025 株式会社adtown</p>
             </footer>

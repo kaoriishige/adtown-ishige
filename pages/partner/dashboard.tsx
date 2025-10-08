@@ -5,7 +5,7 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
-import { adminDb, getPartnerUidFromCookie } from '@/lib/firebase-admin';
+import { adminDb, getUidFromCookie } from '../../lib/firebase-admin';
 
 // ===============================
 // 型定義
@@ -129,44 +129,49 @@ const BankIcon = () => (
 // サーバーサイド認証チェック
 // ===============================
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  try {
-    const uid = await getPartnerUidFromCookie(context);
+  try {
+    // 1. 正しい認証関数 'getUidFromCookie' を使用します
+    const uid = await getUidFromCookie(context);
 
-    if (!uid) {
-      return { redirect: { destination: '/partner/login', permanent: false } };
-    }
+    if (!uid) {
+      return { redirect: { destination: '/partner/login', permanent: false } };
+    }
 
-    const userDoc = await adminDb.collection('users').doc(uid).get();
+    const userDoc = await adminDb.collection('users').doc(uid).get();
 
-    if (!userDoc.exists) {
-      return {
-        redirect: { destination: '/partner/login?error=user_not_found', permanent: false },
-      };
-    }
+    if (!userDoc.exists) {
+      return {
+        redirect: { destination: '/partner/login?error=user_not_found', permanent: false },
+      };
+    }
 
-    const userData = userDoc.data() || {};
+    const userData = userDoc.data() || {};
+    const userRoles: string[] = userData.roles || [];
 
-    // 広告パートナー限定
-    if (!Array.isArray(userData.roles) || !userData.roles.includes('ad')) {
-      return {
-        redirect: { destination: '/partner/login?error=permission_denied', permanent: false },
-      };
-    }
+    // 2. 許可するロールを 'adver' と 'recruit' の両方に修正
+    const allowedRoles = ['adver', 'recruit']; 
+    const isAuthorized = userRoles.some(role => allowedRoles.includes(role));
 
-    return {
-      props: {
-        partnerData: {
-          uid: userDoc.id,
-          email: userData.email || '',
-          companyName: userData.companyName || userData.storeName || '',
-          roles: userData.roles || [],
-        },
-      },
-    };
-  } catch (err) {
-    console.error('Dashboard getServerSideProps error:', err);
-    return { redirect: { destination: '/partner/login', permanent: false } };
-  }
+    if (!isAuthorized) {
+      return {
+        redirect: { destination: '/partner/login?error=permission_denied', permanent: false },
+      };
+    }
+
+    return {
+      props: {
+        partnerData: {
+          uid: userDoc.id,
+          email: userData.email || '',
+          companyName: userData.companyName || userData.storeName || 'パートナー',
+          roles: userData.roles || [],
+        },
+      },
+    };
+  } catch (err) {
+    console.error('Dashboard getServerSideProps error:', err);
+    return { redirect: { destination: '/partner/login', permanent: false } };
+  }
 };
 
 // ===============================
@@ -277,7 +282,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
             <p className="mt-2 text-gray-600">
               月額3,300円で、AIがあなたの会社に最適な人材を見つけます。
             </p>
-            <Link href="/recruit/subscribe" legacyBehavior>
+            <Link href="/recruit/apply" legacyBehavior>
               <a className="inline-block mt-4 bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600 transition duration-150 cursor-pointer">
                 AI求人サービスを追加する
               </a>
@@ -286,13 +291,12 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
         )}
 
         {/* フッター操作 */}
-        <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link href="/contact" legacyBehavior>
-            <a className="w-full text-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 cursor-pointer">
-              お問い合わせ
-            </a>
-          </Link>
-          <button
+        <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* ↓↓↓ このLinkコンポーネントを置き換えてください ↓↓↓ */}
+          <Link href="/contact" className="w-full text-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 cursor-pointer">
+              お問い合わせ
+          </Link>
+          <button
             onClick={handleLogout}
             className="w-full text-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700"
           >
