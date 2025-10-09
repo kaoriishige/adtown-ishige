@@ -1,42 +1,38 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).end('Method Not Allowed');
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { email, uid, referrerId } = req.body;
+  const { uid, email, referrerId } = req.body || {};
 
-  if (!email || !uid) {
-    return res.status(400).json({ error: 'Email and UID are required.' });
+  if (!uid || !email) {
+    return res.status(400).json({ error: 'ユーザーUIDとメールアドレスが必要です。' });
   }
 
   try {
+    // カスタムクレームに roles（配列）を入れておく（adminAuth 側で利用）
+    await adminAuth.setCustomUserClaims(uid, {
+      roles: ['user'],
+      role: 'user', // 互換性のために入れておく
+    });
 
-    // 1. Firestoreにユーザードキュメントを作成
+    // Firestore にユーザー情報を保存（roles を配列で保持）
     await adminDb.collection('users').doc(uid).set({
       email: email,
-      uid: uid,
-      plan: 'free', // 無料プランを設定
-      subscriptionStatus: 'free',
-      createdAt: new Date().toISOString(),
-      referrer: referrerId || null, // 紹介者IDがあれば保存
-    });
+      role: 'user',
+      roles: ['user'],
+      referrerId: referrerId || null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
 
-    // 2. Firebase Authのカスタムクレイムを設定
-    await adminAuth.setCustomUserClaims(uid, {
-      plan: 'free',
-    });
-
-    res.status(200).json({ message: 'User created successfully.' });
-
-  } catch (error) {
-    console.error('Error creating free user:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(200).json({ uid: uid, message: 'ユーザー情報が正常に作成されました。' });
+  } catch (error: any) {
+    console.error('Firebase user data creation error:', error);
+    return res.status(500).json({ error: 'ユーザー情報の作成中にサーバーエラーが発生しました。' });
   }
 }

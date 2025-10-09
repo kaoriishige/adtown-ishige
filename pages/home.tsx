@@ -11,7 +11,6 @@ import { FcGoogle } from 'react-icons/fc';
 import { FaYahoo } from 'react-icons/fa';
 import { IoSparklesSharp } from 'react-icons/io5';
 
-// --- 型定義 ---
 interface HomePageProps {
   user: {
     uid: string;
@@ -20,10 +19,10 @@ interface HomePageProps {
 }
 
 interface EmergencyContact {
-    name: string;
-    number?: string;
-    description: string;
-    url: string;
+  name: string;
+  number?: string;
+  description: string;
+  url: string;
 }
 
 const HomePage: NextPage<HomePageProps> = ({ user }) => {
@@ -84,40 +83,39 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
           </header>
 
           <main className="p-4 space-y-6">
-            
+            {/* 省略: 既存 UI をそのまま使用 */}
             <section className="bg-white p-6 rounded-xl shadow-md">
               <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center text-center text-red-800 font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 bg-red-100 hover:bg-red-200">
                 <RiAlarmWarningLine className="mr-2 text-red-500" /> お困りのときは (緊急連絡先)
               </button>
               <p className="text-xs text-center text-gray-500 mt-2">商品やサービスのトラブル、休日・夜間の急病、水道のトラブルなどはこちら</p>
             </section>
-            
+
             <section>
               <Link href="/users/profile" className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-green-400 to-blue-500 text-white">
-                  <div className="flex items-center">
-                      <RiUserStarLine className="text-4xl mr-4 flex-shrink-0" />
-                      <div>
-                          <h2 className="font-bold text-lg">求人マッチングAI無料登録</h2>
-                          <p className="text-sm mt-1 opacity-90">仕事をお探しの方は、無料で登録すると、あなたが希望する企業とAIがマッチングします。</p>
-                      </div>
+                <div className="flex items-center">
+                  <RiUserStarLine className="text-4xl mr-4 flex-shrink-0" />
+                  <div>
+                    <h2 className="font-bold text-lg">求人マッチングAI無料登録</h2>
+                    <p className="text-sm mt-1 opacity-90">仕事をお探しの方は、無料で登録すると、あなたが希望する企業とAIがマッチングします。</p>
                   </div>
+                </div>
               </Link>
             </section>
 
-            {/* --- ▼▼▼ ここから修正 ▼▼▼ --- */}
             <section>
               <Link href="/deals" className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-                   <div className="flex items-center">
-                      <RiCoupon3Line className="text-4xl mr-4 flex-shrink-0" />
-                      <div>
-                          <h2 className="font-bold text-lg">お得＆クーポン情報</h2>
-                          <p className="text-sm mt-1 opacity-90">那須地域のお店の最新情報やクーポンをチェックしよう！</p>
-                      </div>
+                <div className="flex items-center">
+                  <RiCoupon3Line className="text-4xl mr-4 flex-shrink-0" />
+                  <div>
+                    <h2 className="font-bold text-lg">お得＆クーポン情報</h2>
+                    <p className="text-sm mt-1 opacity-90">那須地域のお店の最新情報やクーポンをチェックしよう！</p>
                   </div>
+                </div>
               </Link>
             </section>
-            {/* --- ▲▲▲ ここまで修正 ▲▲▲ --- */}
 
+            {/* 以降はオリジナル同様に表示 */}
             <section className="bg-white p-6 rounded-xl shadow-md">
               <h2 className="text-xl font-bold text-gray-800 text-center mb-4">
                 アプリをジャンルで探す
@@ -125,7 +123,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               <div className="flex flex-wrap justify-center gap-2">
                 {genres.map((genre) => (
                   <Link key={genre} href={`/genre/${genre}`} className="bg-blue-100 text-blue-800 text-sm font-semibold py-2 px-4 rounded-full hover:bg-blue-200 transition-colors">
-                      {genre}
+                    {genre}
                   </Link>
                 ))}
               </div>
@@ -147,26 +145,26 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             </section>
 
             <section className="bg-white p-6 rounded-xl shadow-md">
-                <h2 className="text-xl font-bold text-gray-800 text-center mb-6">便利なツール</h2>
-                <div className="grid grid-cols-1 gap-4">
-                    {searchTools.map((tool) => (
-                    <a
-                        key={tool.name}
-                        href={tool.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`group flex items-center p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ${tool.bgColor}`}
-                    >
-                        <div className={`text-4xl ${tool.textColor} mr-4`}>
-                        <tool.Icon />
-                        </div>
-                        <div>
-                        <h3 className={`font-bold ${tool.textColor}`}>{tool.name}</h3>
-                        <p className={`text-sm ${tool.textColor} opacity-90`}>{tool.description}</p>
-                        </div>
-                    </a>
-                    ))}
-                </div>
+              <h2 className="text-xl font-bold text-gray-800 text-center mb-6">便利なツール</h2>
+              <div className="grid grid-cols-1 gap-4">
+                {searchTools.map((tool) => (
+                  <a
+                    key={tool.name}
+                    href={tool.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`group flex items-center p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ${tool.bgColor}`}
+                  >
+                    <div className={`text-4xl ${tool.textColor} mr-4`}>
+                      <tool.Icon />
+                    </div>
+                    <div>
+                      <h3 className={`font-bold ${tool.textColor}`}>{tool.name}</h3>
+                      <p className={`text-sm ${tool.textColor} opacity-90`}>{tool.description}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
             </section>
 
             <section>
@@ -179,17 +177,17 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             <footer className="text-center mt-8 pb-4 space-y-8">
               <section>
                 <Link href="/contact" className="inline-block bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-8 rounded-lg shadow-sm transition-colors">
-                    お問い合わせ
+                  お問い合わせ
                 </Link>
               </section>
 
               <section>
-                  <h3 className="text-sm font-semibold text-gray-600 mb-2">アプリ協賛企業様</h3>
-                  <a href="https://www.adtown2006.com/" target="_blank" rel="noopener noreferrer" className="inline-block hover:opacity-80 transition-opacity">
-                      <Image src="/images/partner-adtown.png" alt="株式会社adtown" width={200} height={50} className="object-contain" />
-                  </a>
+                <h3 className="text-sm font-semibold text-gray-600 mb-2">アプリ協賛企業様</h3>
+                <a href="https://www.adtown2006.com/" target="_blank" rel="noopener noreferrer" className="inline-block hover:opacity-80 transition-opacity">
+                  <Image src="/images/partner-adtown.png" alt="株式会社adtown" width={200} height={50} className="object-contain" />
+                </a>
               </section>
-              
+
               <p className="text-xs text-gray-400 pt-4">© 2025 株式会社adtown</p>
             </footer>
           </main>
@@ -212,7 +210,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                     )}
                     <p className="text-sm text-gray-500">{contact.description}</p>
                     <a href={contact.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline mt-1 inline-block">
-                        公式サイトを見る
+                      公式サイトを見る
                     </a>
                   </div>
                 ))}
@@ -233,9 +231,19 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
-    const userDoc = await adminDb.collection('users').doc(token.uid).get();
+    const sessionCookie = cookies.session || '';
 
+    if (!sessionCookie) {
+      return { redirect: { destination: '/users/login', permanent: false } };
+    }
+
+    // sessionCookie を検証
+    const token = await adminAuth.verifySessionCookie(sessionCookie, true);
+    if (!token || !token.uid) {
+      return { redirect: { destination: '/users/login', permanent: false } };
+    }
+
+    const userDoc = await adminDb.collection('users').doc(token.uid).get();
     if (!userDoc.exists) {
       return { redirect: { destination: '/users/login', permanent: false } };
     }
@@ -256,9 +264,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (err) {
+    console.error('home getServerSideProps error:', err);
     return { redirect: { destination: '/users/login', permanent: false } };
   }
 };
 
 export default HomePage;
+
 
