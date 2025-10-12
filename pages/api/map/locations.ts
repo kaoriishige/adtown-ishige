@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminDb } from '../../../lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 
 // このAPIは認証されたユーザーのみがアクセスできるように、
 // 実際の運用では認証チェックを追加するのが望ましいです。

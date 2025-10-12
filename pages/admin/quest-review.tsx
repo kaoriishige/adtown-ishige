@@ -15,7 +15,7 @@ import {
   getFirestore,
 } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
-import { app } from '@/lib/firebase';
+import { app } from '../../lib/firebase';
 import { useRouter } from 'next/router';
 
 // Questインターフェースから 'id' を削除

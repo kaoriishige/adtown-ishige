@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { getStorage } from 'firebase-admin/storage';
 import nookies from 'nookies';
 import formidable from 'formidable';

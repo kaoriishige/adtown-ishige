@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { NextPage } from 'next';
 import Link from 'next/link';
-import { db, auth, storage } from '@/lib/firebase';
+import { db, auth, storage } from '../../lib/firebase';
 import { 
   collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, doc, Timestamp
 } from 'firebase/firestore';

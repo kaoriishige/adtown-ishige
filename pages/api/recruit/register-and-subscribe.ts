@@ -1,7 +1,7 @@
 // pages/api/recruit/register-and-subscribe.ts
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

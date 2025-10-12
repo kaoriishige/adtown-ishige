@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import Head from 'next/head';
 
+
 // --- SVGアイコン ---
 const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> );
 const XCircleIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> );
@@ -21,13 +22,16 @@ const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
 );
 
+
 const SERVICE_START_DATE = new Date('2025-11-01T00:00:00+09:00');
 const SERVICE_START_DATE_STRING = '2025年11月1日';
+
 
 const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (<div className="border-b"><button onClick={() => setIsOpen(!isOpen)} className="w-full text-left py-5 flex justify-between items-center hover:bg-gray-50 transition-colors"><span className="text-lg font-medium text-gray-800 pr-2">{question}</span><ChevronDownIcon className={`w-6 h-6 text-orange-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} /></button>{isOpen && ( <div className="pb-5 pt-2 px-2 text-gray-600 bg-gray-50">{children}</div> )}</div>);
 };
+
 
 // セッションストレージを利用した永続化カスタムフック
 const usePersistentState = (key: string, defaultValue: any) => {
@@ -44,7 +48,10 @@ const usePersistentState = (key: string, defaultValue: any) => {
 };
 
 
+
+
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) : null;
+
 
 const RecruitPartnerPage: NextPage = () => {
     // フォームの状態管理
@@ -68,19 +75,21 @@ const RecruitPartnerPage: NextPage = () => {
     const [isInvoiceProcessing, setIsInvoiceProcessing] = useState(false); // 請求書処理中
     const [invoiceDownloadSuccess, setInvoiceDownloadSuccess] = useState(false); // ダウンロード成功
 
+
     const registrationFormRef = useRef<HTMLDivElement>(null);
     // 初期処理
     useEffect(() => { if (!stripePromise) { console.error("Stripe key missing"); setStripeError(true); } }, []);
     
     // 住所からエリアを自動判定
-    useEffect(() => { 
-        const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/); 
-        if (match) { 
-            setArea(match[0].replace('那須郡', '')); 
-        } else if (address) { 
-            setArea(''); 
-        } 
+    useEffect(() => {
+        const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
+        if (match) {
+            setArea(match[0].replace('那須郡', ''));
+        } else if (address) {
+            setArea('');
+        }
     }, [address, setArea]);
+
 
     const scrollToForm = () => {
         registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -90,35 +99,41 @@ const RecruitPartnerPage: NextPage = () => {
     const isFormValid = !!(companyName && contactPerson && address && phoneNumber && email && confirmEmail && password.length >= 6 && area && agreed && email === confirmEmail);
 
 
+
+
     /**
      * 【請求書払い】フォームの入力内容を検証し、Stripeで請求書を作成・ダウンロードさせる処理
      */
     const handleRegisterAndInvoice = async () => {
         setError(null);
 
-        if (!isFormValid) { 
-            setError('PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。'); 
-            scrollToForm(); 
-            return; 
+
+        if (!isFormValid) {
+            setError('PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。');
+            scrollToForm();
+            return;
         }
         
         setIsInvoiceProcessing(true);
         setInvoiceDownloadSuccess(false);
 
+
         try {
             // ★APIを呼び出し、ユーザー登録とStripe請求書作成・PDF URL返却を同時に行う
-            const response = await fetch('/api/auth/register-and-create-invoice', { 
+            const response = await fetch('/api/auth/register-and-create-invoice', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     serviceType: 'recruit', // 求人サービスとして登録
                     companyName,
-                    address, 
-                    area, 
-                    contactPerson, 
-                    phoneNumber, 
-                    email, 
-                    password 
+                    address,
+                    area,
+                    contactPerson,
+                    phoneNumber,
+                    email,
+                    password,
+                    paymentMethod: 'invoice',   // ✅ 追加済み
+                    billingCycle: 'annual'      // ✅ 追加済み
                 }),
             });
             const data = await response.json();
@@ -126,6 +141,7 @@ const RecruitPartnerPage: NextPage = () => {
             if (!response.ok || !data.pdfUrl) {
                 throw new Error(data.error || '登録および請求書の作成に失敗しました。');
             }
+
 
             // 成功：PDFダウンロードURLを使ってダウンロードを開始
             const link = document.createElement('a');
@@ -135,11 +151,14 @@ const RecruitPartnerPage: NextPage = () => {
             link.click();
             document.body.removeChild(link);
 
+
             setInvoiceDownloadSuccess(true);
             setError(null);
 
+
             // 成功したらセッションストレージをクリア
             Object.keys(window.sessionStorage).forEach(key => { if (key.startsWith('recruitForm_')) { window.sessionStorage.removeItem(key); } });
+
 
         } catch (err: any) {
             console.error('請求書ダウンロードエラー:', err);
@@ -151,19 +170,23 @@ const RecruitPartnerPage: NextPage = () => {
     };
 
 
+
+
     /**
      * 【クレカ決済】申し込み処理
      */
     const handleSubmit = async () => {
         setError(null);
 
+
         // クライアント側でのバリデーション
-        if (!isFormValid) { 
-             setError('クレジットカード決済へ進むには、フォームの必須項目を全て満たし、規約に同意してください。'); 
-            scrollToForm(); 
-            return; 
+        if (!isFormValid) {
+             setError('クレジットカード決済へ進むには、フォームの必須項目を全て満たし、規約に同意してください。');
+            scrollToForm();
+            return;
         }
         if (!stripePromise) { setStripeError(true); return; }
+
 
         setIsLoading(true);
         try {
@@ -173,24 +196,28 @@ const RecruitPartnerPage: NextPage = () => {
             const response = await fetch('/api/auth/register-and-subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     serviceType: 'recruit', // 求人サービスとして登録
-                    companyName, 
-                    address, 
-                    area, 
-                    contactPerson, 
-                    phoneNumber, 
-                    email, 
+                    companyName,
+                    address,
+                    area,
+                    contactPerson,
+                    phoneNumber,
+                    email,
                     password,
                     trialEndDate, // 課金開始日をAPIに渡す
+                    paymentMethod: 'card',   // ★追加：クレジットカード決済
+                    billingCycle: 'monthly'  // ★追加：請求サイクル（月払い）
                 }),
             });
             
             const data = await response.json();
 
+
             if (!response.ok) {
                 throw new Error(data.error || 'サーバーでエラーが発生しました。');
             }
+
 
             const { sessionId } = data;
             
@@ -210,17 +237,20 @@ const RecruitPartnerPage: NextPage = () => {
         }
     };
 
+
     const getButtonText = () => {
         if (isLoading) return '処理中...';
         if (stripeError) return '決済設定エラー';
         return `先行予約する (初回課金日: ${SERVICE_START_DATE_STRING})`;
     };
 
+
     const getInvoiceButtonText = () => {
         if (isInvoiceProcessing) return '登録・請求書を作成中...';
         if (invoiceDownloadSuccess) return 'ダウンロード完了！再発行';
         return '請求書PDFをダウンロードして先行予約';
     };
+
 
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
@@ -257,6 +287,7 @@ const RecruitPartnerPage: NextPage = () => {
                     </div>
                 </section>
 
+
                 {/* --- START: なぜ今、アプリ求人なのか？ --- */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
@@ -269,9 +300,9 @@ const RecruitPartnerPage: NextPage = () => {
                         </p>
                         <div className="mt-8">
                             <p className="text-lg text-gray-700 mb-4 font-semibold">地元の住民がすでに使っています。ぜひご確認ください。</p>
-                            <a 
+                            <a
                                 href="https://minna-no-nasu-app.netlify.app/"
-                                target="_blank" 
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center justify-center bg-orange-600 text-white font-bold py-3 px-8 rounded-full hover:bg-orange-700 transition duration-300 shadow-md text-base"
                             >
@@ -296,14 +327,164 @@ const RecruitPartnerPage: NextPage = () => {
                 </section>
                 {/* --- END: 採用の悩み --- */}
 
+
                 <section className="mt-24">
                     <div className="text-center"><ZapIcon className="w-12 h-12 mx-auto text-orange-500"/><h2 className="mt-4 text-3xl font-extrabold text-gray-800">その悩み、AIが解決します。</h2><p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">従来の「待ち」の求人とは違い、AIが貴社に最適な人材を「探し出し」ます。<br/>採用活動が驚くほどシンプルに変わる、その仕組みをご覧ください。</p></div>
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div><h4 className="text-xl font-bold">カンタン求人作成</h4><p className="mt-2 text-gray-600">求めるスキルや人物像を数分で入力。AIが貴社のニーズを深く学習し、最適な人材像を定義します。</p></div>
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h4 className="text-xl font-bold">AIが候補者を自動提案</h4><p className="mt-2 text-gray-600">AIが地域の求職者データベースから、貴社にマッチする可能性の高い人材を自動でリストアップ。待っているだけで、会いたい人材の情報が届きます。</p></div>
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div><h4 className="text-xl font-bold">いつでも更新を停止</h4><p className="mt-2 text-gray-600">採用が決まればいつでも次回の更新を停止。必要な期間だけ利用でき、無駄なコストはかかりません。</p></div>
+
                     </div>
                 </section>
+
+
+                {/* ▼▼▼ 指示されたコードをここに追加 ▼▼▼ */}
+                <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
+                    <div className="max-w-4xl mx-auto">
+                        <h2 className="text-3xl font-extrabold text-center mb-12">AIマッチング求人システム運用ガイド</h2>
+
+                        {/* --- 1. AIマッチングの仕組み --- */}
+                        <div className="mb-12">
+                            <h3 className="text-2xl font-bold mb-4 pb-2 border-b-2 border-orange-500">1. AIマッチングの仕組み（システムの核心）</h3>
+                            <p className="mb-6 text-gray-600 leading-relaxed">
+                                このシステムは、求職者が最も重視する<strong>10の要素（給与、勤務地、雰囲気など）</strong>と、企業が入力した求人情報をAIが比較し、高精度な「両思い」マッチング（ダブル・オプトイン）を創出します。
+                                AIは、単なるキーワードではなく、求職者の<strong>「本音の重要度ランキング」</strong>に基づきスコアを計算します。
+                            </p>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="p-3 border">ランキング</th>
+                                            <th className="p-3 border">要素</th>
+                                            <th className="p-3 border">仕組みと重み付け</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td className="p-3 border font-bold">1位 (15点)</td>
+                                            <td className="p-3 border">給与・待遇</td>
+                                            <td className="p-3 border">求職者の希望年収と企業の募集給与レンジが重複するかを照合します。最も高い重みです。</td>
+                                        </tr>
+                                        <tr className="bg-gray-50">
+                                            <td className="p-3 border font-bold">2位 (12点)</td>
+                                            <td className="p-3 border">勤務地・リモート</td>
+                                            <td className="p-3 border">希望勤務地（市区町村）の一致度や、リモートワーク希望レベル（フル/ハイブリッド/なし）が企業の許容度と合致するかを照合します。</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-3 border font-bold">3位 (10点)</td>
+                                            <td className="p-3 border">仕事内容・職種</td>
+                                            <td className="p-3 border">求職者の希望職種が、企業の募集職種（単一）と一致するかを照合します。</td>
+                                        </tr>
+                                        <tr className="bg-gray-50">
+                                            <td className="p-3 border font-bold">4位〜10位</td>
+                                            <td className="p-3 border">成長機会、WLB、雰囲気、福利厚生</td>
+                                            <td className="p-3 border">これらの定性的な希望（チェックボックス項目）を、企業が求人票や「アピールポイント」欄に記載したキーワードと照合し、一致項目数に応じて加点します。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="text-right mt-2 text-sm text-gray-500">Google スプレッドシートにエクスポート</div>
+                        </div>
+
+                        {/* --- 2. 企業パートナー向け運用ガイド --- */}
+                        <div className="mb-12">
+                            <h3 className="text-2xl font-bold mb-4 pb-2 border-b-2 border-orange-500">2. 企業パートナー向け運用ガイド</h3>
+                            <p className="mb-6 text-gray-600 leading-relaxed">
+                                企業ダッシュボードから、高スコアの「会いたい候補者」に効率的にアプローチできます。
+                            </p>
+                            <h4 className="text-xl font-semibold mb-4">📄 使い方：登録から面接確約までの流れ</h4>
+                             <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                     <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="p-3 border">ステップ</th>
+                                            <th className="p-3 border">実施内容</th>
+                                            <th className="p-3 border">成果</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td className="p-3 border font-bold">Step 1: 求人作成</td>
+                                            <td className="p-3 border">詳細な求人情報入力：給与、勤務地、リモートレベル、アピールポイント（雰囲気・成長）を具体的に記入します。</td>
+                                            <td className="p-3 border">AIがこの情報に基づき、求職者の希望との照合を開始します。</td>
+                                        </tr>
+                                        <tr className="bg-gray-50">
+                                            <td className="p-3 border font-bold">Step 2: 候補者の確認</td>
+                                            <td className="p-3 border">ダッシュボードで<strong>「マッチング候補者リスト（上位10名）」を毎日確認します。AIが計算したスコアとマッチ理由</strong>が表示されます。</td>
+                                            <td className="p-3 border">貴社に本当にフィットする、応募意欲の高い人材に絞って情報が届きます。</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-3 border font-bold">Step 3: スカウト（オファー）</td>
+                                            <td className="p-3 border">興味を持った候補者に「面接確約スカウト」を送ります。</td>
+                                            <td className="p-3 border">ユーザーに通知が届き、ユーザー側に応募を強く促します。</td>
+                                        </tr>
+                                        <tr className="bg-gray-50">
+                                            <td className="p-3 border font-bold">Step 4: マッチング成立</td>
+                                            <td className="p-3 border">ユーザーがスカウトを受け入れ、「応募確定」ボタンを押す。</td>
+                                            <td className="p-3 border">マッチング成立！ アプリ内チャット機能が解放されます。</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-3 border font-bold">Step 5: 面接設定</td>
+                                            <td className="p-3 border">チャットを通じて、ユーザーと直接、面接日程の調整や初期質問を行います。</td>
+                                            <td className="p-3 border">確度の高い候補者とスムーズに面接に進めます。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="text-right mt-2 text-sm text-gray-500">Google スプレッドシートにエクスポート</div>
+                        </div>
+
+                        {/* --- 3. 求職者ユーザー向け運用ガイド --- */}
+                        <div>
+                            <h3 className="text-2xl font-bold mb-4 pb-2 border-b-2 border-orange-500">3. 求職者ユーザー向け運用ガイド</h3>
+                             <p className="mb-6 text-gray-600 leading-relaxed">
+                                プロフィールを詳細に登録することで、AIが能動的に最適な求人を提案し、不必要な応募の手間を省きます。
+                            </p>
+                            <h4 className="text-xl font-semibold mb-4">📋 使い方：登録から面接確約までの流れ</h4>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                     <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="p-3 border">ステップ</th>
+                                            <th className="p-3 border">実施内容</th>
+                                            <th className="p-3 border">成果</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td className="p-3 border font-bold">Step 1: プロフィール登録</td>
+                                            <td className="p-3 border"><strong>希望条件（給与、勤務地、WLBなど）</strong>を最優先で、詳細にチェック項目を埋めます。</td>
+                                            <td className="p-3 border">貴方の希望がAIにインプットされ、AIが地域内の求人をスクリーニングします。</td>
+                                        </tr>
+                                        <tr className="bg-gray-50">
+                                            <td className="p-3 border font-bold">Step 2: おすすめ求人の確認</td>
+                                            <td className="p-3 border">ユーザーダッシュボードで<strong>「AI厳選おすすめ求人（上位5社）」</strong>を毎日確認します。</td>
+                                            <td className="p-3 border">貴方の希望（特にランキング上位項目）に最も一致した企業が提案されます。</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-3 border font-bold">Step 3: 意思表示（応募/興味あり）</td>
+                                            <td className="p-3 border">提案された求人に対し、「応募」（面接確約オファーなしの場合）または「興味あり」（企業からのスカウトを待つ場合）を選択します。</td>
+                                            <td className="p-3 border">企業に貴方の興味が伝わり、企業からのスカウトを受けるチャンスが生まれます。</td>
+                                        </tr>
+                                        <tr className="bg-gray-50">
+                                            <td className="p-3 border font-bold">Step 4: マッチング成立</td>
+                                            <td className="p-3 border">企業からの「スカウト（面接確約オファー）」を受け入れる、または直接応募する。</td>
+                                            <td className="p-3 border">マッチング成立！ 企業とのチャットが開通し、次のステップへ進みます。</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-3 border font-bold">Step 5: 面接設定</td>
+                                            <td className="p-3 border">アプリ内チャットで、企業が提示した日程候補から都合の良い日時を選択し、面接を確定します。</td>
+                                            <td className="p-3 border">履歴書送付などの手間なく、すぐに面接に進めます。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {/* ▲▲▲ ここまでが追加されたコード ▲▲▲ */}
+
 
                 <section className="mt-24 text-center">
                     <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの企業様が、新しい採用の形を始めています</h3>
@@ -313,6 +494,7 @@ const RecruitPartnerPage: NextPage = () => {
                         ))}
                     </div>
                 </section>
+
 
                 <section className="mt-24 text-center">
                     <h3 className="text-3xl font-extrabold">安心のトリプルサポート体制</h3>
@@ -324,6 +506,7 @@ const RecruitPartnerPage: NextPage = () => {
                     </div>
                 </section>
 
+
                 <section className="mt-24 max-w-4xl mx-auto">
                     <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
@@ -332,6 +515,7 @@ const RecruitPartnerPage: NextPage = () => {
                         <FAQItem question="契約の途中で解約（停止）はできますか？"><p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください。</p></FAQItem>
                     </div>
                 </section>
+
 
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
@@ -365,6 +549,7 @@ const RecruitPartnerPage: NextPage = () => {
                             {/* エラー表示エリア */}
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p></div> )}
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
+
 
                             {/* クレジットカード決済ボタン */}
                             <div className="my-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
@@ -467,6 +652,14 @@ const RecruitPartnerPage: NextPage = () => {
     );
 };
 
+
 export default RecruitPartnerPage;
+
+
+
+
+
+
+
 
 

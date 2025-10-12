@@ -2,7 +2,7 @@ import { NextPage, GetServerSideProps } from 'next'; // GetServerSideProps を�
 import Link from 'next/link';
 import Head from 'next/head';
 import nookies from 'nookies'; // nookies をインポート
-import { adminAuth, adminDb } from '../../lib/firebase-admin'; // firebase-admin をインポート
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; // firebase-admin をインポート
 
 const FoodLossTopPage: NextPage = () => {
   const areas = [

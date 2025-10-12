@@ -4,8 +4,8 @@ import Link from 'next/link';
 import React from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase';
-import { adminDb, getUidFromCookie } from '../../lib/firebase-admin';
+import { app } from '../../lib/firebase';
+import { adminDb, getUidFromCookie } from '@/lib/firebase-admin';
 
 // ===============================
 // 型定義

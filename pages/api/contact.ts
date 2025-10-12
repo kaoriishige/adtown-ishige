@@ -1,4 +1,4 @@
-import { adminDb } from '../../lib/firebase-admin'; // 1. ここでインポートします
+import { adminDb } from '@/lib/firebase-admin'; // 1. ここでインポートします
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(

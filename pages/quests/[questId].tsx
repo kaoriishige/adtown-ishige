@@ -1,9 +1,9 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { adminDb } from '../../lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import nookies from 'nookies';
-import { adminAuth } from '../../lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
 
 interface Quest {
     id: string;

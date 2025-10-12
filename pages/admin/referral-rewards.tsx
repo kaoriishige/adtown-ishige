@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import React from 'react';
-import { adminDb, getUidFromCookie } from '../../lib/firebase-admin';
+import { adminDb, getUidFromCookie } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 
 // ===============================

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import nookies from 'nookies';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);

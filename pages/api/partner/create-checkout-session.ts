@@ -1,7 +1,7 @@
 // ファイル1: pages/api/partner/create-checkout-session.ts (修正済みの完全版)
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin'; // firebase-adminのパスを確認してください
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; // firebase-adminのパスを確認してください
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

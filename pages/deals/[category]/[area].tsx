@@ -1,7 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { adminDb } from '../../../lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import { RiStore2Line } from 'react-icons/ri';
 import { ParsedUrlQuery } from 'querystring';
 import type { Query, QueryDocumentSnapshot } from 'firebase-admin/firestore';

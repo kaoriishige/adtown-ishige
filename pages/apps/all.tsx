@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, adminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 // --- 型定義 ---

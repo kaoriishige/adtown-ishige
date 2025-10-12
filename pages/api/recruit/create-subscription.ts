@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import stripe from '../../../lib/stripe';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

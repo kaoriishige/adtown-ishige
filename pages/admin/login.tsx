@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { app } from '../../lib/firebase';
 import nookies from 'nookies';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 

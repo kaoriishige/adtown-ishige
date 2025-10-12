@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { collection, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // 絶対パスを使用
+import { db } from '../../lib/firebase'; // 絶対パスを使用
 
 // --- ★★★ カテゴリとエリアのデータ ★★★ ---
 // データベースに保存する値(slug)と、表示名(name)を定義します

@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, adminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
 const AdminPage: NextPage = () => {
     const linkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-gray-700 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-gray-600 transition-transform transform hover:scale-105 text-center";

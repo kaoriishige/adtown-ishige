@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { adminAuth } from '../../lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
 
 const secretKey = process.env.STRIPE_SECRET_KEY;
 if (!secretKey) {

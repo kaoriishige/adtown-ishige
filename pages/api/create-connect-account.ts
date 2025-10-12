@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
 
 // Stripeを初期化。as stringで型アサーションを行う

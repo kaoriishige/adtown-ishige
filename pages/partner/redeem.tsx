@@ -6,7 +6,7 @@ import { RiArrowLeftLine, RiCheckboxCircleFill, RiCloseCircleFill, RiLoader4Line
 import Link from 'next/link';
 import nookies from 'nookies';
 import { GetServerSideProps } from 'next';
-import { adminAuth } from '../../lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
 
 const RedeemPage: NextPage = () => {
     const [scanResult, setScanResult] = useState<{ message: string; dealTitle: string; storeName: string; } | null>(null);

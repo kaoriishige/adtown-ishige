@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth } from '../../../lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
 import { serialize } from 'cookie';
 
 export default async function handler(

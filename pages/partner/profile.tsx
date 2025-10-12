@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { db, auth, storage } from '@/lib/firebase';
+import { db, auth, storage } from '../../lib/firebase';
 import {
   collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion
 } from 'firebase/firestore';

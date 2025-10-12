@@ -1,7 +1,7 @@
 import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { adminDb } from '../../lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 
 // 型定義
 interface Deal {

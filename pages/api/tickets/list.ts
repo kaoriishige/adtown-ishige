@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminDb } from '../../../lib/firebase-admin'; 
+import { adminDb } from '@/lib/firebase-admin'; 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

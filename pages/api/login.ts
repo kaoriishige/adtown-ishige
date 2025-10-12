@@ -3,7 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import nookies from 'nookies';
 import { getAuth } from 'firebase-admin/auth';
-import { adminAuth } from '../../lib/firebase-admin'; // 修正: 独自の初期化関数をインポート
+import { adminAuth } from '@/lib/firebase-admin'; // 修正: 独自の初期化関数をインポート
 
 export default async function handler(
   req: NextApiRequest,

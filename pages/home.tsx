@@ -3,10 +3,10 @@ import { NextPage, GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import nookies from 'nookies';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '../lib/firebase-admin'; // ★ パスを修正
 import Head from 'next/head';
 import Image from 'next/image';
-import { RiLayoutGridFill, RiAlarmWarningLine, RiQuestionLine, RiUserStarLine, RiCoupon3Line } from 'react-icons/ri';
+import { RiLayoutGridFill, RiAlarmWarningLine, RiUserStarLine, RiCoupon3Line } from 'react-icons/ri';
 import { FcGoogle } from 'react-icons/fc';
 import { FaYahoo } from 'react-icons/fa';
 import { IoSparklesSharp } from 'react-icons/io5';
@@ -83,7 +83,6 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
           </header>
 
           <main className="p-4 space-y-6">
-            {/* 省略: 既存 UI をそのまま使用 */}
             <section className="bg-white p-6 rounded-xl shadow-md">
               <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center text-center text-red-800 font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 bg-red-100 hover:bg-red-200">
                 <RiAlarmWarningLine className="mr-2 text-red-500" /> お困りのときは (緊急連絡先)
@@ -115,7 +114,6 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               </Link>
             </section>
 
-            {/* 以降はオリジナル同様に表示 */}
             <section className="bg-white p-6 rounded-xl shadow-md">
               <h2 className="text-xl font-bold text-gray-800 text-center mb-4">
                 アプリをジャンルで探す

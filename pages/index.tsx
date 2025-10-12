@@ -2,7 +2,7 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '../lib/firebase-admin'
 import { 
   RiShieldCheckFill, 
   RiHeartPulseFill, 

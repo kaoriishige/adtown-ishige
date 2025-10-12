@@ -115,19 +115,22 @@ const PartnerSignupPage = () => {
         try {
             // Call API to register user and create Stripe invoice/return PDF URL simultaneously
             const response = await fetch('/api/auth/register-and-create-invoice', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    serviceType: 'ad', 
-                    companyName: storeName,
-                    address, 
-                    area, 
-                    contactPerson, 
-                    phoneNumber, 
-                    email, 
-                    password 
-                }),
-            });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    serviceType: 'adver', 
+    companyName: storeName,
+    address, 
+    area, 
+    contactPerson, 
+    phoneNumber, 
+    email, 
+    password, 
+    paymentMethod: 'invoice',   // ✅ 追加済み
+    billingCycle: 'annual'      // ✅ 追加済み
+  }),
+});
+
             const data = await response.json();
             
             if (!response.ok || !data.pdfUrl) {
@@ -178,19 +181,23 @@ const PartnerSignupPage = () => {
         try {
             // Call unified API to register user and create Stripe Checkout session
             const response = await fetch('/api/auth/register-and-subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    serviceType: 'ad', 
-                    companyName: storeName,
-                    address, 
-                    area, 
-                    contactPerson, 
-                    phoneNumber, 
-                    email, 
-                    password 
-                }),
-            });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    serviceType: 'adver', 
+    companyName: storeName,
+    address, 
+    area, 
+    contactPerson, 
+    phoneNumber, 
+    email, 
+    password,
+    paymentMethod: 'card',   // ★追加：クレジットカード決済
+    billingCycle: 'monthly'  // ★追加：請求サイクル（月払い）
+  }),
+});
+
+
             const data = await response.json();
 
             if (!response.ok) {

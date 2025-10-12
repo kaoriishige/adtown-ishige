@@ -4,7 +4,7 @@ import nookies from 'nookies';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, DocumentData } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
+import { app } from '../../lib/firebase';
 import { useRouter } from 'next/router';
 
 // トレジャーアイテムの型定義から'id'を削除
