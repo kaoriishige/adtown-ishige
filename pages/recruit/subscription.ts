@@ -1,112 +1,128 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
-import Stripe from 'stripe'; // ★修正: Stripe SDKをインポート
+import Stripe from 'stripe';
 
-// 【設定箇所 1/3 修正済み】環境変数から秘密鍵を読み込みます
+// 環境変数からStripeのシークレットキーを読み込みます
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
+// シークレットキーが設定されていない場合は、起動時にエラーをスローして問題を明確にします
 if (!STRIPE_SECRET_KEY) {
-    // 秘密鍵が設定されていない場合はエラーをスロー
-    throw new Error("STRIPE_SECRET_KEY is not set in environment variables.");
+  throw new Error("STRIPE_SECRET_KEY is not set in environment variables.");
 }
 
-// ★修正: 実際のStripeクライアントの初期化
-// Stripe APIのバージョンをローカル環境の要求に合わせて更新します。
+// Stripeクライアントを初期化します
+// 最新のAPIバージョンを指定することで、Stripeの機能を安定して利用できます
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: '2024-04-10', // ★修正済み: '2023-10-16' -> '2024-04-10'
+  apiVersion: '2024-04-10',
 });
 
-
+/**
+ * サブスクリプションの状態をトグル（一時停止/再開）するAPIハンドラ
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
-    }
+  // POSTメソッド以外は許可しません
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
-    const { action } = req.body; // 'pause' または 'resume'
-    const sessionCookie = req.cookies.session;
+  const { action } = req.body; // リクエストボディから 'pause' または 'resume' を受け取る
+  const sessionCookie = req.cookies.session;
 
-    if (!sessionCookie) {
-        return res.status(401).json({ error: 'Unauthorized: No session cookie' });
-    }
+  // セッションクッキーがない場合は認証エラー
+  if (!sessionCookie) {
+    return res.status(401).json({ error: 'Unauthorized: No session cookie provided.' });
+  }
 
-    let uid: string;
-    try {
-        const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
-        uid = decodedToken.uid;
-    } catch (error) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid session token' });
-    }
+  let uid: string;
+  try {
+    // セッションクッキーを検証してユーザーID（uid）を取得します
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+    uid = decodedToken.uid;
+  } catch (error) {
+    console.error("Invalid session cookie:", error);
+    return res.status(401).json({ error: 'Unauthorized: Invalid or expired session cookie.' });
+  }
 
-    // 1. ユーザーデータと購読情報の取得
+  try {
+    // 1. Firestoreからユーザーデータと購読情報を取得
     const userRef = adminDb.collection('users').doc(uid);
     const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
     const userData = userDoc.data();
 
-    // 【設定箇所 2/3】購読IDのフィールド名を確認してください
-    const subscriptionId = userData?.stripeSubscriptionId; // Stripeの購読IDを想定
+    // ユーザーデータからStripeの購読IDと現在のステータスを取得
+    // Firestoreのフィールド名が異なる場合は、この部分を修正してください
+    const subscriptionId = userData?.stripeSubscriptionId;
     const currentStatus = userData?.recruitSubscriptionStatus || 'inactive';
 
     if (!subscriptionId) {
-        // 決済情報が未登録の場合
-        console.error(`User ${uid}: Subscription ID not found.`);
-        return res.status(400).json({ error: 'Subscription ID not found. 決済情報が登録されていません。' });
+      console.error(`User ${uid}: Stripe Subscription ID not found in user document.`);
+      return res.status(400).json({ error: 'Subscription ID not found. Payment information may be missing.' });
     }
 
-    try {
-        let newStatus: 'active' | 'paused' | 'trialing' = currentStatus as any;
+    let newStatus: 'active' | 'paused' | 'trialing' = currentStatus as any;
 
-        // 2. 決済システム（Stripe）との連携ロジック
-        if (action === 'pause' && (currentStatus === 'active' || currentStatus === 'trialing')) {
-            
-            // ====================================================
-            // ★★★ 決済の停止処理 (Stripe APIコール) ★★★
-            // ====================================================
-            // 実際のStripe処理: クレジット決済を停止します
-            await stripe.subscriptions.update(subscriptionId, { 
-                pause_collection: { behavior: 'void' } // 'void'は請求書を作成せず停止します
-            });
-            
-            newStatus = 'paused';
-            
-        } else if (action === 'resume' && currentStatus === 'paused') {
-            
-            // ====================================================
-            // ★★★ 決済の再開処理 (Stripe APIコール) ★★★
-            // ====================================================
-            // 実際のStripe処理: クレジット決済を再開します
-            await stripe.subscriptions.update(subscriptionId, { 
-                pause_collection: null // 'null'で保留を解除し、再開します
-            });
+    // 2. Stripe APIを呼び出して決済ステータスを変更
+    if (action === 'pause' && (currentStatus === 'active' || currentStatus === 'trialing')) {
+      // ■ 決済の停止処理
+      // pause_collection.behavior = 'void' は、現在の請求期間の終わりにサブスクリプションを停止し、
+      // 未払いの請求書を無効にします。
+      await stripe.subscriptions.update(subscriptionId, {
+        pause_collection: { behavior: 'void' }
+      });
+      newStatus = 'paused';
 
-            newStatus = 'active';
-        } else {
-            return res.status(200).json({ 
-                newStatus: currentStatus, 
-                message: `Subscription is already in the requested state (${currentStatus}).` 
-            });
-        }
+    } else if (action === 'resume' && currentStatus === 'paused') {
+      // ■ 決済の再開処理
+      // pause_collection = null を設定すると、サブスクリプションの停止が解除され、
+      // 請求が即座に再開されます。
+      await stripe.subscriptions.update(subscriptionId, {
+        pause_collection: null
+      });
+      newStatus = 'active';
+    } else {
+      // すでに目的の状態になっている、または無効な操作の場合は何もしない
+      return res.status(200).json({
+        newStatus: currentStatus,
+        message: `No action taken. Subscription status is already '${currentStatus}'.`
+      });
+    }
 
-        // 3. Firestore（AIマッチングとDB）のステータスを更新
-        await userRef.update({
-            recruitSubscriptionStatus: newStatus,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    // 3. Firestoreのユーザードキュメントのステータスを更新
+    await userRef.update({
+      recruitSubscriptionStatus: newStatus,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // 4. ユーザーが所有する全ての求人情報（jobs）のステータスを同期させる
+    // これにより、サブスクリプションが停止されると、関連する求人も非アクティブになります
+    const jobsQuery = adminDb.collection('jobs').where('ownerId', '==', uid);
+    const jobsSnapshot = await jobsQuery.get();
+    
+    if (!jobsSnapshot.empty) {
+        const batch = adminDb.batch();
+        const newJobStatus = newStatus === 'paused' ? 'paused' : 'active';
+        jobsSnapshot.docs.forEach(doc => {
+            batch.update(doc.ref, { status: newJobStatus });
         });
-        
-        // 4. 全ての求人のステータスを更新 (AIマッチングの有効/無効に連動)
-        const jobsQuery = await adminDb.collection('jobs').where('ownerId', '==', uid).get();
-        const jobUpdatePromises = jobsQuery.docs.map(doc => 
-            doc.ref.update({ status: newStatus === 'paused' ? 'paused' : 'active' })
-        );
-        await Promise.all(jobUpdatePromises);
-
-
-        return res.status(200).json({ newStatus, message: `Subscription successfully set to ${newStatus}` });
-
-    } catch (error: any) { 
-        console.error('Subscription toggle error:', error);
-        // エラーを捕捉し、フロントエンドに正確に伝える
-        // Stripeのエラー形式を想定
-        return res.status(500).json({ error: error.message || 'サーバー側での購読操作に失敗しました。' });
+        await batch.commit();
     }
+    
+    // 5. 成功レスポンスを返す
+    return res.status(200).json({ newStatus, message: `Subscription successfully updated to '${newStatus}'.` });
+
+  } catch (error: any) {
+    console.error(`Subscription toggle failed for user ${uid}:`, error);
+
+    // Stripe APIからのエラーか、その他のサーバーエラーかを判別
+    if (error.code) { // Stripeエラーは通常、codeプロパティを持つ
+      return res.status(500).json({ error: `Stripe Error: ${error.message}` });
+    }
+    return res.status(500).json({ error: 'An unexpected server error occurred.' });
+  }
 }
