@@ -1,9 +1,10 @@
+// pages/home.tsx
 import { useState } from 'react';
 import { NextPage, GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import nookies from 'nookies';
-import { adminAuth, adminDb } from '../lib/firebase-admin'; // ★ パスを修正
+import { adminAuth, adminDb } from '../lib/firebase-admin';
 import Head from 'next/head';
 import Image from 'next/image';
 import { RiLayoutGridFill, RiAlarmWarningLine, RiUserStarLine, RiCoupon3Line } from 'react-icons/ri';
@@ -90,8 +91,9 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               <p className="text-xs text-center text-gray-500 mt-2">商品やサービスのトラブル、休日・夜間の急病、水道のトラブルなどはこちら</p>
             </section>
 
+            {/* ★★★ ここが修正箇所です ★★★ */}
             <section>
-              <Link href="/users/profile" className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-green-400 to-blue-500 text-white">
+              <Link href="/users/dashboard" className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-green-400 to-blue-500 text-white">
                 <div className="flex items-center">
                   <RiUserStarLine className="text-4xl mr-4 flex-shrink-0" />
                   <div>
@@ -101,6 +103,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 </div>
               </Link>
             </section>
+            {/* ★★★ ここまでが修正箇所です ★★★ */}
 
             <section>
               <Link href="/deals" className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
@@ -235,7 +238,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       return { redirect: { destination: '/users/login', permanent: false } };
     }
 
-    // sessionCookie を検証
     const token = await adminAuth.verifySessionCookie(sessionCookie, true);
     if (!token || !token.uid) {
       return { redirect: { destination: '/users/login', permanent: false } };
