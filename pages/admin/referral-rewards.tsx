@@ -1,128 +1,106 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import React from 'react';
-import { adminDb, getUidFromCookie } from '@/lib/firebase-admin';
-import * as admin from 'firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin'; // ★修正: adminAuthを直接インポート
+import nookies from 'nookies';
 
-// ===============================
-// 型定義
-// ===============================
-interface PartnerSummary {
+// --- 型定義 ---
+interface Reward {
     id: string;
-    companyName: string;
-    email: string;
-    totalReferrals: number;
-    totalRevenue: number;
+    referrerName: string; // 紹介者の名前
+    referredName: string;  // 紹介された人の名前
+    rewardAmount: number;
+    rewardStatus: string;
+    createdAt: string;
 }
 
-interface ReferralRewardsProps {
-    summaries: PartnerSummary[];
+interface ReferralRewardsPageProps {
+    rewards: Reward[];
 }
 
-interface ReferralSummaryDoc {
-    id: string;
-    totalReferrals?: number;
-    totalRevenue?: number;
-}
-
-// ===============================
-// メインページコンポーネント
-// ===============================
-const ReferralRewardsPage: NextPage<ReferralRewardsProps> = ({ summaries }) => {
-    return (
-        <div className="min-h-screen bg-gray-100 p-8">
-            <Head>
-                <title>紹介リワード管理</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-            </Head>
-            <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">紹介リワード管理</h1>
-
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">パートナー名</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">メールアドレス</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">紹介者数</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">合計収益</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {summaries.map((summary) => (
-                                <tr key={summary.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{summary.companyName}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{summary.email}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{summary.totalReferrals}人</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">¥{summary.totalRevenue.toLocaleString()}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// ===============================
-// サーバーサイド処理
-// ===============================
+// --- サーバーサイド処理 ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
-        // 管理者認証
-        const uid = await getUidFromCookie(context);
-        if (!uid) {
-            return { redirect: { destination: '/partner/login', permanent: false } };
-        }
-        const userDoc = await adminDb.collection('users').doc(uid).get();
-        if (!userDoc.exists || !userDoc.data()?.roles?.includes('admin')) {
-            return { redirect: { destination: '/partner/login?error=permission_denied', permanent: false } };
-        }
+        // ★修正: getUidFromCookieを使わず、ここで直接認証を行う
+        const cookies = nookies.get(context);
+        await adminAuth.verifySessionCookie(cookies.session || '', true);
 
-        // 全ての紹介サマリーを取得
-        const summarySnapshot = await adminDb.collection('referralSummaries').get();
+        const rewardsSnap = await adminDb.collection('referralRewards').orderBy('createdAt', 'desc').get();
         
-        const summariesData = summarySnapshot.docs.map((doc: admin.firestore.QueryDocumentSnapshot) => ({
-            id: doc.id,
-            ...doc.data(),
-        })) as ReferralSummaryDoc[];
-        
-        // 全てのパートナー情報を取得
-        const usersSnapshot = await adminDb.collection('users').get();
-        const usersData: { [key: string]: { companyName: string; email: string } } = {};
-        
-        // ★★★ エラー箇所を修正: 'doc'に型を明示的に指定 ★★★
-        usersSnapshot.docs.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
+        // Firestoreのドキュメントから非同期でユーザー名を取得するための準備
+        const rewardsPromises = rewardsSnap.docs.map(async (doc) => {
             const data = doc.data();
-            usersData[doc.id] = {
-                companyName: data.companyName || '（企業名未設定）',
-                email: data.email || '（メールアドレス未設定）',
+            
+            // 紹介者と紹介された人の名前を非同期で取得
+            const referrerSnap = await adminDb.collection('users').doc(data.referrerUid).get();
+            const referredSnap = await adminDb.collection('users').doc(data.referredUid).get();
+            
+            const referrerName = referrerSnap.data()?.name || '不明なユーザー';
+            const referredName = referredSnap.data()?.name || '不明なユーザー';
+
+            return {
+                id: doc.id,
+                referrerName: referrerName,
+                referredName: referredName,
+                rewardAmount: data.rewardAmount,
+                rewardStatus: data.rewardStatus,
+                createdAt: data.createdAt.toDate().toLocaleString('ja-JP'),
             };
         });
 
-        const summaries = summariesData.map((summary: ReferralSummaryDoc) => ({
-            id: summary.id,
-            companyName: usersData[summary.id]?.companyName || '（不明なパートナー）',
-            email: usersData[summary.id]?.email || '（不明）',
-            totalReferrals: summary.totalReferrals || 0,
-            totalRevenue: summary.totalRevenue || 0,
-        }));
+        const rewards = await Promise.all(rewardsPromises);
 
         return {
             props: {
-                summaries,
+                rewards,
             },
         };
 
     } catch (error) {
-        console.error('Error fetching referral rewards:', error);
+        // 認証失敗時は管理者ログインページなどにリダイレクト
         return {
-            props: {
-                summaries: [],
+            redirect: {
+                destination: '/admin/login',
+                permanent: false,
             },
         };
     }
+};
+
+// --- ページコンポーネント本体 ---
+const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ rewards }) => {
+    return (
+        <div>
+            <Head>
+                <title>紹介報酬一覧</title>
+            </Head>
+            <main>
+                <h1>紹介報酬一覧</h1>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>発生日時</th>
+                            <th>紹介者</th>
+                            <th>紹介された人</th>
+                            <th>報酬額</th>
+                            <th>ステータス</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rewards.map((reward) => (
+                            <tr key={reward.id}>
+                                <td>{reward.createdAt}</td>
+                                <td>{reward.referrerName}</td>
+                                <td>{reward.referredName}</td>
+                                <td>{reward.rewardAmount} ポイント</td>
+                                <td>{reward.rewardStatus}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </main>
+        </div>
+    );
 };
 
 export default ReferralRewardsPage;

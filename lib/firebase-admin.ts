@@ -1,109 +1,28 @@
 import * as admin from 'firebase-admin';
-import { GetServerSidePropsContext } from 'next';
-import nookies from 'nookies';
 
-// --- 初期化ステータスを保持する変数 ---
-let initializedAdminAuth: admin.auth.Auth | null = null;
-let initializedAdminDb: admin.firestore.Firestore | null = null;
+// サービスアカウントキーのJSONを環境変数から読み込む
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-export function initializeAdminApp(): void {
-  if (admin.apps.length > 0) {
-    if (!initializedAdminAuth) {
-      initializedAdminAuth = admin.auth();
-      initializedAdminDb = admin.firestore();
-    }
-    return;
+// 既に初期化済みでないかチェック
+if (!admin.apps.length) {
+  if (!serviceAccountJson) {
+    throw new Error(
+      'Firebase Admin SDKの初期化エラー: 環境変数 "FIREBASE_SERVICE_ACCOUNT_JSON" が設定されていません。'
+    );
   }
 
   try {
-    const serviceAccountJsonString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (!serviceAccountJsonString) {
-      console.error('FIREBASE_SERVICE_ACCOUNT_JSON 環境変数が設定されていません。初期化をスキップします。');
-      return;
-    }
-    
-    const serviceAccount = JSON.parse(serviceAccountJsonString);
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(JSON.parse(serviceAccountJson)),
     });
-
-    initializedAdminAuth = admin.auth();
-    initializedAdminDb = admin.firestore();
-    console.log('Firebase Admin SDKの初期化に成功しました。');
-
-  } catch (error: any) {
-    console.error('Firebase Admin SDKの初期化に失敗しました。詳細:', error.message);
+    console.log('Firebase Admin SDK Initialized.');
+  } catch (e) {
+    console.error('Firebase Admin SDK initialization error:', e);
   }
 }
 
-initializeAdminApp();
+// 初期化済みのインスタンスを直接エクスポートする
+const adminDb = admin.firestore();
+const adminAuth = admin.auth();
 
-function _getAdminAuth(): admin.auth.Auth {
-  if (!initializedAdminAuth) {
-    initializeAdminApp();
-    if (!initializedAdminAuth) {
-      throw new Error('Firebase Admin Authが利用できません。環境変数を確認してください。');
-    }
-  }
-  return initializedAdminAuth;
-}
-
-function _getAdminDb(): admin.firestore.Firestore {
-  if (!initializedAdminDb) {
-    initializeAdminApp();
-    if (!initializedAdminDb) {
-      throw new Error('Firebase Admin Firestoreが利用できません。環境変数を確認してください。');
-    }
-  }
-  return initializedAdminDb;
-}
-
-export const adminAuth = {
-  verifySessionCookie: (token: string, checkRevoked: boolean) => _getAdminAuth().verifySessionCookie(token, checkRevoked),
-  verifyIdToken: (idToken: string, checkRevoked: boolean = true) => _getAdminAuth().verifyIdToken(idToken, checkRevoked),
-  createCustomToken: (uid: string, developerClaims?: object) => _getAdminAuth().createCustomToken(uid, developerClaims),
-  setCustomUserClaims: (uid: string, customClaims: object) => _getAdminAuth().setCustomUserClaims(uid, customClaims),
-  listUsers: (maxResults?: number, pageToken?: string) => _getAdminAuth().listUsers(maxResults, pageToken),
-  createUser: (properties: admin.auth.CreateRequest) => _getAdminAuth().createUser(properties),
-  getUserByEmail: (email: string) => _getAdminAuth().getUserByEmail(email),
-  deleteUser: (uid: string) => _getAdminAuth().deleteUser(uid),
-  createSessionCookie: (idToken: string, options: { expiresIn: number }) => _getAdminAuth().createSessionCookie(idToken, options),
-  getUser: (uid: string) => _getAdminAuth().getUser(uid),
-};
-
-export const adminDb = {
-  collection: (path: string) => _getAdminDb().collection(path),
-  doc: (path: string) => _getAdminDb().doc(path),
-  runTransaction: (updateFunction: (transaction: admin.firestore.Transaction) => Promise<any>) => _getAdminDb().runTransaction(updateFunction),
-  batch: () => _getAdminDb().batch(),
-};
-
-export const getUidFromCookie = async (context: GetServerSidePropsContext): Promise<string | null> => {
-  try {
-    const cookies = nookies.get(context);
-    const sessionCookie = cookies.session || '';
-    if (!sessionCookie) {
-      return null;
-    }
-    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
-    return decodedToken.uid;
-  } catch (err) {
-    console.error('getUidFromCookie failed:', err);
-    return null;
-  }
-};
-
-export const getPartnerUidFromCookie = async (context: GetServerSidePropsContext): Promise<string | null> => {
-  try {
-    const cookies = nookies.get(context);
-    const sessionCookie = cookies.token || '';
-    if (!sessionCookie) {
-      return null;
-    }
-    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
-    return decodedToken.uid;
-  } catch (err) {
-    console.error('getPartnerUidFromCookie failed:', err);
-    return null;
-  }
-};
+export { adminDb, adminAuth };

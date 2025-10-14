@@ -115,21 +115,21 @@ const PartnerSignupPage = () => {
         try {
             // Call API to register user and create Stripe invoice/return PDF URL simultaneously
             const response = await fetch('/api/auth/register-and-create-invoice', { 
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ 
-    serviceType: 'adver', 
-    companyName: storeName,
-    address, 
-    area, 
-    contactPerson, 
-    phoneNumber, 
-    email, 
-    password, 
-    paymentMethod: 'invoice',   // ✅ 追加済み
-    billingCycle: 'annual'      // ✅ 追加済み
-  }),
-});
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    serviceType: 'adver', 
+                    companyName: storeName,
+                    address, 
+                    area, 
+                    contactPerson, 
+                    phoneNumber, 
+                    email, 
+                    password, 
+                    paymentMethod: 'invoice',
+                    billingCycle: 'annual'
+                }),
+            });
 
             const data = await response.json();
             
@@ -181,21 +181,21 @@ const PartnerSignupPage = () => {
         try {
             // Call unified API to register user and create Stripe Checkout session
             const response = await fetch('/api/auth/register-and-subscribe', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ 
-    serviceType: 'adver', 
-    companyName: storeName,
-    address, 
-    area, 
-    contactPerson, 
-    phoneNumber, 
-    email, 
-    password,
-    paymentMethod: 'card',   // ★追加：クレジットカード決済
-    billingCycle: 'monthly'  // ★追加：請求サイクル（月払い）
-  }),
-});
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    serviceType: 'adver', 
+                    companyName: storeName,
+                    address, 
+                    area, 
+                    contactPerson, 
+                    phoneNumber, 
+                    email, 
+                    password,
+                    paymentMethod: 'card',
+                    billingCycle: 'monthly'
+                }),
+            });
 
 
             const data = await response.json();
@@ -272,7 +272,7 @@ const PartnerSignupPage = () => {
                 <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
                     <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
                     <p className="mt-2 text-lg">
-                        月額3,300円のパートナー制度（アプリ広告出し放題＆紹介手数料で収入アップ）を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。さらに、1年後の**全額返金保証**もご用意しました。
+                        月額3,850円のパートナー制度（アプリ広告出し放題＆紹介手数料で収入アップ）を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。さらに、1年後の**全額返金保証**もご用意しました。
                     </p>
                     <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
                         <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
@@ -287,7 +287,7 @@ const PartnerSignupPage = () => {
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
                         <h3 className="text-3xl font-extrabold">なぜ今、アプリ広告なのか？答えは「圧倒的な見込み客」です。</h3>
                         <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-                            『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、地域の住民にとって「ないと損」なアプリになりつつあります。
+                            『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
                             貴店の広告やクーポン、フードロスを、アプリ広告出し放題で、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
                         </p>
@@ -311,10 +311,10 @@ const PartnerSignupPage = () => {
                     <p className="mt-4 text-center text-gray-600 max-w-3xl mx-auto">お客様が貴店をきっかけにQRコードから無料登録して、有料会員になると、その売上の30%が**永続的に貴店の収益**となります。その驚くほど簡単な仕組みをご覧ください。</p>
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div><h4 className="text-xl font-bold">お客様が「無料」で登録</h4><p className="mt-2 text-gray-600">貴店に置かれたQRコードスタンド（無料提供）から、お客様はお役立ち満載の約50個のアプリが永久無料で使い放題！**無料プラン**に登録します。</p></div>
-                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4><p className="mt-2 text-gray-600">アプリを使ううち、お客様は「各店舗の割引クーポンや特典で節約」「フードロスの割引商品の情報で節約」「フリマで売って稼ぐ」「お手伝いで稼ぐ」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p></div>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4><p className="mt-2 text-gray-600">アプリを使ううち、お客様は「恋愛・婚活マッチングサービス」「フリマで売って稼ぐ」「お手伝いで稼ぐ」「ペット・動物マッチング」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p></div>
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div><h4 className="text-xl font-bold">貴店に「継続収益」が発生します</h4><p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円×人数分**が自動で積み上がります。</p></div>
                     </div>
-                    <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">つまり、月額3,300円のパートナー費用は、わずか23人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
+                    <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">つまり、月額3,850円のパートナー費用は、わずか23人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
                 </section>
 
                 {/* Revenue Simulation Section */}
@@ -353,16 +353,16 @@ const PartnerSignupPage = () => {
                     <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
                         <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？">
-                            <p className="leading-relaxed">はい、月額3,300円（または年額39,600円）のみです。広告掲載数に上限はなく、紹介手数料から成功報酬をいただくことも一切ありません。安心してご利用いただけます。</p>
+                            <p className="leading-relaxed">はい、月額3,850円クレジットカード決済（または請求書払い年額39,600円）のみです。広告掲載数に上限はなく、紹介手数料から成功報酬をいただくことも一切ありません。安心してご利用いただけます。</p>
                         </FAQItem>
                         <FAQItem question="全額返金保証について詳しく教えてください。">
-                            <p className="leading-relaxed">ご利用開始から1年後、得られた紹介手数料の累計が年間のパートナー費用（39,600円）に満たなかった場合、お支払いいただいた費用を全額返金いたします。これは、私達のシステムに自信があるからこその保証です。※適用には諸条件がありますので、利用規約第6条をご確認ください。</p>
+                            <p className="leading-relaxed">ご利用開始から1年後、得られた紹介手数料の累計が年間のパートナー費用（46,200円クレジットカード決済、39,600円請求書払い決済）に満たなかった場合、お支払いいただいた費用を全額返金いたします。これは、私達のシステムに自信があるからこその保証です。※適用には諸条件がありますので、利用規約第6条をご確認ください。</p>
                         </FAQItem>
                         <FAQItem question="紹介手数料はどのように支払われますか？">
                             <p className="leading-relaxed">毎月末締めで計算し、翌々月15日にご指定の銀行口座へお振り込みします。振込額の合計が3,000円に満たない場合は、お支払いは翌月以降に繰り越されます。パートナー様専用のダッシュボードで、いつでも収益状況をご確認いただけます。</p>
                         </FAQItem>
                         <FAQItem question="契約の途中で解約（停止）はできますか？">
-                            <p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください（全額返金保証を除く）。</p>
+                            <p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください（全額返金保証を除く、請求書払いの途中解約は返金はございません）。</p>
                         </FAQItem>
                     </div>
                 </section>
@@ -374,7 +374,7 @@ const PartnerSignupPage = () => {
                             <p className="text-gray-700 leading-relaxed">
                                 ここまでお読みいただきありがとうございます。<br/>
                                 限定100店舗の初期費用無料キャンペーン枠は、すぐに埋まってしまうことが予想されます。<br/>
-                                <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目から初期費用が発生いたします。もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（39,600円）に満たなかった場合、お支払いいただいた費用を全額返金いたします。</strong><br/>
+                                <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目から初期費用が発生いたします。もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（46,200円クレジットカード決済、39,600円請求書払い決済）に満たなかった場合、お支払いいただいた費用を全額返金いたします。請求書払いは、年間46,200円のところ一括前払いで39,600円の割引価格となります。</strong><br/>
                             </p>
                         </div>
                         <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
@@ -401,7 +401,7 @@ const PartnerSignupPage = () => {
                                         <button type="button" onClick={() => setShowTerms(true)} className="text-blue-600 hover:underline">
                                             パートナー利用規約
                                         </button>
-                                        および全額返金保証の条件に同意し、広告掲載および紹介料プログラム（月額3,300円/税込）へ申し込みます。
+                                        および全額返金保証の条件に同意し、広告掲載および紹介料プログラム（月額3,850円/税込）へ申し込みます。
                                     </span>
                                 </label>
                             </div>
@@ -425,7 +425,7 @@ const PartnerSignupPage = () => {
                             <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
                             <p className="text-gray-600 mb-6">
                                 御請求書にてのお支払いについては、年間39,600円を前払にてのご精算になります。<br />
-                                ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してください。
+                                ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してください。ご入金確認後にログイン情報をご連絡いたします。
                             </p>
                             {invoiceDownloadSuccess && (
                                 <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md flex items-center justify-center mb-4 max-w-md mx-auto">
@@ -463,10 +463,10 @@ const PartnerSignupPage = () => {
                         <div className="overflow-y-auto space-y-4 pr-2">
                             <p><strong>第1条（本規約の適用範囲）</strong><br />本規約は、株式会社adtown（以下「当社」といいます。）が提供する「みんなの那須アプリ」パートナープログラム（以下「本サービス」といいます。）の利用に関する一切の関係に適用されます。</p>
                             <p><strong>第2条（本サービスの利用資格）</strong><br />本サービスは、当社が別途定める審査基準を満たした法人または個人事業主（以下「パートナー」といいます。）のみが利用できるものとします。申込者は、当社が要求する情報が真実かつ正確であることを保証するものとします。</p>
-                            <p><strong>第3条（利用料金）</strong><br />パートナーは、当社に対し、別途定める利用料金（月額3,300円（税込）または年額39,600円（税込））を支払うものとします。支払い方法は、クレジットカード決済または銀行振込（年額一括のみ）とします。</p>
+                            <p><strong>第3条（利用料金）</strong><br />パートナーは、当社に対し、別途定める利用料金（月額3,850円（税込）または年額39,600円（税込））を支払うものとします。支払い方法は、クレジットカード決済または銀行振込（年額一括のみ）とします。</p>
                             <p><strong>第4条（禁止事項）</strong><br />パートナーは、本サービスの利用にあたり、以下の行為を行ってはなりません。<br />1. 法令または公序良俗に違反する行為<br />2. 犯罪行為に関連する行為<br />3. 当社のサーバーまたはネットワークの機能を破壊したり、妨害したりする行為<br />4. 当社のサービスの運営を妨害するおそれのある行為<br />5. 他のパートナーに関する個人情報等を収集または蓄積する行為<br />6. 不正な目的を持って本サービスを利用する行為<br />7. 当社または第三者の知的財産権、肖像権、プライバシー、名誉その他の権利または利益を侵害する行為<br />8. その他、当社が不適切と判断する行為</p>
                             <p><strong>第5条（紹介手数料）</strong><br />1. パートナーは、当社が提供する専用のQRコードを経由してアプリ利用者が有料会員登録を行った場合、当社所定の紹介手数料（以下「手数料」といいます。）を受け取ることができます。<br />2. 手数料は、有料会員の月額利用料金の30%とします。<br />3. 手数料は、月末締めで計算し、翌々月15日にパートナーが指定する銀行口座へ振り込むものとします。ただし、振込額の合計が3,000円に満たない場合は、支払いは翌月以降に繰り越されるものとします。</p>
-                            <p><strong>第6条（全額返金保証）</strong><br />1. 本サービスの利用開始から1年経過した時点で、パートナーが受け取った手数料の累計額が、支払った年間のパートナー費用（39,600円）に満たなかった場合、パートナーは当社に対し、支払った費用の全額返金を請求することができます。<br />2. 本保証は、実店舗を有し、来店客への案内が可能なパートナーで、QRコードスタンドをお客様の見える場所に設置することを対象とします。<br />3. 返金請求は、利用開始から1年経過後、30日以内に当社所定の方法で行うものとします。</p>
+                            <p><strong>第6条（全額返金保証）</strong><br />1. 本サービスの利用開始から1年経過した時点で、パートナーが受け取った手数料の累計額が、支払った年間のパートナー費用（46,200円クレジットカード決済、39,600円請求書払い決済）に満たなかった場合、パートナーは当社に対し、支払った費用の全額返金を請求することができます。<br />2. 本保証は、実店舗を有し、来店客への案内が可能なパートナーで、QRコードスタンドをお客様の見える場所に設置することを対象とします。<br />3. 返金請求は、利用開始から1年経過後、30日以内に当社所定の方法で行うものとします。</p>
                             <p><strong>第7条（契約期間と解約）</strong><br />1. 本サービスの契約期間は、申込日を起算日として1年間とします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。
                             <br />2. パートナーは、いつでも解約を申し出ることができますが、契約期間中の利用料金の返金は行わないものとします（第6条の全額返金保証を除く）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
                             <p><strong>第8条（本サービスの提供の停止等）</strong><br />当社は、以下のいずれかの事由があると判断した場合、パートナーに事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。<br />1. 本サービスにかかるコンピュータシステムの保守点検または更新を行う場合<br />2. 地震、落雷、火災、停電または天災などの不可抗力により、本サービスの提供が困難となった場合<br />3. その他、当社が本サービスの提供が困難と判断した場合</p>

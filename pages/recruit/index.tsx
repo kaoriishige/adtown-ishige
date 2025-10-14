@@ -241,7 +241,7 @@ const RecruitPartnerPage: NextPage = () => {
     const getButtonText = () => {
         if (isLoading) return '処理中...';
         if (stripeError) return '決済設定エラー';
-        return `先行予約する (初回課金日: ${SERVICE_START_DATE_STRING})`;
+        return 'クレジットカード決済で申し込む'; // ★★★ 変更箇所 ★★★
     };
 
 
@@ -269,11 +269,11 @@ const RecruitPartnerPage: NextPage = () => {
                 <section className="text-center py-16 md:py-24">
                     <div className="mb-8 p-4 bg-indigo-100 border-l-4 border-indigo-500 rounded-r-lg max-w-4xl mx-auto">
                         <p className="font-bold text-indigo-800 text-lg">【先行予約受付中】サービス開始日: {SERVICE_START_DATE_STRING}</p>
-                        <p className="text-sm text-indigo-700 mt-1">今お申し込みいただくと、サービス開始日からすぐにご利用いただけます。初回のお支払いはサービス開始日となります。</p>
+                        <p className="text-sm text-indigo-700 mt-1">今お申し込みいただくと、企業の情報登録を完了して、サービス開始日からすぐにご利用いただけます。</p>
                     </div>
                     <p className="text-orange-500 font-semibold">地元の企業を応援する広告代理店 株式会社adtownからのご提案【大手企業に高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        【先行予約】月額3,300円で、<br />
+                        【先行予約】月額3,850円で、<br />
                         <span className="text-orange-600">理想の人材が見つかるまで。</span>
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
@@ -511,7 +511,7 @@ const RecruitPartnerPage: NextPage = () => {
                     <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
                         <FAQItem question="本当に求める人材に出会えますか？"><p className="leading-relaxed">はい。当社のAIは、スキルや経験といった表面的な情報だけでなく、求職者の価値観や希望する働き方、貴社の社風などを多角的に分析し、マッチング精度を最大限に高めています。これにより、定着率の高い、貴社にとって本当に価値のある採用を実現します。</p></FAQItem>
-                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額3,300円（または年額39,600円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p></FAQItem>
+                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額3,850円（または請求書払い、定価年額46,200円を一括前払い割引価格39,600円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p></FAQItem>
                         <FAQItem question="契約の途中で解約（停止）はできますか？"><p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください。</p></FAQItem>
                     </div>
                 </section>
@@ -519,7 +519,7 @@ const RecruitPartnerPage: NextPage = () => {
 
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
-                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">アカウント情報を登録し、先行予約を完了してください。</p></div>
+                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">アカウント情報を登録し、先行予約を完了してください。クレジットカード支払いは月額3,850円、請求書払いをお申込みの場合は、年額46,200円を一括前払い割引価格39,600円でご利用いただけます。</p></div>
                         
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -555,7 +555,7 @@ const RecruitPartnerPage: NextPage = () => {
                             <div className="my-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
                                 <p className="text-sm text-blue-800">
                                     サービス開始日は <strong>{SERVICE_START_DATE_STRING}</strong> です。<br/>
-                                    初回のお支払いはサービス開始日に行われます。
+                                    
                                 </p>
                             </div>
                             <button type="button" onClick={handleSubmit} disabled={isLoading || !isFormValid || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
@@ -573,7 +573,7 @@ const RecruitPartnerPage: NextPage = () => {
                 <section className="mt-12 bg-white rounded-2xl shadow-xl p-8 md:p-12 w-full max-w-3xl mx-auto border border-gray-200 text-center">
                     <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
                     <p className="text-gray-600 mb-6">
-                        御請求書でのお支払い（年一括払い）の場合、サービスの利用開始は **{SERVICE_START_DATE_STRING}** からとなります。<br/>
+                        御請求書でのお支払い（年一括払い）の場合、サービスの利用開始は、ご入金の確認が取れてからとなります。ご入金確認後にログイン情報をお送りします。<br/>
                         ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してご予約ください。
                     </p>
                     {invoiceDownloadSuccess && (
@@ -616,7 +616,7 @@ const RecruitPartnerPage: NextPage = () => {
                                 <li>過去当社との契約に違反した者またはその関係者であると当社が判断した場合</li>
                                 <li>その他、当社が登録を適当でないと判断した場合</li>
                             </ul>
-                            <p><strong>第3条（利用料金及び支払方法）</strong><br/>1. 利用者は、本サービスの利用の対価として、当社が別途定める利用料金を、当社が指定する支払方法により当社に支払うものとします。利用料金は月額3,300円（税込）とします。<br/>2. 支払方法はクレジットカード決済または銀行振込（年額一括39,600円（税込）のみ「求人を停止しても返金はございません」）とします。<br/>3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも管理画面から次回の更新をキャンセルすることができます。月の途中で解約した場合でも、日割り返金は行われません。</p>
+                            <p><strong>第3条（利用料金及び支払方法）</strong><br/>1. 利用者は、本サービスの利用の対価として、当社が別途定める利用料金を、当社が指定する支払方法により当社に支払うものとします。利用料金は月額3,850円（税込）とします。<br/>2. 支払方法はクレジットカード決済または銀行振込（定価46,200円を年額一括の割引価格39,600円（税込）のみ「求人を停止しても返金はございません」）とします。<br/>3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも管理画面から次回の更新をキャンセルすることができます。月の途中で解約した場合でも、日割り返金は行われません。</p>
                             <p><strong>第4条（ユーザーID及びパスワードの管理）</strong><br/>1. 利用者は、自己の責任において、本サービスのユーザーID及びパスワードを適切に管理及び保管するものとし、これを第三者に利用させ、または貸与、譲渡、名義変更、売買等をしてはならないものとします。<br/>2. ユーザーIDまたはパスワードの管理不十分、使用上の過誤、第三者の使用等によって生じた損害に関する責任は利用者が負うものとし、当社は一切の責任を負いません。</p>
                             <p><strong>第5条（禁止事項）</strong><br/>利用者は、本サービスの利用にあたり、以下の各号のいずれかに該当する行為または該当すると当社が判断する行為をしてはなりません。<br/>
                             <ul className="list-disc list-inside pl-4 text-sm">
@@ -640,7 +640,7 @@ const RecruitPartnerPage: NextPage = () => {
                             <p><strong>第7条（契約の解約）</strong><br/>利用者は、当社所定の方法で当社に通知することにより、本サービスを解約し、自己の利用者としての登録を抹消することができます。解約にあたり、利用者は当社に対して負っている債務がある場合は、その一切について当然に期限の利益を失い、直ちに当社に対して全ての債務の支払を行わなければなりません。</p>
                             <p><strong>第8条（免責事項）</strong><br/>当社は、本サービスが利用者の特定の目的に適合すること、期待する機能・商品的価値・正確性・有用性を有すること、利用者による本サービスの利用が利用者に適用のある法令または業界団体の内部規則等に適合すること、及び不具合が生じないことについて、何ら保証するものではありません。また、当社は、本サービスから得られる情報の完全性、正確性、確実性、有用性等について、いかなる保証も行わないものとします。</p>
                             <p><strong>第9条（本規約等の変更）</strong><br/>当社は、当社が必要と認めた場合は、本規約を変更できるものとします。本規約を変更する場合、変更後の本規約の施行時期及び内容を当社のウェブサイト上での掲示その他の適切な方法により周知し、または利用者に通知します。但し、法令上利用者の同意が必要となるような内容の変更の場合は、当社所定の方法で利用者の同意を得るものとします。</p>
-                            <p><strong>第10条（準拠法及び管轄裁判所）</strong><br/>1. 本規約及びサービス利用契約の準拠法は日本法とします。<br/>2. 本規約またはサービス利用契約に起因し、または関連する一切の紛争については、宇都宮地方裁判所を第一審の専属的合意管轄裁判所とします。</p>
+                            <p><strong>第10条（準拠法及び管轄裁判所）</strong><br/>1. 本規約及びサービス利用契約の準拠法は日本法とします。<br/>2. 本規я약またはサービス利用契約に起因し、または関連する一切の紛争については、宇都宮地方裁判所を第一審の専属的合意管轄裁判所とします。</p>
                         </div>
                         <div className="mt-6 flex justify-end">
                             <button onClick={() => setShowTerms(false)} className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600">閉じる</button>
