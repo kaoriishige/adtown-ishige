@@ -315,11 +315,11 @@ const PartnerSignupPage = () => {
                     <h3 className="text-3xl font-extrabold text-center">なぜ、みんなの那須アプリの「QRコード」をテーブルに置くだけで「毎月の安定収益」に変わるのか？</h3>
                     <p className="mt-4 text-center text-gray-600 max-w-3xl mx-auto">お客様が貴店をきっかけにQRコードから無料登録して、有料会員になると、その売上の30%が**永続的に貴店の収益**となります。その驚くほど簡単な仕組みをご覧ください。</p>
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div><h4 className="text-xl font-bold">お客様が「無料」で登録</h4><p className="mt-2 text-gray-600">貴店に置かれたQRコードスタンド（無料提供）から、お客様はお役立ち満載の約50個のアプリが永久無料で使い放題！**無料プラン**に登録します。</p></div>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div><h4 className="text-xl font-bold">お客様が「無料」で登録</h4><p className="mt-2 text-gray-600">貴店に置かれたQRコードスタンド（無料提供）から、お客様はお役立ち満載の約50個のアプリ、求人マッチングAI、店舗の特典、クーポンが利用できる、などが永久無料で使い放題！**無料プラン**に登録します。</p></div>
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4><p className="mt-2 text-gray-600">アプリを使ううち、お客様は「恋愛・婚活マッチングサービス」「フリマで売って稼ぐ」「お手伝いで稼ぐ」「ペット・動物マッチング」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p></div>
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div><h4 className="text-xl font-bold">貴店に「継続収益」が発生します</h4><p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円×人数分**が自動で積み上がります。</p></div>
                     </div>
-                    <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">つまり、月額3,850円のパートナー費用は、わずか23人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
+                    <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">つまり、月額3,850円のパートナー費用は、わずか27人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
                 </section>
 
                 {/* Revenue Simulation Section */}

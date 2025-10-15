@@ -96,7 +96,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
               <div className="mt-10">
                 <Link href="/users/signup" passHref legacyBehavior>
                   <a className="bg-lime-400 text-black font-bold py-4 px-8 rounded-md shadow-lg transition-all transform hover:scale-105 inline-block max-w-xs w-full">
-                    今すぐ無料で登録する
+                    只今、準備中
                   </a>
                 </Link>
                 <p className="text-sm text-blue-200 mt-4">登録はメールアドレスだけで簡単1分。費用は一切かかりません。</p>
@@ -240,7 +240,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                 <div className="mt-8">
                   <Link href="/users/signup" passHref legacyBehavior>
                     <a className="bg-lime-400 text-black font-bold text-lg py-4 px-10 rounded-md shadow-lg transition-transform transform hover:scale-105 inline-block">
-                      今すぐ無料で登録する
+                      只今、準備中
                     </a>
                   </Link>
                 </div>
