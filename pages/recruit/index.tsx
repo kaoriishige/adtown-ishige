@@ -1,4 +1,3 @@
-// --- Firebase関連のインポートを追加 ---
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
@@ -266,6 +265,10 @@ const RecruitPartnerPage: NextPage = () => {
                 </div>
             </header>
             <main className="container mx-auto px-6">
+                <section className="text-center pt-16 pb-8">
+                    <h2 className="text-3xl font-bold text-gray-800">おかげさまで株式会社adtown20周年、感謝企画</h2>
+                    <p className="mt-4 text-lg text-gray-600">みんなの那須アプリを開発しましたので、下記をご覧の上ご利用ください。</p>
+                </section>
                 <section className="text-center py-16 md:py-24">
                     <div className="mb-8 p-4 bg-indigo-100 border-l-4 border-indigo-500 rounded-r-lg max-w-4xl mx-auto">
                         <p className="font-bold text-indigo-800 text-lg">【先行予約受付中】サービス開始日: {SERVICE_START_DATE_STRING}</p>

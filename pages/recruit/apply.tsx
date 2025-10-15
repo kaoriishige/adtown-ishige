@@ -168,7 +168,6 @@ const AddRecruitServicePage: NextPage = () => {
     const getButtonText = () => {
         if (isLoading) return '処理中...';
         if (stripeError) return '決済設定エラー';
-        // ★★★ 変更点 1 ★★★
         return 'クレジットカード決済で申し込む';
     };
     const getInvoiceButtonText = () => {
@@ -200,13 +199,16 @@ const AddRecruitServicePage: NextPage = () => {
             </header>
             
             <main className="container mx-auto px-6">
+                <section className="text-center pt-16 pb-8">
+                    <h2 className="text-3xl font-bold text-gray-800">おかげさまで株式会社adtown20周年、感謝企画</h2>
+                    <p className="mt-4 text-lg text-gray-600">みんなの那須アプリを開発しましたので、下記をご覧の上ご利用ください。</p>
+                </section>
                 <section className="text-center py-16 md:py-24">
                     <div className="mb-8 p-4 bg-indigo-100 border-l-4 border-indigo-500 rounded-r-lg max-w-4xl mx-auto">
                         <p className="font-bold text-indigo-800 text-lg">【先行予約受付中】サービス開始日: {SERVICE_START_DATE_STRING}</p>
                         <p className="text-sm text-indigo-700 mt-1">今お申し込みいただくと、企業の情報登録を完了して、サービス開始日からすぐにご利用いただけます。</p>
                     </div>
                     <p className="text-orange-500 font-semibold">地元の企業を応援する広告代理店 株式会社adtownからのご提案【大手企業に高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
-                    {/* ★★★ 変更点 2 ★★★ */}
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight text-center">
                         【先行予約】月額3,850円で、<br />
                         <span className="text-orange-600">理想の人材が見つかるまで。</span>
@@ -259,11 +261,14 @@ const AddRecruitServicePage: NextPage = () => {
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div><h4 className="text-xl font-bold">カンタン求人作成</h4><p className="mt-2 text-gray-600">求めるスキルや人物像を数分で入力。AIが貴社のニーズを深く学習し、最適な人材像を定義します。</p></div>
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h4 className="text-xl font-bold">AIが候補者を自動提案</h4><p className="mt-2 text-gray-600">AIが地域の求職者データベースから、貴社にマッチする可能性の高い人材を自動でリストアップ。待っているだけで、会いたい人材の情報が届きます。</p></div>
                         <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div><h4 className="text-xl font-bold">いつでも更新を停止</h4><p className="mt-2 text-gray-600">採用が決まればいつでも次回の更新を停止。必要な期間だけ利用でき、無駄なコストはかかりません。</p></div>
+
                     </div>
                 </section>
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto">
                         <h2 className="text-3xl font-extrabold text-center mb-12">AIマッチング求人システム運用ガイド</h2>
+
+                        {/* --- 1. AIマッチングの仕組み --- */}
                         <div className="mb-12">
                             <h3 className="text-2xl font-bold mb-4 pb-2 border-b-2 border-orange-500">1. AIマッチングの仕組み（システムの核心）</h3>
                             <p className="mb-6 text-gray-600 leading-relaxed">
@@ -313,9 +318,9 @@ const AddRecruitServicePage: NextPage = () => {
                                 企業ダッシュボードから、高スコアの「会いたい候補者」に効率的にアプローチできます。
                             </p>
                             <h4 className="text-xl font-semibold mb-4">📄 使い方：登録から面接確約までの流れ</h4>
-                            <div className="overflow-x-auto">
+                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
-                                    <thead className="bg-gray-100">
+                                     <thead className="bg-gray-100">
                                         <tr>
                                             <th className="p-3 border">ステップ</th>
                                             <th className="p-3 border">実施内容</th>
@@ -357,13 +362,13 @@ const AddRecruitServicePage: NextPage = () => {
                         {/* --- 3. 求職者ユーザー向け運用ガイド --- */}
                         <div>
                             <h3 className="text-2xl font-bold mb-4 pb-2 border-b-2 border-orange-500">3. 求職者ユーザー向け運用ガイド</h3>
-                                <p className="mb-6 text-gray-600 leading-relaxed">
-                                    プロフィールを詳細に登録することで、AIが能動的に最適な求人を提案し、不必要な応募の手間を省きます。
-                                </p>
+                             <p className="mb-6 text-gray-600 leading-relaxed">
+                                プロフィールを詳細に登録することで、AIが能動的に最適な求人を提案し、不必要な応募の手間を省きます。
+                            </p>
                             <h4 className="text-xl font-semibold mb-4">📋 使い方：登録から面接確約までの流れ</h4>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
-                                    <thead className="bg-gray-100">
+                                     <thead className="bg-gray-100">
                                         <tr>
                                             <th className="p-3 border">ステップ</th>
                                             <th className="p-3 border">実施内容</th>
@@ -389,7 +394,7 @@ const AddRecruitServicePage: NextPage = () => {
                                         <tr className="bg-gray-50">
                                             <td className="p-3 border font-bold">Step 4: マッチング成立</td>
                                             <td className="p-3 border">企業からの「スカウト（面接確約オファー）」を受け入れる、または直接応募する。</td>
-                                            <td className="p-3 border">マッチング成立！ 企業とのチャットが開き、面接に進みます。</td>
+                                            <td className="p-3 border">マッチング成立！ 企業とのチャットが開通し、面接に進みます。</td>
                                         </tr>
                                         <tr>
                                             <td className="p-3 border font-bold">Step 5: 面接設定</td>
@@ -462,7 +467,6 @@ const AddRecruitServicePage: NextPage = () => {
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p></div> )}
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
 
-                            {/* Credit Card Payment Button */}
                             <button type="button" onClick={handleSubmit} disabled={isLoading || !isFormValid || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                 {getButtonText()}
                             </button>
@@ -507,14 +511,41 @@ const AddRecruitServicePage: NextPage = () => {
             {showTerms && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
-                        <h2 className="text-xl font-bold mb-4 border-b pb-2">パートナー利用規約</h2>
+                        <h2 className="text-xl font-bold mb-4 border-b pb-2">AIマッチング求人 利用規約</h2>
                         <div className="overflow-y-auto space-y-4 pr-2">
-                            <p><strong>第1条（本規約の適用範囲）</strong><br />本規約は、株式会社adtown（以下「当社」といいます。）が提供する「みんなの那須アプリ」パートナープログラム（以下「本サービス」といいます。）の利用に関する一切の関係に適用されます。</p>
-                            <p><strong>第2条（本サービスの利用資格）</strong><br />本サービスは、当社が別途定める審査基準を満たした法人または個人事業主（以下「パートナー」といいます。）のみが利用できるものとします。申込者は、当社が要求する情報が真実かつ正確であることを保証するものとします。</p>
-                            <p><strong>第3条（利用料金）</strong><br />1. 利用者は、本サービスの利用の対価として、当社が別途定める利用料金を、当社が指定する支払方法により当社に支払うものとします。利用料金は月額3,850円（税込）とします。（求人サービスではありません）<br />2. 支払方法はクレジットカード決済（月額3,850円）または銀行振込（年額一括46,200円（税込）のみ）とします。<br />3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも管理画面から次回の更新をキャンセルすることができます。月の途中で解約した場合でも、日割り返金は行いません。</p>
-                            <p><strong>第6条（全額返金保証）</strong><br />1. 本サービスの利用開始から1年経過した時点で、パートナーが受け取った手数料の累計額が、支払った年間のパートナー費用（46,200円）に満たなかった場合、パートナーは当社に対し、支払った費用の全額返金を請求することができます。これは、私達のシステムに自信があるからこその保証です。</p>
-                            {/* その他の規約内容は省略 */}
-                            <p><strong>第10条（準拠法・裁判管轄）</strong><br />本規約の解釈にあたっては、日本法を準拠法とします。本サービスに関して紛争が生じた場合には、当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</p>
+                            <p><strong>第1条（適用）</strong><br/>本規約は、株式会社adtown（以下「当社」といいます。）が提供するAIマッチング求人サービス（以下「本サービス」といいます。）の利用に関する一切の関係に適用されます。</p>
+                            <p><strong>第2条（利用登録）</strong><br/>1. 本サービスの利用を希望する者（以下「登録希望者」）は、本規約に同意の上、当社の定める方法によって利用登録を申請するものとします。<br/>2. 当社は、当社の基準に従って、登録希望者の登録の可否を判断し、当社が登録を認める場合にはその旨を登録希望者に通知します。利用登録は、当社が本項の通知を行ったことをもって完了したものとします。<br/>3. 当社は、登録希望者が、以下の各号のいずれかの事由に該当する場合は、登録を拒否することがあり、またその理由について一切開示義務を負いません。</p>
+                            <ul className="list-disc list-inside pl-4 text-sm">
+                                <li>当社に提供した登録事項の全部または一部につき虚偽、誤記または記載漏れがあった場合</li>
+                                <li>反社会的勢力等（暴力団、暴力団員、その他これに準ずる者を意味します。以下同じ。）である、または資金提供その他を通じて反社会的勢力等の維持、運営もしくは経営に協力もしくは関与する等反社会的勢力等との何らかの交流もしくは関与を行っていると当社が判断した場合</li>
+                                <li>過去当社との契約に違反した者またはその関係者であると当社が判断した場合</li>
+                                <li>その他、当社が登録を適当でないと判断した場合</li>
+                            </ul>
+                            <p><strong>第3条（利用料金及び支払方法）</strong><br/>1. 利用者は、本サービスの利用の対価として、当社が別途定める利用料金を、当社が指定する支払方法により当社に支払うものとします。利用料金は月額3,850円（税込）とします。<br/>2. 支払方法はクレジットカード決済または銀行振込（定価46,200円を年額一括の割引価格39,600円（税込）のみ「求人を停止しても返金はございません」）とします。<br/>3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも管理画面から次回の更新をキャンセルすることができます。月の途中で解約した場合でも、日割り返金は行われません。</p>
+                            <p><strong>第4条（ユーザーID及びパスワードの管理）</strong><br/>1. 利用者は、自己の責任において、本サービスのユーザーID及びパスワードを適切に管理及び保管するものとし、これを第三者に利用させ、または貸与、譲渡、名義変更、売買等をしてはならないものとします。<br/>2. ユーザーIDまたはパスワードの管理不十分、使用上の過誤、第三者の使用等によって生じた損害に関する責任は利用者が負うものとし、当社は一切の責任を負いません。</p>
+                            <p><strong>第5条（禁止事項）</strong><br/>利用者は、本サービスの利用にあたり、以下の各号のいずれかに該当する行為または該当すると当社が判断する行為をしてはなりません。<br/>
+                            <ul className="list-disc list-inside pl-4 text-sm">
+                                <li>法令に違反する行為または犯罪行為に関連する行為</li>
+                                <li>当社、本サービスの他の利用者またはその他の第三者に対する詐欺または脅迫行為</li>
+                                <li>公序良俗に反する行為</li>
+                                <li>当社、本サービスの他の利用者またはその他の第三者の知的財産権、肖像権、プライバシーの権利、名誉、その他の権利または利益を侵害する行為</li>
+                                <li>本サービスのネットワークまたはシステム等に過度な負荷をかける行為</li>
+                                <li>当社のサービスの運営を妨害するおそれのある行為</li>
+                                <li>その他、当社が不適切と判断する行為</li>
+                            </ul>
+                            </p>
+                            <p><strong>第6条（本サービスの停止等）</strong><br/>当社は、以下のいずれかに該当する場合には、利用者に事前に通知することなく、本サービスの全部または一部の提供を停止または中断することができるものとします。<br/>
+                            <ul className="list-disc list-inside pl-4 text-sm">
+                                <li>本サービスに係るコンピューター・システムの点検または保守作業を緊急に行う場合</li>
+                                <li>コンピューター、通信回線等が事故により停止した場合</li>
+                                <li>地震、落雷、火災、風水害、停電、天災地変などの不可抗力により本サービスの運営ができなくなった場合</li>
+                                <li>その他、当社が停止または中断を必要と判断した場合</li>
+                            </ul>
+                            </p>
+                            <p><strong>第7条（契約の解約）</strong><br/>利用者は、当社所定の方法で当社に通知することにより、本サービスを解約し、自己の利用者としての登録を抹消することができます。解約にあたり、利用者は当社に対して負っている債務がある場合は、その一切について当然に期限の利益を失い、直ちに当社に対して全ての債務の支払を行わなければなりません。</p>
+                            <p><strong>第8条（免責事項）</strong><br/>当社は、本サービスが利用者の特定の目的に適合すること、期待する機能・商品的価値・正確性・有用性を有すること、利用者による本サービスの利用が利用者に適用のある法令または業界団体の内部規則等に適合すること、及び不具合が生じないことについて、何ら保証するものではありません。また、当社は、本サービスから得られる情報の完全性、正確性、確実性、有用性等について、いかなる保証も行わないものとします。</p>
+                            <p><strong>第9条（本規約等の変更）</strong><br/>当社は、当社が必要と認めた場合は、本規約を変更できるものとします。本規約を変更する場合、変更後の本規約の施行時期及び内容を当社のウェブサイト上での掲示その他の適切な方法により周知し、または利用者に通知します。但し、法令上利用者の同意が必要となるような内容の変更の場合は、当社所定の方法で利用者の同意を得るものとします。</p>
+                            <p><strong>第10条（準拠法及び管轄裁判所）</strong><br/>1. 本規約及びサービス利用契約の準拠法は日本法とします。<br/>2. 本規я약またはサービス利用契約に起因し、または関連する一切の紛争については、宇都宮地方裁判所を第一審の専属的合意管轄裁判所とします。</p>
                         </div>
                         <div className="mt-6 flex justify-end">
                             <button onClick={() => setShowTerms(false)} className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600">閉じる</button>

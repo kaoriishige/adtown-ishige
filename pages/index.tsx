@@ -106,6 +106,13 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
         </header>
 
         <main>
+          <section className="text-center py-16 bg-gray-50 border-b">
+              <div className="container mx-auto px-6">
+                  <h2 className="text-3xl font-bold text-gray-800">おかげさまで株式会社adtown20周年、感謝企画</h2>
+                  <p className="mt-4 text-lg text-gray-600">みんなの那須アプリを開発しましたので、下記をご覧の上ご利用ください。</p>
+              </div>
+          </section>
+
           <section className="py-16 bg-white">
             <div className="container mx-auto px-6 text-center">
               <div className="relative max-w-4xl mx-auto shadow-lg rounded-lg overflow-hidden" style={{ paddingTop: "56.25%" }}>
