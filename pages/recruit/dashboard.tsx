@@ -1,8 +1,7 @@
-// recruit/dashboard.tsx
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import Head from 'next/head';
-import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '../../lib/firebase-admin';
 import nookies from 'nookies';
 import {
     RiBuilding4Line, RiFileList3Line, RiUserSearchLine, RiLogoutBoxRLine,
@@ -45,7 +44,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
         const userData = userSnap.data()!;
         const companyName = userData.companyName || "未設定の会社名";
-        const isUserAdPartner = userData.isAdPartner || false;
+        
+        // ★★★ 修正箇所 ★★★
+        // isAdPartnerフィールドではなく、roles配列に 'adver' が含まれているかで判定する
+        const userRoles = userData.roles || [];
+        const isUserAdPartner = userRoles.includes('adver');
 
         // AI推薦候補者取得
         const candidates: Candidate[] = [];
@@ -57,9 +60,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
         for (const doc of appsSnap.docs) {
             const app = doc.data();
-            const userSnap = await adminDb.collection('users').doc(app.userId).get();
-            if (userSnap.exists) {
-                const u = userSnap.data()!;
+            const candidateSnap = await adminDb.collection('users').doc(app.userId).get();
+            if (candidateSnap.exists) {
+                const u = candidateSnap.data()!;
                 candidates.push({
                     id: app.userId,
                     name: u.name || '匿名ユーザー',
@@ -82,9 +85,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
         for (const doc of contactsSnap.docs) {
             const m = doc.data();
-            const userSnap = await adminDb.collection('users').doc(m.userUid).get();
-            if (userSnap.exists) {
-                const u = userSnap.data()!;
+            const contactUserSnap = await adminDb.collection('users').doc(m.userUid).get();
+            if (contactUserSnap.exists) {
+                const u = contactUserSnap.data()!;
                 contacts.push({
                     id: m.userUid,
                     name: u.name || '匿名',
@@ -131,7 +134,7 @@ const DashboardCard = ({ href, icon, title, description, color }: any) => {
 };
 
 // --- ページ本体 ---
-const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, contacts }) => {
+const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, contacts, isUserAdPartner }) => {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const auth = getAuth(app);
@@ -235,24 +238,28 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                     </div>
                 </section>
 
-                {/* ✅ 広告パートナー誘導 */}
-                <section className="bg-white p-8 rounded-xl shadow-lg border-2 border-dashed border-blue-300">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                        <RiAdvertisementLine className="mr-2 text-blue-500" size={28} />
-                        広告パートナー募集中
-                    </h2>
-                    <p className="text-gray-700 mb-6 leading-relaxed">
-                        月額<strong>3,850円税込み</strong>でアプリ広告出し放題！<br />
-                        さらに、アプリ紹介手数料で収入獲得のチャンス！<br />
-                        集客＋収益化の新しい仕組みを、ぜひご覧ください。
-                    </p>
-                    <Link
-                        href="/partner/ad-subscribe"
-                        className="inline-block px-8 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-xl font-bold shadow-lg transition"
-                    >
-                        詳しく見る
-                    </Link>
-                </section>
+                {/* ★★★ 修正箇所 ★★★ */}
+                {/* isUserAdPartnerがfalseの場合のみ、このセクションを表示する */}
+                {!isUserAdPartner && (
+                    <section className="bg-white p-8 rounded-xl shadow-lg border-2 border-dashed border-blue-300">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                            <RiAdvertisementLine className="mr-2 text-blue-500" size={28} />
+                            広告パートナー募集中
+                        </h2>
+                        <p className="text-gray-700 mb-6 leading-relaxed">
+                            月額<strong>3,850円税込み</strong>でアプリ広告出し放題！<br />
+                            さらに、アプリ紹介手数料で収入獲得のチャンス！<br />
+                            集客＋収益化の新しい仕組みを、ぜひご覧ください。
+                        </p>
+                        <Link
+                            href="/partner/ad-subscribe"
+                            className="inline-block px-8 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-xl font-bold shadow-lg transition"
+                        >
+                            詳しく見る
+                        </Link>
+                    </section>
+                )}
+                {/* ★★★ ここまで ★★★ */}
             </main>
         </div>
     );

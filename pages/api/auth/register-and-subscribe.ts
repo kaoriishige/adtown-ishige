@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '../../../lib/firebase-admin';
 import getStripeAdmin from '../../../lib/stripe-admin';
 import * as admin from 'firebase-admin'; // FirestoreのFieldValueのためにインポート
 
@@ -51,20 +51,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const user = await adminAuth.getUserByEmail(email);
             firebaseUid = user.uid;
             console.log(`[Subscribe API] 既存ユーザーを検出: ${firebaseUid}`);
-            const userDoc = await adminDb.collection('users').doc(firebaseUid).get();
-            stripeCustomerId = userDoc.data()?.stripeCustomerId;
-            const existingRoles: string[] = userDoc.data()?.roles || []; // 既存のロールを取得
+            const userDocRef = adminDb.collection('users').doc(firebaseUid);
+            const userDoc = await userDocRef.get();
+            const userData = userDoc.data();
+            stripeCustomerId = userData?.stripeCustomerId;
+            const existingRoles: string[] = userData?.roles || [];
 
-            // Stripe Customer IDがない場合、作成
-            if (!stripeCustomerId) {
+            // ★★★ ここからがエラー修正の核心部分です ★★★
+            // 顧客IDが存在する場合、Stripe側で本当に有効か、削除済みでないかを確認します。
+            if (stripeCustomerId) {
+                try {
+                    const customer = await stripe.customers.retrieve(stripeCustomerId);
+                    // Stripeから取得した顧客情報が「削除済み」の場合、エラーを発生させて再作成フローに進ませる
+                    if (customer.deleted) {
+                        throw new Error('Stripe customer is deleted');
+                    }
+                    console.log(`[Subscribe API] 既存のStripe顧客ID (${stripeCustomerId}) は有効です。`);
+                } catch (error: any) {
+                    // 「顧客が存在しない」エラーまたは「削除済み」エラーの場合、新しい顧客を作成する
+                    console.warn(`[Subscribe API] 警告: 既存のStripe顧客ID (${stripeCustomerId}) が無効か削除済みでした。新しい顧客を再作成します。`);
+                    const newCustomer = await stripe.customers.create({ email, name: companyName || user.displayName, metadata: { firebaseUid } });
+                    stripeCustomerId = newCustomer.id;
+                    // Firestoreの顧客IDを新しいものに更新
+                    await userDocRef.update({ stripeCustomerId, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+                    console.log(`[Subscribe API] 新しいStripe顧客ID (${stripeCustomerId}) を作成し、Firestoreを更新しました。`);
+                }
+            } else {
+                // Stripe Customer IDがFirestoreにない場合、新規作成
                 const newCustomer = await stripe.customers.create({ email, name: companyName || user.displayName, metadata: { firebaseUid } });
                 stripeCustomerId = newCustomer.id;
-                // Firestoreを更新
-                await adminDb.collection('users').doc(firebaseUid).set({ stripeCustomerId, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                await userDocRef.set({ stripeCustomerId, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                 console.log(`[Subscribe API] 新規Stripe顧客ID (${stripeCustomerId}) を作成し、Firestoreを更新しました。`);
             }
+            // ★★★ ここまでがエラー修正の核心部分です ★★★
+            
             sessionMetadata.firebaseUid = firebaseUid;
             
-            // 【★修正点★】既存ユーザーが追加サービスに申し込む場合、rolesに追記
             const rolesToAdd: string[] = [];
             if (isAdverService && !existingRoles.includes('adver')) {
                 rolesToAdd.push('adver');
@@ -74,10 +96,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
             
             if (rolesToAdd.length > 0) {
-                 // arrayUnionで新しいロールのみを効率的に追記
-                 await adminDb.collection('users').doc(firebaseUid).update({
-                    roles: admin.firestore.FieldValue.arrayUnion(...rolesToAdd),
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                 await userDocRef.update({
+                     roles: admin.firestore.FieldValue.arrayUnion(...rolesToAdd),
+                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                  });
                  console.log(`[Subscribe API] 既存ユーザー ${firebaseUid} にロール [${rolesToAdd.join(', ')}] を追加しました。`);
             }
@@ -90,15 +111,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     return res.status(400).json({ error: '新規ユーザーの登録にはパスワードが必要です。' });
                 }
                 
-                // 1. 新規ユーザーをFirebase Authに登録
                 const authUser = await adminAuth.createUser({ email, password, displayName: companyName });
                 firebaseUid = authUser.uid;
 
-                // 2. Stripe Customerを作成
                 const newCustomer = await stripe.customers.create({ email, name: companyName, metadata: { firebaseUid } });
                 stripeCustomerId = newCustomer.id;
                 
-                // 3. 【新規ユーザーのロール設定】Firestoreに初期データと roles を書き込む
                 let initialRoles: string[] = [];
                 if (isAdverService) initialRoles.push('adver');
                 if (isRecruitService) initialRoles.push('recruit');
@@ -110,11 +128,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     address: address || '',
                     phoneNumber: phoneNumber || '',
                     stripeCustomerId: stripeCustomerId,
-                    // ★ roles を初期サービスタイプに基づいて設定
-                    roles: initialRoles.length > 0 ? initialRoles : admin.firestore.FieldValue.arrayUnion(), 
+                    roles: initialRoles, 
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    // statusはStripe Webhookで更新されるが、初期値を設定
-                    // recruitSubscriptionStatus: 'trialing' (Webhookが担当)
                 }, { merge: true });
                 
                 sessionMetadata = { 
@@ -122,7 +137,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     is_new_user: 'true', 
                     serviceType, 
                     firebaseUid,
-                    // companyName, address, phoneNumber などの追加情報をメタデータに含める
                     companyName: companyName,
                     address: address,
                     phoneNumber: phoneNumber,
@@ -133,9 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
         }
         
-        // Determine the correct dashboard URL
         if (isNewUser) {
-            // 新規登録成功後、ユーザーにダッシュボードへのアクセスを促すウェルカムページへリダイレクト
             successUrl = `${NEXT_PUBLIC_BASE_URL}/partner/welcome?serviceType=${serviceType}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password || '')}`;
         } else {
             successUrl = serviceType === 'recruit'
@@ -143,7 +155,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 : `${NEXT_PUBLIC_BASE_URL}/partner/dashboard`;
         }
 
-        // Stripe Checkout Sessionを作成し、決済へ誘導
         const session = await stripe.checkout.sessions.create({
             mode: 'subscription',
             payment_method_types: ['card'],
@@ -152,14 +163,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             success_url: successUrl,
             cancel_url: req.headers.referer || `${NEXT_PUBLIC_BASE_URL}/`,
             metadata: sessionMetadata,
-            // setup_future_usage: 'off_session', // 必要に応じて
         });
         
         return res.status(200).json({ sessionId: session.id, url: session.url });
 
     } catch (e: any) {
         console.error('[Subscribe API] エラー:', e);
-        // 新規ユーザー登録がAuthで成功し、Firestoreで失敗した場合、Authユーザーを削除するリカバリロジックを検討する必要があるが、ここでは省略
         return res.status(500).json({ error: e.message || 'サーバー内部エラー' });
     }
 }

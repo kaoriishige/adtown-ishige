@@ -3,11 +3,17 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { db, auth, storage } from '../../lib/firebase';
 import {
-  collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion
+  collection, query, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
+
+// グローバル変数の型を宣言
+declare const __app_id: string;
+
+// グローバル変数からアプリIDを取得
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // カテゴリデータ
 const categoryData = {
@@ -24,7 +30,7 @@ const categoryData = {
 };
 const mainCategories = Object.keys(categoryData);
 
-// 店舗紹介文のプレースホルダー
+// 店舗紹介文のテンプレート
 const descriptionPlaceholders: { [key: string]: string } = {
     '飲食関連': '【お店のこだわり】\n例：地元那須の新鮮な野菜をたっぷり使ったイタリアンです。\n\n【おすすめメニュー】\n例：とちぎ和牛のグリル、季節野菜のバーニャカウダ\n\n【席数】\n例：30席（カウンター10席、テーブル20席）\n\n【個室】\n例：あり（4名様用×2室）\n\n【禁煙・喫煙】\n例：全席禁煙\n\n【駐車場】\n例：あり（10台）\n\n【営業時間】\n例：\n[月～金]\n11:00～15:00 (L.O. 14:30)\n17:00～22:00 (L.O. 21:30)\n[土・日・祝]\n11:00～22:00 (L.O. 21:30)\n\n【定休日】\n例：毎週水曜日、第2火曜日',
     '美容室・理容室': '【得意なスタイル】\n例：ショートカット、透明感のあるカラーリングが得意です。\n\n【お店の雰囲気】\n例：白を基調とした落ち着いた空間で、リラックスした時間をお過ごしいただけます。\n\n【席数】\n例：4席\n\n【駐車場】\n例：あり（店舗前に2台）\n\n【営業時間】\n例：\n平日 10:00～20:00\n土日祝 9:00～19:00\n\n【定休日】\n例：毎週火曜日',
@@ -37,20 +43,15 @@ const StoreProfilePage = () => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-
-    // Form State
     const [storeId, setStoreId] = useState<string | null>(null);
     const [storeName, setStoreName] = useState('');
     const [address, setAddress] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
-
-    // カテゴリ State
     const [mainCategory, setMainCategory] = useState('');
     const [subCategory, setSubCategory] = useState('');
     const [otherMainCategory, setOtherMainCategory] = useState('');
     const [otherSubCategory, setOtherSubCategory] = useState('');
     const [subCategoryOptions, setSubCategoryOptions] = useState<string[]>([]);
-
     const [description, setDescription] = useState('');
     const [websiteUrl, setWebsiteUrl] = useState('');
     const [snsUrls, setSnsUrls] = useState(['', '', '']);
@@ -60,7 +61,6 @@ const StoreProfilePage = () => {
     const [galleryImageFiles, setGalleryImageFiles] = useState<File[]>([]);
     const [error, setError] = useState<string | null>(null);
     
-    // 説明文のプレースホルダー
     const descriptionPlaceholder = useMemo(() => {
         if (mainCategory.includes('美容') || mainCategory.includes('健康')) return descriptionPlaceholders['美容室・理容室'];
         if (subCategory.includes('整体') || subCategory.includes('整骨院')) return descriptionPlaceholders['整体・整骨院・鍼灸院'];
@@ -84,8 +84,8 @@ const StoreProfilePage = () => {
         if (!currentUser) return;
         setLoading(true);
         try {
-            const storesRef = collection(db, 'stores');
-            const q = query(storesRef, where("ownerId", "==", currentUser.uid));
+            const storesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'stores');
+            const q = query(storesRef);
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
@@ -105,9 +105,13 @@ const StoreProfilePage = () => {
                 setMainImageUrl(storeData.mainImageUrl || null);
                 setGalleryImageUrls(storeData.galleryImageUrls || []);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("店舗情報の取得に失敗:", err);
-            setError("店舗情報の読み込みに失敗しました。");
+            let errorMessage = "店舗情報の読み込みに失敗しました。";
+            if (err.code === 'permission-denied') {
+                errorMessage += " Firebaseのセキュリティルールを確認してください。";
+            }
+            setError(errorMessage);
         }
         setLoading(false);
     }, []);
@@ -127,23 +131,9 @@ const StoreProfilePage = () => {
     }, [mainCategory]);
 
 
-    const handleMainImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files[0]) {
-            setMainImageFile(event.target.files[0]);
-        }
-    };
-
-    const handleGalleryImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files) {
-            setGalleryImageFiles(prev => [...prev, ...Array.from(event.target.files!)]);
-        }
-    };
-    
-    const handleSnsUrlChange = (index: number, value: string) => {
-        const newSnsUrls = [...snsUrls];
-        newSnsUrls[index] = value;
-        setSnsUrls(newSnsUrls);
-    };
+    const handleMainImageChange = (event: React.ChangeEvent<HTMLInputElement>) => { if (event.target.files && event.target.files[0]) { setMainImageFile(event.target.files[0]); } };
+    const handleGalleryImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => { if (event.target.files) { setGalleryImageFiles(prev => [...prev, ...Array.from(event.target.files!)]); } };
+    const handleSnsUrlChange = (index: number, value: string) => { const newSnsUrls = [...snsUrls]; newSnsUrls[index] = value; setSnsUrls(newSnsUrls); };
     
     const handleDeleteImage = async (imageUrlToDelete: string, imageType: 'main' | 'gallery') => {
         if (!user || !storeId) {
@@ -185,87 +175,93 @@ const StoreProfilePage = () => {
     };
 
     const handleSaveProfile = async () => {
-        if (!user) return alert('ログインしていません。');
+        if (!user) {
+            console.error("Save failed: User is not logged in.");
+            return alert('ログインしていません。');
+        }
 
-        if (!mainCategory || (mainCategory !== 'その他' && !subCategory)) {
-            alert('カテゴリ（大分類・小分類）は必須項目です。');
-            return;
-        }
-        if (mainCategory === 'その他' && !otherMainCategory) {
-            alert('カテゴリ（大分類）で「その他」を選んだ場合は、内容を入力してください。');
-            return;
-        }
-        if (subCategory === 'その他' && !otherSubCategory) {
-            alert('カテゴリ（小分類）で「その他」を選んだ場合は、内容を入力してください。');
-            return;
-        }
+        console.log("--- 1. SAVE PROCESS STARTED ---");
+        console.log("User ID:", user.uid);
+        console.log("App ID:", appId);
+
+        if (!mainCategory || (mainCategory !== 'その他' && !subCategory)) { return alert('カテゴリ（大分類・小分類）は必須項目です。'); }
+        if (mainCategory === 'その他' && !otherMainCategory) { return alert('カテゴリ（大分類）で「その他」を選んだ場合は、内容を入力してください。'); }
+        if (subCategory === 'その他' && !otherSubCategory) { return alert('カテゴリ（小分類）で「その他」を選んだ場合は、内容を入力してください。'); }
 
         setIsSaving(true);
         setError(null);
 
         try {
-            let currentStoreId = storeId;
-            const finalSnsUrls = snsUrls.filter(url => url.trim() !== '');
+            const userStoresCollectionPath = `artifacts/${appId}/users/${user.uid}/stores`;
+            console.log("--- 2. Firestore Path ---");
+            console.log("Attempting to write to collection:", userStoresCollectionPath);
+            
+            const userStoresCollectionRef = collection(db, 'artifacts', appId, 'users', user.uid, 'stores');
 
-            const textData = {
-                storeName, address, phoneNumber,
-                mainCategory, subCategory,
-                otherMainCategory: mainCategory === 'その他' ? otherMainCategory : '',
-                otherSubCategory: subCategory === 'その他' ? otherSubCategory : '',
-                description, websiteUrl,
-                snsUrls: finalSnsUrls,
-                ownerId: user.uid,
-                updatedAt: serverTimestamp(),
-            };
+            let currentStoreId = storeId;
+            
+            const textData = { storeName, address, phoneNumber, mainCategory, subCategory, otherMainCategory: mainCategory === 'その他' ? otherMainCategory : '', otherSubCategory: subCategory === 'その他' ? otherSubCategory : '', description, websiteUrl, snsUrls: snsUrls.filter(url => url.trim() !== ''), ownerId: user.uid, updatedAt: serverTimestamp(), };
+            console.log("--- 3. Firestore Data ---");
+            console.log("Data to save:", textData);
 
             if (!currentStoreId) {
-                const docRef = await addDoc(collection(db, 'stores'), { 
-                    ...textData,
-                    status: 'pending', createdAt: serverTimestamp(),
-                    mainImageUrl: '', galleryImageUrls: []
-                });
+                console.log("Creating new document...");
+                const docRef = await addDoc(userStoresCollectionRef, { ...textData, status: 'pending', createdAt: serverTimestamp(), mainImageUrl: '', galleryImageUrls: [] });
                 currentStoreId = docRef.id;
                 setStoreId(currentStoreId);
+                console.log("SUCCESS: New document created with ID:", currentStoreId);
             } else {
-                await updateDoc(doc(db, 'stores', currentStoreId), textData);
+                console.log("Updating existing document:", currentStoreId);
+                const storeDocRefForUpdate = doc(userStoresCollectionRef, currentStoreId);
+                await updateDoc(storeDocRefForUpdate, textData);
+                console.log("SUCCESS: Document updated.");
             }
             
-            const storeDocRef = doc(db, 'stores', currentStoreId!);
+            const storeDocRef = doc(userStoresCollectionRef, currentStoreId!);
 
-            let updatedMainImageUrl = mainImageUrl;
             if (mainImageFile) {
                 const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
-                const fileRef = ref(storage, `stores/${currentStoreId}/${uniqueFileName}`);
+                const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
+                console.log("--- 4. Main Image Upload ---");
+                console.log("Uploading to Storage path:", storagePath);
+                const fileRef = ref(storage, storagePath);
                 const uploadTask = await uploadBytesResumable(fileRef, mainImageFile);
-                updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
+                const updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
+                await updateDoc(storeDocRef, { mainImageUrl: updatedMainImageUrl });
+                setMainImageUrl(updatedMainImageUrl);
+                console.log("SUCCESS: Main image uploaded.");
             }
             
-            const newGalleryImageUrls: string[] = [];
             if (galleryImageFiles.length > 0) {
+                console.log(`--- 5. Gallery Image Upload (${galleryImageFiles.length} files) ---`);
+                const newGalleryImageUrls: string[] = [];
                 for (const file of galleryImageFiles) {
                     const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
-                    const fileRef = ref(storage, `stores/${currentStoreId}/${uniqueFileName}`);
+                    const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
+                    console.log("Uploading to Storage path:", storagePath);
+                    const fileRef = ref(storage, storagePath);
                     const uploadTask = await uploadBytesResumable(fileRef, file);
                     const downloadURL = await getDownloadURL(uploadTask.ref);
                     newGalleryImageUrls.push(downloadURL);
                 }
+                await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(...newGalleryImageUrls) });
+                setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
+                console.log("SUCCESS: Gallery images uploaded.");
             }
             
-            await updateDoc(storeDocRef, {
-                mainImageUrl: updatedMainImageUrl,
-                ...(newGalleryImageUrls.length > 0 && { galleryImageUrls: arrayUnion(...newGalleryImageUrls) }),
-            });
-
-            if (mainImageFile) setMainImageUrl(updatedMainImageUrl);
-            if (newGalleryImageUrls.length > 0) setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
             setMainImageFile(null);
             setGalleryImageFiles([]);
 
+            console.log("--- 6. SAVE PROCESS COMPLETED ON CLIENT ---");
             alert('店舗情報を保存しました。');
 
         } catch (err: any) {
-            console.error("プロフィールの保存に失敗:", err);
-            setError(`保存に失敗しました: ${err.message}`);
+            console.error("!!! SAVE FAILED !!! An error occurred in handleSaveProfile:", err);
+            let errorMessage = `保存に失敗しました: ${err.message}`;
+            if (err.code === 'permission-denied' || (err.code && err.code.includes('storage/unauthorized'))) {
+                errorMessage += "\n\n【重要】これはFirebaseの権限エラーです。FirebaseコンソールでFirestoreとStorage両方のセキュリティルールが正しく設定されているか確認してください。";
+            }
+            setError(errorMessage);
         } finally {
             setIsSaving(false);
         }
@@ -276,23 +272,11 @@ const StoreProfilePage = () => {
     return (
         <div className="container mx-auto p-8 max-w-3xl">
             <h1 className="text-2xl font-bold mb-6">店舗プロフィールの登録・編集</h1>
-            {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded">エラー: {error}</p>}
+            {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded whitespace-pre-wrap">エラー: {error}</p>}
             <div className="space-y-6">
                 <div><label className="font-bold">店舗名 *</label><input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
                 <div><label className="font-bold">住所 *</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
-                {address && (
-                    <div className="mt-4">
-                        <iframe
-                            width="100%"
-                            height="300"
-                            style={{ border: 0 }}
-                            loading="lazy"
-                            allowFullScreen
-                            src={`https://maps.google.co.jp/maps?output=embed&q=${encodeURIComponent(address)}`}
-                        ></iframe>
-                    </div>
-                )}
-                
+                {address && ( <div className="mt-4"><iframe width="100%" height="300" style={{ border: 0 }} loading="lazy" allowFullScreen src={`https://maps.google.co.jp/maps?output=embed&q=${encodeURIComponent(address)}`}></iframe></div> )}
                 <div><label className="font-bold">電話番号 *</label><input type="text" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
@@ -302,9 +286,7 @@ const StoreProfilePage = () => {
                             <option value="">選択してください</option>
                             {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
-                        {mainCategory === 'その他' && (
-                            <input type="text" value={otherMainCategory} onChange={e => setOtherMainCategory(e.target.value)} placeholder="カテゴリ名を入力" className="w-full p-2 border rounded mt-2"/>
-                        )}
+                        {mainCategory === 'その他' && ( <input type="text" value={otherMainCategory} onChange={e => setOtherMainCategory(e.target.value)} placeholder="カテゴリ名を入力" className="w-full p-2 border rounded mt-2"/> )}
                     </div>
                     <div>
                         <label className="font-bold">カテゴリ（小分類）*</label>
@@ -312,45 +294,29 @@ const StoreProfilePage = () => {
                             <option value="">大分類を先に選択</option>
                             {subCategoryOptions.map(sub => <option key={sub} value={sub}>{sub}</option>)}
                         </select>
-                        {subCategory === 'その他' && (
-                            <input type="text" value={otherSubCategory} onChange={e => setOtherSubCategory(e.target.value)} placeholder="カテゴリ名を入力" className="w-full p-2 border rounded mt-2"/>
-                        )}
+                        {subCategory === 'その他' && ( <input type="text" value={otherSubCategory} onChange={e => setOtherSubCategory(e.target.value)} placeholder="カテゴリ名を入力" className="w-full p-2 border rounded mt-2"/> )}
                     </div>
                 </div>
                 
                 <div>
-                    <label className="font-bold">店舗紹介文・営業時間</label>
-                    <p className="text-sm text-gray-500 mt-1">営業時間や定休日もこちらにご記入ください。</p>
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded mt-1" rows={15} placeholder={descriptionPlaceholder}></textarea>
+                    <div className="flex justify-between items-center mb-1">
+                        <div>
+                            <label className="font-bold">店舗紹介文・営業時間</label>
+                            <p className="text-sm text-gray-500 mt-1">営業時間や定休日もこちらにご記入ください。</p>
+                        </div>
+                        <button type="button" onClick={() => setDescription(descriptionPlaceholder)} className="bg-blue-500 text-white text-sm font-bold py-2 px-4 rounded hover:bg-blue-600 transition-colors">テンプレートを貼り付け</button>
+                    </div>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded mt-1" rows={15} placeholder="カテゴリを選択後、「テンプレートを貼り付け」ボタンを押すと入力が簡単になります。"></textarea>
                 </div>
                 
-                {/* --- 画像関連 --- */}
                 <div className="space-y-2">
                     <label className="font-bold">トップ画像 (1枚)</label>
                     <p className="text-sm text-gray-500">推奨サイズ: 横1200px × 縦675px (16:9)</p>
                     <div className="p-2 border rounded min-h-[100px]">
                         {(mainImageUrl || mainImageFile) ? (
                             <div className="relative inline-block">
-                                <img 
-                                    src={mainImageFile ? URL.createObjectURL(mainImageFile) : mainImageUrl!} 
-                                    alt="トップ画像プレビュー" 
-                                    className="w-48 h-auto rounded"
-                                />
-                                <button 
-                                    type="button"
-                                    onClick={() => {
-                                        if (mainImageFile) {
-                                            setMainImageFile(null);
-                                            const input = document.getElementById('main-image-input') as HTMLInputElement;
-                                            if (input) input.value = '';
-                                        } else if (mainImageUrl) {
-                                            handleDeleteImage(mainImageUrl, 'main');
-                                        }
-                                    }}
-                                    className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -m-2"
-                                >
-                                    X
-                                </button>
+                                <img src={mainImageFile ? URL.createObjectURL(mainImageFile) : mainImageUrl!} alt="トップ画像プレビュー" className="w-48 h-auto rounded" />
+                                <button type="button" onClick={() => { if (mainImageFile) { setMainImageFile(null); const input = document.getElementById('main-image-input') as HTMLInputElement; if (input) input.value = ''; } else if (mainImageUrl) { handleDeleteImage(mainImageUrl, 'main'); } }} className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -m-2">X</button>
                             </div>
                         ) : ( <p className="text-gray-400">まだ画像はありません。</p> )}
                     </div>
@@ -362,41 +328,21 @@ const StoreProfilePage = () => {
                     <div className="p-2 border rounded min-h-[112px] flex flex-wrap gap-2">
                         {galleryImageUrls && galleryImageUrls.filter(url => url).map((url, index) => (
                             <div key={index} className="relative">
-                                <img 
-                                    src={url} 
-                                    alt={`ギャラリー画像 ${index + 1}`} 
-                                    className="w-24 h-24 object-cover rounded"
-                                    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
-                                />
-                                <button 
-                                    type="button"
-                                    onClick={() => handleDeleteImage(url, 'gallery')} 
-                                    className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                                >
-                                    X
-                                </button>
+                                <img src={url} alt={`ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }} />
+                                <button type="button" onClick={() => handleDeleteImage(url, 'gallery')} className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">X</button>
                             </div>
                         ))}
                         {galleryImageFiles.map((file, index) => (
                                <div key={index} className="relative">
                                     <img src={URL.createObjectURL(file)} alt={`新規ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded"/>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setGalleryImageFiles(galleryImageFiles.filter((_, i) => i !== index))}
-                                        className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                                    >
-                                        X
-                                    </button>
+                                    <button type="button" onClick={() => setGalleryImageFiles(galleryImageFiles.filter((_, i) => i !== index))} className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">X</button>
                                </div>
                         ))}
-                        {galleryImageUrls.filter(url => url).length === 0 && galleryImageFiles.length === 0 && (
-                               <p className="text-gray-400">まだ写真はありません。</p>
-                        )}
+                        {galleryImageUrls.filter(url => url).length === 0 && galleryImageFiles.length === 0 && (<p className="text-gray-400">まだ写真はありません。</p>)}
                     </div>
                     <input type="file" multiple onChange={handleGalleryImagesChange} accept="image/*" className="text-sm" />
                 </div>
                 
-                {/* --- SNS と 保存ボタン --- */}
                 <div><label className="font-bold">公式ウェブサイトURL</label><input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
                 <div><label className="font-bold">SNS URL 1</label><input type="url" value={snsUrls[0]} onChange={(e) => handleSnsUrlChange(0, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
                 <div><label className="font-bold">SNS URL 2</label><input type="url" value={snsUrls[1]} onChange={(e) => handleSnsUrlChange(1, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>

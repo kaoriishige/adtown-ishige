@@ -522,7 +522,7 @@ const RecruitPartnerPage: NextPage = () => {
 
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
-                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">アカウント情報を登録し、先行予約を完了してください。クレジットカード支払いは月額3,850円、請求書払いをお申込みの場合は、年額46,200円を一括前払い割引価格39,600円でご利用いただけます。</p></div>
+                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">すでに広告パートナーにお申込みの方は、こちらからは登録はできません。広告パートナーの管理画面からお申込みください。アカウント情報を登録し、先行予約を完了してください。クレジットカード支払いは月額3,850円、請求書払いをお申込みの場合は、年額46,200円を一括前払い割引価格39,600円でご利用いただけます。</p></div>
                         
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

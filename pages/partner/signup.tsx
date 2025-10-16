@@ -384,7 +384,8 @@ const PartnerSignupPage = () => {
                         </div>
                         <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
                         <p className="text-center text-gray-600 mb-8">
-                            全てのアドバンテージを手に入れるために、以下のフォームをご入力ください。
+                            全てのアドバンテージを手に入れるために、以下のフォームをご入力ください。すでに求人パートナーにお申込みの方は、こちらからは登録はできません。求人パートナーの管理画面からお申込みください。
+    　　　　　　　　　　　
                         </p>
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}> {/* Prevent form submission */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
