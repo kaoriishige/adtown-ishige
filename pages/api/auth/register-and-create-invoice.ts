@@ -68,7 +68,7 @@ const getOrCreateUserAndStripeCustomer = async (data: {
     if (customerId) {
         try {
             const customer = await stripe.customers.retrieve(customerId);
-            if ((customer as Stripe.Customer).deleted) {
+            if ((customer as any).deleted === true) {
                 console.warn(`Stripe顧客(${customerId})は削除済みのため再作成します。`);
                 customerId = null;
             }
