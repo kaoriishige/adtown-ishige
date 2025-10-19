@@ -1,11 +1,18 @@
-// next.config.js
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   images: {
     unoptimized: true,
   },
+  
+  // 💡 修正箇所: experimental設定をトップレベルに追加
+  experimental: {
+    // /stores ページの SSR/SSGでのエラーを回避するため、除外する
+    unstable_exclude: [
+      '/stores'
+    ],
+  },
+  
   webpack: (config, { isServer, webpack }) => {
     // クライアントサイドでのみ設定を適用
     if (!isServer) {
