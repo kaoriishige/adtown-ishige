@@ -1,7 +1,8 @@
 import { GetServerSideProps, NextPage } from 'next';
-import { useRouter } from 'next/router'; // ▼ 1. useRouter をインポート
+import { useRouter } from 'next/router'; 
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import React from 'react'; // Reactを明示的にインポート
 
 // ページのPropsの型を定義
 interface AppProps {
@@ -16,7 +17,7 @@ interface AppProps {
 
 // ページコンポーネント
 const AppPage: NextPage<AppProps> = ({ app }) => {
-  const router = useRouter(); // ▼ 2. routerを初期化
+  const router = useRouter(); // routerを初期化
 
   // データが見つからない場合の表示
   if (!app) {
@@ -24,10 +25,10 @@ const AppPage: NextPage<AppProps> = ({ app }) => {
   }
 
   return (
-    <div style={ padding: '40px', fontFamily: 'sans-serif' }>
+    <div style={{ padding: '40px', fontFamily: 'sans-serif' }}>
       
-      {/* ▼ 3. 「戻るボタン」をここに追加 */}
-      <div style={ marginBottom: '40px' }>
+      {/* 戻るボタン */}
+      <div style={{ marginBottom: '40px' }}>
         <button
           onClick={() => router.back()}
           style={{
@@ -43,9 +44,8 @@ const AppPage: NextPage<AppProps> = ({ app }) => {
           &larr; アプリのジャンル選択に戻る
         </button>
       </div>
-      {/* ▲ ここまで */}
 
-      <div style={ textAlign: 'center' }>
+      <div style={{ textAlign: 'center' }}>
         <h1>{app.name}</h1>
         <p>ジャンル: {app.genre}</p>
         <a 
@@ -66,7 +66,7 @@ const AppPage: NextPage<AppProps> = ({ app }) => {
         >
           このアプリを使ってみる
         </a>
-        <p style={ marginTop: '20px', color: '#888' }>
+        <p style={{ marginTop: '20px', color: '#888' }}>
           作成日: {new Date(app.createdAt).toLocaleDateString()}
         </p>
       </div>
@@ -76,10 +76,15 @@ const AppPage: NextPage<AppProps> = ({ app }) => {
 
 // サーバーサイドでデータを取得する処理 (変更なし)
 export const getServerSideProps: GetServerSideProps = async (context) => {
+  // グローバル変数の型を宣言 (Next.js環境では通常不要ですが、VS Codeのエラーを避けるため)
+  // declare const __app_id: string;
+
   const { appId } = context.params!;
+  // const appId = (context.params?.appId as string) || ''; // 実際はappIdが必須
 
   try {
-    const docRef = doc(db, 'apps', appId as string);
+    // データベースパスの定義 (仮に 'apps' コレクションから直接取得すると仮定)
+    const docRef = doc(db, 'apps', appId as string); 
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -90,6 +95,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         name: data.name || '',
         genre: data.genre || '',
         url: data.url || '',
+        // Timestampオブジェクトの場合はtoDate().toISOString()に変換
         createdAt: data.createdAt instanceof Timestamp 
           ? data.createdAt.toDate().toISOString() 
           : new Date().toISOString(),

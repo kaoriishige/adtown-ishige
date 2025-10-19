@@ -2,9 +2,10 @@ import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-import { adminAuth, adminDb } from '@/lib/firebase-admin'; // ★ここを修正しました
+import { adminAuth, adminDb } from '../../lib/firebase-admin'; // ★相対パス修正
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { FiUsers, FiHome, FiTrendingUp, FiHeart, FiArrowUp } from 'react-icons/fi';
+import React from 'react';
 
 // --- 型定義 ---
 interface StatCardProps {
@@ -63,7 +64,8 @@ const NewUsersChart = ({ data }: { data: any[] }) => (
     <div className="bg-white p-6 rounded-lg shadow-md">
         <h3 className="font-bold text-gray-700 mb-4">新規ユーザー登録数の推移（今週）</h3>
         <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data} margin={ top: 5, right: 20, left: -10, bottom: 5 }>
+            {/* 💡 修正箇所: margin={...} を margin={{...}} に修正 */}
+            <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" />
                 <YAxis />
@@ -173,23 +175,29 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             return { redirect: { destination: '/admin/login', permanent: false } };
         }
 
+        // --- ダミーデータ生成（本番環境ではFirestoreから取得） ---
         const dashboardData: DashboardData = {
             operatorName: userDoc.data()?.name || '管理者',
             stats: [
-                { iconName: 'FiUsers', title: '総ユーザー数', value: '0 人', change: '前日比 +0人', subText: '有料: 0 / 無料: 0', iconBgColor: 'bg-blue-100' },
-                { iconName: 'FiHome', title: '総加盟店数', value: '0 店舗', change: '前週比 +0店舗', subText: '飲食: 0 / 物販: 0 / 他: 0', iconBgColor: 'bg-orange-100' },
-                { iconName: 'FiTrendingUp', title: '今月のポイント流通総額', value: '¥0', change: '先月同期間比 +0%', iconBgColor: 'bg-green-100' },
-                { iconName: 'FiHeart', title: 'オンライン子ども食堂 支援総額', value: '¥0', subText: '0食分 / 0人から', iconBgColor: 'bg-pink-100' },
+                { iconName: 'FiUsers', title: '総ユーザー数', value: '1,234 人', change: '前日比 +12人', subText: '有料: 50 / 無料: 1184', iconBgColor: 'bg-blue-100' },
+                { iconName: 'FiHome', title: '総加盟店数', value: '45 店舗', change: '前週比 +2店舗', subText: '飲食: 20 / 物販: 15 / 他: 10', iconBgColor: 'bg-orange-100' },
+                { iconName: 'FiTrendingUp', title: '今月のポイント流通総額', value: '¥3,450,000', change: '先月同期間比 +8.5%', iconBgColor: 'bg-green-100' },
+                { iconName: 'FiHeart', title: 'オンライン子ども食堂 支援総額', value: '¥120,000', subText: '120食分 / 50人から', iconBgColor: 'bg-pink-100' },
             ],
             weeklyNewUsers: [
-                { day: '月', referral: 0, normal: 0 }, { day: '火', referral: 0, normal: 0 }, { day: '水', referral: 0, normal: 0 },
-                { day: '木', referral: 0, normal: 0 }, { day: '金', referral: 0, normal: 0 }, { day: '土', referral: 0, normal: 0 }, { day: '日', referral: 0, normal: 0 },
+                { day: '月', referral: 5, normal: 10 }, { day: '火', referral: 8, normal: 15 }, { day: '水', referral: 12, normal: 20 },
+                { day: '木', referral: 6, normal: 18 }, { day: '金', referral: 15, normal: 25 }, { day: '土', referral: 20, normal: 30 }, { day: '日', referral: 18, normal: 22 },
             ],
-            popularStores: [],
+            popularStores: [
+                { name: 'なっぴーベーカリー', amount: 550000, percentage: 100 },
+                { name: '那須まるごと直売所', amount: 480000, percentage: 87 },
+                { name: 'チーズ工房のカフェ', amount: 320000, percentage: 58 },
+                { name: '御用邸チーズケーキ', amount: 250000, percentage: 45 },
+            ],
             actionItems: [
-                { id: '1', text: '新規加盟店の承認待ち', count: 0, link: '/admin/review-approval', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800', buttonColor: 'bg-yellow-500 hover:bg-yellow-600' },
-                { id: '2', text: 'ユーザー作成クエストの承認待ち', count: 0, link: '/admin/quest-review', bgColor: 'bg-blue-100', textColor: 'text-blue-800', buttonColor: 'bg-blue-500 hover:bg-blue-600' },
-                { id: '3', text: 'ユーザーからの問い合わせ', count: 0, link: '/admin/inquiry-list', bgColor: 'bg-gray-200', textColor: 'text-gray-800', buttonColor: 'bg-gray-600 hover:bg-gray-700' },
+                { id: '1', text: '新規加盟店の承認待ち', count: 3, link: '/admin/review-approval', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800', buttonColor: 'bg-yellow-500 hover:bg-yellow-600' },
+                { id: '2', text: 'ユーザー作成クエストの承認待ち', count: 5, link: '/admin/quest-review', bgColor: 'bg-blue-100', textColor: 'text-blue-800', buttonColor: 'bg-blue-500 hover:bg-blue-600' },
+                { id: '3', text: 'ユーザーからの問い合わせ', count: 12, link: '/admin/inquiry-list', bgColor: 'bg-gray-200', textColor: 'text-gray-800', buttonColor: 'bg-gray-600 hover:bg-gray-700' },
             ],
         };
 

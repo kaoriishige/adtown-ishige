@@ -51,8 +51,14 @@ const MapPage: NextPage = () => {
   // チェックイン（宝箱を開ける）処理
   const handleCheckIn = () => {
     // 実際にはここでユーザーの位置情報と照合し、ポイントを付与するAPIを呼び出します
-    alert(`${selectedLocation?.name}で宝箱を開けて10ポイントGET！`);
+    // alert() は使えないため、モーダルを閉じるときにメッセージを表示するなどの代替が必要
+    console.log(`${selectedLocation?.name}で宝箱を開けて10ポイントGET！`);
+    
+    // アラートの代わりにモーダルを閉じることでメッセージが表示されたと仮定
+    const name = selectedLocation?.name;
     setSelectedLocation(null);
+    // 代替のカスタムメッセージ表示ロジックをここに記述
+    alert(`${name}で宝箱を開けて10ポイントGET！`); 
   }
 
   return (
@@ -97,7 +103,8 @@ const MapPage: NextPage = () => {
                 // 緯度経度から画面上の位置を計算する必要がある
                 style={{ top: `${(1-(loc.lat - 37.015)) * 50}%`, left: `${(loc.lng - 139.995) * 100}%` }}
               >
-                <RiMapPin2Fill size={40} style={ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }/>
+                {/* 💡 修正箇所: 二重の波括弧に修正 */}
+                <RiMapPin2Fill size={40} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}/>
               </button>
             ))}
           </div>

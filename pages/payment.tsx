@@ -3,9 +3,10 @@ import Head from 'next/head';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import React from 'react'; // Reactをインポート
+import React from 'react';
 
 // QrScanner を dynamic import で SSR 無効化
+// ssr: false でクライアント側でのみレンダリング
 const QrScanner: any = dynamic(() => import('react-qr-scanner'), { ssr: false });
 
 const PaymentPage: NextPage = () => {
@@ -16,13 +17,13 @@ const PaymentPage: NextPage = () => {
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // ▼▼▼ 修正箇所 ▼▼▼
   // handleScanの引数の型を修正し、処理を簡潔にしました
   const handleScan = async (scannedData: string | null) => {
     if (scannedData) {
       setStoreId(scannedData);
 
       try {
+        // APIエンドポイント: /api/stores/[storeId] から店舗情報を取得
         const res = await fetch(`/api/stores/${scannedData}`);
         if (!res.ok) throw new Error('店舗情報の取得に失敗しました。');
         const data = await res.json();
@@ -34,7 +35,6 @@ const PaymentPage: NextPage = () => {
       }
     }
   };
-  // ▲▲▲ 修正ここまで ▲▲▲
 
   const handleError = (err: any) => {
     console.error(err);
@@ -70,6 +70,7 @@ const PaymentPage: NextPage = () => {
     }
   };
 
+  // 支払い完了画面
   if (paymentStatus === 'success') {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-center p-4">
@@ -87,6 +88,7 @@ const PaymentPage: NextPage = () => {
     );
   }
 
+  // スキャン/入力画面
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
@@ -99,12 +101,11 @@ const PaymentPage: NextPage = () => {
           <div>
             <p className="text-center text-gray-600 mb-4">お店のQRコードをスキャンしてください</p>
             <div className="border-4 border-gray-300 rounded-lg overflow-hidden w-full">
-              {/* ▼▼▼ 修正箇所 ▼▼▼ */}
-              {/* QrScannerのpropsを調整しました */}
+              {/* ▼▼▼ 修正箇所: 二重の波括弧に修正済み ▼▼▼ */}
               <QrScanner
                 onScan={handleScan}
                 onError={handleError}
-                style={ width: '100%' }
+                style={{ width: '100%' }} // 💡 修正済み
                 constraints={{
                   audio: false,
                   video: { facingMode: 'environment' },
