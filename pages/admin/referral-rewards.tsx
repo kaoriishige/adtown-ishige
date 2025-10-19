@@ -72,7 +72,7 @@ const ReferralRewardsPage: NextPage<ReferralRewardsPageProps> = ({ rewards }) =>
     return (
         <div>
             <Head>
-                <title>紹介報酬一覧</title>
+                <title>{"紹介報酬一覧"}</title>
             </Head>
             <main>
                 <h1>紹介報酬一覧</h1>

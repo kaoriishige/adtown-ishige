@@ -56,7 +56,7 @@ const RewardsPage: NextPage<RewardsPageProps> = ({ summaries }) => {
     return (
         <div>
             <Head>
-                <title>月別報酬サマリー</title>
+                <title>{"月別報酬サマリー"}</title>
             </Head>
             <main>
                 <h1>月別報酬サマリー</h1>

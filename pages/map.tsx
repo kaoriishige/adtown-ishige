@@ -58,7 +58,7 @@ const MapPage: NextPage = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Head>
-        <title>どこでもお宝さがしマップ</title>
+        <title>{"どこでもお宝さがしマップ"}</title>
       </Head>
 
       {/* --- ヘッダー --- */}
@@ -97,7 +97,7 @@ const MapPage: NextPage = () => {
                 // 緯度経度から画面上の位置を計算する必要がある
                 style={{ top: `${(1-(loc.lat - 37.015)) * 50}%`, left: `${(loc.lng - 139.995) * 100}%` }}
               >
-                <RiMapPin2Fill size={40} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+                <RiMapPin2Fill size={40} style={ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }/>
               </button>
             ))}
           </div>

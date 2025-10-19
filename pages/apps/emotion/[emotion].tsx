@@ -31,20 +31,20 @@ export default function EmotionFilteredAppsPage() {
   }, [emotion])
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '720px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>
+    <div style={ padding: '2rem', maxWidth: '720px', margin: '0 auto' }>
+      <h1 style={ fontSize: '24px', fontWeight: 'bold' }>
         「{emotion}」に合うアプリ一覧
       </h1>
       {apps.length === 0 ? (
         <p>該当するアプリが見つかりませんでした。</p>
       ) : (
-        <ul style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <ul style={ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }>
           {apps.map((app) => (
-            <li key={app.id} style={{ border: '1px solid #ccc', borderRadius: '6px', padding: '1rem' }}>
+            <li key={app.id} style={ border: '1px solid #ccc', borderRadius: '6px', padding: '1rem' }>
               <Link href={`/apps/${app.id}`} legacyBehavior>
-                <a style={{ color: '#0070f3', fontWeight: 'bold' }}>{app.name}</a>
+                <a style={ color: '#0070f3', fontWeight: 'bold' }>{app.name}</a>
               </Link>
-              <p style={{ fontSize: '14px', color: '#666' }}>{app.description}</p>
+              <p style={ fontSize: '14px', color: '#666' }>{app.description}</p>
             </li>
           ))}
         </ul>

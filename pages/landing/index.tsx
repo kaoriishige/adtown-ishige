@@ -6,7 +6,7 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <title>みんなの那須アプリ｜予告ランディング</title>
+        <title>{"みんなの那須アプリ｜予告ランディング"}</title>
       </Head>
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 min-h-screen text-white text-center px-6 py-12">
         {/* ファーストビュー */}

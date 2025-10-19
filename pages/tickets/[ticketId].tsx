@@ -40,7 +40,7 @@ const TicketDetailPage: NextPage<TicketDetailPageProps> = ({ deal }) => {
     return (
         <div className="min-h-screen bg-gray-50">
             <Head>
-                <title>チケット詳細: {deal.title}</title>
+                <title>{チケット詳細: {deal.title}}</title>
             </Head>
             <div className="max-w-md mx-auto p-4 pt-10">
                 <button onClick={() => router.back()} className="mb-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg text-sm">

@@ -81,7 +81,7 @@ const SubmitDealPage: NextPage = () => {
     <>
       {/* ▼▼▼ スタイル定義を追加 ▼▼▼ */}
       <Head>
-        <title>フードロス情報の登録</title>
+        <title>{"フードロス情報の登録"}</title>
         <style>{`
           .input-style {
             appearance: none;

@@ -14,7 +14,7 @@ const AdminPage: NextPage = () => {
     return (
         <div className="p-5 my-10 min-h-screen bg-gray-50">
             <Head>
-                <title>管理メニュー</title>
+                <title>{"管理メニュー"}</title>
             </Head>
             <h1 className="text-4xl font-extrabold mb-10 text-center text-gray-800">管理メニュー</h1>
 

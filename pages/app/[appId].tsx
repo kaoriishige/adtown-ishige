@@ -24,10 +24,10 @@ const AppPage: NextPage<AppProps> = ({ app }) => {
   }
 
   return (
-    <div style={{ padding: '40px', fontFamily: 'sans-serif' }}>
+    <div style={ padding: '40px', fontFamily: 'sans-serif' }>
       
       {/* ▼ 3. 「戻るボタン」をここに追加 */}
-      <div style={{ marginBottom: '40px' }}>
+      <div style={ marginBottom: '40px' }>
         <button
           onClick={() => router.back()}
           style={{
@@ -45,7 +45,7 @@ const AppPage: NextPage<AppProps> = ({ app }) => {
       </div>
       {/* ▲ ここまで */}
 
-      <div style={{ textAlign: 'center' }}>
+      <div style={ textAlign: 'center' }>
         <h1>{app.name}</h1>
         <p>ジャンル: {app.genre}</p>
         <a 
@@ -66,7 +66,7 @@ const AppPage: NextPage<AppProps> = ({ app }) => {
         >
           このアプリを使ってみる
         </a>
-        <p style={{ marginTop: '20px', color: '#888' }}>
+        <p style={ marginTop: '20px', color: '#888' }>
           作成日: {new Date(app.createdAt).toLocaleDateString()}
         </p>
       </div>

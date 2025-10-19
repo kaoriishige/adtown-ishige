@@ -10,7 +10,7 @@ const TrustAndSafetyPage: NextPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>AI審査基準と信頼性の証明</title>
+        <title>{"AI審査基準と信頼性の証明"}</title>
       </Head>
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

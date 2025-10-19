@@ -131,7 +131,7 @@ const FoodLossPage: NextPage<FoodLossPageProps> = ({ initialDeals }) => {
   return (
     <>
       <Head>
-        <title>フードロス情報の登録＆管理</title>
+        <title>{"フードロス情報の登録＆管理"}</title>
       </Head>
       <div className="p-5 max-w-4xl mx-auto">
         <Link href="/partner/dashboard" className="text-blue-500 hover:underline">

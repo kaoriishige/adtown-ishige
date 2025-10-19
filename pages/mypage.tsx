@@ -45,7 +45,7 @@ const MyPage: NextPage<MyPageProps> = ({ userName, email }) => {
     return (
         <div>
             <Head>
-                <title>マイページ</title>
+                <title>{"マイページ"}</title>
             </Head>
             <main>
                 <h1>マイページ</h1>

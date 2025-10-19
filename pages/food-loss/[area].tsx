@@ -36,7 +36,7 @@ const FoodLossPage: NextPage<FoodLossPageProps> = ({ area, deals, error }) => {
   return (
     <>
       <Head>
-        <title>フードロス情報 - {areaName}</title>
+        <title>{フードロス情報 - {areaName}}</title>
       </Head>
       <div className="min-h-screen bg-gray-50 p-4 md:p-8">
         <header className="text-center mb-8">

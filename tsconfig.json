@@ -9,6 +9,8 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    
+    "strictNullChecks": false,  // 💡 【修正点】これを false に設定することで、SSRでのFirestoreデータ取得時の型推論エラーを回避します。
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,

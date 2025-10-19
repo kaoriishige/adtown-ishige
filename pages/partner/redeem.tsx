@@ -102,7 +102,7 @@ const RedeemPage: NextPage = () => {
     return (
         <div className="min-h-screen bg-gray-900 text-white">
             <Head>
-                <title>QRコード読み取り - パートナー</title>
+                <title>{"QRコード読み取り - パートナー"}</title>
             </Head>
 
             <header className="bg-gray-800 shadow-md">

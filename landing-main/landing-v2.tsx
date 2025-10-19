@@ -5,7 +5,7 @@ export default function LandingPage() {
   return (
     <div className="bg-white min-h-screen text-gray-800">
       <Head>
-        <title>みんなの那須アプリ</title>
+        <title>{"みんなの那須アプリ"}</title>
       </Head>
       <section className="bg-gradient-to-r from-pink-500 to-yellow-500 text-white py-20 px-6 text-center">
         <h1 className="text-5xl font-bold mb-4">みんなの那須アプリ</h1>

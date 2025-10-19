@@ -38,7 +38,7 @@ interface EditorPageProps {
 // --- プレビュー用コンポーネント ---
 const LandingPreview: React.FC<{ data: LandingData }> = ({ data }) => {
   return (
-    <div className="bg-[#fefcfb] text-gray-700 scale-75 origin-top-left" style={{ minWidth: '133.33%' }}>
+    <div className="bg-[#fefcfb] text-gray-700 scale-75 origin-top-left" style={ minWidth: '133.33%' }>
     	  <header className="bg-white border-b">
           <div className="container mx-auto px-6 pt-16 pb-12 md:pt-24 md:pb-20 text-center">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
@@ -191,7 +191,7 @@ const LandingEditorPage: NextPage<EditorPageProps> = ({ initialContent }) => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Head><title>ランディングページ編集</title></Head>
+      <Head><title>{"ランディングページ編集"}</title></Head>
       <div className="w-1/2 p-6 bg-white border-r overflow-y-auto">
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-white py-4 border-b z-20">
           <h1 className="text-2xl font-bold text-gray-800">ランディングページ編集</h1>

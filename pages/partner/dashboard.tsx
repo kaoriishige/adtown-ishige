@@ -154,7 +154,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>広告パートナー ダッシュボード</title>
+        <title>{"広告パートナー ダッシュボード"}</title>
       </Head>
 
       {/* ヘッダー */}

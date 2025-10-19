@@ -87,7 +87,7 @@ const TreePage: NextPage = () => {
 
     return (
         <div className="min-h-screen bg-green-50">
-            <Head><title>なっぴーのなる木</title></Head>
+            <Head><title>{"なっぴーのなる木"}</title></Head>
             <div className="max-w-md mx-auto p-4 pt-6">
                 <Link href="/mypage" className="mb-4 inline-flex items-center text-gray-600 hover:text-gray-900 font-bold">
                     <RiArrowLeftLine className="mr-2" />

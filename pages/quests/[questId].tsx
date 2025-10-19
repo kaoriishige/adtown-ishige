@@ -27,7 +27,7 @@ const QuestDetailPage: NextPage<QuestDetailPageProps> = ({ quest }) => {
   return (
     <div>
       <Head>
-        <title>{quest.title} - クエスト詳細</title>
+        <title>{{quest.title} - クエスト詳細}</title>
       </Head>
       <main className="max-w-xl mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4">{quest.title}</h1>

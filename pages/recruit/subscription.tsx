@@ -33,7 +33,7 @@ const SubscriptionPage: NextPage<SubscriptionProps> = ({ user, subscription }) =
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <Head>
-        <title>ご契約情報</title>
+        <title>{"ご契約情報"}</title>
       </Head>
       <div className="max-w-2xl mx-auto bg-white shadow-md rounded-lg p-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-4">ご契約情報</h1>

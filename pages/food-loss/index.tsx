@@ -16,7 +16,7 @@ const FoodLossTopPage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>フードロス情報 - エリア選択</title>
+        <title>{"フードロス情報 - エリア選択"}</title>
       </Head>
       <div className="flex flex-col items-center justify-center min-h-screen bg-green-50 p-4">
         <header className="text-center mb-10">

@@ -103,7 +103,7 @@ const LoginPage: NextPage = () => {
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
             <Head>
-                <title>ログイン - みんなの那須アプリ</title>
+                <title>{"ログイン - みんなの那須アプリ"}</title>
             </Head>
             <div className="w-full max-w-md">
                 <div className="bg-white p-8 rounded-lg shadow-md">

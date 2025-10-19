@@ -90,7 +90,7 @@ const PaymentPage: NextPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>ポイントで支払う</title>
+        <title>{"ポイントで支払う"}</title>
       </Head>
       <div className="max-w-md mx-auto p-4 pt-10">
         <h1 className="text-3xl font-bold text-center mb-6">ポイントで支払う</h1>
@@ -104,7 +104,7 @@ const PaymentPage: NextPage = () => {
               <QrScanner
                 onScan={handleScan}
                 onError={handleError}
-                style={{ width: '100%' }}
+                style={ width: '100%' }
                 constraints={{
                   audio: false,
                   video: { facingMode: 'environment' },

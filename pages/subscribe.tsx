@@ -59,7 +59,7 @@ const SubscribePage = () => {
   return (
     <>
       <Head>
-        <title>有料プランにアップグレード</title>
+        <title>{"有料プランにアップグレード"}</title>
       </Head>
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="w-full max-w-sm p-8 space-y-6 bg-white rounded-2xl shadow-lg text-center">

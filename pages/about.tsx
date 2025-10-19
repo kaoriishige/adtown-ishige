@@ -80,13 +80,13 @@ const AboutPage: NextPage<AboutPageProps> = ({ data }) => {
           backgroundPosition: 'center'
         }}
       >
-        <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}>
+        <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4" style={ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }>
           {data.heroHeadline.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
         </h1>
-        <p className="text-lg md:text-2xl mb-4" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7)' }}>
+        <p className="text-lg md:text-2xl mb-4" style={ textShadow: '1px 1px 2px rgba(0,0,0,0.7)' }>
           {data.heroSubheadline.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
         </p>
-        <p className="text-xl md:text-2xl mt-4 font-bold text-yellow-300" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+        <p className="text-xl md:text-2xl mt-4 font-bold text-yellow-300" style={ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }>
           {data.heroCampaignText.split('\n').map((line, i) => <span key={i} className="block">{line}</span>)}
         </p>
 

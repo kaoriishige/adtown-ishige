@@ -48,7 +48,7 @@ const NewReviewPage: NextPage = () => {
     
     return (
         <div className="min-h-screen bg-gray-50">
-            <Head><title>思い出を投稿する</title></Head>
+            <Head><title>{"思い出を投稿する"}</title></Head>
             <div className="max-w-xl mx-auto p-4 pt-10">
                 <h1 className="text-3xl font-bold text-center mb-2">思い出を投稿</h1>
                 <p className="text-center text-gray-600 mb-8">{storeInfo.name}での体験をシェアしよう！</p>

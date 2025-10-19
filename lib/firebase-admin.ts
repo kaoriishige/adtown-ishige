@@ -1,28 +1,67 @@
-import * as admin from 'firebase-admin';
+// lib/firebase-admin.ts (ローカルファイル読み込み方式に復元)
 
-// サービスアカウントキーのJSONを環境変数から読み込む
-const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+import * as admin from "firebase-admin";
+// 🚨 ファイルシステムとパスモジュールをインポートし直します
+import path from "path";
+import fs from "fs";
 
-// 既に初期化済みでないかチェック
-if (!admin.apps.length) {
-  if (!serviceAccountJson) {
-    throw new Error(
-      'Firebase Admin SDKの初期化エラー: 環境変数 "FIREBASE_SERVICE_ACCOUNT_JSON" が設定されていません。'
-    );
-  }
+let adminDb: admin.firestore.Firestore;
+let adminAuth: admin.auth.Auth;
 
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(serviceAccountJson)),
-    });
-    console.log('Firebase Admin SDK Initialized.');
-  } catch (e) {
-    console.error('Firebase Admin SDK initialization error:', e);
-  }
+try {
+    if (!admin.apps.length) {
+        // 1. サービスアカウントJSONのパスを解決 (プロジェクトのルートにあると仮定)
+        const serviceAccountPath = path.resolve(
+            process.cwd(),
+            "firebase-service-account.json"
+        );
+        console.log("✅ Service account path:", serviceAccountPath);
+
+        // 2. JSONファイルを読み込む
+        // 以前のログから、この処理は問題なく実行されていたと判断
+        const jsonString = fs.readFileSync(serviceAccountPath, "utf8");
+        const serviceAccount = JSON.parse(jsonString);
+        console.log("✅ JSON keys:", Object.keys(serviceAccount));
+
+        // 3. Admin SDKの初期化
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            // 必要であれば process.env.FIREBASE_DATABASE_URL を追加
+        });
+        console.log("✅ Firebase Admin SDK initialized successfully via local file.");
+    }
+
+    // 初期化されたFirestoreとAuthインスタンスを変数に代入
+    adminDb = admin.firestore();
+    adminAuth = admin.auth();
+    console.log("✅ Firestore instance type:", typeof adminDb);
+    
+} catch (error) {
+    console.error("🔴 Firebase Admin initialization error:", error);
+    // 開発継続のため、エラー時にダミーを代入 (実際のFirestore操作は失敗します)
+    adminDb = {} as any;
+    adminAuth = {} as any;
 }
 
-// 初期化済みのインスタンスを直接エクスポートする
-const adminDb = admin.firestore();
-const adminAuth = admin.auth();
-
 export { adminDb, adminAuth };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

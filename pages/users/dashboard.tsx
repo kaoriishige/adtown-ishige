@@ -48,7 +48,7 @@ export default function UserDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <Head>
-        <title>マイダッシュボード｜AI求人マッチング</title>
+        <title>{"マイダッシュボード｜AI求人マッチング"}</title>
       </Head>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">

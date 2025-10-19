@@ -58,7 +58,7 @@ export default function EditStorePage({ id, storeData }: { id: string; storeData
   return (
     <>
       <Head>
-        <title>店舗情報編集</title>
+        <title>{"店舗情報編集"}</title>
       </Head>
       <main className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">店舗情報を編集</h1>

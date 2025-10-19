@@ -101,7 +101,7 @@ const GenrePage: NextPage = () => {
   return (
     <div className="bg-blue-50 min-h-screen">
       <Head>
-        <title>{pageTitle}</title>
+        <title>{"pageTitle"}</title>
       </Head>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="mb-8">

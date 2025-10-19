@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { NextPage } from 'next';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { db, auth, storage } from '../../lib/firebase';
 import { 
-  collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, doc, Timestamp
+  collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, doc, Timestamp, deleteDoc
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
+import Head from 'next/head';
+import { RiArrowLeftLine } from 'react-icons/ri';
+
+// グローバル変数の型を宣言
+declare const __app_id: string;
+
+// グローバル変数からアプリIDを取得
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- 型定義 ---
 interface Store {
@@ -46,6 +55,7 @@ const dealPlaceholders: { [key: string]: { [key: string]: string } } = {
 
 // --- ページコンポーネント ---
 const PartnerDealsPage: NextPage = () => {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [store, setStore] = useState<Store | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -75,19 +85,21 @@ const PartnerDealsPage: NextPage = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setLoading(true);
-      setUser(currentUser);
-      if (!currentUser) {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
         setLoading(false);
+        router.push('/partner/login');
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   const fetchStoreAndDeals = useCallback(async (currentUser: User) => {
     try {
       setError(null);
-      const storesRef = collection(db, 'stores');
-      const storeQuery = query(storesRef, where("ownerId", "==", currentUser.uid));
+      const storesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'stores');
+      const storeQuery = query(storesRef);
       const storeSnapshot = await getDocs(storeQuery);
 
       if (storeSnapshot.empty) {
@@ -100,8 +112,8 @@ const PartnerDealsPage: NextPage = () => {
       const fetchedStore = { id: storeDoc.id, ...storeDoc.data() } as Store;
       setStore(fetchedStore);
 
-      const dealsRef = collection(db, 'storeDeals');
-      const dealsQuery = query(dealsRef, where("storeId", "==", fetchedStore.id), orderBy("createdAt", "desc"));
+      const dealsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'stores', fetchedStore.id, 'deals');
+      const dealsQuery = query(dealsRef, orderBy("createdAt", "desc"));
       const dealsSnapshot = await getDocs(dealsQuery);
 
       const dealsData = dealsSnapshot.docs.map(doc => {
@@ -112,12 +124,12 @@ const PartnerDealsPage: NextPage = () => {
           title: data.title,
           description: data.description,
           imageUrl: data.imageUrl,
-          createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+          createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
         };
       });
       setDeals(dealsData);
     } catch (err) {
-      console.error(err);
+      console.error("データ取得エラー:", err);
       setError("データの読み込みに失敗しました。");
     } finally {
       setLoading(false);
@@ -150,9 +162,8 @@ const PartnerDealsPage: NextPage = () => {
       if (selectedFile) {
         setUploadProgress(0);
         const uniqueFileName = `${uuidv4()}_${selectedFile.name}`;
-        const fileRef = ref(storage, `deals/${store.id}/${uniqueFileName}`);
-        const metadata = { customMetadata: { ownerId: user.uid } };
-        const uploadTask = uploadBytesResumable(fileRef, selectedFile, metadata);
+        const fileRef = ref(storage, `users/${user.uid}/stores/${store.id}/deals/${uniqueFileName}`);
+        const uploadTask = uploadBytesResumable(fileRef, selectedFile);
         
         imageUrl = await new Promise<string>((resolve, reject) => {
           uploadTask.on('state_changed',
@@ -163,10 +174,13 @@ const PartnerDealsPage: NextPage = () => {
         });
       }
       
-      const dealsCollectionRef = collection(db, 'storeDeals');
+      const dealsCollectionRef = collection(db, 'artifacts', appId, 'users', user.uid, 'stores', store.id, 'deals');
       await addDoc(dealsCollectionRef, {
         type: newDealType, title: newDealTitle, description: newDealDescription,
-        imageUrl, storeId: store.id, ownerId: user.uid, createdAt: serverTimestamp(), isActive: true,
+        imageUrl, 
+        ownerId: user.uid, 
+        createdAt: serverTimestamp(), 
+        isActive: true,
       });
 
       setNewDealTitle('');
@@ -176,7 +190,7 @@ const PartnerDealsPage: NextPage = () => {
       if (user) fetchStoreAndDeals(user);
 
     } catch (err: any) {
-      console.error(err);
+      console.error("登録エラー:", err);
       setError(err.message || '登録中にエラーが発生しました。');
     } finally {
       setIsSubmitting(false);
@@ -184,50 +198,45 @@ const PartnerDealsPage: NextPage = () => {
   };
 
   const handleDeleteDeal = async (dealId: string) => {
-    if (!user) {
-      alert("ログインしていません。");
+    if (!user || !store) {
+      alert("ログイン情報または店舗情報がありません。");
       return;
     }
-    if (!window.confirm("この情報を削除しますか？")) return;
+    if (!window.confirm("この情報を本当に削除しますか？")) return;
     
     setError(null);
     try {
-      // 認証トークンを取得
-      const token = await user.getIdToken();
-
-      // ヘッダーにトークンを含めてAPIを呼び出す
-      const response = await fetch(`/api/partner/deals/${dealId}`, { 
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '削除に失敗しました。');
-      }
-
+      const dealDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'stores', store.id, 'deals', dealId);
+      await deleteDoc(dealDocRef);
+      
       setDeals(prevDeals => prevDeals.filter(deal => deal.id !== dealId));
       alert('削除しました。');
 
     } catch (err: any) {
-      console.error(err);
+      console.error("削除エラー:", err);
       setError(err.message);
     }
   };
   
-  if (loading) return <div>読み込み中...</div>;
-  if (!user) return <div>このページにアクセスするにはログインが必要です。</div>;
+  if (loading) return <div className="flex justify-center items-center h-screen">読み込み中...</div>;
+  if (!user) return null; // ログインページへのリダイレクト中に何も表示しない
 
   return (
     <div className="container mx-auto p-8 max-w-3xl">
-      <h1 className="text-2xl font-bold mb-6">お得情報・クーポン・フードロス管理</h1>
+      <Head>
+      <title>{"お得情報・クーポン・フードロス管理"}</title>
+      </Head>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">お得情報・クーポン・フードロス管理</h1>
+        <Link href="/partner/dashboard" className="text-blue-600 hover:underline flex items-center">
+          <RiArrowLeftLine className="mr-1" /> ダッシュボードに戻る
+        </Link>
+      </div>
       
-      <form onSubmit={handleCreateDeal} className="space-y-4 p-4 border rounded-lg mb-8">
+      <form onSubmit={handleCreateDeal} className="space-y-4 p-4 border rounded-lg mb-8 bg-white shadow">
         <h2 className="text-xl font-semibold">新規登録</h2>
         <div>
-            <label>種別</label>
+            <label className="font-bold">種別</label>
             <select 
               value={newDealType} 
               onChange={(e) => setNewDealType(e.target.value as 'お得情報' | 'クーポン' | 'フードロス')} 
@@ -238,14 +247,14 @@ const PartnerDealsPage: NextPage = () => {
               <option value="フードロス">フードロス</option>
             </select>
         </div>
-        <div><label>タイトル</label><input type="text" value={newDealTitle} onChange={(e) => setNewDealTitle(e.target.value)} required className="w-full p-2 border rounded mt-1" /></div>
-        <div><label>説明文</label><textarea value={newDealDescription} onChange={(e) => setNewDealDescription(e.target.value)} required className="w-full p-2 border rounded mt-1" rows={5} placeholder={descriptionPlaceholder}></textarea></div>
+        <div><label className="font-bold">タイトル</label><input type="text" value={newDealTitle} onChange={(e) => setNewDealTitle(e.target.value)} required className="w-full p-2 border rounded mt-1" /></div>
+        <div><label className="font-bold">説明文</label><textarea value={newDealDescription} onChange={(e) => setNewDealDescription(e.target.value)} required className="w-full p-2 border rounded mt-1" rows={5} placeholder={descriptionPlaceholder}></textarea></div>
         <div>
-          <label>画像 (任意)</label>
-          <input type="file" onChange={handleFileChange} accept="image/*" className="w-full p-2 border rounded mt-1" />
+          <label className="font-bold">画像 (任意)</label>
+          <input type="file" onChange={handleFileChange} accept="image/*" className="w-full p-2 border rounded mt-1 text-sm" />
           {uploadProgress !== null && (<div className="w-full bg-gray-200 rounded-full h-2.5 my-2"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>)}
         </div>
-        <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400">
+        <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-green-500 text-white font-bold rounded hover:bg-green-600 disabled:bg-gray-400">
           {isSubmitting ? '登録中...' : '登録する'}
         </button>
       </form>
@@ -255,18 +264,18 @@ const PartnerDealsPage: NextPage = () => {
       <div className="space-y-4 mt-4">
         {deals.length > 0 ? (
           deals.map(deal => (
-            <div key={deal.id} className="p-4 border rounded-lg flex justify-between items-center gap-4">
+            <div key={deal.id} className="bg-white p-4 border rounded-lg flex justify-between items-start gap-4 shadow-sm">
               <div className="flex items-center min-w-0">
-                {deal.imageUrl && <img src={deal.imageUrl} alt={deal.title} className="w-16 h-16 object-cover rounded mr-4 flex-shrink-0"/>}
+                {deal.imageUrl && <img src={deal.imageUrl} alt={deal.title} className="w-20 h-20 object-cover rounded mr-4 flex-shrink-0"/>}
                 <div className="min-w-0">
-                  <span className="text-xs bg-gray-200 rounded-full px-2 py-1">{deal.type}</span>
-                  <p className="font-bold truncate">{deal.title}</p>
+                  <span className="text-xs bg-gray-200 rounded-full px-2 py-1 font-semibold">{deal.type}</span>
+                  <p className="font-bold truncate mt-1">{deal.title}</p>
                   <p className="text-sm text-gray-600 truncate">{deal.description}</p>
                 </div>
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-xs text-gray-500 mb-2">{new Date(deal.createdAt).toLocaleDateString('ja-JP')}</p>
-                <button onClick={() => handleDeleteDeal(deal.id)} className="text-red-500 hover:underline">削除</button>
+              <div className="text-right flex-shrink-0 flex flex-col items-end">
+                <p className="text-xs text-gray-500 mb-2">{deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('ja-JP') : ''}</p>
+                <button onClick={() => handleDeleteDeal(deal.id)} className="text-red-500 hover:underline text-sm">削除</button>
               </div>
             </div>
           ))
@@ -275,13 +284,6 @@ const PartnerDealsPage: NextPage = () => {
         )}
       </div>
 
-      <div className="mt-8">
-        <Link href="/partner/dashboard" legacyBehavior>
-          <a className="text-blue-600 hover:underline">
-            ← ダッシュボードに戻る
-          </a>
-        </Link>
-      </div>
     </div>
   );
 };

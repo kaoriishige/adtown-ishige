@@ -123,7 +123,7 @@ const EditStorePage: NextPage<EditStorePageProps> = ({ store }) => {
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <Head>
-        <title>店舗情報編集 - {formData.name}</title>
+        <title>{店舗情報編集 - {formData.name}}</title>
       </Head>
        <header className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

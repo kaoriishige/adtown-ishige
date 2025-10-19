@@ -139,7 +139,7 @@ const ChatPage: NextPage<ChatPageProps> = ({ matchId, initialMatchDetails, curre
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       <Head>
-        <title>チャット: {otherPartyName}様</title>
+        <title>{チャット: {otherPartyName}様}</title>
       </Head>
 
       <header className="bg-white shadow-sm sticky top-0 z-10">

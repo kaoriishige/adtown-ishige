@@ -18,7 +18,7 @@ const AppWrapperPage: NextPage<WrapperProps> = ({ app }) => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', margin: 0 }}>
+    <div style={ display: 'flex', flexDirection: 'column', height: '100vh', margin: 0 }>
       {/* ▼▼▼ これが「額縁」部分です ▼▼▼ */}
       <header style={{
         padding: '12px 20px',
@@ -39,7 +39,7 @@ const AppWrapperPage: NextPage<WrapperProps> = ({ app }) => {
         >
           &larr; 戻る
         </button>
-        <span style={{ marginLeft: '16px', fontWeight: 'bold' }}>{app.name}</span>
+        <span style={ marginLeft: '16px', fontWeight: 'bold' }>{app.name}</span>
       </header>
       {/* ▲▲▲ ここまで ▲▲▲ */}
 

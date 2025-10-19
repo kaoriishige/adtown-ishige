@@ -69,7 +69,7 @@ const InquiryListPage: NextPage<InquiryListPageProps> = ({ inquiries }) => {
     return (
         <div>
             <Head>
-                <title>お問い合わせ一覧</title>
+                <title>{"お問い合わせ一覧"}</title>
             </Head>
             <main>
                 <h1>お問い合わせ一覧</h1>

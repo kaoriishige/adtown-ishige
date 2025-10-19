@@ -25,7 +25,7 @@ export default function LandingV2() {
               src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png"
               alt="友だち追加"
               height="36"
-              style={{ border: 0 }}
+              style={ border: 0 }
             />
           </a>
         </div>

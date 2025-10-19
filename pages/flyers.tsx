@@ -28,7 +28,7 @@ const FlyersPage: NextPage<FlyersProps> = ({ flyers }) => {
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
             <Head>
-                <title>チラシ情報</title>
+                <title>{"チラシ情報"}</title>
                 <script src="https://cdn.tailwindcss.com"></script>
             </Head>
             <div className="max-w-4xl mx-auto">

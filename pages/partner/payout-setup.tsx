@@ -77,7 +77,7 @@ const PayoutSetupPage: NextPage<PayoutSettingsPageProps> = ({ initialSettings, u
     return (
         <div className="min-h-screen bg-gray-100 p-8">
             <Head>
-                <title>支払い設定 - パートナー</title>
+                <title>{"支払い設定 - パートナー"}</title>
             </Head>
             <div className="max-w-2xl mx-auto">
                 <Link href="/partner/dashboard" className="text-blue-500 hover:underline">

@@ -7,7 +7,7 @@ const SubscribeSuccessPage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>ご登録ありがとうございます！</title>
+        <title>{"ご登録ありがとうございます！"}</title>
       </Head>
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-lg text-center">

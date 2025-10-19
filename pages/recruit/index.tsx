@@ -254,7 +254,7 @@ const RecruitPartnerPage: NextPage = () => {
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
             <Head>
-                <title>AI求人サービス 先行予約</title>
+                <title>{"AI求人サービス 先行予約"}</title>
             </Head>
             <header className="bg-white shadow-md sticky top-0 z-50">
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">

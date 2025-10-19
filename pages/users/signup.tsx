@@ -93,7 +93,7 @@ const SignupPage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>新規登録 - みんなの那須アプリ</title>
+        <title>{"新規登録 - みんなの那須アプリ"}</title>
       </Head>
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">

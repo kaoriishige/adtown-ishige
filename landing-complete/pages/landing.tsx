@@ -4,7 +4,7 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <title>みんなの那須アプリ｜予告ランディング</title>
+        <title>{"みんなの那須アプリ｜予告ランディング"}</title>
       </Head>
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen text-white text-center px-6 py-12">
         <p className="text-xl text-red-300 font-bold">緊急予告!!</p>

@@ -72,7 +72,7 @@ const WelcomePage = () => {
     return (
         <>
             <Head>
-                <title>ご登録ありがとうございます</title>
+                <title>{"ご登録ありがとうございます"}</title>
             </Head>
             <div className="flex items-center justify-center min-h-screen bg-gray-50">
                 <div className="p-8 bg-white shadow-lg rounded-lg text-center">

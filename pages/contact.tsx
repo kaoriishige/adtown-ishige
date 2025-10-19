@@ -35,7 +35,7 @@ const ContactPage: NextPage<ContactProps> = ({ isLoggedIn }) => {
     return (
         <div>
             <Head>
-                <title>お問い合わせ</title>
+                <title>{"お問い合わせ"}</title>
             </Head>
             <main>
                 <h1>お問い合わせ</h1>

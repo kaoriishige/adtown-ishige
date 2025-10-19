@@ -493,7 +493,7 @@ const PartnerSignupPage = () => {
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
             <Head>
-                <title>みんなの那須アプリ パートナー追加登録</title>
+                <title>{"みんなの那須アプリ パートナー追加登録"}</title>
                 <meta name="description" content="みんなの那須アプリのパートナープログラムに追加登録して、新しい収益源を手に入れましょう。リスクゼロの全額返金保証付き。" />
             </Head>
             

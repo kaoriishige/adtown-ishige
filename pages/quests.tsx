@@ -46,7 +46,7 @@ const QuestsPage: NextPage = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <Head>
-        <title>那須クエスト・ボード</title>
+        <title>{"那須クエスト・ボード"}</title>
       </Head>
 
       {/* --- ヘッダー --- */}

@@ -74,7 +74,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
   return (
     <>
       <Head>
-        <title>ホーム - みんなの那須アプリ</title>
+        <title>{"ホーム - みんなの那須アプリ"}</title>
       </Head>
       <div className="bg-gray-100 min-h-screen">
         <div className="max-w-md mx-auto bg-white">

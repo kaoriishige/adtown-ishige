@@ -63,7 +63,7 @@ const NewUsersChart = ({ data }: { data: any[] }) => (
     <div className="bg-white p-6 rounded-lg shadow-md">
         <h3 className="font-bold text-gray-700 mb-4">新規ユーザー登録数の推移（今週）</h3>
         <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <BarChart data={data} margin={ top: 5, right: 20, left: -10, bottom: 5 }>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" />
                 <YAxis />
@@ -124,7 +124,7 @@ const AdminDashboardPage: NextPage<{ dashboardData: DashboardData }> = ({ dashbo
     return (
         <div className="min-h-screen bg-gray-100">
             <Head>
-                <title>運営管理ダッシュボード</title>
+                <title>{"運営管理ダッシュボード"}</title>
             </Head>
 
             <header className="bg-white shadow-sm sticky top-0 z-10">

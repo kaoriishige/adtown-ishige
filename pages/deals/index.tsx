@@ -35,7 +35,7 @@ const DealsCategoryPage: NextPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <Head>
-        <title>カテゴリ選択 - 地域のお店を探す</title>
+        <title>{"カテゴリ選択 - 地域のお店を探す"}</title>
       </Head>
       <header className="bg-white p-4 text-center sticky top-0 z-10 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-800">地域のお店を探す</h1>
