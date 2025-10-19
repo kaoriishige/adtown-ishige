@@ -1,7 +1,4 @@
-// lib/firebase-admin.ts (ローカルファイル読み込み方式に復元)
-
 import * as admin from "firebase-admin";
-// 🚨 ファイルシステムとパスモジュールをインポートし直します
 import path from "path";
 import fs from "fs";
 
@@ -10,25 +7,33 @@ let adminAuth: admin.auth.Auth;
 
 try {
     if (!admin.apps.length) {
-        // 1. サービスアカウントJSONのパスを解決 (プロジェクトのルートにあると仮定)
-        const serviceAccountPath = path.resolve(
-            process.cwd(),
-            "firebase-service-account.json"
-        );
-        console.log("✅ Service account path:", serviceAccountPath);
+        let serviceAccountJson: string;
 
-        // 2. JSONファイルを読み込む
-        // 以前のログから、この処理は問題なく実行されていたと判断
-        const jsonString = fs.readFileSync(serviceAccountPath, "utf8");
-        const serviceAccount = JSON.parse(jsonString);
+        if (process.env.NODE_ENV === 'production' && process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+            // 1. Netlify/Vercelなどの本番環境: 環境変数からJSON文字列を読み込む
+            serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+            console.log("✅ Admin SDK: Initializing from Environment Variable.");
+        } else {
+            // 2. ローカル開発環境: ローカルファイルから読み込む
+            const serviceAccountPath = path.resolve(
+                process.cwd(),
+                "firebase-service-account.json"
+            );
+            console.log("✅ Admin SDK: Initializing from local file.");
+            
+            // 🚨 fs.readFileSync() は同期的なため、try/catchで包む
+            serviceAccountJson = fs.readFileSync(serviceAccountPath, "utf8");
+        }
+
+        const serviceAccount = JSON.parse(serviceAccountJson);
         console.log("✅ JSON keys:", Object.keys(serviceAccount));
 
         // 3. Admin SDKの初期化
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
-            // 必要であれば process.env.FIREBASE_DATABASE_URL を追加
+            // databaseURL: process.env.FIREBASE_DATABASE_URL, // 必要に応じて追加
         });
-        console.log("✅ Firebase Admin SDK initialized successfully via local file.");
+        console.log("✅ Firebase Admin SDK initialized successfully.");
     }
 
     // 初期化されたFirestoreとAuthインスタンスを変数に代入
