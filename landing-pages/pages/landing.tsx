@@ -54,7 +54,7 @@ const LandingPage = () => {
                             marginTop: '1rem' 
                         }}
                     >
-                        <FeatureBox title="特売の情報" description="お店のリアルタイムな特売情報をプッシュ通知でお届け！" />
+                        <FeatureBox title="特売情報" description="お店のリアルタイムな特売情報をプッシュ通知でお届け！" />
                         <FeatureBox title="今日の運勢" description="毎日の運勢を占いでチェック！那須でのラッキーアクションも提案。" />
                         <FeatureBox title="相性診断" description="那須の観光スポットや飲食店との相性を診断！新しい発見をサポート。" />
                         <FeatureBox title="地域情報アプリ" description="那須の最新イベント、お店のレビュー、観光情報を網羅。" />
