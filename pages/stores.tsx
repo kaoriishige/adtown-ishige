@@ -1,5 +1,6 @@
 import { NextPage } from 'next';
 import Head from 'next/head';
+import dynamic from 'next/dynamic'; // 💡 新規インポート
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { RiMapPinLine, RiStoreLine, RiRefreshLine } from 'react-icons/ri';
@@ -13,15 +14,20 @@ interface Store {
     description: string;
 }
 
-const StoresPage: NextPage = () => {
-    // サーバーサイドでの処理を避けるため、useEffect内でデータをロードします
+// ----------------------------------------------------
+// 🚨 対策: CSR (Client-Side Rendering) を強制するコンポーネント
+// サーバーサイドでのレンダリングでエラーが出るため、
+// dynamic import を使ってクライアント側でのみレンダリングする
+// ----------------------------------------------------
+const ClientSideStoresPage = () => {
     const [stores, setStores] = useState<Store[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        // Netlifyビルドエラーを回避するため、データ取得はコンポーネントマウント後に実行
-        const fetchStores = async () => {
+    const fetchStores = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
             // Firestoreへの実際のAPIコールはここでは行いません
             const mockStores: Store[] = [
                 { id: 's1', name: 'なっぴーベーカリー', mainCategory: '飲食関連', address: '那須塩原市○○', description: '美味しいパンです。' },
@@ -31,23 +37,29 @@ const StoresPage: NextPage = () => {
 
             await new Promise(resolve => setTimeout(resolve, 50)); // 意図的な遅延
             setStores(mockStores);
+
+        } catch (e: any) {
+            console.error("Store fetch error:", e);
+            setError('店舗データの読み込みに失敗しました。');
+        } finally {
             setIsLoading(false);
-        };
-        
+        }
+    };
+
+    useEffect(() => {
         fetchStores();
     }, []);
 
+    const handleRefresh = () => {
+        fetchStores();
+    };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <Head>
-                <title>{"加盟店一覧"}</title>
-            </Head>
-
+        <>
             <header className="bg-white shadow-md sticky top-0 z-10">
                 <div className="max-w-lg mx-auto p-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-800">加盟店一覧</h1>
-                    <button onClick={() => window.location.reload()} className="text-sm text-blue-600 hover:underline flex items-center">
+                    <button onClick={handleRefresh} className="text-sm text-blue-600 hover:underline flex items-center">
                         <RiRefreshLine className="mr-1" /> 更新
                     </button>
                 </div>
@@ -83,8 +95,19 @@ const StoresPage: NextPage = () => {
                     </div>
                 )}
             </main>
-        </div>
+        </>
     );
 };
+
+
+// 最終的なページコンポーネント (dynamic import でラップ)
+const StoresPage: NextPage = () => (
+    <div className="min-h-screen bg-gray-50">
+        <Head>
+            <title>{"加盟店一覧"}</title>
+        </Head>
+        <ClientSideStoresPage />
+    </div>
+);
 
 export default StoresPage;
