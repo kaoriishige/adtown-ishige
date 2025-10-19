@@ -132,7 +132,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
             <section className="bg-white p-6 rounded-xl shadow-md border-2 border-yellow-400">
               <h2 className="text-xl font-bold text-gray-800 text-center mb-2">
-                限定機能で、年間<span className="text-red-600">9.3万円</span>以上お得に！
+                限定機能で、年間<span className="text-red-600">9.3万円</span>以上がお得に！
               </h2>
               <p className="text-center text-gray-600 mb-4">
                 プレミアムプランにアップグレードして、全ての節約機能を利用しましょう。
