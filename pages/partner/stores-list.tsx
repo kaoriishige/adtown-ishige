@@ -130,7 +130,7 @@ const StoresListPage: NextPage = () => { // コンポーネント名も変更
                                                 src={store.imageUrl || `https://placehold.co/100x100/A0B3DB/ffffff?text=${encodeURIComponent(store.storeName.substring(0, 1))}`}
                                                 alt={store.storeName}
                                                 fill
-                                                style={ objectFit: 'cover' }
+                                                style={{ objectFit: 'cover' }}
                                                 sizes="100px"
                                                 className="transition-transform duration-300 hover:scale-105"
                                                 onError={(e) => { e.currentTarget.src = `https://placehold.co/100x100/A0B3DB/ffffff?text=${encodeURIComponent(store.storeName.substring(0, 1))}`; }}

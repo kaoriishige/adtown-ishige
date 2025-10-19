@@ -57,7 +57,7 @@ const LandingEditorPage: NextPage<LandingEditorProps> = ({ initialData }) => {
                     </button>
                     <h1 className="text-2xl font-bold text-gray-800">ランディングページ編集</h1>
                     
-                    {/* 💡 修正点: style={...} を style={{...}} に修正 */}
+                    {/* 💡 修正点: style={{...}} を style={{...}} に修正 */}
                     <div style={{ display: 'flex', gap: '10px' }}> 
                         <button 
                             onClick={handlePreview} 

@@ -23,7 +23,7 @@ const AppViewPage: NextPage = () => {
     const app = mockAppData; 
 
     return (
-        // 💡 修正箇所: 21行目付近の style={...} を style={{...}} に修正
+        // 💡 修正箇所: 21行目付近の style={{...}} を style={{...}} に修正
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', margin: 0 }}>
             
             {/* ▼▼▼ これが「額縁」部分です ▼▼▼ */}
