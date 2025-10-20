@@ -1,6 +1,6 @@
 define(['exports'], (function (exports) { 'use strict';
 
-    // @ts-ignore
+    // @ts-expect-error
     try {
       self['workbox:core:6.5.4'] && _();
     } catch (e) {}
@@ -453,7 +453,7 @@ define(['exports'], (function (exports) { 'use strict';
       isArrayOfClass
     };
 
-    // @ts-ignore
+    // @ts-expect-error
     try {
       self['workbox:routing:6.5.4'] && _();
     } catch (e) {}
@@ -1182,7 +1182,7 @@ define(['exports'], (function (exports) { 'use strict';
       return route;
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     try {
       self['workbox:strategies:6.5.4'] && _();
     } catch (e) {}

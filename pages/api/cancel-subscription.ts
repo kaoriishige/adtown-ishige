@@ -6,7 +6,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
 // Stripe SDKを初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // @ts-ignore
+  // @ts-expect-error
   apiVersion: '2024-06-20',
 });
 

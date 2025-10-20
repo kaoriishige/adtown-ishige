@@ -1,3 +1,4 @@
+'use client';
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import Head from 'next/head';
