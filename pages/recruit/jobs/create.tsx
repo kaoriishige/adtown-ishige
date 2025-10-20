@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // Firebase Client SDK
-import { Loader2, Building, Briefcase, ArrowLeft, Sparkles, MessageSquare, JapaneseYen, MapPin, Laptop, Send, CheckSquare, Clock, Tag } from 'lucide-react';
+import { Loader2, Building, Briefcase, ArrowLeft, Sparkles, MessageSquare, JapaneseYen, MapPin, Laptop, Send, CheckSquare, Clock, Tag, UserCheck } from 'lucide-react'; // UserCheck アイコンを追加
 import Link from 'next/link';
 import React from 'react';
 
@@ -68,6 +68,12 @@ const JobCreatePage = () => {
         requiredSkills: '',
         welcomeSkills: '',
         jobDescription: '',
+        // ★新規追加フィールド
+        hiringBackground: '',       // 採用背景
+        idealCandidate: '',         // 求める人物像
+        salaryStructure: '',        // 昇給・賞与体系
+        paidLeaveSystem: '',        // 有給休暇取得
+        // ★新規追加ここまで
         appealPoints: {
             growth: [] as string[],
             wlb: [] as string[],
@@ -175,12 +181,15 @@ const JobCreatePage = () => {
                 requiredSkills: formData.requiredSkills,
                 welcomeSkills: formData.welcomeSkills,
                 jobDescription: formData.jobDescription,
+                // ★新規追加フィールドの保存
+                hiringBackground: formData.hiringBackground,
+                idealCandidate: formData.idealCandidate,
+                salaryStructure: formData.salaryStructure,
+                paidLeaveSystem: formData.paidLeaveSystem,
+                // ★新規追加ここまで
                 appealPoints: formData.appealPoints,
                 uid: user.uid, // 企業ID
                 
-                // ==========================================================
-                // 💡 修正箇所: 運用ステータス(status)は常に 'draft' にリセット
-                // 審査APIが active に上書きできる状態を保証する
                 // ==========================================================
                 verificationStatus: 'pending_review', // 審査ステータス: 審査待ち
                 status: 'draft',                     // 運用ステータス: 常に下書きにリセット
@@ -323,6 +332,32 @@ const JobCreatePage = () => {
                             </div>
                         </section>
 
+                        {/* 💡 求人独自の詳細情報（新規追加） */}
+                        <section className="space-y-6">
+                            <h2 className="text-xl font-semibold border-b pb-2 text-gray-800 flex items-center"><UserCheck className="w-5 h-5 mr-3 text-gray-500" />採用の詳細・人物像</h2>
+                            <div>
+                                <label htmlFor="hiringBackground" className="block text-sm font-medium text-gray-700">採用背景 *</label>
+                                <p className="text-xs text-gray-500 mb-1">欠員補充、事業拡大、新規事業立ち上げなど、なぜこのポジションを募集しているのかを簡潔に記述してください。</p>
+                                <textarea id="hiringBackground" name="hiringBackground" value={formData.hiringBackground} onChange={handleChange} required rows={3} className="mt-1 block w-full input" placeholder="例：事業拡大に伴う増員募集です。"></textarea>
+                            </div>
+                            <div>
+                                <label htmlFor="idealCandidate" className="block text-sm font-medium text-gray-700">求める人物像 *</label>
+                                <p className="text-xs text-gray-500 mb-1">性格、価値観、チームでの役割など、スキル以外でどのような人に来てほしいかを具体的に記述してください。</p>
+                                <textarea id="idealCandidate" name="idealCandidate" value={formData.idealCandidate} onChange={handleChange} required rows={4} className="mt-1 block w-full input" placeholder="例：チームワークを大切にし、新しい挑戦に意欲的な方を歓迎します。"></textarea>
+                            </div>
+                            <div>
+                                <label htmlFor="salaryStructure" className="block text-sm font-medium text-gray-700">昇給・賞与体系</label>
+                                <p className="text-xs text-gray-500 mb-1">昇給の頻度、評価基準、賞与の有無と実績を記述してください。</p>
+                                <textarea id="salaryStructure" name="salaryStructure" value={formData.salaryStructure} onChange={handleChange} rows={3} className="mt-1 block w-full input" placeholder="例：昇給年1回（4月）、賞与年2回（実績連動型）。"></textarea>
+                            </div>
+                            <div>
+                                <label htmlFor="paidLeaveSystem" className="block text-sm font-medium text-gray-700">有給休暇取得制度</label>
+                                <p className="text-xs text-gray-500 mb-1">有給休暇の平均取得日数や取得しやすい環境であるかを記述してください。</p>
+                                <textarea id="paidLeaveSystem" name="paidLeaveSystem" value={formData.paidLeaveSystem} onChange={handleChange} rows={3} className="mt-1 block w-full input" placeholder="例：平均取得日数15日。長期休暇を推奨しており、取得率は90%以上です。"></textarea>
+                            </div>
+                        </section>
+
+
                         {/* 💡 求人独自の制度・文化 (企業プロフィールから継承された初期値を使用) */}
                         <section className="space-y-8">
                             <h2 className="text-xl font-semibold border-b pb-2 text-gray-800 flex items-center"><Tag className="w-5 h-5 mr-3 text-gray-500" />求人独自の制度・文化の調整</h2>
@@ -352,9 +387,8 @@ const JobCreatePage = () => {
                                 </div>
                             </div>
 
-                            {/* 削除対象: 🏢 社風・組織（企業プロフィールから継承・編集不可） */}
-                            {/* このセクションを削除します。 */}
-                            {/* <div className="p-4 rounded-lg bg-gray-100/50 border border-dashed text-sm">
+                            {/* 社風・組織 (継承のみ - 編集不可) */}
+                            <div className="p-4 rounded-lg bg-gray-100/50 border border-dashed text-sm">
                                 <h3 className="font-bold text-gray-700 mb-2">🏢 社風・組織（企業プロフィールから継承・編集不可）</h3>
                                 <p className="text-xs text-gray-500">これらの項目は、企業プロフィール全体で固定されており、この求人単体では変更できません。</p>
                                 <div className="mt-3">
@@ -373,7 +407,7 @@ const JobCreatePage = () => {
                                         ))}
                                     </div>
                                 </div>
-                            </div> */}
+                            </div>
                         </section>
 
                         {/* 具体的な仕事内容・スキル */}
