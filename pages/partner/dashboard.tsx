@@ -110,7 +110,7 @@ const DummySettingsPage: React.FC<{ title: string, path: string }> = ({ title, p
 };
 
 // Next.jsのGetServerSidePropsをラップして、ページコンポーネントを定義
-// 💡 これらのコンポーネントは、Next.jsのPagesディレクトリ構造に応じて、
+// 💡 コンポーネントは、Next.jsのPagesディレクトリ構造に応じて、
 //    実際には `partner/referral-info.tsx` や `partner/payout-settings.tsx` に記述されます。
 
 const ReferralInfoPage: NextPage = () => <DummySettingsPage title="紹介用URLとQRコード" path="/partner/referral-info" />;
