@@ -4,6 +4,30 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Head from 'next/head';
 
+// --- 画像パスの定義（public/images/に配置されていることを前提とする） ---
+const PARTNER_LOGOS = [
+    '/images/partner-adtown.png',
+    '/images/partner-aquas.png',
+    '/images/partner-aurevoir.png',
+    '/images/partner-celsiall.png',
+    '/images/partner-dairin.png',
+    '/images/partner-kanon.png',
+    '/images/partner-kokoro.png',
+    '/images/partner-meithu.png',
+    '/images/partner-midcityhotel.png',
+    '/images/partner-nikkou.png',
+    '/images/partner-oluolu.png',
+    '/images/partner-omakaseauto.png',
+    '/images/partner-poppo.png',
+    '/images/partner-Quattro.png',
+    '/images/partner-sekiguchi02.png',
+    '/images/partner-tonbo.png',
+    '/images/partner-training_farm.png',
+    '/images/partner-transunet.png',
+    '/images/partner-yamabuki.png',
+    '/images/partner-yamakiya.png'
+];
+
 // --- Inline SVG Icon Components ---
 const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> );
 const XCircleIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> );
@@ -336,8 +360,16 @@ const PartnerSignupPage = () => {
                 <section className="mt-20 text-center">
                     <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様がこのチャンスに気づいています</h3>
                     <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
-                        {['/images/partner-adtown.png', '/images/partner-aquas.png', '/images/partner-aurevoir.png', '/images/partner-celsiall.png', '/images/partner-dairin.png', '/images/partner-kanon.png', '/images/partner-kokoro.png', '/images/partner-meithu.png', '/images/partner-midcityhotel.png', '/images/partner-nikkou.png', '/images/partner-oluolu.png', '/images/partner-omakaseauto.png', '/images/partner-poppo.png', '/images/partner-Quattro.png', '/images/partner-sekiguchi02.png', '/images/partner-tonbo.png', '/images/partner-training_farm.png', '/images/partner-transunet.png', '/images/partner-yamabuki.png', '/images/partner-yamakiya.png'].map((logoPath, index) => (
-                            <Image key={index} src={logoPath} alt={`パートナーロゴ ${index + 1}`} width={150} height={50} className="object-contain" />
+                        {PARTNER_LOGOS.map((logoPath, index) => (
+                            <Image 
+                                key={index} 
+                                src={logoPath} 
+                                alt={`パートナーロゴ ${index + 1}`} 
+                                width={150} 
+                                height={50} 
+                                className="object-contain" 
+                                unoptimized={true} // 画像最適化を無効化し、表示問題を回避
+                            />
                         ))}
                     </div>
                 </section>
@@ -385,7 +417,6 @@ const PartnerSignupPage = () => {
                         <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
                         <p className="text-center text-gray-600 mb-8">
                             全てのアドバンテージを手に入れるために、以下のフォームをご入力ください。すでに求人パートナーにお申込みの方は、こちらからは登録はできません。求人パートナーの管理画面からお申込みください。
-    　　　　　　　　　　　
                         </p>
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}> {/* Prevent form submission */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -411,7 +442,7 @@ const PartnerSignupPage = () => {
                                     </span>
                                 </label>
                             </div>
-                            
+                        
                             {/* Error display area */}
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p></div> )}
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
