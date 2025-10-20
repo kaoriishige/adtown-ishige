@@ -14,7 +14,7 @@ import Link from 'next/link';
 import React from 'react';
 
 
-// --- チェックボックスの選択肢 (変更なし) ---
+// --- チェックボックスの選択肢 (企業全体に関するもののみ残す) ---
 const atmosphereOptions = [
     "フラットな社風", "チームワーク重視", "個人主義", "成果主義", "挑戦を歓迎する",
     "落ち着いた雰囲気", "スピード感がある", "オープンなコミュニケーション", "若手が活躍",
@@ -30,11 +30,6 @@ const organizationOptions = [
     "顧客満足より「顧客成功」を重視", "働く人の多様性・個性を尊重",
     "社長・経営層と距離が近い", "オープンで透明性のある経営"
 ];
-
-
-const growthOptions = ["OJT（実務を通じた教育制度）", "メンター制度（先輩社員によるサポート）", "定期的な社内研修あり", "社外研修・セミナー参加支援あり", "資格取得支援制度あり", "書籍・教材購入補助あり", "AI・DX関連の研修あり", "海外研修・グローバル教育あり", "キャリア面談制度あり", "評価・昇進が明確（スキルや成果で評価）", "社内表彰・インセンティブ制度あり", "他部署への異動・チャレンジを歓迎", "社員の挑戦を応援する文化", "失敗を許容する文化（トライ＆エラーを奨励）", "社内勉強会・ナレッジシェア会あり", "社外講師や専門家を招いた学習機会あり"];
-const wlbOptions = ["フルリモート勤務可", "一部リモート勤務可（ハイブリッドワーク）", "フレックスタイム制あり", "残業少なめ（月20時間以内）", "完全週休2日制", "年間休日120日以上", "有給休暇取得率が高い", "産休・育休取得実績あり", "時短勤務制度あり", "介護・看護休暇あり", "副業・兼業OK", "私服勤務OK", "勤務地選択可（地方・在宅勤務など）", "長期休暇制度あり（リフレッシュ・サバティカルなど）", "定時退社を推奨", "家庭・育児と両立しやすい環境"];
-const benefitsOptions = ["社会保険完備", "通勤手当・交通費支給", "在宅勤務手当あり", "家賃補助・住宅手当あり", "家族手当あり", "賞与・ボーナスあり", "成果連動インセンティブあり", "ストックオプション制度あり", "健康診断・人間ドック補助あり", "福利厚生サービス（例：リロクラブ、ベネフィットステーション等）加入", "食事補助・社員食堂あり", "書籍・ツール購入補助あり", "PC・デバイス支給（業務用）", "勤続表彰・特別休暇あり", "社員旅行・懇親イベントあり", "社内カフェ・フリードリンクあり", "資格手当・成果手当あり", "退職金制度あり", "定年後再雇用制度あり"];
 
 
 // --- 型定義 ---
@@ -57,7 +52,8 @@ interface CompanyProfile {
     appealPoints: {
         atmosphere: string[];
         organization: string[];
-        growth: string[];
+        // 🚀 成長機会、🕰️ WLB、💰 福利厚生・手当は削除
+        growth: string[]; 
         wlb: string[];
         benefits: string[];
     };
@@ -293,10 +289,10 @@ const CompanyProfilePage = () => {
     
     // 💡 強制リセット用のヘルパー関数
     const handleManualReset = () => {
-         if (window.confirm('AI審査がフリーズした場合、この操作で強制的に再審査を開始できます。フォーム内容は保存されません。続行しますか？')) {
-             // フォームデータは更新せず、ステータスとAPI呼び出しのみ実行
-             handleSaveAndSubmitForReview({ preventDefault: () => {} } as React.FormEvent, true); 
-         }
+        if (window.confirm('AI審査がフリーズした場合、この操作で強制的に再審査を開始できます。フォーム内容は保存されません。続行しますか？')) {
+            // フォームデータは更新せず、ステータスとAPI呼び出しのみ実行
+            handleSaveAndSubmitForReview({ preventDefault: () => {} } as React.FormEvent, true); 
+        }
     };
 
 
@@ -486,10 +482,10 @@ const CompanyProfilePage = () => {
                     </section>
 
 
-                    {/* アピールポイント */}
+                    {/* アピールポイント (社風・組織のみ) */}
                     <section className="space-y-6">
                         <h2 className="text-xl font-semibold border-b pb-2 text-gray-800 flex items-center">
-                            <CheckSquare className="w-5 h-5 mr-3 text-gray-500" />AIマッチング用 価値観・制度 (5項目)
+                            <CheckSquare className="w-5 h-5 mr-3 text-gray-500" />AIマッチング用 価値観・制度 (2項目のみ)
                         </h2>
 
 
@@ -530,62 +526,8 @@ const CompanyProfilePage = () => {
                             </div>
                         </div>
 
+                        {/* 🚀 成長機会, 🕰️ WLB, 💰 福利厚生 のセクションは削除されました。 */}
 
-                        {/* 🚀 成長機会 */}
-                        <div className="p-4 border rounded-lg bg-gray-50">
-                            <h3 className="font-bold text-gray-700 mb-3">🚀 成長機会・キャリア</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {growthOptions.map(option => (
-                                    <label key={option} className="flex items-center space-x-2 text-sm">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.appealPoints.growth.includes(option)}
-                                            onChange={() => handleAppealCheckboxChange('growth', option)}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <span>{option}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-
-                        {/* 🕰️ ワークライフバランス (WLB) */}
-                        <div className="p-4 border rounded-lg bg-gray-50">
-                            <h3 className="font-bold text-gray-700 mb-3">🕰️ ワークライフバランス (WLB)</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {wlbOptions.map(option => (
-                                    <label key={option} className="flex items-center space-x-2 text-sm">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.appealPoints.wlb.includes(option)}
-                                            onChange={() => handleAppealCheckboxChange('wlb', option)}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <span>{option}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-
-                        {/* 💰 福利厚生・手当 */}
-                        <div className="p-4 border rounded-lg bg-gray-50">
-                            <h3 className="font-bold text-gray-700 mb-3">💰 福利厚生・手当</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {benefitsOptions.map(option => (
-                                    <label key={option} className="flex items-center space-x-2 text-sm">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.appealPoints.benefits.includes(option)}
-                                            onChange={() => handleAppealCheckboxChange('benefits', option)}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <span>{option}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
                     </section>
 
 
@@ -661,6 +603,7 @@ const CompanyProfilePage = () => {
                     </div>
                 </form>
             </main>
+            <style jsx>{`.input { @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500; } .checkbox { @apply h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500; }`}</style>
         </div>
     );
 };

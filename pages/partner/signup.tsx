@@ -44,7 +44,7 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
     const [isOpen, setIsOpen] = useState(false);
     return (
         <div className="border-b">
-            <button onClick={() => setIsOpen(!isOpen)} className="w-full text-left py-5 flex justify-between items-center hover:bg-gray-50 transition-colors">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full text-left py-5 flex justify-between items-center hover:bg-gray-500 transition-colors">
                 <span className="text-lg font-medium text-gray-800 pr-2">{question}</span>
                 <ChevronDownIcon className={`w-6 h-6 text-orange-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -162,13 +162,8 @@ const PartnerSignupPage = () => {
                 throw new Error(data.error || '登録および請求書の作成に失敗しました。');
             }
 
-            // Success: Start download using the PDF URL
-            const link = document.createElement('a');
-            link.href = data.pdfUrl;
-            link.setAttribute('download', `invoice_${storeName}_${Date.now()}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // ★修正: 強制ダウンロードではなく、新しいタブでPDFを開く (モバイル対応のため)
+            window.open(data.pdfUrl, '_blank'); 
 
             setInvoiceDownloadSuccess(true);
             setError(null);
@@ -339,9 +334,21 @@ const PartnerSignupPage = () => {
                     <h3 className="text-3xl font-extrabold text-center">なぜ、みんなの那須アプリの「QRコード」をテーブルに置くだけで「毎月の安定収益」に変わるのか？</h3>
                     <p className="mt-4 text-center text-gray-600 max-w-3xl mx-auto">お客様が貴店をきっかけにQRコードから無料登録して、有料会員になると、その売上の30%が**永続的に貴店の収益**となります。その驚くほど簡単な仕組みをご覧ください。</p>
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div><h4 className="text-xl font-bold">お客様が「無料」で登録</h4><p className="mt-2 text-gray-600">貴店に置かれたQRコードスタンド（無料提供）から、お客様はお役立ち満載の約50個のアプリ、求人マッチングAI、店舗の特典、クーポンが利用できる、などが永久無料で使い放題！**無料プラン**に登録します。</p></div>
-                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4><p className="mt-2 text-gray-600">アプリを使ううち、お客様は「恋愛・婚活マッチングサービス」「フリマで売って稼ぐ」「お手伝いで稼ぐ」「ペット・動物マッチング」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p></div>
-                        <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div><h4 className="text-xl font-bold">貴店に「継続収益」が発生します</h4><p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円×人数分**が自動で積み上がります。</p></div>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg">
+                            <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
+                            <h4 className="text-xl font-bold">お客様が「無料」で登録</h4>
+                            <p className="mt-2 text-gray-600">貴店に置かれたQRコードスタンド（無料提供）から、お客様はお役立ち満載の約50個のアプリ、求人マッチングAI、店舗の特典、クーポンが利用できる、などが永久無料で使い放題！**無料プラン**に登録します。</p>
+                        </div>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg">
+                            <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
+                            <h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4>
+                            <p className="mt-2 text-gray-600">アプリを使ううち、お客様は「恋愛・婚活マッチングサービス」「フリマで売って稼ぐ」「お手伝いで稼ぐ」「ペット・動物マッチング」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p>
+                        </div>
+                        <div className="text-center p-6 bg-white rounded-lg shadow-lg">
+                            <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
+                            <h4 className="text-xl font-bold">貴店に「継続収益」が発生します</h4>
+                            <p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円×人数分**が自動で積み上がります。</p>
+                        </div>
                     </div>
                     <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">つまり、月額3,850円のパートナー費用は、わずか27人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
                 </section>
@@ -393,7 +400,7 @@ const PartnerSignupPage = () => {
                             <p className="leading-relaxed">はい、月額3,850円クレジットカード決済（または請求書払い年額39,600円）のみです。広告掲載数に上限はなく、紹介手数料から成功報酬をいただくことも一切ありません。安心してご利用いただけます。</p>
                         </FAQItem>
                         <FAQItem question="全額返金保証について詳しく教えてください。">
-                            <p className="leading-relaxed">ご利用開始から1年後、得られた紹介手数料の累計が年間のパートナー費用（46,200円クレジットカード決済、39,600円請求書払い決済）に満たなかった場合、お支払いいただいた費用を全額返金いたします。これは、私達のシステムに自信があるからこその保証です。※適用には諸条件がありますので、利用規約第6条をご確認ください。</p>
+                            <p className="leading-relaxed">ご利用開始から1年後、得られた紹介手数料の累計が年間のパートナー費用（46,200円クレジットカード決済、39,600円請求書払い決済）に満たなかった場合、パートナーは当社に対し、支払った費用の全額返金を請求することができます。これは、私達のシステムに自信があるからこその保証です。※適用には諸条件がありますので、利用規約第6条をご確認ください。</p>
                         </FAQItem>
                         <FAQItem question="紹介手数料はどのように支払われますか？">
                             <p className="leading-relaxed">毎月末締めで計算し、翌々月15日にご指定の銀行口座へお振り込みします。振込額の合計が3,000円に満たない場合は、お支払いは翌月以降に繰り越されます。パートナー様専用のダッシュボードで、いつでも収益状況をご確認いただけます。</p>
@@ -409,7 +416,7 @@ const PartnerSignupPage = () => {
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
                         <div className="text-center mb-10">
                             <p className="text-gray-700 leading-relaxed">
-                                ここまでお読みいただきありがとうございます。<br/>
+                                {/* ここまでお読みいただきありがとうございます。 */}
                                 限定100店舗の初期費用無料キャンペーン枠は、すぐに埋まってしまうことが予想されます。<br/>
                                 <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目から初期費用が発生いたします。もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（46,200円クレジットカード決済、39,600円請求書払い決済）に満たなかった場合、お支払いいただいた費用を全額返金いたします。請求書払いは、年間46,200円のところ一括前払いで39,600円の割引価格となります。</strong><br/>
                             </p>
@@ -426,7 +433,7 @@ const PartnerSignupPage = () => {
                             <div> <label className="block text-gray-700 font-medium mb-2">住所 *</label> <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須町、大田原市のいずれかである必要があります。</p>} </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                                <div> <label className="block text-gray-700 font-medium mb-2">電話番号 *</label> <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
+                                <div> <label className="block text-gray-700 font-medium mb-2">電話番号 *</label> <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                                 <div> <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上) *</label> <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                                 <div> <label className="block text-gray-700 font-medium mb-2">メールアドレス *</label> <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                                 <div> <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）*</label> <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
@@ -444,7 +451,7 @@ const PartnerSignupPage = () => {
                             </div>
                         
                             {/* Error display area */}
-                            {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p></div> )}
+                            {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
 
                             {/* Credit Card Payment Button */}
@@ -510,9 +517,7 @@ const PartnerSignupPage = () => {
                             <p><strong>第10条（準拠法・裁判管轄）</strong><br />本規約の解釈にあたっては、日本法を準拠法とします。本サービスに関して紛争が生じた場合には、当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</p>
                         </div>
                         <div className="mt-6 flex justify-end">
-                            <button onClick={() => setShowTerms(false)} className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600">
-                                閉じる
-                            </button>
+                            <button onClick={() => setShowTerms(false)} className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600">閉じる</button>
                         </div>
                     </div>
                 </div>

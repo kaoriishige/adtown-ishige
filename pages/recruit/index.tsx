@@ -162,13 +162,9 @@ const RecruitPartnerPage: NextPage = () => {
             }
 
 
-            // 成功：PDFダウンロードURLを使ってダウンロードを開始
-            const link = document.createElement('a');
-            link.href = data.pdfUrl;
-            link.setAttribute('download', `invoice_${companyName}_${Date.now()}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // ★修正点: 強制ダウンロードではなく、新しいタブで開く処理に切り替え
+            // これにより、iOS/AndroidでPDFがブラウザ内で確実に表示され、ユーザーが保存オプションを選択しやすくなる
+            window.open(data.pdfUrl, '_blank'); 
 
 
             setInvoiceDownloadSuccess(true);
@@ -198,7 +194,7 @@ const RecruitPartnerPage: NextPage = () => {
 
         // クライアント側でのバリデーション
         if (!isFormValid) {
-             setError('クレジットカード決済へ進むには、フォームの必須項目を全て満たし、規約に同意してください。');
+            setError('クレジットカード決済へ進むには、フォームの必須項目を全て満たし、規約に同意してください。');
             scrollToForm();
             return;
         }
@@ -441,12 +437,12 @@ const RecruitPartnerPage: NextPage = () => {
                                         <tr className="bg-gray-50">
                                             <td className="p-3 border font-bold">Step 4: マッチング成立</td>
                                             <td className="p-3 border">ユーザーがスカウトを受け入れ、「応募確定」ボタンを押す。</td>
-                                            <td className="p-3 border">マッチング成立！ 企業とのチャットが開通し、次のステップへ進みます。</td>
+                                            <td className="p-3 border">マッチング成立！ アプリ内チャット機能が解放されます。</td>
                                         </tr>
                                         <tr>
-                                            <td className="p-3 border font-bold">Step 5: </td>
-                                            <td className="p-3 border">アプリ内で、企業と求職者双方の意思確認や、面接・選考に進むための合意ができた後、アプリの機能を使って、氏名、電話番号、メールアドレスなどの連絡先情報を相互に開示します。</td>
-                                            <td className="p-3 border">履歴書送付などの手間なく、すぐに面接に進めます。</td>
+                                            <td className="p-3 border font-bold">Step 5: 面接設定</td>
+                                            <td className="p-3 border">チャットを通じて、ユーザーと直接、面接日程の調整や初期質問を行います。</td>
+                                            <td className="p-3 border">確度の高い候補者とスムーズに面接に進めます。</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -493,7 +489,7 @@ const RecruitPartnerPage: NextPage = () => {
                                         </tr>
                                         <tr>
                                             <td className="p-3 border font-bold">Step 5: 面接設定</td>
-                                            <td className="p-3 border">アプリ内チャットで、企業が提示した日程候補から都合の良い日時を選択し、面接を確定します。</td>
+                                            <td className="p-3 border">アプリ内で、企業と求職者双方の意思確認や、面接・選考に進むための合意ができた後、アプリの機能を使って、氏名、電話番号、メールアドレスなどの連絡先情報を相互に開示します。</td>
                                             <td className="p-3 border">履歴書送付などの手間なく、すぐに面接に進めます。</td>
                                         </tr>
                                     </tbody>
@@ -515,13 +511,7 @@ const RecruitPartnerPage: NextPage = () => {
                                 width={150} 
                                 height={50} 
                                 className="object-contain" 
-                                // Image最適化によるローカル環境でのエラーを回避するためにunoptimizedをtrueに設定
-                                unoptimized={true} 
-                                sizes="150px"
-                                onError={(e) => {
-                                    console.error(`Error loading image: ${logoPath}`);
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                }}
+                                unoptimized={true} // 画像最適化を無効化し、表示問題を回避
                             />
                         ))}
                     </div>
@@ -543,8 +533,7 @@ const RecruitPartnerPage: NextPage = () => {
                     <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
                         <FAQItem question="本当に求める人材に出会えますか？"><p className="leading-relaxed">はい。当社のAIは、スキルや経験といった表面的な情報だけでなく、求職者の価値観や希望する働き方、貴社の社風などを多角的に分析し、マッチング精度を最大限に高めています。これにより、定着率の高い、貴社にとって本当に価値のある採用を実現します。</p></FAQItem>
-                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額3,850円（または請求書払い、定価年額46,200円を一括前払い割引価格39,600円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p>
-                        </FAQItem>
+                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額3,850円（または請求書払い、定価年額46,200円を一括前払い割引価格39,600円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p></FAQItem>
                         <FAQItem question="契約の途中で解約（停止）はできますか？"><p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください。</p></FAQItem>
                     </div>
                 </section>
@@ -553,14 +542,13 @@ const RecruitPartnerPage: NextPage = () => {
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
                         <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">すでに広告パートナーにお申込みの方は、こちらからは登録はできません。広告パートナーの管理画面からお申込みください。アカウント情報を登録し、先行予約を完了してください。クレジットカード支払いは月額3,850円、請求書払いをお申込みの場合は、年額46,200円を一括前払い割引価格39,600円でご利用いただけます。</p></div>
-                        
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div> <label className="block text-gray-700 font-medium mb-2">企業名・店舗名 *</label> <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                                 <div> <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label> <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                             </div>
                             <div> <label className="block text-gray-700 font-medium mb-2">所在地 *</label> <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須町、大田原市のいずれかである必要があります。</p>} </div>
-                        
+                            
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
                                 <div> <label className="block text-gray-700 font-medium mb-2">電話番号 *</label> <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required placeholder="例: 09012345678" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                                 <div> <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上) *</label> <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
@@ -582,7 +570,6 @@ const RecruitPartnerPage: NextPage = () => {
                             {/* エラー表示エリア */}
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p></div> )}
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
-
 
                             {/* クレジットカード決済ボタン */}
                             <div className="my-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-center">

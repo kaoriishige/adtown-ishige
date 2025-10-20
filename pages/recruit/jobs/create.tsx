@@ -1,14 +1,15 @@
-// pages/recruit/jobs/create.tsx
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // 🚨 Firebase Client SDK
+import { db } from '@/lib/firebase'; // Firebase Client SDK
 import { Loader2, Building, Briefcase, ArrowLeft, Sparkles, MessageSquare, JapaneseYen, MapPin, Laptop, Send, CheckSquare, Clock, Tag } from 'lucide-react';
 import Link from 'next/link';
+import React from 'react';
 
-// --- このページで必要な選択肢データ (修正) ---
+
+// --- 求人固有の選択肢 ---
 const jobCategoryOptions = [
     "営業・企画・マーケティング", 
     "事務・管理", 
@@ -30,10 +31,14 @@ const jobCategoryOptions = [
 ];
 const employmentTypeOptions = ["正社員", "契約社員", "アルバイト・パート", "業務委託"];
 
-// 企業プロフィールと求職者プロフィールで共有される価値観チェックリスト (変更なし)
+// --- 企業プロフィールと求職者プロフィールで共有される価値観チェックリスト ---
+// CompanyProfilePageから流用
 const growthOptions = ["OJT（実務を通じた教育制度）", "メンター制度（先輩社員によるサポート）", "定期的な社内研修あり", "社外研修・セミナー参加支援あり", "資格取得支援制度あり", "書籍・教材購入補助あり", "AI・DX関連の研修あり", "海外研修・グローバル教育あり", "キャリア面談制度あり", "評価・昇進が明確（スキルや成果で評価）", "社内表彰・インセンティブ制度あり", "他部署への異動・チャレンジを歓迎", "社員の挑戦を応援する文化", "失敗を許容する文化（トライ＆エラーを奨励）", "社内勉強会・ナレッジシェア会あり", "社外講師や専門家を招いた学習機会あり"];
 const wlbOptions = ["フルリモート勤務可", "一部リモート勤務可（ハイブリッドワーク）", "フレックスタイム制あり", "残業少なめ（月20時間以内）", "完全週休2日制", "年間休日120日以上", "有給休暇取得率が高い", "産休・育休取得実績あり", "時短勤務制度あり", "介護・看護休暇あり", "副業・兼業OK", "私服勤務OK", "勤務地選択可（地方・在宅勤務など）", "長期休暇制度あり（リフレッシュ・サバティカルなど）", "定時退社を推奨", "家庭・育児と両立しやすい環境"];
 const benefitsOptions = ["社会保険完備", "通勤手当・交通費支給", "在宅勤務手当あり", "家賃補助・住宅手当あり", "家族手当あり", "賞与・ボーナスあり", "成果連動インセンティブあり", "ストックオプション制度あり", "健康診断・人間ドック補助あり", "福利厚生サービス（例：リロクラブ、ベネフィットステーション等）加入", "食事補助・社員食堂あり", "書籍・ツール購入補助あり", "PC・デバイス支給（業務用）", "勤続表彰・特別休暇あり", "社員旅行・懇親イベントあり", "社内カフェ・フリードリンクあり", "資格手当・成果手当あり", "退職金制度あり", "定年後再雇用制度あり", "制服貸与"];
+
+
+// 企業プロフィールから継承するが、求人側で編集はしない
 const atmosphereOptions = ["フラットな社風", "チームワーク重視", "個人主義", "成果主義", "挑戦を歓迎する", "落ち着いた雰囲気", "スピード感がある", "オープンなコミュニケーション", "若手が活躍", "ベテランが活躍", "男女問わず活躍", "多国籍チーム", "リモート中心", "オフィス出社中心", "カジュアルな雰囲気", "フォーマルな雰囲気"];
 const organizationOptions = ["サステナビリティ・社会貢献を重視", "地域密着型の事業を展開", "スタートアップ・ベンチャー志向", "安定成長志向", "社会課題解決をテーマにしている", "AI・デジタル技術を積極活用", "顧客満足より「顧客成功」を重視", "働く人の多様性・個性を尊重", "社長・経営層と距離が近い", "オープンで透明性のある経営"];
 
@@ -47,6 +52,7 @@ const JobCreatePage = () => {
     const [profileStatus, setProfileStatus] = useState<'verified' | 'pending' | 'rejected' | 'draft'>('draft'); // 💡 プロフィール承認状態をより詳細に管理
     const isProfileVerified = profileStatus === 'verified';
     const [aiFeedbackProfile, setAiFeedbackProfile] = useState(''); // プロフィールからのAIフィードバック
+    const [error, setError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         jobTitle: '',
@@ -151,6 +157,7 @@ const JobCreatePage = () => {
         }
 
         setSaving(true);
+        setError(null);
         let newJobId = '';
         try {
             // 💡 修正: コレクションを 'recruitments' に変更
@@ -185,7 +192,6 @@ const JobCreatePage = () => {
             newJobId = docRef.id;
 
             // 💡 AI審査APIの呼び出し（求人登録後、即座に実行）
-            // このAPIはCloud Functionsをトリガーし、AIによる求人スコアリングと審査を行います。
             const response = await fetch('/api/recruit/initiate-match', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -200,8 +206,10 @@ const JobCreatePage = () => {
             router.push('/recruit/dashboard');
 
         } catch (err: any) {
-            alert(`エラーが発生しました: ${err.message}`);
-            if (newJobId) {
+            setError(`エラーが発生しました: ${err.message}`);
+            console.error("申請エラー:", err);
+            
+            if (newJobId && user) {
                 // エラーが発生した場合、求人ステータスを修正要請に戻す
                 const jobDocRef = doc(db, 'recruitments', newJobId); 
                 await updateDoc(jobDocRef, {
@@ -315,10 +323,10 @@ const JobCreatePage = () => {
                             </div>
                         </section>
 
-                        {/* 求人独自の制度・文化 */}
+                        {/* 💡 求人独自の制度・文化 (企業プロフィールから継承された初期値を使用) */}
                         <section className="space-y-8">
-                            <h2 className="text-xl font-semibold border-b pb-2 text-gray-800 flex items-center"><CheckSquare className="w-5 h-5 mr-3 text-gray-500" />この求人独自の制度・文化</h2>
-                            <p className="text-sm text-gray-600 -mt-6">企業プロフィールから自動入力されています。この求人に当てはまらない場合はチェックを外してください。</p>
+                            <h2 className="text-xl font-semibold border-b pb-2 text-gray-800 flex items-center"><Tag className="w-5 h-5 mr-3 text-gray-500" />求人独自の制度・文化の調整</h2>
+                            <p className="text-sm text-gray-600 -mt-6">※ 以下の項目は企業プロフィールから初期値が自動入力されていますが、この求人固有の要件に合わせて調整できます。</p>
                             
                             {/* 成長機会 */}
                             <div className="p-4 border rounded-lg space-y-4">
@@ -344,18 +352,28 @@ const JobCreatePage = () => {
                                 </div>
                             </div>
 
-                            {/* 社風・組織（企業プロフィールから継承） */}
-                            <div className="p-4 border rounded-lg space-y-4">
-                                <h3 className="font-bold text-gray-700">🏢 社風・組織（企業プロフィールから継承）</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {atmosphereOptions.map(opt => (<label key={opt} className="flex items-center space-x-2 text-sm"><input type="checkbox" checked={formData.appealPoints.atmosphere.includes(opt)} onChange={() => handleAppealCheckboxChange('atmosphere', opt)} className="h-4 w-4 checkbox" /><span>{opt}</span></label>))}
+                            {/* 削除対象: 🏢 社風・組織（企業プロフィールから継承・編集不可） */}
+                            {/* このセクションを削除します。 */}
+                            {/* <div className="p-4 rounded-lg bg-gray-100/50 border border-dashed text-sm">
+                                <h3 className="font-bold text-gray-700 mb-2">🏢 社風・組織（企業プロフィールから継承・編集不可）</h3>
+                                <p className="text-xs text-gray-500">これらの項目は、企業プロフィール全体で固定されており、この求人単体では変更できません。</p>
+                                <div className="mt-3">
+                                    <p className="font-semibold text-gray-700">社風・雰囲気:</p>
+                                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                                        {(formData.appealPoints.atmosphere.length > 0 ? formData.appealPoints.atmosphere : ['未設定']).map((item, i) => (
+                                            <span key={i} className="text-xs bg-gray-200 px-2 py-0.5 rounded">{item}</span>
+                                        ))}
+                                    </div>
                                 </div>
-                                <h3 className="font-bold text-gray-700 mt-4">🌍 組織・事業（企業プロフィールから継承）</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {organizationOptions.map(opt => (<label key={opt} className="flex items-center space-x-2 text-sm"><input type="checkbox" checked={formData.appealPoints.organization.includes(opt)} onChange={() => handleAppealCheckboxChange('organization', opt)} className="h-4 w-4 checkbox" /><span>{opt}</span></label>))}
+                                <div className="mt-3">
+                                    <p className="font-semibold text-gray-700">組織・事業:</p>
+                                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                                        {(formData.appealPoints.organization.length > 0 ? formData.appealPoints.organization : ['未設定']).map((item, i) => (
+                                            <span key={i} className="text-xs bg-gray-200 px-2 py-0.5 rounded">{item}</span>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-
+                            </div> */}
                         </section>
 
                         {/* 具体的な仕事内容・スキル */}
@@ -368,7 +386,7 @@ const JobCreatePage = () => {
 
                         <div className="flex justify-end pt-6 border-t">
                             <button type="submit" disabled={saving || !isProfileVerified} className="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center">
-                                {saving ? <><Loader2 className="animate-spin mr-2" />AI審査を送信中...</> : <><Send className="w-4 h-4 mr-2" />保存してAI登録審査を申請</>}
+                                {saving ? <><Loader2 className="animate-spin mr-2" />AI審査を送信中...</> : <><Send className="w-4 h-4 mr-2" />求人を登録しAI審査を申請</>}
                             </button>
                         </div>
                     </section>
