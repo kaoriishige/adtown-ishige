@@ -436,7 +436,7 @@ const AddRecruitServicePage: NextPage = () => {
                                         </tr>
                                         <tr>
                                             <td className="p-3 border font-bold">Step 5: 面接設定</td>
-                                            <td className="p-3 border">アプリ内チャットで、企業が提示した日程候補から都合の良い日時を選択し、面接を確定します。</td>
+                                            <td className="p-3 border">アプリ内で、企業と求職者双方の意思確認や、面接・選考に進むための合意ができた後、アプリの機能を使って、氏名、電話番号、メールアドレスなどの連絡先情報を相互に開示します。。</td>
                                             <td className="p-3 border">日程調整の手間なく、スムーズに面接に進めます。</td>
                                         </tr>
                                     </tbody>
