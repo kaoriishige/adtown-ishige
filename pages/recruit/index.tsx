@@ -10,26 +10,26 @@ import Head from 'next/head';
 
 // --- 画像パスの定義（public/images/に配置されていることを前提とする） ---
 const PARTNER_LOGOS = [
-    '/images/partner-adtown.png',
-    '/images/partner-aquas.png',
-    '/images/partner-aurevoir.png',
-    '/images/partner-celsiall.png',
-    '/images/partner-dairin.png',
-    '/images/partner-kanon.png',
-    '/images/partner-kokoro.png',
-    '/images/partner-meithu.png',
-    '/images/partner-midcityhotel.png',
-    '/images/partner-nikkou.png',
-    '/images/partner-oluolu.png',
-    '/images/partner-omakaseauto.png',
-    '/images/partner-poppo.png',
-    '/images/partner-Quattro.png',
-    '/images/partner-sekiguchi02.png',
-    '/images/partner-tonbo.png',
-    '/images/partner-training_farm.png',
-    '/images/partner-transunet.png',
-    '/images/partner-yamabuki.png',
-    '/images/partner-yamakiya.png'
+'/images/partner-adtown.png',
+'/images/partner-aquas.png',
+'/images/partner-aurevoir.png',
+'/images/partner-celsiall.png',
+'/images/partner-dairin.png',
+'/images/partner-kanon.png',
+'/images/partner-kokoro.png',
+'/images/partner-meithu.png',
+'/images/partner-midcityhotel.png',
+'/images/partner-nikkou.png',
+'/images/partner-oluolu.png',
+'/images/partner-omakaseauto.png',
+'/images/partner-poppo.png',
+'/images/partner-Quattro.png',
+'/images/partner-sekiguchi02.png',
+'/images/partner-tonbo.png',
+'/images/partner-training_farm.png',
+'/images/partner-transunet.png',
+'/images/partner-yamabuki.png',
+'/images/partner-yamakiya.png'
 ];
 
 
@@ -152,7 +152,7 @@ const RecruitPartnerPage: NextPage = () => {
                     email,
                     password,
                     paymentMethod: 'invoice', // ✅ 追加済み
-                    billingCycle: 'annual'    // ✅ 追加済み
+                    billingCycle: 'annual' // ✅ 追加済み
                 }),
             });
             const data = await response.json();
@@ -162,12 +162,20 @@ const RecruitPartnerPage: NextPage = () => {
             }
 
 
-            // ★修正点: 強制ダウンロードではなく、新しいタブで開く処理に切り替え
-            // これにより、iOS/AndroidでPDFがブラウザ内で確実に表示され、ユーザーが保存オプションを選択しやすくなる
-            window.open(data.pdfUrl, '_blank'); 
+            // ★修正点: 新しいタブを開かずに、PDFをダウンロードさせる
+            const pdfUrl = data.pdfUrl;
+            
+            const a = document.createElement('a');
+            a.href = pdfUrl;
+            a.download = '請求書_' + new Date().toISOString().split('T')[0] + '.pdf'; // ファイル名を指定
+            // ユーザーに視覚的な変化を与えないように一時的に追加
+            a.style.display = 'none'; 
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a); // 要素を削除
 
 
-            setInvoiceDownloadSuccess(true);
+            setInvoiceDownloadSuccess(true); // ダウンロード成功UIをトリガー
             setError(null);
 
 
@@ -290,7 +298,7 @@ const RecruitPartnerPage: NextPage = () => {
                     </div>
                     <p className="text-orange-500 font-semibold">地元の企業を応援する広告代理店 株式会社adtownからのご提案【大手企業に高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        【先行予約】月額3,850円で、<br />
+                        【先行予約】月額8,800円で、<br />
                         <span className="text-orange-600">理想の人材が見つかるまで。</span>
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
@@ -315,17 +323,6 @@ const RecruitPartnerPage: NextPage = () => {
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
                             貴店の求人マッチングは、この<strong className="font-bold">爆発的に増え続ける「未来の求職者」</strong>に直接届くのです。
                         </p>
-                        <div className="mt-8">
-                            <p className="text-lg text-gray-700 mb-4 font-semibold">地元の住民がすでに使っています。ぜひご確認ください。</p>
-                            <a
-                                href="https://minna-no-nasu-app.netlify.app/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center bg-orange-600 text-white font-bold py-3 px-8 rounded-full hover:bg-orange-700 transition duration-300 shadow-md text-base"
-                            >
-                                アプリを確認
-                            </a>
-                        </div>
                     </div>
                 </section>
                 {/* --- END: なぜ今、アプリ求人なのか？ --- */}
@@ -485,7 +482,7 @@ const RecruitPartnerPage: NextPage = () => {
                                         <tr className="bg-gray-50">
                                             <td className="p-3 border font-bold">Step 4: マッチング成立</td>
                                             <td className="p-3 border">企業からの「スカウト（面接確約オファー）」を受け入れる、または直接応募する。</td>
-                                            <td className="p-3 border">マッチング成立！ 企業とのチャットが開通し、次のステップへ進みます。</td>
+                                            <td className="p-3 border">マッチング成立！ アプリ内チャット機能が解放されます。</td>
                                         </tr>
                                         <tr>
                                             <td className="p-3 border font-bold">Step 5: 面接設定</td>
@@ -533,15 +530,15 @@ const RecruitPartnerPage: NextPage = () => {
                     <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
                         <FAQItem question="本当に求める人材に出会えますか？"><p className="leading-relaxed">はい。当社のAIは、スキルや経験といった表面的な情報だけでなく、求職者の価値観や希望する働き方、貴社の社風などを多角的に分析し、マッチング精度を最大限に高めています。これにより、定着率の高い、貴社にとって本当に価値のある採用を実現します。</p></FAQItem>
-                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額3,850円（または請求書払い、定価年額46,200円を一括前払い割引価格39,600円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p></FAQItem>
-                        <FAQItem question="契約の途中で解約（停止）はできますか？"><p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください。</p></FAQItem>
+                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額8,800円（または請求書払い、定価年額105,600円を一括前払い割引価格92,400円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p></FAQItem>
+                        <FAQItem question="契約の途中で解約（停止）はできますか？"><p className="leading-relaxed">はい。いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください。</p></FAQItem>
                     </div>
                 </section>
 
 
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
-                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">すでに広告パートナーにお申込みの方は、こちらからは登録はできません。広告パートナーの管理画面からお申込みください。アカウント情報を登録し、先行予約を完了してください。クレジットカード支払いは月額3,850円、請求書払いをお申込みの場合は、年額46,200円を一括前払い割引価格39,600円でご利用いただけます。</p></div>
+                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">すでに広告パートナーにお申込みの方は、こちらからは登録はできません。広告パートナーの管理画面からお申込みください。アカウント情報を登録し、先行予約を完了してください。クレジットカード支払いは月額8,800円、請求書払いをお申込みの場合は、年額105,600円を一括前払い割引価格92,400円でご利用いただけます。</p></div>
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div> <label className="block text-gray-700 font-medium mb-2">企業名・店舗名 *</label> <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
@@ -566,7 +563,7 @@ const RecruitPartnerPage: NextPage = () => {
                                     </span>
                                 </label>
                             </div>
-                        
+                            
                             {/* エラー表示エリア */}
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">決済設定が不完全なため、お申し込みを完了できません。サイト管理者にご連絡ください。</p></div> )}
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
@@ -585,32 +582,32 @@ const RecruitPartnerPage: NextPage = () => {
                         <p className="text-sm text-center mt-6">
                             すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
                         </p>
+                        
+                        {/* 請求書払いセクション (PDFダウンロードUI) */}
+                        <section className="mt-12 bg-white rounded-2xl shadow-xl p-8 md:p-12 w-full max-w-3xl mx-auto border border-gray-200 text-center">
+                            <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
+                            <p className="text-gray-600 mb-6">
+                                御請求書でのお支払い（年一括払い）の場合、サービスの利用開始は、ご入金の確認が取れてからとなります。ご入金確認後にログイン情報をお送りします。<br/>
+                                ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してご予約ください。
+                            </p>
+                            {invoiceDownloadSuccess && (
+                                <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md flex items-center justify-center mb-4 max-w-md mx-auto">
+                                    <DownloadIcon className="h-5 w-5 mr-3"/>
+                                    <p className="text-sm font-bold">請求書のダウンロードを開始しました！</p>
+                                </div>
+                            )}
+                            <button
+                                onClick={handleRegisterAndInvoice}
+                                disabled={isInvoiceProcessing || !isFormValid}
+                                className="inline-flex items-center justify-center w-full max-w-md py-4 text-white text-lg font-bold bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg hover:shadow-lg disabled:opacity-50 transition-all duration-300"
+                            >
+                                {isInvoiceProcessing && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                                <DownloadIcon className="w-5 h-5 mr-2" />
+                                {getInvoiceButtonText()}
+                            </button>
+                            {!isFormValid && <p className="text-red-500 text-sm mt-2">※ PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。</p>}
+                        </section>
                     </div>
-                </section>
-                
-                {/* 請求書払いセクション (PDFダウンロードUI) */}
-                <section className="mt-12 bg-white rounded-2xl shadow-xl p-8 md:p-12 w-full max-w-3xl mx-auto border border-gray-200 text-center">
-                    <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
-                    <p className="text-gray-600 mb-6">
-                        御請求書でのお支払い（年一括払い）の場合、サービスの利用開始は、ご入金の確認が取れてからとなります。ご入金確認後にログイン情報をお送りします。<br/>
-                        ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してご予約ください。
-                    </p>
-                    {invoiceDownloadSuccess && (
-                        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md flex items-center justify-center mb-4 max-w-md mx-auto">
-                            <DownloadIcon className="h-5 w-5 mr-3"/>
-                            <p className="text-sm font-bold">請求書のダウンロードを開始しました！</p>
-                        </div>
-                    )}
-                    <button
-                        onClick={handleRegisterAndInvoice}
-                        disabled={isInvoiceProcessing || !isFormValid}
-                        className="inline-flex items-center justify-center w-full max-w-md py-4 text-white text-lg font-bold bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg hover:shadow-lg disabled:opacity-50 transition-all duration-300"
-                    >
-                        {isInvoiceProcessing && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                        <DownloadIcon className="w-5 h-5 mr-2" />
-                        {getInvoiceButtonText()}
-                    </button>
-                    {!isFormValid && <p className="text-red-500 text-sm mt-2">※ PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。</p>}
                 </section>
             </main>
             <footer className="bg-white mt-20 border-t">

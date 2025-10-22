@@ -100,7 +100,7 @@ const IndexPage: NextPage<IndexPageProps> = ({ data }) => {
                     只今、準備中
                   </a>
                 </Link>
-                <p className="text-sm text-blue-200 mt-4">登録はメールアドレスだけで簡単1分。費用は一切かかりません。</p>
+                <p className="text-sm text-blue-200 mt-4">登録はメールアドレスだけで簡単1分。無料プランにお申込みください。</p>
               </div>
             </div>
           </div>
@@ -274,10 +274,10 @@ export const getServerSideProps: GetServerSideProps = async () => {
   const fallbackData: LandingData = {
     mainTitle: "みんなの那須アプリ「地域お守り無料プラン」",
     areaDescription: "那須塩原市、大田原市、那須町の地域専用アプリ",
-    heroHeadline: "那須の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題!",
-    heroSubheadline: "休日当番医からAお悩み相談まで。あなたのスマホが、那須地域最強の「お守り」に変わります。",
+    heroHeadline: "那須地域の暮らしが、もっと便利に、もっとお得に。\n約50個のアプリが永久無料で使い放題!",
+    heroSubheadline: "休日当番医からAIのお悩み相談まで。あなたのスマホが、那須地域最強の「お守り」に変わります。",
     solutionBenefit1_Title: "もしもの時の、家族の安心に",
-    solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。災害時の避難行動をAIがシミュレーション。暮らしの緊急事態に、もう焦りません。",
+    solutionBenefit1_Desc: "休日夜間診療所を瞬時に検索。商品やサービスのトラブル、水道のトラブルなどはこちら。暮らしの緊急事態に、もう焦りません。",
     solutionBenefit2_Title: "忙しい毎日の、時間とお金を節約",
     solutionBenefit2_Desc: "AIが献立を提案し、買い忘れも防止。ペットの迷子や里親募集情報も充実しています。",
     solutionBenefit3_Title: "ちょっと疲れた、あなたの心に",
@@ -285,11 +285,11 @@ export const getServerSideProps: GetServerSideProps = async () => {
     solutionBenefit4_Title: "地域のフリマでお得に売買",
     solutionBenefit4_Desc: "不要になったものを地域の人に譲ったり、掘り出し物を見つけたり。安心・安全な地域内取引をサポートします。<br><span class='text-sm text-gray-500'>※無料プランは購入のみ。出品はプレミアムプランで可能になります。</span>",
     solutionBenefit5_Title: "ご近所助け合い(お手伝い)",
-    solutionBenefit5_Desc: "電球の交換や買い物代行など、ちょっとした困りごとを気軽に相談・解決。地域のつながりを深めます。",
+    solutionBenefit5_Desc: "電球の交換や買い物代行など、ちょっとした困りごとを気軽に相談・解決。地域のつながりを深めます。<br><span class='text-sm text-gray-500'>※無料プランは購入のみ。出品はプレミアムプランで可能になります。</span>",
     solutionBenefit6_Title: "AIが探す、あなたに合う仕事",
-    solutionBenefit6_Desc: "履歴書不要。簡単な質問に答えるだけで、AIが那須地域の最適な求人をマッチング。新しいキャリアを応援します。",
+    solutionBenefit6_Desc: "履歴書不要。こんな会社がいい、こんな仕事をしたいを入力するだけで、AIが那須地域の最適な求人をマッチング。新しいキャリアを応援します。",
     solutionBenefit7_Title: "地域のお店の割引クーポン",
-    solutionBenefit7_Desc: "地元の飲食店やお店で使えるお得なクーポンが満載。地域経済を応援しながら、賢くお買い物を楽しめます。<br><span class='text-sm text-gray-500'>※無料プランは情報閲覧のみ。アプリ限定クーポンはプレミアムプランでご利用いただけます。</span>",
+    solutionBenefit7_Desc: "地元の飲食店やお店で使えるお得なクーポンが満載。地域経済を応援しながら、賢くお買い物を楽しめます。<br><span class='text-sm text-gray-500'></span>",
     freeReasonTitle: "なぜ、これだけの機能がずっと無料なのですか?",
     freeReasonDesc: "このアプリは、地域の企業様からの広告協賛によって運営されています。私たちは、那須地域に住むすべての方に、安全と便利を提供することが地域貢献だと考えています。だから、あなたに「地域お守り無料プラン」の利用料を請求することは一切ありません。安心して、ずっと使い続けてください。",
     premiumTeaserTitle: "さらに、もっともっとお得に。",

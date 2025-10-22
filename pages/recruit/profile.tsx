@@ -60,6 +60,10 @@ interface CompanyProfile {
 }
 
 
+// --- AIスコアリングの仕組みに関するデータ (完全に削除) ---
+// 以前存在していたaiScoringCriteriaの定義を削除しました。
+
+
 const CompanyProfilePage = () => {
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
@@ -240,6 +244,12 @@ const CompanyProfilePage = () => {
         setSaving(true);
         setError(null);
 
+        // フォームデータから成長機会、WLB、福利厚生の空の配列を削除 (Firestoreに空を書き込まないようにする)
+        const appealPointsToSave = { ...formData.appealPoints };
+        if (appealPointsToSave.growth && appealPointsToSave.growth.length === 0) delete appealPointsToSave.growth;
+        if (appealPointsToSave.wlb && appealPointsToSave.wlb.length === 0) delete appealPointsToSave.wlb;
+        if (appealPointsToSave.benefits && appealPointsToSave.benefits.length === 0) delete appealPointsToSave.benefits;
+
 
         try {
             const userRef = doc(db, 'recruiters', user.uid);
@@ -247,7 +257,7 @@ const CompanyProfilePage = () => {
             // 1. Firestoreのステータスを即座に 'pending_review' に更新 (マニュアルリセットも含む)
             await setDoc(userRef, {
                 // フォーム送信時は全ての内容を保存。リセット時は保存しない。
-                ...(isManualReset ? {} : formData), 
+                ...(isManualReset ? {} : { ...formData, appealPoints: appealPointsToSave }), 
                 verificationStatus: 'pending_review' as VerificationStatus,
                 aiFeedback: isManualReset ? 'AI審査を強制的に再実行します...' : 'AIが内容を審査中です... (通常、数分で完了します)',
                 updatedAt: serverTimestamp()
@@ -404,6 +414,7 @@ const CompanyProfilePage = () => {
                         <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
                             <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
                         </h2>
+                        {/* ★修正：スコアリングの仕組みを説明するテーブルの削除 */}
                         <p className="text-sm text-yellow-700">
                             応募者リストに表示されるための最低スコアです。60〜99点の範囲で設定できます。
                             高く設定するほど、マッチ度の高い候補者のみが表示されます。
@@ -598,7 +609,7 @@ const CompanyProfilePage = () => {
                             disabled={saving || isUploading}
                             className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 disabled:bg-gray-400 flex items-center text-lg"
                         >
-                            {saving ? <><Loader2 className="animate-spin mr-2" />AI審査中...</> : <><Send className="w-5 h-5 mr-2" />保存してAI登録審査を申請</>}
+                            {saving ? <><Loader2 className="animate-spin mr-2" />AI審査中...</> : <><Send className="w-4 h-4 mr-2" />保存してAI登録審査を申請</>}
                         </button>
                     </div>
                 </form>
@@ -610,7 +621,6 @@ const CompanyProfilePage = () => {
 
 
 export default CompanyProfilePage;
-
 
 
 

@@ -1,54 +1,74 @@
+// @/lib/firebase-admin.ts
+
 import * as admin from "firebase-admin";
-import path from "path";
 import fs from "fs";
+
+// ファイルからサービスアカウントJSONを読み込み
+let serviceAccount: admin.ServiceAccount | null = null;
+try {
+  const jsonData = fs.readFileSync("firebase-service-account.json", "utf8");
+  serviceAccount = JSON.parse(jsonData);
+  console.log("✅ firebase-service-account.json loaded successfully.");
+} catch (error) {
+  console.error("🔴 Failed to load firebase-service-account.json:", error);
+}
 
 let adminDb: admin.firestore.Firestore;
 let adminAuth: admin.auth.Auth;
 
+// ダミーAuth
+const createDummyAuth = (errorMessage: string): admin.auth.Auth => {
+  return {
+    getUserByEmail: async (email: string) => {
+      console.error(`🔴 DUMMY_AUTH_CALL: getUserByEmail(${email}) called. Error: ${errorMessage}`);
+      throw new Error(`Firebase Admin Auth Not Initialized: ${errorMessage}`);
+    },
+    createUser: async (properties: admin.auth.CreateRequest) => {
+      console.error(`🔴 DUMMY_AUTH_CALL: createUser() called. Error: ${errorMessage}`);
+      throw new Error(`Firebase Admin Auth Not Initialized: ${errorMessage}`);
+    },
+  } as unknown as admin.auth.Auth;
+};
+
+// ダミーDB
+const createDummyDb = (errorMessage: string): admin.firestore.Firestore => {
+  return {
+    collection: (path: string) => {
+      console.error(`🔴 DUMMY_DB_CALL: collection(${path}) called. Error: ${errorMessage}`);
+      throw new Error(`Firebase Admin DB Not Initialized: ${errorMessage}`);
+    },
+  } as unknown as admin.firestore.Firestore;
+};
+
+// 初期化
 try {
-    if (!admin.apps.length) {
-        let serviceAccountJson: string;
-
-        if (process.env.NODE_ENV === 'production' && process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-            // 1. Netlify/Vercelなどの本番環境: 環境変数からJSON文字列を読み込む
-            serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-            console.log("✅ Admin SDK: Initializing from Environment Variable.");
-        } else {
-            // 2. ローカル開発環境: ローカルファイルから読み込む
-            const serviceAccountPath = path.resolve(
-                process.cwd(),
-                "firebase-service-account.json"
-            );
-            console.log("✅ Admin SDK: Initializing from local file.");
-            
-            // 🚨 fs.readFileSync() は同期的なため、try/catchで包む
-            serviceAccountJson = fs.readFileSync(serviceAccountPath, "utf8");
-        }
-
-        const serviceAccount = JSON.parse(serviceAccountJson);
-        console.log("✅ JSON keys:", Object.keys(serviceAccount));
-
-        // 3. Admin SDKの初期化
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            // databaseURL: process.env.FIREBASE_DATABASE_URL, // 必要に応じて追加
-        });
-        console.log("✅ Firebase Admin SDK initialized successfully.");
+  if (!admin.apps.length) {
+    if (!serviceAccount) {
+      const errorMsg = "firebase-service-account.json not found or invalid.";
+      console.error(`🔴 ${errorMsg}`);
+      adminAuth = createDummyAuth(errorMsg);
+      adminDb = createDummyDb(errorMsg);
+      throw new Error(errorMsg);
     }
 
-    // 初期化されたFirestoreとAuthインスタンスを変数に代入
-    adminDb = admin.firestore();
-    adminAuth = admin.auth();
-    console.log("✅ Firestore instance type:", typeof adminDb);
-    
-} catch (error) {
-    console.error("🔴 Firebase Admin initialization error:", error);
-    // 開発継続のため、エラー時にダミーを代入 (実際のFirestore操作は失敗します)
-    adminDb = {} as any;
-    adminAuth = {} as any;
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log("✅ Firebase Admin SDK initialized successfully.");
+  }
+
+  adminDb = admin.firestore();
+  adminAuth = admin.auth();
+
+} catch (error: any) {
+  console.error("🔴 Firebase Admin initialization error:", error);
+  const finalErrorMsg = error.message || "Unknown initialization failure.";
+  adminAuth = createDummyAuth(finalErrorMsg);
+  adminDb = createDummyDb(finalErrorMsg);
 }
 
 export { adminDb, adminAuth };
+
 
 
 

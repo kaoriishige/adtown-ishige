@@ -6,12 +6,14 @@
 // --- 型定義 ---
 export interface UserProfile {
   uid?: string;
-  topPriorities: string[];
-  desiredAnnualSalary: number;
+  // 必須入力項目（例：pages/users/profile.tsxのStep 2に対応）
+  desiredSalaryMin: number; // 万円単位
+  desiredSalaryMax: number; // 万円単位
   desiredLocation: string;
   desiredJobTypes: string[];
-  skills: string;
-  appealPoints: {
+  skills: string; // 履歴書相当のスキル
+  // 価値観
+  matchingValues: {
     atmosphere: string[];
     growth: string[];
     wlb: string[];
@@ -38,6 +40,8 @@ export interface Job {
   salaryMax: number;
   location: string;
   jobCategory: string;
+  // 企業側のマッチング価値観をJobにも含める（APIロジックから推測）
+  appealPoints: CompanyProfile['appealPoints'];
 }
 
 /**
@@ -63,25 +67,38 @@ export function calculateMatchScore(
 ): { score: number; reasons: string[] } {
   let score = 0;
   const reasons: string[] = [];
-
+  
+  // ⚠️ 注意: APIコードに依存した簡易スコアリングロジックです。
+  // 実際には、userProfile.topPriorities の定義がないため、ここでは簡略化します。
+  
   // --- ステップ1: 重要項目のスコアリング (最大60点) ---
-  // 給与 (最大35点)
-  if (job.salaryMax >= userProfile.desiredAnnualSalary) {
-    const point = userProfile.topPriorities.includes('salary') ? 35 : 25;
-    score += point;
-    reasons.push('希望給与');
+  const userDesiredSalary = (userProfile.desiredSalaryMin + userProfile.desiredSalaryMax) / 2 || 0;
+  
+  // 1. 給与 (最大30点) - 求人の提示額がユーザーの希望範囲内か
+  if (job.salaryMin <= userDesiredSalary && job.salaryMax >= userDesiredSalary) {
+      score += 30;
+      reasons.push('希望年収の範囲内です');
+  } else if (job.salaryMax > userDesiredSalary) {
+      // ユーザーの希望より高い場合も高評価
+      score += 15;
+      reasons.push('提示給与があなたの希望を満たしています');
   }
 
-  // 職種 (最大25点)
+  // 2. 職種 (最大20点)
   if (userProfile.desiredJobTypes.includes(job.jobCategory)) {
-    const point = userProfile.topPriorities.includes('jobType') ? 25 : 15;
-    score += point;
-    reasons.push('希望職種');
+      score += 20;
+      reasons.push('希望職種と完全に一致します');
   }
 
+  // 3. 勤務地 (最大10点) - 簡易一致
+  if (job.location.includes(userProfile.desiredLocation) || userProfile.desiredLocation.includes(job.location)) {
+      score += 10;
+      reasons.push('希望勤務地と一致します');
+  }
+  
   // --- ステップ2: 価値観（制度・文化）のマッチング (最大40点) ---
   let appealPointScore = 0;
-  const appealCategories: (keyof UserProfile['appealPoints'])[] = [
+  const appealCategories: (keyof UserProfile['matchingValues'])[] = [
     'atmosphere',
     'growth',
     'wlb',
@@ -90,32 +107,37 @@ export function calculateMatchScore(
   ];
 
   appealCategories.forEach(category => {
-    const userWants = new Set(userProfile.appealPoints[category]);
-    const companyOffers = new Set(companyProfile.appealPoints[category]);
+    const userWants = new Set(userProfile.matchingValues[category]);
+    // 企業はCompanyProfileではなくJobまたはRecruitmentsにappealPointsを持っているはずですが、
+    // APIのロジックに従いCompanyProfile/Jobの両方を参照する想定でJobのappealPointsを使用します。
+    const companyOffers = new Set(job.appealPoints[category]); 
     const intersection = new Set(Array.from(userWants).filter(want => companyOffers.has(want)));
 
     if (intersection.size > 0) {
-      appealPointScore += intersection.size * 2;
-      if (userProfile.topPriorities.includes(category)) {
-        appealPointScore += 8;
-        reasons.push('優先する価値観');
-      }
+      // 一致する価値観1つにつき4点
+      appealPointScore += intersection.size * 4; 
+      reasons.push(`価値観: ${Array.from(intersection)[0]} などが一致`);
     }
   });
 
-  score += Math.min(appealPointScore, 40);
+  score += Math.min(appealPointScore, 40); // 最大40点
 
   const finalScore = Math.min(Math.round(score), 99);
-
-  if (finalScore >= companyProfile.minMatchScore) {
-    reasons.push('総合的な相性');
+  
+  // 理由の最終整理
+  if (finalScore >= (companyProfile.minMatchScore || 60)) {
+    reasons.push('総合的な相性は抜群です！');
   } else if (reasons.length === 0 && finalScore > 0) {
-    reasons.push('基本的な条件の一致');
+    reasons.push('基本的な条件は満たしています');
   }
+  
+  // 理由をユニーク化
+  const uniqueReasons = Array.from(new Set(reasons)).slice(0, 3);
+
 
   return {
     score: finalScore,
-    reasons: Array.from(new Set(reasons)),
+    reasons: uniqueReasons,
   };
 }
 

@@ -247,7 +247,7 @@ const AddRecruitServicePage: NextPage = () => {
                     </div>
                     <p className="text-orange-500 font-semibold">地元の企業を応援する広告代理店 株式会社adtownからのご提案【大手企業に高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight text-center">
-                        【先行予約】月額3,850円で、<br />
+                        【先行予約】月額8,800円で、<br />
                         <span className="text-orange-600">理想の人材が見つかるまで。</span>
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
@@ -477,7 +477,7 @@ const AddRecruitServicePage: NextPage = () => {
                     <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
                         <FAQItem question="本当に求める人材に出会えますか？"><p className="leading-relaxed">はい。当社のAIは、スキルや経験といった表面的な情報だけでなく、求職者の価値観や希望する働き方、貴社の社風などを多角的に分析し、マッチング精度を最大限に高めています。これにより、定着率の高い、貴社にとって本当に価値のある採用を実現します。</p></FAQItem>
-                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額3,850円（または請求書払い、定価年額46,200円を一括前払い割引価格39,600円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p></FAQItem>
+                        <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？"><p className="leading-relaxed"><strong className="font-bold">はい、月額8,800円（または請求書払い、定価年額105,600円を一括前払い割引価格92,400円）のみです。</strong>採用が何名決まっても、追加の成功報酬は一切いただきません。コストを気にせず、納得のいくまで採用活動に専念していただけます。</p></FAQItem>
                         <FAQItem question="契約の途中で解約（停止）はできますか？"><p className="leading-relaxed">はい、いつでも管理画面から次回の更新を停止（解約）することができます。契約期間の縛りはありません。ただし、月の途中で停止した場合でも、日割りの返金はございませんのでご了承ください。</p></FAQItem>
                     </div>
                 </section>
@@ -485,7 +485,7 @@ const AddRecruitServicePage: NextPage = () => {
 
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
-                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 追加お申し込み</h2><p className="text-center text-gray-600">以下の登録情報をご確認の上、規約に同意してお申し込みください。請求書払いをお申込みの場合は、年額定価46,200円を一括前払い割引価格39,600円でご利用いただけます。</p></div>
+                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 追加お申し込み</h2><p className="text-center text-gray-600">以下の登録情報をご確認の上、規約に同意してお申し込みください。請求書払いをお申込みの場合は、年額定価105,600円を一括前払い割引価格92,400円でご利用いただけます。</p></div>
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div> <label className="block text-gray-700 font-medium mb-2">企業名・店舗名 *</label> <input type="text" value={companyName} readOnly className="w-full px-4 py-2 border rounded-lg bg-gray-100 cursor-not-allowed"/> </div>

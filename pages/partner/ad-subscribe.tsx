@@ -107,7 +107,7 @@ const CampaignSection = ({ registeredCount }: { registeredCount: number }) => {
         <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
             <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
             <p className="mt-2 text-lg">
-                月額3,850円のパートナー制度（アプリ広告出し放題＆紹介手数料で収入アップ）を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。さらに、1年後の**全額返金保証**もご用意しました。
+                月額4,400円のパートナー制度（アプリ広告出し放題＆紹介手数料で収入アップ）を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。さらに、1年後の**全額返金保証**もご用意しました。
             </p>
             <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
                 <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
@@ -152,7 +152,7 @@ const HowItWorksSection = () => (
             <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h4 className="text-xl font-bold">「年間9.3万円の損」に気づく</h4><p className="mt-2 text-gray-600">アプリを使ううち、お客様は「恋愛・婚活マッチングサービス」「フリマで売って稼ぐ」「お手伝いで稼ぐ」「ペット・動物マッチング」といった有料機能を使わないと**年間93,000円以上も損をしている**事実に気づきます。</p></div>
             <div className="text-center p-6 bg-white rounded-lg shadow-lg"><div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div><h4 className="text-xl font-bold">貴店に「継続収益」が発生します</h4><p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円×人数分**が自動で積み上がります。</p></div>
         </div>
-        <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">つまり、月額3,850円のパートナー費用は、わずか27人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
+        <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">つまり、月額4,400円のパートナー費用は、わずか30人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
     </section>
 );
 
@@ -195,10 +195,10 @@ const FaqSection = () => (
         <h3 className="text-3xl font-extrabold text-center">よくある質問</h3>
         <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
             <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？">
-                <p className="leading-relaxed">はい、月額3,850円クレジットカード決済（または請求書払い年額39,600円）のみです。広告掲載数に上限はなく、紹介手数料から成功報酬をいただくことも一切ありません。安心してご利用いただけます。</p>
+                <p className="leading-relaxed">はい、月額4,400円クレジットカード決済（または請求書払い年額46,200円）のみです。広告掲載数に上限はなく、紹介手数料から成功報酬をいただくことも一切ありません。安心してご利用いただけます。</p>
             </FAQItem>
             <FAQItem question="全額返金保証について詳しく教えてください。">
-                <p className="leading-relaxed">ご利用開始から1年後、得られた紹介手数料の累計が年間のパートナー費用（46,200円クレジットカード決済、39,600円請求書払い決済）に満たなかった場合、お支払いいただいた費用を全額返金いたします。これは、私達のシステムに自信があるからこその保証です。※適用には諸条件がありますので、利用規約第6条をご確認ください。</p>
+                <p className="leading-relaxed">ご利用開始から1年後、得られた紹介手数料の累計が年間のパートナー費用（52,800円クレジットカード決済、46,200円請求書払い決済）に満たなかった場合、お支払いいただいた費用を全額返金いたします。これは、私達のシステムに自信があるからこその保証です。※適用には諸条件がありますので、利用規約第6条をご確認ください。</p>
             </FAQItem>
             <FAQItem question="紹介手数料はどのように支払われますか？">
                 <p className="leading-relaxed">毎月末締めで計算し、翌々月15日にご指定の銀行口座へお振り込みします。振込額の合計が3,000円に満たない場合は、お支払いは翌月以降に繰り越されます。パートナー様専用のダッシュボードで、いつでも収益状況をご確認いただけます。</p>
@@ -225,7 +225,7 @@ const RegistrationForm = forwardRef<HTMLDivElement, RegistrationFormProps>((prop
                     <p className="text-gray-700 leading-relaxed">
                         ここまでお読みいただきありがとうございます。<br/>
                         限定100店舗の初期費用無料キャンペーン枠は、すぐに埋まってしまうことが予想されます。<br/>
-                        <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目から初期費用が発生いたします。もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（46,200円クレジットカード決済、39,600円請求書払い決済）に満たなかった場合、お支払いいただいた費用を全額返金いたします。請求書払いは、年間46,200円のところ一括前払いで39,600円の割引価格となります。</strong><br/>
+                        <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目から初期費用が発生いたします。もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（52,800円クレジットカード決済、46,200円請求書払い決済）に満たなかった場合、お支払いいただいた費用を全額返金いたします。請求書払いは、年間52,800円のところ一括前払いで46,200円の割引価格となります。</strong><br/>
                     </p>
                 </div>
                 <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
@@ -253,7 +253,7 @@ const RegistrationForm = forwardRef<HTMLDivElement, RegistrationFormProps>((prop
                                 <button type="button" onClick={() => setShowTerms(true)} className="text-blue-600 hover:underline">
                                     パートナー利用規約
                                 </button>
-                                および全額返金保証の条件に同意し、広告掲載および紹介料プログラム（月額3,850円/税込）へ申し込みます。
+                                および全額返金保証の条件に同意し、広告掲載および紹介料プログラム（月額4,400円/税込）へ申し込みます。
                             </span>
                         </label>
                     </div>
@@ -269,7 +269,7 @@ const RegistrationForm = forwardRef<HTMLDivElement, RegistrationFormProps>((prop
                     <section className="mt-12 pt-8 border-t text-center">
                         <h3 className="text-xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
                         <p className="text-gray-600 mb-6 text-sm">
-                            御請求書でのお支払いについては、年間39,600円を前払いにてご精算いただきます。<br />
+                            御請求書でのお支払いについては、年間46,200円を前払いにてご精算いただきます。<br />
                             ご希望の方は、**フォームの情報をご確認の上、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してください。ご入金確認後に本登録完了となります。
                         </p>
                         {invoiceDownloadSuccess && (
