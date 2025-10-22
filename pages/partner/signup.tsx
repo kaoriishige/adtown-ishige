@@ -288,7 +288,7 @@ const PartnerSignupPage = () => {
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         「お金を無駄に
                         払う」時代は終わりました。<br />
-                        これからは<span className="text-orange-600">あなたのお店のテーブルが新しい収益源</span>になります。
+                        これからは<span className="text-orange-600">あなたのお店のテーブルが新しい収益源</span>になり、<br />さらに集客広告が出し放題!!
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
                         これは単なる広告掲載のご提案ではありません。人手不足、物価高騰…そんな<strong className="font-bold">「痛み」</strong>を抱える今だからこそ、那須地域の店舗様と共に、広告費を「コスト」から「利益」に変える新しいプロジェクトをご提案します。
