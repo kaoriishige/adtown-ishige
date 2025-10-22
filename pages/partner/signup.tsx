@@ -136,8 +136,6 @@ const PartnerSignupPage = () => {
         setIsInvoiceProcessing(true);
         setInvoiceDownloadSuccess(false);
 
-        // ★ 変更点 1: 新しいウィンドウを開く処理を削除（ポップアップ/真っ白画面回避）
-        
         try {
             // Call API to register user and create Stripe invoice/return PDF URL simultaneously
             const response = await fetch('/api/auth/register-and-create-invoice', { 
@@ -164,7 +162,7 @@ const PartnerSignupPage = () => {
                 throw new Error(data.error || '登録および請求書の作成に失敗しました。');
             }
 
-            // ★ 変更点 2: URLを使って、不可視のaタグでダウンロードを強制的にトリガー
+            // ★ 修正済み: URLを使って、不可視のaタグでダウンロードを強制的にトリガー
             const pdfUrl = data.pdfUrl;
             
             const a = document.createElement('a');
@@ -181,10 +179,6 @@ const PartnerSignupPage = () => {
 
             // Clear sessionStorage on success (フォーム情報をクリア)
             Object.keys(window.sessionStorage).forEach(key => { if (key.startsWith('partnerForm_')) { window.sessionStorage.removeItem(key); } });
-
-            // ★ 変更点 3: 成功後のページ遷移を削除
-            // window.location.href = '/partner/subscribe-success'; 
-            // これにより、ユーザーは現在のランディングページに留まる
 
         } catch (err: any) {
             console.error('Invoice download error:', err);
@@ -330,17 +324,6 @@ const PartnerSignupPage = () => {
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
                             貴店の広告やクーポン、フードロスを、アプリ広告出し放題で、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
                         </p>
-                        <div className="mt-8">
-                            <p className="text-lg text-gray-700 mb-4 font-semibold">地元の住民がすでに使っています。ぜひご確認ください。</p>
-                            <a
-                                href="https://minna-no-nasu-app.netlify.app/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center bg-orange-600 text-white font-bold py-3 px-8 rounded-full hover:bg-orange-700 transition duration-300 shadow-md text-base"
-                            >
-                                アプリを確認
-                            </a>
-                        </div>
                     </div>
                 </section>
 
@@ -365,7 +348,7 @@ const PartnerSignupPage = () => {
                             <p className="mt-2 text-gray-600">お客様が月額480円の有料プランに移行した瞬間、貴店に**紹介料(売上の30%)**が発生。利用し続ける限り、**毎月144円×人数分**が自動で積み上がります。</p>
                         </div>
                     </div>
-                    <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">つまり、月額<strong className="font-bold">4,400円</strong>のパートナー費用は、わずか31人のお客様が有料会員になるだけで回収でき、それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。（※4,400円 $\div$ 144円 $\approx$ 30.5人）</p></div>
+                    <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
                 </section>
 
                 {/* Revenue Simulation Section */}
