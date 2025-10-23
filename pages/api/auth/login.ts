@@ -1,6 +1,4 @@
-// Next.jsのAPIルートハンドラ
 import { NextApiRequest, NextApiResponse } from 'next';
-import nookies from 'nookies';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 
@@ -10,11 +8,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // クライアントがFirebase Authでサインインした後に発行されたIDトークンを受け取る
-    const { idToken } = req.body; // クライアントから直接IDトークンを受け取る
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    const { loginType } = req.body; // 'recruit' or 'adver'
 
-    if (!idToken) {
-        return res.status(401).json({ error: 'IDトークンがありません。' });
+    if (!idToken || !loginType) {
+        return res.status(401).json({ error: 'Authorization token or login type is missing.' });
     }
 
     try {
@@ -22,45 +20,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         const uid = decodedToken.uid;
 
-        // 2. ユーザーのFirestoreドキュメントからロールを確認
+        // 2. Firestoreでユーザーのロールとデータを検証
         const userDocRef = adminDb.collection('users').doc(uid);
         const userDoc = await userDocRef.get();
-        const userData = userDoc.data();
-        
-        // パートナーロールの確認 (adverまたはrecruit)
-        const roles: string[] = userData?.roles || [];
-        if (!roles.includes('adver') && !roles.includes('recruit')) {
-            return res.status(403).json({ error: '管理者またはパートナーの権限がありません。' });
+
+        if (!userDoc.exists) {
+            // Firebase Authにはいるが、Firestoreにデータがない場合
+            await adminAuth.revokeRefreshTokens(uid); // セキュリティのためトークンを無効化
+            // クライアント側でエラー処理させるためにログアウトさせる
+            return res.status(403).json({ error: 'user_data_missing' }); 
         }
-        
+
+        const userData = userDoc.data();
+        const requiredRole = loginType === 'recruit' ? 'recruit' : 'adver';
+
+        // ロールチェック：ログインタイプと一致するロールを持っているか確認
+        if (!userData?.roles || !userData.roles.includes(requiredRole)) {
+            await adminAuth.revokeRefreshTokens(uid); // セキュリティのためトークンを無効化
+            return res.status(403).json({ error: 'permission_denied' }); 
+        }
+
         // 3. セッションクッキーを作成し、クライアントに送信
         const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: 60 * 60 * 24 * 5 * 1000 }); // 5日間有効
-
-        // 本番環境でのクッキー動作を確実にするためのオプション
+        
         const isProduction = process.env.NODE_ENV === 'production';
-        const domain = process.env.NEXT_PUBLIC_APP_DOMAIN; 
+        const domain = process.env.NEXT_PUBLIC_APP_DOMAIN;
         
         const COOKIE_OPTIONS = [
             `Max-Age=${60 * 60 * 24 * 5}`,
             'HttpOnly',
-            'SameSite=Strict', // CSRF対策
-            isProduction ? 'Secure' : '', // 本番環境ではHTTPS必須
-            isProduction && domain ? `Domain=${domain}` : '', // 本番環境でのドメイン指定
+            'SameSite=Strict', 
             'Path=/',
+            isProduction ? 'Secure' : '',
+            (isProduction && domain) ? `Domain=${domain}` : '', // ★本番環境でのドメイン指定
         ].filter(Boolean).join('; ');
 
-        // HTTPヘッダーにセッションクッキーをセット
         res.setHeader('Set-Cookie', `__session=${sessionCookie}; ${COOKIE_OPTIONS}`);
 
-        res.status(200).json({ uid: uid, message: 'ログインに成功しました。' });
+        // 4. リダイレクト先を決定 (ダッシュボードへ)
+        const redirectPath = loginType === 'recruit' ? '/recruit/dashboard' : '/partner/dashboard';
+
+        res.status(200).json({ uid, redirect: redirectPath, message: 'ログインが完了しました。' });
 
     } catch (error: any) {
-        console.error('Login API error:', error);
-        // IDトークン検証失敗時 (期限切れ、無効など)
-        if (error.code === 'auth/argument-error' || error.code === 'auth/id-token-expired' || error.message.includes('Invalid ID token')) {
-            res.status(401).json({ error: 'Invalid ID token.' });
-        } else {
-            res.status(500).json({ error: 'ログイン中にサーバーエラーが発生しました。' });
-        }
+        console.error('Session Login API error:', error);
+        // Admin SDKの検証エラー、トークン期限切れ、初期化失敗などが含まれる
+        const errorMessage = error.message || 'セッション作成中にサーバーエラーが発生しました。';
+        res.status(401).json({ error: 'Invalid ID token.' }); 
     }
 }

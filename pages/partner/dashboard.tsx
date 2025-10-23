@@ -5,8 +5,9 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, signOut } from 'firebase/auth';
 import { app } from '../../lib/firebase';
-import { adminDb, adminAuth } from '@/lib/firebase-admin'; // ★修正: adminAuthを直接インポート
-import nookies from 'nookies'; // nookiesをインポート
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import nookies from 'nookies';
+import { RiLogoutBoxRLine } from 'react-icons/ri'; // RiLogoutBoxRLineを追加
 
 // ===============================
 // SVG アイコン
@@ -31,6 +32,7 @@ const BankIcon = (props: React.SVGProps<SVGSVGElement>) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
     </svg>
 );
+// DownloadIconは削除された機能のため不要ですが、念のため削除
 
 // ===============================
 // 型定義
@@ -50,10 +52,11 @@ interface ActionButtonProps {
     title: string;
     description: string;
     bgColorClass: string;
+    // download?: string; // ダウンロード機能削除のため削除
 }
 
 // ===============================
-// 汎用 UI コンポーネント
+// 汎用 UI コンポーネント (ダウンロード機能削除のためシンプル化)
 // ===============================
 const ActionButton: React.FC<ActionButtonProps> = ({
     href,
@@ -61,33 +64,39 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     title,
     description,
     bgColorClass,
-}) => (
-    <Link href={href} legacyBehavior>
-        <a className="group flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow cursor-pointer">
-            <div
-                className={`flex-shrink-0 w-16 h-16 rounded-lg flex items-center justify-center ${bgColorClass}`}
+    // download, // ダウンロード機能削除のため削除
+}) => {
+    // 日本語ファイル名対応のためのencodeURIも不要になりましたが、Linkのhrefはそのまま
+    const encodedHref = href; 
+    
+    return (
+        <Link href={encodedHref} legacyBehavior> 
+            <a 
+                className="group flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
             >
-                {icon}
-            </div>
-            <div className="ml-4">
-                <h3 className="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
-                    {title}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">{description}</p>
-            </div>
-        </a>
-    </Link>
-);
+                <div
+                    className={`flex-shrink-0 w-16 h-16 rounded-lg flex items-center justify-center ${bgColorClass}`}
+                >
+                    {icon}
+                </div>
+                <div className="ml-4">
+                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                        {title}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">{description}</p>
+                </div>
+            </a>
+        </Link>
+    );
+};
 
 
 // =======================================================
-// ★修正：ダミーページコンポーネント (リンク切れ対策としてこのファイル内で定義)
+// ダミーページコンポーネント (そのまま)
 // =======================================================
 
 const DummySettingsPage: React.FC<{ title: string, path: string }> = ({ title, path }) => {
     const router = useRouter();
-    // 💡 実際のプロジェクトでは、router.pathname を使ってどのページが表示されているかを判断できます
-    // このダミーページは、ReferralInfoPage と PayoutSettingsPage がレンダリングする内容です。
     return (
         <div className="min-h-screen bg-gray-50 p-8">
             <Head><title>{title}</title></Head>
@@ -109,24 +118,18 @@ const DummySettingsPage: React.FC<{ title: string, path: string }> = ({ title, p
     );
 };
 
-// Next.jsのGetServerSidePropsをラップして、ページコンポーネントを定義
-// 💡 コンポーネントは、Next.jsのPagesディレクトリ構造に応じて、
-//    実際には `partner/referral-info.tsx` や `partner/payout-settings.tsx` に記述されます。
-
 const ReferralInfoPage: NextPage = () => <DummySettingsPage title="紹介用URLとQRコード" path="/partner/referral-info" />;
 const PayoutSettingsPage: NextPage = () => <DummySettingsPage title="報酬受取口座の設定" path="/partner/payout-settings" />;
 
 // ===============================
-// サーバーサイド認証チェック
+// サーバーサイド認証チェック (そのまま)
 // ===============================
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
-        // ★★★ ここから修正 ★★★
         const cookies = nookies.get(context);
-        // 'session' クッキーを検証。もし違う名前なら修正してください。
+        // cookies.session が存在しない場合を考慮して空文字列を渡す
         const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
         const { uid } = token;
-        // ★★★ ここまで修正 ★★★
 
         if (!uid) {
             return { redirect: { destination: '/partner/login', permanent: false } };
@@ -163,6 +166,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             },
         };
     } catch (err) {
+        // セッション切れなど認証エラーの場合はログインへリダイレクト
         console.error('Dashboard getServerSideProps error:', err);
         return { redirect: { destination: '/partner/login', permanent: false } };
     }
@@ -174,14 +178,19 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
     const router = useRouter();
     const { status } = router.query;
+    const auth = getAuth(app); 
 
     const handleLogout = async () => {
         try {
+            // セッションクッキーを削除するAPIを呼び出し
             await fetch('/api/auth/sessionLogout', { method: 'POST' });
-            await signOut(getAuth(app));
+            // Firebaseのクライアント側のサインアウト
+            await signOut(auth);
+            // ログインページへリダイレクト
             router.push('/partner/login');
         } catch (error) {
             console.error('ログアウト失敗:', error);
+            // 失敗しても強制的にログインページへ
             router.push('/partner/login');
         }
     };
@@ -194,7 +203,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                 <title>{"広告パートナー ダッシュボード"}</title>
             </Head>
 
-            {/* ヘッダー */}
+            {/* ヘッダー (そのまま) */}
             <header className="bg-white shadow-sm">
                 <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
                     <div>
@@ -214,14 +223,20 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                         <p>パートナー登録と決済が正常に完了しました。</p>
                     </div>
                 )}
-
+                
+                {/* ▼▼▼ 追加: ログイン案内バナー ▼▼▼ */}
                 <div className="mb-8 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-800 rounded-md">
                     <p className="text-sm">
-                        <strong>お知らせ:</strong> 再ログインは、<a href="https://www.adtown.co.jp/" target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-blue-900">adtownのホームページ</a>から行えます。
+                        <strong>ログインについて:</strong> ブラウザでadtownと検索してホームページからログインできます。
                     </p>
                 </div>
+                {/* ▲▲▲ 追加: ログイン案内バナー ▲▲▲ */}
 
-                {/* セクション1 */}
+                {/* PDF資料ダウンロードセクションは削除済み */}
+                {/* <section className="mb-8">...</section> */}
+
+
+                {/* セクション1 (そのまま) */}
                 <section>
                     <h2 className="text-xl font-bold text-gray-700 mb-3">１．お店の基本情報を設定する</h2>
                     <ActionButton
@@ -233,7 +248,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                     />
                 </section>
 
-                {/* セクション2 */}
+                {/* セクション2 (そのまま) */}
                 <section className="mt-8">
                     <h2 className="text-xl font-bold text-gray-700 mb-3">２．お客様へのお知らせを更新する</h2>
                     <ActionButton
@@ -245,12 +260,11 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                     />
                 </section>
 
-                {/* セクション3 */}
+                {/* セクション3 (そのまま) */}
                 <section className="mt-8">
                     <h2 className="text-xl font-bold text-gray-700 mb-3">３．収益と集客を管理する</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <ActionButton
-                            // ★修正：ダミーページへリンク
                             href="/partner/referral-info" 
                             icon={<QrCodeIcon />}
                             title="紹介用URLとQRコード"
@@ -258,7 +272,6 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                             bgColorClass="bg-purple-500"
                         />
                         <ActionButton
-                            // ★修正：ダミーページへリンク
                             href="/partner/payout-settings"
                             icon={<BankIcon />}
                             title="報酬受取口座を登録・編集"
@@ -268,12 +281,12 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                     </div>
                 </section>
 
-                {/* AI求人案内 */}
+                {/* AI求人案内 (そのまま) */}
                 {!hasRecruitRole && (
                     <section className="mt-12 p-6 bg-white rounded-lg shadow-md border border-blue-200">
                         <h2 className="text-xl font-bold text-blue-600">AIマッチング求人サービス</h2>
                         <p className="mt-2 text-gray-600">
-                            月額3,850円税込みで、AIがあなたの会社に最適な人材を見つけます。
+                            月額8,800円税込みで、AIがあなたの会社に最適な人材を見つけます。
                         </p>
                         <Link href="/recruit/apply" legacyBehavior>
                             <a className="inline-block mt-4 bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600 transition duration-150 cursor-pointer">
@@ -283,8 +296,9 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                     </section>
                 )}
 
-                {/* フッター操作 */}
+                {/* フッター操作 (そのまま) */}
                 <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* LinkにclassNameを直接指定するNext.jsの新しい書き方に修正 */}
                     <Link href="/contact" className="w-full text-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 cursor-pointer">
                         お問い合わせ
                     </Link>
@@ -300,9 +314,6 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
     );
 };
 
-// Next.jsでこれらのダミーページをエクスポートする際は、ファイルごとに分割する必要があります。
-// しかし、このCanvas内ではメインコンポーネントのみをエクスポートします。
-// 実際のプロジェクトでは、ReferralInfoPageとPayoutSettingsPageは別ファイルに記述してください。
-
 export default PartnerDashboard;
+
 

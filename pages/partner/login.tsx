@@ -1,9 +1,12 @@
 import Head from 'next/head';
 import React, { useState, useEffect } from 'react'; 
 import { useRouter } from 'next/router';
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'; // sendPasswordResetEmail を追加
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'; // sendPasswordResetEmail を使用
 import { app } from '@/lib/firebase'; // パスを確認
 import Link from 'next/link';
+
+// --- 型定義の拡張 ---
+type MessageContent = string | React.ReactNode;
 
 // --- SVGアイコン ---
 const EyeIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg> );
@@ -18,9 +21,12 @@ const LoginPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [loginType, setLoginType] = useState('recruit'); // 'recruit' (求人) または 'adver' (広告)
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null); // 成功メッセージ用
-    const [passwordVisible, setPasswordVisible] = useState(false); // ★修正：パスワード表示制御用
+    // 💡 修正: エラー/成功メッセージが文字列またはJSX要素を受け入れるように型を拡張
+    const [error, setError] = useState<MessageContent | null>(null); 
+    const [successMessage, setSuccessMessage] = useState<MessageContent | null>(null); 
+    const [passwordVisible, setPasswordVisible] = useState(false); 
+
+    const [isPasswordResetMode, setIsPasswordResetMode] = useState(false); 
 
     // URLのクエリパラメータからエラーメッセージを取得
     const queryError = router.query.error as string;
@@ -36,8 +42,16 @@ const LoginPage: React.FC = () => {
         }
     }, [queryError]);
 
+    // パスワードリセット処理の開始
+    const handleStartPasswordReset = (e: React.MouseEvent) => {
+        e.preventDefault(); 
+        setError('パスワード再設定メールを送信するには、メールアドレスを入力してください。');
+        setSuccessMessage(null);
+        setIsPasswordResetMode(true); 
+    };
 
-    const handlePasswordReset = async () => {
+    // パスワードリセットメール送信
+    const handleSendPasswordReset = async () => {
         if (!email) {
             setError('パスワード再設定メールを送信するには、メールアドレスを入力してください。');
             return;
@@ -47,9 +61,9 @@ const LoginPage: React.FC = () => {
         setSuccessMessage(null);
 
         try {
-            // Firebaseのパスワード再設定メール送信機能を使用
             await sendPasswordResetEmail(auth, email);
             setSuccessMessage(`再設定メールを ${email} に送信しました。メールを確認してください。`);
+            setIsPasswordResetMode(false); 
             
         } catch (err: any) {
             console.error('Password Reset Failed:', err);
@@ -66,10 +80,35 @@ const LoginPage: React.FC = () => {
             setLoading(false);
         }
     };
-
+    
+    // 💡 修正: メールアドレス忘れのサポートリンクへ誘導 (メールアドレス追加)
+    const handleEmailForget = (e: React.MouseEvent) => {
+        e.preventDefault(); 
+        setError(null);
+        setSuccessMessage(
+            <div className="text-sm font-medium leading-relaxed">
+                メールアドレスをお忘れの場合、以下にご連絡ください。
+                <div className="mt-1 text-center font-bold text-lg text-indigo-700">
+                    <a href="mailto:adtown@able.ocn.ne.jp" className="hover:underline">
+                        adtown@able.ocn.ne.jp
+                    </a>
+                </div>
+                <p className="mt-2 text-xs text-gray-600">※ こちらから <Link href="/contact" className="underline">お問い合わせフォーム</Link>もご利用いただけます。</p>
+            </div>
+        );
+        setIsPasswordResetMode(false); // パスワードリセットモードを強制終了
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isPasswordResetMode) {
+            // リセットモードの場合はメール送信処理を実行
+            handleSendPasswordReset();
+            return;
+        }
+
+        // 通常のログイン処理
         setLoading(true);
         setError(null);
         setSuccessMessage(null);
@@ -94,27 +133,35 @@ const LoginPage: React.FC = () => {
                 }),
             });
 
-            const data = await response.json();
-
+            // 💡 修正: レスポンスをチェックし、エラーの場合はメッセージを投げる
             if (!response.ok) {
-                // セッションAPIがエラーを返した場合（例：ロールがない）
-                throw new Error(data.error || 'ログイン処理中にエラーが発生しました。');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'セッション設定中に不明なエラーが発生しました。');
             }
 
+            const data = await response.json();
+
             // 4. 成功したらダッシュボードへリダイレクト
-            router.push(data.redirect || '/recruit/dashboard');
+            const defaultRedirectPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
+            
+            // 💡 修正: リダイレクトを確実に実行
+            router.push(data.redirect || defaultRedirectPath);
 
         } catch (err: any) {
             console.error('Login Failed:', err);
-            // Firebase Authのエラーメッセージを日本語化
+            
             let message = '認証に失敗しました。';
+            // Firebase Authのエラーメッセージを日本語化
             if (err.code === 'auth/invalid-email' || err.code === 'auth/user-not-found') {
                 message = 'メールアドレスまたはパスワードが正しくありません。';
             } else if (err.code === 'auth/wrong-password') {
                 message = 'パスワードが正しくありません。';
+            } else if (err.message && err.message.includes('セッション設定中に')) {
+                 message = err.message + ' 権限が不足している可能性があります。'; // セッションAPIエラーを強化
             } else if (err.message) {
                 message = err.message;
             }
+            
             setError(message);
             setLoading(false);
         }
@@ -132,25 +179,37 @@ const LoginPage: React.FC = () => {
                 {/* ログインタイプ選択 */}
                 <div className="flex justify-center space-x-6">
                     <label className="flex items-center space-x-2">
-                        <input type="radio" name="loginType" value="adver" checked={loginType === 'adver'} onChange={() => setLoginType('adver')} className="text-indigo-600 focus:ring-indigo-500" />
+                        <input type="radio" name="loginType" value="adver" checked={loginType === 'adver'} onChange={() => { setLoginType('adver'); setError(null); setSuccessMessage(null); setIsPasswordResetMode(false); }} className="text-indigo-600 focus:ring-indigo-500" />
                         <span className="text-gray-700">広告パートナー</span>
                     </label>
                     <label className="flex items-center space-x-2">
-                        <input type="radio" name="loginType" value="recruit" checked={loginType === 'recruit'} onChange={() => setLoginType('recruit')} className="text-indigo-600 focus:ring-indigo-500" />
+                        <input type="radio" name="loginType" value="recruit" checked={loginType === 'recruit'} onChange={() => { setLoginType('recruit'); setError(null); setSuccessMessage(null); setIsPasswordResetMode(false); }} className="text-indigo-600 focus:ring-indigo-500" />
                         <span className="text-gray-700">求人パートナー</span>
                     </label>
                 </div>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     
-                    {error && (
+                    {/* 💡 修正: 画像に合わせ、isPasswordResetMode中のエラーを優先表示 */}
+                    {isPasswordResetMode && !successMessage && (
                         <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center">
-                            {error}
+                            {/* パスワードリセットモード専用の画像メッセージを表示 */}
+                            パスワード再設定メールを送信するには、メールアドレスを入力してください。
                         </div>
                     )}
+                    
+                    {/* 通常のエラーメッセージ (リセットモードでない場合、またはリセットモード中のカスタムエラー) */}
+                    {error && (
+                        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center">
+                            {/* エラーメッセージがReactNodeの場合に対応 */}
+                            {typeof error === 'string' ? error : <div>{error}</div>}
+                        </div>
+                    )}
+
+                    {/* 成功メッセージ/メールアドレス忘れの案内 (画像に合わせるため successMessageも利用) */}
                     {successMessage && (
                         <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm text-center">
-                            {successMessage}
+                            {typeof successMessage === 'string' ? successMessage : <div>{successMessage}</div>}
                         </div>
                     )}
                     
@@ -159,38 +218,42 @@ const LoginPage: React.FC = () => {
                         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
                     
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">パスワード</label>
-                        <div className="relative mt-1">
-                            {/* ★修正：パスワード表示切り替え */}
-                            <input 
-                                type={passwordVisible ? "text" : "password"} 
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)} 
-                                required 
-                                className="block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 pr-10" 
-                            />
-                            <button 
-                                type="button"
-                                onClick={() => setPasswordVisible(!passwordVisible)}
-                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-                            >
-                                {passwordVisible ? <EyeOffIcon /> : <EyeIcon />}
-                            </button>
+                    {/* パスワードフィールドはリセットモードでない場合のみ表示 */}
+                    {!isPasswordResetMode && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">パスワード</label>
+                            <div className="relative mt-1">
+                                <input 
+                                    type={passwordVisible ? "text" : "password"} 
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)} 
+                                    required 
+                                    className="block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 pr-10" 
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => setPasswordVisible(!passwordVisible)}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                                >
+                                    {passwordVisible ? <EyeOffIcon /> : <EyeIcon />}
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                     
-                    <div className="text-sm flex justify-end space-x-4">
-                        {/* ★修正：メールアドレスお忘れリンクを追加 */}
-                        <a 
-                            href="mailto:support@example.com?subject=メールアドレスを忘れました" 
+                    {/* 忘れましたボタン */}
+                    <div className="text-sm flex justify-center space-x-4">
+                        <button
+                            type="button"
+                            onClick={handleEmailForget}
                             className="text-indigo-600 hover:text-indigo-800 hover:underline"
                         >
                             メールアドレスをお忘れですか？
-                        </a>
+                        </button>
+                        
                         <button 
                             type="button" 
-                            onClick={handlePasswordReset} 
+                            onClick={handleStartPasswordReset}
                             disabled={loading}
                             className="text-indigo-600 hover:text-indigo-800 hover:underline disabled:text-gray-400"
                         >
@@ -198,17 +261,22 @@ const LoginPage: React.FC = () => {
                         </button>
                     </div>
 
-                    <button type="submit" disabled={loading} className="w-full py-3 bg-orange-500 text-white font-bold rounded-md hover:bg-orange-600 disabled:bg-gray-400">
-                        {loading ? 'ログイン中...' : 'ログイン'}
+                    <button 
+                        type="submit" 
+                        disabled={loading} 
+                        className="w-full py-3 bg-orange-500 text-white font-bold rounded-md hover:bg-orange-600 disabled:bg-gray-400"
+                    >
+                        {loading ? '処理中...' : isPasswordResetMode ? '再設定メールを送信' : 'ログイン'}
                     </button>
                 </form>
                 
+                {/* 登録リンク */}
                 <div className="text-center text-sm mt-4 space-y-2 border-t pt-4">
                     <p className="text-gray-600">アカウントをお持ちでないですか？</p>
                     <div className="flex justify-center space-x-4">
-                        <Link href="/partner/signup/adver" className="text-blue-600 hover:underline">広告パートナー登録</Link>
+                        <Link href="/partner/signup" className="text-blue-600 hover:underline">広告パートナー登録</Link>
                         <span>/</span>
-                        <Link href="/recruit/signup" className="text-blue-600 hover:underline">AI求人パートナー登録</Link>
+                        <Link href="/recruit" className="text-blue-600 hover:underline">求人パートナー登録</Link>
                     </div>
                 </div>
             </div>

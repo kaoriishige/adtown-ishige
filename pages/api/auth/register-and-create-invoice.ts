@@ -3,16 +3,11 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import getStripeAdmin from '@/lib/stripe-admin';
 import admin from 'firebase-admin';
 
-// --- インボイス制度対応情報 ---
-const ISSUER_TIN = 'T7060001012602'; // インボイス登録番号
-const ISSUER_ADDRESS_JAPANESE = '栃木県那須塩原市石林698-35'; // 会社住所
+// --- 発行元情報 ---
+const ISSUER_TIN = process.env.ISSUER_TIN || 'T7060001012602'; // インボイス番号
+const ISSUER_ADDRESS = '栃木県那須塩原市石林698-35';
 
 const BANK_TRANSFER_DETAILS_JAPANESE = `
-【発行者情報（適格請求書発行事業者）】
-名称：株式会社adtown
-登録番号：${ISSUER_TIN}
-所在地：${ISSUER_ADDRESS_JAPANESE}
-
 【お振込先】
 銀行名：栃木銀行
 支店名：西那須野支店
@@ -21,6 +16,9 @@ const BANK_TRANSFER_DETAILS_JAPANESE = `
 口座名義：株式会社adtown 代表取締役 石下かをり
 (カブシキガイシャアドタウン ダイヒョウトリシマリヤク イシゲカヲリ)
 
+発行元: 株式会社adtown
+登録番号: ${ISSUER_TIN}
+住所: ${ISSUER_ADDRESS}
 ※振込手数料はお客様にてご負担をお願い申し上げます。
 `;
 
@@ -31,6 +29,9 @@ const formatPhoneNumberForFirebase = (phoneNumber: string): string | undefined =
     return phoneNumber;
 };
 
+/**
+ * Stripe顧客IDが無効な場合に再作成するフォールバックロジックを含む。
+ */
 const getOrCreateUserAndStripeCustomer = async (data: {
     email: string;
     password?: string;
@@ -44,6 +45,7 @@ const getOrCreateUserAndStripeCustomer = async (data: {
     const stripe = getStripeAdmin();
     let user: admin.auth.UserRecord;
 
+    // 1. Firebase Authユーザーの作成または取得
     try {
         user = await adminAuth.getUserByEmail(email);
     } catch (err: any) {
@@ -63,7 +65,26 @@ const getOrCreateUserAndStripeCustomer = async (data: {
     const userDocRef = adminDb.collection('users').doc(user.uid);
     const snapshot = await userDocRef.get();
     let customerId = snapshot.data()?.stripeCustomerId;
+    let shouldUpdateFirestore = !customerId;
 
+    // 2. Stripe顧客IDの検証と再作成（★修正点: StripeIDが無効だった場合のフォールバック）
+    if (customerId) {
+        try {
+            // 顧客IDが存在するかStripeに確認
+            await stripe.customers.retrieve(customerId); 
+        } catch (e: any) {
+            // "No such customer" エラーの場合
+            if (e.type === 'StripeInvalidRequestError' && e.code === 'resource_missing') {
+                console.warn(`Stripe customer ${customerId} not found. Recreating customer for user ${user.uid}.`);
+                customerId = null; // IDを無効にし、再作成をトリガー
+            } else {
+                // その他のStripeエラーは再スロー
+                throw e; 
+            }
+        }
+    }
+
+    // 3. 顧客IDが存在しない場合は新規作成
     if (!customerId) {
         const newCustomer = await stripe.customers.create({
             email,
@@ -73,8 +94,10 @@ const getOrCreateUserAndStripeCustomer = async (data: {
             metadata: { firebaseUid: user.uid },
         });
         customerId = newCustomer.id;
+        shouldUpdateFirestore = true;
     }
 
+    // 4. Firestoreのユーザーデータ更新
     const dataToStore: { [key: string]: any } = {
         uid: user.uid,
         email,
@@ -89,7 +112,10 @@ const getOrCreateUserAndStripeCustomer = async (data: {
     if (!snapshot.exists) {
         dataToStore.createdAt = admin.firestore.FieldValue.serverTimestamp();
     }
-    await userDocRef.set(dataToStore, { merge: true });
+    if (shouldUpdateFirestore) {
+        await userDocRef.set(dataToStore, { merge: true });
+    }
+
 
     return { user, customerId };
 };
@@ -121,9 +147,18 @@ export default async function handler(
 
         const missingFields = ['serviceType', 'companyName', 'address', 'contactPerson', 'phoneNumber', 'email']
             .filter(f => !req.body[f]);
-        if (!password && !(await adminAuth.getUserByEmail(email).catch((_: unknown): null => null))
-        )
-        missingFields.push('password');
+        
+        // 既存ユーザーか新規ユーザーかを判定し、新規ならpasswordを必須に追加
+        if (!password) {
+            try {
+                await adminAuth.getUserByEmail(email);
+            } catch (e: any) {
+                if (e.code === 'auth/user-not-found') {
+                     missingFields.push('password');
+                }
+            }
+        }
+
         if (missingFields.length > 0) {
             res.status(400).json({ error: `必須項目が不足しています: ${missingFields.join(', ')}` });
             return;
@@ -149,7 +184,7 @@ export default async function handler(
             customer: customerId,
             collection_method: 'send_invoice',
             days_until_due: 30,
-            footer: BANK_TRANSFER_DETAILS_JAPANESE, // インボイス情報を含むフッター
+            footer: BANK_TRANSFER_DETAILS_JAPANESE,
             auto_advance: false,
         });
 
@@ -167,7 +202,7 @@ export default async function handler(
             stripeInvoiceId: finalizedInvoice.id,
         }, { merge: true });
 
-        // PDF URLの取得待機
+        // ✅ Stripe PDF URL生成待ち (4秒)
         const wait = (ms: number): Promise<void> =>
             new Promise<void>((resolve): void => {
                 setTimeout(resolve, ms);
@@ -185,7 +220,12 @@ export default async function handler(
 
     } catch (e: any) {
         console.error('[Invoice API Error]', e);
-        res.status(500).json({ error: e.message || '不明なエラー' });
+        // Stripeエラーの場合、ユーザーフレンドリーなメッセージを返す
+        const errorMessage = e.type === 'StripeInvalidRequestError' && e.message.includes('No such customer') 
+            ? 'Stripe顧客情報に問題が発生しました。再度お試しください。' 
+            : e.message || '不明なエラー';
+            
+        res.status(500).json({ error: errorMessage });
     }
 }
 

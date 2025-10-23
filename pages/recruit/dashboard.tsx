@@ -1,5 +1,3 @@
-// pages/recruit/dashboard.tsx
-
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -10,14 +8,14 @@ import {
     RiBuilding4Line, RiFileList3Line, RiUserSearchLine, RiLogoutBoxRLine,
     RiLayout2Line, RiContactsLine, RiLoader2Line,
     RiAdvertisementLine, RiErrorWarningLine, RiArrowRightLine, RiHandHeartLine,
-    RiAwardLine, RiPencilRuler2Line, RiArrowLeftLine, RiCheckLine, RiHourglassLine, RiEditCircleLine, RiDownloadLine 
+    RiAwardLine, RiPencilRuler2Line, RiCheckLine, RiHourglassLine, RiEditCircleLine, RiDownloadLine 
 } from 'react-icons/ri';
 import { useRouter } from 'next/router';
 import { signOut, getAuth, onAuthStateChanged } from "firebase/auth"; 
 import { app } from "@/lib/firebase"; // 🚨 必要に応じてプロジェクトのパスへ調整
 import { useState, useEffect } from 'react';
 
-// --- 型定義 ---
+// --- 型定義 (そのまま) ---
 interface Candidate {
     id: string;
     name: string;
@@ -53,7 +51,7 @@ interface DashboardProps {
     reviewSummary: { totalJobsCount: number, verified: number, pending: number, rejected: number, activeTotal: number };
 }
 
-// --- AIMatchingGuide コンポーネント ---
+// --- AIMatchingGuide コンポーネント (そのまま) ---
 const AIMatchingGuide = ({ show, onClose }: { show: boolean, onClose: () => void }) => {
     if (!show) return null;
     return (
@@ -85,8 +83,17 @@ const AIMatchingGuide = ({ show, onClose }: { show: boolean, onClose: () => void
     );
 };
 
-// --- DashboardCard コンポーネント ---
-const DashboardCard = ({ href, icon, title, description, color }: any) => {
+// --- DashboardCard コンポーネント (ダウンロード機能削除のためシンプル化) ---
+interface DashboardCardProps {
+    href: string;
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    color: 'indigo' | 'green' | 'red' | 'yellow' | 'purple' | 'blue';
+    // download?: string; // ダウンロード機能削除のため削除
+}
+
+const DashboardCard = ({ href, icon, title, description, color }: DashboardCardProps) => {
     const colorMap: any = {
         indigo: 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200',
         green: 'bg-green-100 text-green-600 group-hover:bg-green-200',
@@ -95,23 +102,36 @@ const DashboardCard = ({ href, icon, title, description, color }: any) => {
         purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-200',
         blue: 'bg-blue-100 text-blue-600 group-hover:bg-blue-200',
     };
+    
+    // hrefはそのまま
+    const encodedHref = href;
+
+    const cardContent = (
+        <div className="flex items-start space-x-4">
+            <div className={`p-4 rounded-xl ${colorMap[color]}`}>{icon}</div>
+            <div>
+                <h3 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600">{title}</h3>
+                <p className="text-gray-500 mt-1 text-sm">{description}</p>
+            </div>
+        </div>
+    );
+
+    // downloadがないため、常にLinkを使用
     return (
         <Link
-            href={href}
-            className="group block bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-2xl hover:border-indigo-400 transition-all"
+            href={encodedHref} 
+            legacyBehavior 
         >
-            <div className="flex items-start space-x-4">
-                <div className={`p-4 rounded-xl ${colorMap[color]}`}>{icon}</div>
-                <div>
-                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600">{title}</h3>
-                    <p className="text-gray-500 mt-1 text-sm">{description}</p>
-                </div>
-            </div>
+            <a
+                className="group block bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-2xl hover:border-indigo-400 transition-all cursor-pointer"
+            >
+                {cardContent}
+            </a>
         </Link>
     );
 };
 
-// --- RecruitmentCard コンポーネント ---
+// --- RecruitmentCard コンポーネント (そのまま) ---
 const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
 
     const getStatusDisplay = (status: RecruitmentStatus) => {
@@ -157,7 +177,7 @@ const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
     );
 };
 
-// --- getServerSideProps: Firestoreからデータ取得 ---
+// --- getServerSideProps: Firestoreからデータ取得 (そのまま) ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
     let queryFailed = false;
     const candidates: Candidate[] = [];
@@ -211,9 +231,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
                 applicantsCountPromises.push(
                     adminDb.collection('applicants')
-                          .where('recruitmentId', '==', doc.id)
-                          .get()
-                          .then(snap => ({ id: doc.id, size: snap.size }))
+                        .where('recruitmentId', '==', doc.id)
+                        .get()
+                        .then(snap => ({ id: doc.id, size: snap.size }))
                 );
 
                 return {
@@ -309,7 +329,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 };
 
-// --- ページ本体 ---
+// --- ページ本体 (そのまま) ---
 const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, contacts, recruitments, isUserAdPartner, minMatchScore, profileExists, queryFailed, reviewSummary }) => {
     const router = useRouter();
     const auth = getAuth(app);
@@ -431,6 +451,17 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                     </div>
                 )}
                 
+                {/* ▼▼▼ 追加: ログイン案内バナー ▼▼▼ */}
+                <div className="mb-10 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-800 rounded-lg shadow-sm">
+                    <p className="text-base font-semibold">
+                        <strong>ログインについて:</strong> ブラウザでadtownと検索してホームページからログインできます。
+                    </p>
+                </div>
+                {/* ▲▲▲ 追加: ログイン案内バナー ▲▲▲ */}
+
+                {/* PDF資料ダウンロードセクションは削除済み */}
+                {/* <section>...</section> */}
+                
                 {/* 1. AI運用サマリーとアクション */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">1. AI運用サマリーとアクション</h2>
@@ -501,27 +532,27 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
 
                         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                             <h3 className="text-xl font-bold mb-4 flex items-center">
-                                <RiContactsLine className="mr-2 text-blue-600" size={24} />
-                                連絡先交換済みリスト ({contacts.length}件)
+                                 <RiContactsLine className="mr-2 text-blue-600" size={24} />
+                                 連絡先交換済みリスト ({contacts.length}件)
                             </h3>
                             {contacts.length === 0 ? (
                                 <p className="text-gray-600">まだマッチングが成立した候補者はいません。</p>
                             ) : (
                                 <div className="space-y-3">
-                                    {contacts.slice(0, 3).map((c) => (
-                                        <div key={c.id} className="p-3 bg-blue-50 rounded-lg flex justify-between items-center">
-                                            <div>
-                                                <p className="font-semibold text-gray-900">{c.name} 様</p>
-                                                <p className="text-xs text-gray-600">連絡先: {c.contactInfo}</p>
-                                            </div>
-                                            <RiCheckLine className="text-blue-500" size={20} />
-                                        </div>
-                                    ))}
-                                    {contacts.length > 3 && (
-                                        <p className="text-sm text-center text-gray-500">他 {contacts.length - 3} 件...</p>
-                                    )}
-                                </div>
-                            )}
+                                     {contacts.slice(0, 3).map((c) => (
+                                         <div key={c.id} className="p-3 bg-blue-50 rounded-lg flex justify-between items-center">
+                                             <div>
+                                                 <p className="font-semibold text-gray-900">{c.name} 様</p>
+                                                 <p className="text-xs text-gray-600">連絡先: {c.contactInfo}</p>
+                                             </div>
+                                             <RiCheckLine className="text-blue-500" size={20} />
+                                         </div>
+                                     ))}
+                                     {contacts.length > 3 && (
+                                         <p className="text-sm text-center text-gray-500">他 {contacts.length - 3} 件...</p>
+                                     )}
+                                 </div>
+                             )}
                             <Link 
                                 href="/recruit/export-contacts"
                                 className="mt-4 block text-center text-green-600 hover:underline text-sm font-bold"
