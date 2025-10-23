@@ -279,7 +279,10 @@ const PartnerSignupPage = () => {
             <main className="container mx-auto px-6">
                 <section className="text-center pt-16 pb-8">
                     <h2 className="text-3xl font-bold text-gray-800">おかげさまで株式会社adtown20周年、感謝企画</h2>
-                    <p className="mt-4 text-lg text-gray-600">みんなの那須アプリを開発しましたので、下記をご覧の上ご利用ください。</p>
+                    <p className="mt-4 text-lg text-gray-600">日頃よりご支援いただいている那須地域の皆さまへの感謝を込めて、
+このたび「みんなの那須アプリ」を開発いたしました。</p>
+                    <p className="mt-4 text-lg text-gray-600">那須地域の魅力をもっと身近に、もっと便利に感じていただけるアプリです。
+ぜひ下記のご案内をご覧のうえ、ご利用ください。</p>
                 </section>
 
                 {/* Hero Section */}
