@@ -2,49 +2,35 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { adminDb } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 
-// --- 型定義を追加 (pages/recruit/jobs/create.tsx からコピー) ---
+// --- 型定義 ---
 interface CustomField {
   id: string;
   title: string;
   content: string;
 }
-// -----------------------------------------------------------------
 
-// --- 1. マッチングの重み設定 (ランキング準拠) ---
+// --- マッチングの重み設定 ---
 const MATCH_WEIGHTS = {
-  // 1位: 給与・待遇, 10位: 福利厚生
   SALARY_BENEFIT: 15,
   BENEFIT_PER_HIT: 3,
-
-  // 2位: 勤務地・通勤条件 (リモート含む)
   LOCATION: 12,
   REMOTE_MATCH: 10,
-
-  // 3位: 仕事内容, 8位: 雇用形態
   JOB_CATEGORY: 10,
   EMPLOYMENT_TYPE: 4,
-
-  // 4位: 成長機会, 9位: 職場環境, 6位: WLB
   GROWTH_ATMOSPHERE: 8,
   WLB_FEATURES: 7,
 };
 
-// --- 2. ユーティリティ関数 ---
-
-/**
- * 給与の文字列から最低/最高額の数値を抽出する（簡易版）
- * 例: "350万円〜500万円" -> { min: 350, max: 500 }
- */
+// --- ユーティリティ関数 ---
 const parseSalaryRange = (salaryStr: string): { min: number; max: number } => {
-  // 全角数字を半角に変換、"万円"、"以上"などを除去
   const normalized = salaryStr
-    .replace(/[０-９]/g, (s) =>
-      String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
-    )
-    // ✅ 不要なエスケープ削除
-    .replace(/[^0-9〜\-.+]/g, '');
+    .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+    // ← 修正済み：ハイフンは文字クラスの最後に置くことでエスケープ不要に
+    //     ここでは /[^0-9〜+.-]/ としている（ハイフンは末尾）
+    .replace(/[^0-9〜+.-]/g, '');
 
-  const parts = normalized.split(/[〜\-]/);
+  // split の方もハイフンを先頭に置く（範囲と解釈されない）
+  const parts = normalized.split(/[-〜]/);
 
   const min = parseFloat(parts[0] || '0');
   let max = min;
@@ -53,7 +39,6 @@ const parseSalaryRange = (salaryStr: string): { min: number; max: number } => {
     max = parseFloat(parts[parts.length - 1]);
   }
 
-  // "以上" の場合は最高額を非常に高く設定
   if (normalized.includes('以上') || normalized.includes('+')) {
     max = 9999;
   }
@@ -61,9 +46,6 @@ const parseSalaryRange = (salaryStr: string): { min: number; max: number } => {
   return { min: min, max: max || min };
 };
 
-/**
- * テキストから特定のキーワードがいくつ含まれているかを数える
- */
 const countKeywordMatches = (text: string, keywordList: string[]): number => {
   if (!text || !keywordList.length) return 0;
   const lowerText = text.toLowerCase();
@@ -76,8 +58,7 @@ const countKeywordMatches = (text: string, keywordList: string[]): number => {
   return count;
 };
 
-// --- 3. メインマッチングロジック ---
-
+// --- メイン ---
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -86,21 +67,18 @@ export default async function handler(
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // ★認証はここでは省略しますが、実際にはセッショントークン等で認証を行う必要があります。
   const uid = req.query.uid as string;
   if (!uid) {
     return res.status(401).json({ error: 'User ID is required.' });
   }
 
   try {
-    // 3-A. 求職者プロフィールの取得
     const userDoc = await adminDb.collection('users').doc(uid).get();
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User profile not found.' });
     }
     const userProfile = userDoc.data() as any;
 
-    // 3-B. 公開中の求人情報の全取得
     const jobsSnapshot = await adminDb
       .collection('jobs')
       .where('status', '==', 'active')
@@ -112,33 +90,25 @@ export default async function handler(
 
     const matchingResults: { job: any; score: number; details: string[] }[] = [];
 
-    // 3-C. 各求人とのマッチングスコア計算
     for (const job of jobs) {
       let totalScore = 0;
       const matchDetails: string[] = [];
 
-      // --- 1. 職種カテゴリ (JOB_CATEGORY, 10点) ---
+      // 職種カテゴリ
       const jobCategory = job.jobCategory;
       if (jobCategory && userProfile.desiredJobTypes?.includes(jobCategory)) {
         totalScore += MATCH_WEIGHTS.JOB_CATEGORY;
-        matchDetails.push(
-          `✅ 職種カテゴリが一致 (${MATCH_WEIGHTS.JOB_CATEGORY}点)`
-        );
+        matchDetails.push(`✅ 職種カテゴリが一致 (${MATCH_WEIGHTS.JOB_CATEGORY}点)`);
       }
 
-      // --- 2. 雇用形態 (EMPLOYMENT_TYPE, 4点) ---
+      // 雇用形態
       const employmentType = job.employmentType;
-      if (
-        employmentType &&
-        userProfile.desiredEmploymentTypes?.includes(employmentType)
-      ) {
+      if (employmentType && userProfile.desiredEmploymentTypes?.includes(employmentType)) {
         totalScore += MATCH_WEIGHTS.EMPLOYMENT_TYPE;
-        matchDetails.push(
-          `✅ 雇用形態が一致 (${MATCH_WEIGHTS.EMPLOYMENT_TYPE}点)`
-        );
+        matchDetails.push(`✅ 雇用形態が一致 (${MATCH_WEIGHTS.EMPLOYMENT_TYPE}点)`);
       }
 
-      // --- 3. 勤務地とリモート (LOCATION, REMOTE_MATCH) ---
+      // 勤務地・リモート
       const userLocation = userProfile.desiredLocation || '';
       const jobLocation = job.workLocation || '';
 
@@ -150,30 +120,23 @@ export default async function handler(
       const remoteMatch = job.remoteLevel === userProfile.desiredRemoteLevel;
       if (remoteMatch) {
         totalScore += MATCH_WEIGHTS.REMOTE_MATCH;
-        matchDetails.push(
-          `✅ リモート希望レベルが一致 (${MATCH_WEIGHTS.REMOTE_MATCH}点)`
-        );
+        matchDetails.push(`✅ リモート希望レベルが一致 (${MATCH_WEIGHTS.REMOTE_MATCH}点)`);
       }
 
-      // --- 4. 給与・待遇 (SALARY_BENEFIT, 15点) ---
-      const userSalary = parseSalaryRange(
-        userProfile.desiredAnnualSalary || ''
-      );
+      // 給与
+      const userSalary = parseSalaryRange(userProfile.desiredAnnualSalary || '');
       const jobSalary = parseSalaryRange(job.salary || '');
 
-      const salaryOverlap =
-        userSalary.min <= jobSalary.max && jobSalary.min <= userSalary.max;
+      const salaryOverlap = userSalary.min <= jobSalary.max && jobSalary.min <= userSalary.max;
 
       if (salaryOverlap && userSalary.min > 0) {
         totalScore += MATCH_WEIGHTS.SALARY_BENEFIT;
-        matchDetails.push(
-          `✅ 給与レンジが希望と適合 (${MATCH_WEIGHTS.SALARY_BENEFIT}点)`
-        );
+        matchDetails.push(`✅ 給与レンジが希望と適合 (${MATCH_WEIGHTS.SALARY_BENEFIT}点)`);
       }
 
-      // --- 5. ワークライフバランス (WLB_FEATURES, 7点) ---
+      // WLB
       const wlbScore = countKeywordMatches(
-        job.holidays || '' + job.workingHours || '',
+        (job.holidays || '') + (job.workingHours || ''),
         userProfile.desiredWLBFeatures || []
       );
       if (wlbScore > 0) {
@@ -185,7 +148,7 @@ export default async function handler(
         );
       }
 
-      // --- 6. 雰囲気・成長機会・福利厚生 (複合チェック) ---
+      // 成長/雰囲気/福利厚生
       const jobAppealText =
         job.customFields?.map((f: CustomField) => f.content).join(' ') || '';
       const allUserKeywords = [
@@ -198,6 +161,7 @@ export default async function handler(
 
       if (appealMatches > 0) {
         totalScore += MATCH_WEIGHTS.GROWTH_ATMOSPHERE;
+
         const benefitMatches = countKeywordMatches(
           job.benefits || '',
           userProfile.desiredBenefits || []
@@ -217,7 +181,6 @@ export default async function handler(
       matchingResults.push({ job, score: totalScore, details: matchDetails });
     }
 
-    // 3-D. スコアの高い順にソートして結果を返す
     matchingResults.sort((a, b) => b.score - a.score);
 
     return res.status(200).json({
@@ -227,11 +190,10 @@ export default async function handler(
     });
   } catch (error: any) {
     console.error('Matching API Error:', error);
-    return res
-      .status(500)
-      .json({
-        error:
-          error.message || 'サーバー側で予期せぬエラーが発生しました。',
-      });
+    return res.status(500).json({
+      error: error.message || 'サーバー側で予期せぬエラーが発生しました。',
+    });
   }
 }
+
+

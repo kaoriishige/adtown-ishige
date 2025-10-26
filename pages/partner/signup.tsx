@@ -4,29 +4,25 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Head from 'next/head';
 
+
 // --- 画像パスの定義（public/images/に配置されていることを前提とする） ---
 const PARTNER_LOGOS = [
 '/images/partner-adtown.png',
 '/images/partner-aquas.png',
-'/images/partner-aurevoir.png',
 '/images/partner-celsiall.png', // 修正済み
 '/images/partner-dairin.png',
 '/images/partner-kanon.png',
 '/images/partner-kokoro.png',
 '/images/partner-meithu.png',
 '/images/partner-midcityhotel.png',
-'/images/partner-nikkou.png',
-'/images/partner-oluolu.png',
 '/images/partner-omakaseauto.png',
 '/images/partner-poppo.png',
-'/images/partner-Quattro.png',
 '/images/partner-sekiguchi02.png',
-'/images/partner-tonbo.png',
 '/images/partner-training_farm.png',
 '/images/partner-transunet.png',
-'/images/partner-yamabuki.png',
 '/images/partner-yamakiya.png'
 ];
+
 
 // --- Inline SVG Icon Components ---
 const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> );
@@ -38,6 +34,8 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="
 const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
 );
+
+
 
 
 const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
@@ -53,6 +51,7 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
     )
 };
 
+
 // Custom hook for persistent state using sessionStorage
 const usePersistentState = (key: string, defaultValue: any) => {
     const [state, setState] = useState(() => {
@@ -67,7 +66,9 @@ const usePersistentState = (key: string, defaultValue: any) => {
     return [state, setState];
 };
 
+
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) : null;
+
 
 const PartnerSignupPage = () => {
     // Form state management
@@ -91,33 +92,40 @@ const PartnerSignupPage = () => {
     const [isInvoiceProcessing, setIsInvoiceProcessing] = useState(false); // For invoice processing
     const [invoiceDownloadSuccess, setInvoiceDownloadSuccess] = useState(false); // For download success
 
+
     const [registeredCount] = useState(32); // Dummy value for registered stores
     const totalSlots = 100;
     const remainingSlots = totalSlots - registeredCount;
 
+
     const registrationFormRef = useRef<HTMLDivElement>(null);
+
 
     // Initial setup
     useEffect(() => { if (!stripePromise) { console.error("Stripe key missing"); setStripeError(true); } }, []);
     
     // Auto-detect area from address
-    useEffect(() => { 
-        const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/); 
-        if (match) { 
+    useEffect(() => {
+        const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
+        if (match) {
             // Set area excluding '那須郡'
-            setArea(match[0].replace('那須郡', '')); 
-        } else if (address) { 
+            setArea(match[0].replace('那須郡', ''));
+        } else if (address) {
             // Clear area if address is entered but doesn't match
-            setArea(''); 
-        } 
+            setArea('');
+        }
     }, [address, setArea]);
+
 
     const scrollToForm = () => {
         registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+
     // Check if form is complete (to control button's disabled state)
     const isFormValid = !!(storeName && contactPerson && address && phoneNumber && email && confirmEmail && password.length >= 6 && area && agreed && email === confirmEmail);
+
+
 
 
     /**
@@ -126,34 +134,37 @@ const PartnerSignupPage = () => {
     const handleRegisterAndInvoice = async () => {
         setError(null);
 
+
         // Client-side validation
-        if (!isFormValid) { 
-            setError('PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。'); 
-            scrollToForm(); 
-            return; 
+        if (!isFormValid) {
+            setError('PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。');
+            scrollToForm();
+            return;
         }
         
         setIsInvoiceProcessing(true);
         setInvoiceDownloadSuccess(false);
 
+
         try {
             // Call API to register user and create Stripe invoice/return PDF URL simultaneously
-            const response = await fetch('/api/auth/register-and-create-invoice', { 
+            const response = await fetch('/api/auth/register-and-create-invoice', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    serviceType: 'adver', 
+                body: JSON.stringify({
+                    serviceType: 'adver',
                     companyName: storeName,
-                    address, 
-                    area, 
-                    contactPerson, 
-                    phoneNumber, 
-                    email, 
-                    password, 
+                    address,
+                    area,
+                    contactPerson,
+                    phoneNumber,
+                    email,
+                    password,
                     paymentMethod: 'invoice',
                     billingCycle: 'annual'
                 }),
             });
+
 
             const data = await response.json();
             
@@ -162,6 +173,7 @@ const PartnerSignupPage = () => {
                 throw new Error(data.error || '登録および請求書の作成に失敗しました。');
             }
 
+
             // ★ 修正済み: URLを使って、不可視のaタグでダウンロードを強制的にトリガー
             const pdfUrl = data.pdfUrl;
             
@@ -169,16 +181,19 @@ const PartnerSignupPage = () => {
             a.href = pdfUrl;
             a.download = '請求書_' + new Date().toISOString().split('T')[0] + '.pdf'; // ファイル名を指定
             // ユーザーに視覚的な変化を与えないように一時的に追加
-            a.style.display = 'none'; 
+            a.style.display = 'none';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a); // 要素を削除
 
+
             setInvoiceDownloadSuccess(true);
             setError(null);
 
+
             // Clear sessionStorage on success (フォーム情報をクリア)
             Object.keys(window.sessionStorage).forEach(key => { if (key.startsWith('partnerForm_')) { window.sessionStorage.removeItem(key); } });
+
 
         } catch (err: any) {
             console.error('Invoice download error:', err);
@@ -190,6 +205,8 @@ const PartnerSignupPage = () => {
     };
 
 
+
+
     /**
      * 【Credit Card Payment】Handle application submission.
      */
@@ -197,13 +214,15 @@ const PartnerSignupPage = () => {
         setError(null);
         
         // Re-validate on client-side
-        if (!isFormValid) { 
-            setError('クレジットカード決済へ進むには、フォームの必須項目を全て満たし、規約に同意してください。'); 
-            scrollToForm(); 
-            return; 
+        if (!isFormValid) {
+            setError('クレジットカード決済へ進むには、フォームの必須項目を全て満たし、規約に同意してください。');
+            scrollToForm();
+            return;
         }
 
+
         if (!stripePromise) { setStripeError(true); return; }
+
 
         setIsLoading(true);
         try {
@@ -211,14 +230,14 @@ const PartnerSignupPage = () => {
             const response = await fetch('/api/auth/register-and-subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    serviceType: 'adver', 
+                body: JSON.stringify({
+                    serviceType: 'adver',
                     companyName: storeName,
-                    address, 
-                    area, 
-                    contactPerson, 
-                    phoneNumber, 
-                    email, 
+                    address,
+                    area,
+                    contactPerson,
+                    phoneNumber,
+                    email,
                     password,
                     paymentMethod: 'card',
                     billingCycle: 'monthly'
@@ -226,11 +245,15 @@ const PartnerSignupPage = () => {
             });
 
 
+
+
             const data = await response.json();
+
 
             if (!response.ok) {
                 throw new Error(data.error || 'サーバーでエラーが発生しました。');
             }
+
 
             const { sessionId } = data;
             
@@ -250,6 +273,7 @@ const PartnerSignupPage = () => {
         }
     };
 
+
     const getButtonText = () => {
         if (isLoading) return '処理中...';
         if (stripeError) return '決済設定エラー';
@@ -261,6 +285,8 @@ const PartnerSignupPage = () => {
         if (invoiceDownloadSuccess) return 'ダウンロード完了！再発行';
         return '請求書PDFをダウンロードして登録';
     };
+
+
 
 
     return (
@@ -285,14 +311,15 @@ const PartnerSignupPage = () => {
 ぜひ下記のご案内をご覧のうえ、ご利用ください。</p>
                 </section>
 
+
                 {/* Hero Section */}
                 <section className="text-center py-16 md:py-24">
                     <p className="text-orange-500 font-semibold">地元企業＆店舗を応援するadtownからのご提案【もし、毎月安定した収益が自動で入ってきたら？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        「お金を無駄に
-                        払う」時代は終わりました。<br />
-                        これからは<span className="text-orange-600">あなたのお店のテーブルが新しい収益源</span>になり、<br />さらに集客広告が出し放題!!
-                    </h2>
+                        「集客に困っている
+                        店舗様」は必見です！<br />
+                        最新の<span className="text-orange-600">集客マッチングAIが理想の顧客を連れてくる！</span><br />さらにあなたのお店のテーブルが新しい収益源になる!!
+                    </h2>先着100社限定で、月額4,400円が3,850円！
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
                         これは単なる広告掲載のご提案ではありません。人手不足、物価高騰…そんな<strong className="font-bold">「痛み」</strong>を抱える今だからこそ、那須地域の店舗様と共に、広告費を「コスト」から「利益」に変える新しいプロジェクトをご提案します。
                     </p>
@@ -304,11 +331,16 @@ const PartnerSignupPage = () => {
                     </div>
                 </section>
 
+
                 {/* Campaign Section */}
                 <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
                     <h3 className="text-2xl font-bold">【先着100店舗様 限定】初期費用<span className="text-red-600"> 0円 </span>キャンペーン実施中！</h3>
                     <p className="mt-2 text-lg">
-                        月額<strong className="font-bold">4,400円</strong>のパートナー制度（アプリ広告出し放題＆紹介手数料で収入アップ）を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。さらに、1年後の**全額返金保証**もご用意しました。
+                        月額<strong className="font-bold">4,400円（先着100社限定で3,850円！）
+                            
+                            
+                            
+                        </strong>のパートナー制度（アプリ広告、集客マッチングAI出し放題＆紹介手数料で収入アップ）を、今なら初期費用<span className="font-bold text-red-600">完全無料</span>で始められます。
                     </p>
                     <div className="mt-4 bg-white p-4 rounded-lg flex items-center justify-center space-x-2 md:space-x-4 max-w-md mx-auto">
                         <p className="text-md md:text-lg font-semibold">現在の申込店舗数:</p>
@@ -317,18 +349,20 @@ const PartnerSignupPage = () => {
                     </div>
                 </section>
 
+
                 {/* App Advantage Section */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
-                        <h3 className="text-3xl font-extrabold">なぜ今、アプリ広告なのか？答えは「圧倒的な見込み客」です。</h3>
+                        <h3 className="text-3xl font-extrabold">なぜ今、アプリ広告（集客マッチングAI）なのか？答えは「圧倒的な見込み客」です。</h3>
                         <p className="mt-6 text-lg text-gray-600 leading-relaxed">
                             『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
-                            貴店の広告やクーポン、フードロスを、アプリ広告出し放題で、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
+                            貴店の広告やクーポン、フードロスを、アプリ広告（集客マッチングAI）出し放題で、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
                         </p>
                     </div>
                 </section>
+
 
                 {/* Monetization Mechanism Section */}
                 <section className="mt-20">
@@ -354,6 +388,7 @@ const PartnerSignupPage = () => {
                     <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg"><p className="text-xl font-bold text-green-800">それ以降はすべて貴店の「利益」に変わり広告も出し放題で好循環の流れになります。</p></div>
                 </section>
 
+
                 {/* Revenue Simulation Section */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <h3 className="text-3xl font-extrabold text-center">もし、1日にたった2人または5人のお客様が登録したら？</h3>
@@ -364,34 +399,36 @@ const PartnerSignupPage = () => {
                     <p className="mt-4 text-sm text-gray-500 text-center">※この収益は、広告掲載による本来の**集客効果とは別に**得られるものです。</p>
                 </section>
 
+
                 {/* Partner Logos Section */}
                 <section className="mt-20 text-center">
                     <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの店舗様がこのチャンスに気づいています</h3>
                     <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
                         {PARTNER_LOGOS.map((logoPath, index) => (
-                            <Image 
-                                key={index} 
-                                src={logoPath} 
-                                alt={`パートナーロゴ ${index + 1}`} 
-                                width={150} 
-                                height={50} 
-                                className="object-contain" 
+                            <Image
+                                key={index}
+                                src={logoPath}
+                                alt={`パートナーロゴ ${index + 1}`}
+                                width={150}
+                                height={50}
+                                className="object-contain"
                                 unoptimized={true} // 画像最適化を無効化し、表示問題を回避
                             />
                         ))}
                     </div>
                 </section>
 
+
                 {/* Support System Section */}
                 <section className="mt-20 text-center">
-                    <h3 className="text-3xl font-extrabold">安心のトリプルサポート体制</h3>
+                    <h3 className="text-3xl font-extrabold">安心を保証するサポート体制</h3>
                     <p className="mt-4 text-gray-600 max-w-2xl mx-auto">導入後も、専任の担当者が貴店を徹底的にサポートします。ITが苦手な方でも安心してご利用いただけます。</p>
                     <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                        <div className="bg-white p-6 rounded-lg shadow-md border"><PhoneIcon className="w-10 h-10 mx-auto text-blue-500"/><p className="mt-4 font-bold text-lg">お電話サポート</p></div>
                         <div className="bg-white p-6 rounded-lg shadow-md border"><MessageCircleIcon className="w-10 h-10 mx-auto text-green-500"/><p className="mt-4 font-bold text-lg">LINEチャットサポート</p></div>
                         <div className="bg-white p-6 rounded-lg shadow-md border"><UserCheckIcon className="w-10 h-10 mx-auto text-orange-500"/><p className="mt-4 font-bold text-lg">専任担当者</p></div>
                     </div>
                 </section>
+
 
                 {/* FAQ Section */}
                 <section className="mt-24 max-w-4xl mx-auto">
@@ -399,9 +436,6 @@ const PartnerSignupPage = () => {
                     <div className="mt-8 bg-white p-4 md:p-8 rounded-2xl shadow-xl border">
                         <FAQItem question="費用は本当にこれだけですか？成功報酬はありますか？">
                             <p className="leading-relaxed">はい、月額<strong className="font-bold">4,400円</strong>クレジットカード決済（または請求書払い年額<strong className="font-bold">46,200円</strong>）のみです。広告掲載数に上限はなく、紹介手数料から成功報酬をいただくことも一切ありません。安心してご利用いただけます。</p>
-                        </FAQItem>
-                        <FAQItem question="全額返金保証について詳しく教えてください。">
-                            <p className="leading-relaxed">ご利用開始から1年後、得られた紹介手数料の累計が年間のパートナー費用（クレジットカード決済<strong className="font-bold">52,800円</strong>、請求書払い決済<strong className="font-bold">46,200円</strong>）に満たなかった場合、パートナーは当社に対し、支払った費用の全額返金を請求することができます。これは、私達のシステムに自信があるからこその保証です。※適用には諸条件がありますので、利用規約第6条をご確認ください。</p>
                         </FAQItem>
                         <FAQItem question="紹介手数料はどのように支払われますか？">
                             <p className="leading-relaxed">毎月末締めで計算し、翌々月15日にご指定の銀行口座へお振り込みします。振込額の合計が3,000円に満たない場合は、お支払いは翌月以降に繰り越されます。パートナー様専用のダッシュボードで、いつでも収益状況をご確認いただけます。</p>
@@ -412,6 +446,7 @@ const PartnerSignupPage = () => {
                     </div>
                 </section>
 
+
                 {/* Registration Form Section */}
                 <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
@@ -419,7 +454,7 @@ const PartnerSignupPage = () => {
                             <p className="text-gray-700 leading-relaxed">
                                 {/* ここまでお読みいただきありがとうございます。 */}
                                 限定100店舗の初期費用無料キャンペーン枠は、すぐに埋まってしまうことが予想されます。<br/>
-                                <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目から初期費用が発生いたします。もし1年間で得られた紹介手数料の合計が、年間のパートナー費用（クレジットカード決済<strong className="font-bold">52,800円</strong>、請求書払い決済<strong className="font-bold">46,200円</strong>）に満たなかった場合、お支払いいただいた費用を全額返金いたします。請求書払いは、年間定価52,800円のところ一括前払いで<strong className="font-bold">46,200円</strong>の割引価格となります。</strong><br/>
+                                <strong className="text-red-600 font-bold">このチャンスを逃せば、101店舗目から初期費用が発生いたします。クレジットカード払いは月額4,400円→先着100社限定で3,850円！請求書払いは、年間定価52,800円のところ一括前払いで<strong className="font-bold">46,200円→先着100社限定で39,600円！</strong>の割引価格となります。</strong><br/>
                             </p>
                         </div>
                         <h2 className="text-3xl font-bold text-center mb-2">パートナー登録 & 掲載お申し込み</h2>
@@ -446,7 +481,7 @@ const PartnerSignupPage = () => {
                                         <button type="button" onClick={() => setShowTerms(true)} className="text-blue-600 hover:underline">
                                             パートナー利用規約
                                         </button>
-                                        および全額返金保証の条件に同意し、広告掲載および紹介料プログラム（月額<strong className="font-bold">4,400円/税込</strong>）へ申し込みます。
+                                        広告掲載および紹介料プログラム（月額<strong className="font-bold">4,400円/税込（先着100社限定3,850円税込                                 </strong>）へ申し込みます。
                                     </span>
                                 </label>
                             </div>
@@ -454,11 +489,12 @@ const PartnerSignupPage = () => {
                             {stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
                             {error && !stripeError && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
 
+
                             {/* Credit Card Payment Button */}
                             <button type="button" onClick={handleSubmit} disabled={isLoading || !isFormValid || stripeError} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                 {getButtonText()}
                             </button>
-                            <p className="text-sm text-center -mt-2 text-gray-500">クレジットカードでのお支払いは上記からお願いします。（月額<strong className="font-bold">4,400円/税込</strong>）</p>
+                            <p className="text-sm text-center -mt-2 text-gray-500">クレジットカードでのお支払いは上記からお願いします。（月額<strong className="font-bold">4,400円/税込→先着100社限定3,850円税込</strong>）</p>
                         </form>
                         <p className="text-sm text-center mt-6">
                             すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
@@ -468,7 +504,7 @@ const PartnerSignupPage = () => {
                         <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 w-full max-w-3xl mx-auto border border-gray-200 text-center">
                             <h3 className="text-3xl font-extrabold mb-4">請求書でのお支払いをご希望の方へ</h3>
                             <p className="text-gray-600 mb-6">
-                                御請求書にてのお支払いについては、年間定価52,800円のところ一括前払いで<strong className="font-bold">46,200円</strong>を前払にてのご精算になります。<br />
+                                御請求書にてのお支払いについては、前払にてのご精算になります。<br />
                                 ご希望の方は、**フォームの必須項目を全て入力し、規約に同意した後**、下のボタンから**請求書PDFを即時ダウンロード**してください。ご入金確認後にログイン情報をご連絡いたします。
                             </p>
                             {invoiceDownloadSuccess && (
@@ -510,11 +546,10 @@ const PartnerSignupPage = () => {
                             <p><strong>第3条（利用料金）</strong><br />パートナーは、当社に対し、別途定める利用料金（月額<strong className="font-bold">4,400円</strong>（税込）または年額<strong className="font-bold">46,200円</strong>（税込））を支払うものとします。支払い方法は、クレジットカード決済または銀行振込（年額一括のみ）とします。</p>
                             <p><strong>第4条（禁止事項）</strong><br />パートナーは、本サービスの利用にあたり、以下の行為を行ってはなりません。<br />1. 法令または公序良俗に違反する行為<br />2. 犯罪行為に関連する行為<br />3. 当社のサーバーまたはネットワークの機能を破壊したり、妨害したりする行為<br />4. 当社のサービスの運営を妨害するおそれのある行為<br />5. 他のパートナーに関する個人情報等を収集または蓄積する行為<br />6. 不正な目的を持って本サービスを利用する行為<br />7. 当社または第三者の知的財産権、肖像権、プライバシー、名誉その他の権利または利益を侵害する行為<br />8. その他、当社が不適切と判断する行為</p>
                             <p><strong>第5条（紹介手数料）</strong><br />1. パートナーは、当社が提供する専用のQRコードを経由してアプリ利用者が有料会員登録を行った場合、当社所定の紹介手数料（以下「手数料」といいます。）を受け取ることができます。<br />2. 手数料は、有料会員の月額利用料金の30%とします。<br />3. 手数料は、月末締めで計算し、翌々月15日にパートナーが指定する銀行口座へ振り込むものとします。ただし、振込額の合計が3,000円に満たない場合は、支払いは翌月以降に繰り越されるものとします。</p>
-                            <p><strong>第6条（全額返金保証）</strong><br />1. 本サービスの利用開始から1年経過した時点で、パートナーが受け取った手数料の累計額が、支払った年間のパートナー費用（クレジットカード決済<strong className="font-bold">52,800円</strong>、請求書払い決済<strong className="font-bold">46,200円</strong>）に満たなかった場合、パートナーは当社に対し、支払った費用の全額返金を請求することができます。<br />2. 本保証は、実店舗を有し、来店客への案内が可能なパートナーで、QRコードスタンドをお客様の見える場所に設置することを対象とします。<br />3. 返金請求は、利用開始から1年経過後、30日以内に当社所定の方法で行うものとします。</p>
-                            <p><strong>第7条（契約期間と解約）</strong><br />1. 本サービスの契約期間は、申込日を起算日として1年間とします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。<br />2. パートナーは、いつでも解約を申し出ることができますが、契約期間中の利用料金の返金は行わないものとします（第6条の全額返金保証を除く）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。<br />3. 年額一括請求書払いの場合は、途中解約時の返金はございません。</p>
-                            <p><strong>第8条（本サービスの提供の停止等）</strong><br />当社は、以下のいずれかの事由があると判断した場合、パートナーに事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。<br />1. 本サービスにかかるコンピュータシステムの保守点検または更新を行う場合<br />2. 地震、落雷、火災、停電または天災などの不可抗力により、本サービスの提供が困難となった場合<br />3. その他、当社が本サービスの提供が困難と判断した場合</p>
-                            <p><strong>第9条（免責事項）</strong><br />当社は、本サービスに起因してパートナーに生じたあらゆる損害について一切の責任を負いません。ただし、本サービスに関する当社とパートナーとの間の契約が消費者契約法に定める消費者契約となる場合、この免責規定は適用されません。</p>
-                            <p><strong>第10条（準拠法・裁判管轄）</strong><br />本規約の解釈にあたっては、日本法を準拠法とします。本サービスに関して紛争が生じた場合には、当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</p>
+                            <p><strong>第6条（契約期間と解約）</strong><br />1. 本サービスの契約期間は、申込日を起算日として1年間とします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で1年間自動更新されるものとします。<br />2. パートナーは、いつでも解約を申し出ることができますが、契約期間中の利用料金の返金は行わないものとします（第6条の全額返金保証を除く）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。<br />3. 年額一括請求書払いの場合は、途中解約時の返金はございません。</p>
+                            <p><strong>第7条（本サービスの提供の停止等）</strong><br />当社は、以下のいずれかの事由があると判断した場合、パートナーに事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。<br />1. 本サービスにかかるコンピュータシステムの保守点検または更新を行う場合<br />2. 地震、落雷、火災、停電または天災などの不可抗力により、本サービスの提供が困難となった場合<br />3. その他、当社が本サービスの提供が困難と判断した場合</p>
+                            <p><strong>第8条（免責事項）</strong><br />当社は、本サービスに起因してパートナーに生じたあらゆる損害について一切の責任を負いません。ただし、本サービスに関する当社とパートナーとの間の契約が消費者契約法に定める消費者契約となる場合、この免責規定は適用されません。</p>
+                            <p><strong>第9条（準拠法・裁判管轄）</strong><br />本規約の解釈にあたっては、日本法を準拠法とします。本サービスに関して紛争が生じた場合には、当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</p>
                         </div>
                         <div className="mt-6 flex justify-end">
                             <button onClick={() => setShowTerms(false)} className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600">閉じる</button>
@@ -526,4 +561,7 @@ const PartnerSignupPage = () => {
     );
 };
 
+
 export default PartnerSignupPage;
+
+

@@ -212,6 +212,14 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                             ようこそ、<span className="font-bold">{partnerData.companyName}</span> 様
                         </p>
                     </div>
+                    {/* ログアウトボタンをヘッダーに配置 */}
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center space-x-2 text-sm text-gray-600 hover:text-red-600 p-2 rounded-lg transition-colors font-semibold"
+                    >
+                        <RiLogoutBoxRLine size={20} />
+                        <span>ログアウト</span>
+                    </button>
                 </div>
             </header>
 
@@ -224,17 +232,13 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                     </div>
                 )}
                 
-                {/* ▼▼▼ 追加: ログイン案内バナー ▼▼▼ */}
+                {/* ▼▼▼ 追加: ログイン案内バナー (そのまま) ▼▼▼ */}
                 <div className="mb-8 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-800 rounded-md">
                     <p className="text-sm">
                         <strong>ログインについて:</strong> ブラウザでadtownと検索してホームページからログインできます。
                     </p>
                 </div>
                 {/* ▲▲▲ 追加: ログイン案内バナー ▲▲▲ */}
-
-                {/* PDF資料ダウンロードセクションは削除済み */}
-                {/* <section className="mb-8">...</section> */}
-
 
                 {/* セクション1 (そのまま) */}
                 <section>
@@ -295,13 +299,33 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                         </Link>
                     </section>
                 )}
+                
+                <hr className="my-8" />
+            </main>
+            
+            {/* 💡 修正: LINEお問い合わせセクションをメインタグの外、フッターの前に移動 */}
+            {/* LINEのお問い合わせボタンをフッターのログアウトボタンの直前（上）に配置 */}
+            <div className="max-w-4xl mx-auto px-6 pb-6">
+                <section className="mt-6">
+                    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <h2 className="text-lg font-bold text-gray-700 mb-1">LINEよりお問い合わせください。</h2>
+                            <p className="text-sm text-gray-500">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
+                        </div>
+                        <div 
+                            className="flex-shrink-0"
+                            dangerouslySetInnerHTML={{
+                                // 広告パートナー用のLINE IDを使用
+                                __html: '<a href="https://lin.ee/RLg811m" target="_blank" rel="noopener noreferrer"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" border="0"></a>'
+                            }}
+                        />
+                    </div>
+                </section>
+            </div>
 
-                {/* フッター操作 (そのまま) */}
-                <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* LinkにclassNameを直接指定するNext.jsの新しい書き方に修正 */}
-                    <Link href="/contact" className="w-full text-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 cursor-pointer">
-                        お問い合わせ
-                    </Link>
+            {/* フッター操作 (ログアウトボタンのみ) */}
+            <footer className="max-w-4xl mx-auto px-6 pt-0 pb-8">
+                <section className="mt-6 grid grid-cols-1 gap-4">
                     <button
                         onClick={handleLogout}
                         className="w-full text-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700"
@@ -309,7 +333,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                         ログアウト
                     </button>
                 </section>
-            </main>
+            </footer>
         </div>
     );
 };

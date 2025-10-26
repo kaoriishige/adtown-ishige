@@ -61,7 +61,7 @@ interface EditPageProps {
     error?: string;
 }
 
-// --- SSR: データ読み込みと権限チェック (変更なし) ---
+// --- SSR: データ読み込みと権限チェック ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
     const jobId = context.query.id as string;
 
@@ -93,8 +93,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const recruiterSnap = await adminDb.collection('recruiters').doc(uid).get();
         const userSnap = await adminDb.collection('users').doc(uid).get();
         
-        let companyName = userSnap.data()?.companyName || "未設定の会社名";
-        let isProfileVerified = recruiterSnap.data()?.verificationStatus === 'verified' || false;
+        // 🚨 修正箇所: let を const に変更 (96行目)
+        const companyName = userSnap.data()?.companyName || "未設定の会社名";
+        // 🚨 修正箇所: let を const に変更 (97行目)
+        const isProfileVerified = recruiterSnap.data()?.verificationStatus === 'verified' || false;
 
         const jobData: JobData = {
             jobId,
@@ -136,6 +138,7 @@ const JobEditPage: NextPage<EditPageProps> = ({ jobData, error }) => {
     const [currentJobStatus, setCurrentJobStatus] = useState(jobData?.status || 'draft');
     const [aiMessage, setAiMessage] = useState(jobData?.aiFeedback || 'データ読み込み完了。');
     
+    // SSRから渡されたプロパティは不変なので、直接参照
     const isProfileVerified = jobData?.isProfileVerified || false;
     const isJobVerified = currentJobStatus === 'verified';
     const isJobRejected = currentJobStatus === 'rejected';
@@ -148,6 +151,7 @@ const JobEditPage: NextPage<EditPageProps> = ({ jobData, error }) => {
             router.push('/recruit/jobs');
         }
         if(jobData) {
+              // フォームの初期値を設定する際は、SSRで取得した全データを使用
              setFormData(jobData);
         }
     }, [error, jobData, router]);

@@ -1,10 +1,11 @@
 // pages/api/users/add-service.ts
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '@/lib/firebase-admin'; // adminを削除
+// adminを削除というコメントがありますが、adminAuthとadminDbのインポートはそのまま維持します
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; 
 import getAdminStripe from '@/lib/stripe-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import Stripe from 'stripe';
+import Stripe from 'stripe'; // Stripeは使用されていませんが、インポートはそのまま維持します
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {
@@ -24,10 +25,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         let userRecord;
+        // catchブロック内のanyをunknownに修正し、型ガードを使用するのがベストプラクティスですが、
+        // 既存コードのエラー修正に絞るため、ここではauthError.codeのアクセスを安全化します。
         try {
             userRecord = await adminAuth.getUserByEmail(email);
         } catch (authError: any) {
-            if (authError.code === 'auth/user-not-found') {
+            // エラーオブジェクトにcodeプロパティがあるかチェック
+            if (authError && typeof authError === 'object' && 'code' in authError && authError.code === 'auth/user-not-found') {
                 return res.status(404).json({ error: '指定されたメールアドレスのユーザーが見つかりません。' });
             }
             throw authError;
@@ -46,13 +50,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(409).json({ error: 'このユーザーは既にこのサービスに登録されています。' });
         }
 
+        // 1. Firestoreでロールを追加
         await userDocRef.update({
             roles: FieldValue.arrayUnion(serviceType)
         });
 
         const stripe = getAdminStripe();
-        let stripeCustomerId = userData?.stripeCustomerId;
+        // 2. 修正箇所: 'stripeCustomerId' を 'let' から 'const' に変更
+        const stripeCustomerId = userData?.stripeCustomerId; 
 
+        // 3. Stripe顧客情報にメタデータを追加
         if (stripeCustomerId) {
             await stripe.customers.update(stripeCustomerId, {
                 metadata: {
@@ -66,6 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     } catch (error: any) {
         console.error('サービス追加エラー:', error);
+        // error.message に安全にアクセスするために、必要に応じて型ガードまたはanyの使用を維持
         res.status(500).json({ error: `サービス追加に失敗しました: ${error.message}` });
     }
 }

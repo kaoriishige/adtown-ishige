@@ -12,23 +12,17 @@ import Head from 'next/head';
 const PARTNER_LOGOS = [
 '/images/partner-adtown.png',
 '/images/partner-aquas.png',
-'/images/partner-aurevoir.png',
 '/images/partner-celsiall.png',
 '/images/partner-dairin.png',
 '/images/partner-kanon.png',
 '/images/partner-kokoro.png',
 '/images/partner-meithu.png',
 '/images/partner-midcityhotel.png',
-'/images/partner-nikkou.png',
-'/images/partner-oluolu.png',
 '/images/partner-omakaseauto.png',
 '/images/partner-poppo.png',
-'/images/partner-Quattro.png',
 '/images/partner-sekiguchi02.png',
-'/images/partner-tonbo.png',
 '/images/partner-training_farm.png',
 '/images/partner-transunet.png',
-'/images/partner-yamabuki.png',
 '/images/partner-yamakiya.png'
 ];
 
@@ -299,8 +293,8 @@ const RecruitPartnerPage: NextPage = () => {
                     </div>
                     <p className="text-orange-500 font-semibold">地元の企業を応援する広告代理店 株式会社adtownからのご提案【大手企業に高い求人広告費を払い続けるのは、もうやめにしませんか？】</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        【先行予約】月額8,800円で、<br />
-                        <span className="text-orange-600">理想の人材が見つかるまで。</span>
+                        【先行予約】月額8,800円が、先着100社限定で6,600円！<br />
+                        <span className="text-orange-600">求人マッチングAIで、理想の人材が見つかるまで。</span>
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
                         求人広告の高騰、応募が来ない、理想の人材と出会えない…。そんな採用の<strong className="font-bold">「痛み」</strong>を、最先端のマッチングAIが根本から解決。必要な時にいつでも始められ、複数職種を登録することができ、採用が決まればいつでも停止できる、新しい採用の形をご提案します。
@@ -517,10 +511,9 @@ const RecruitPartnerPage: NextPage = () => {
 
 
                 <section className="mt-24 text-center">
-                    <h3 className="text-3xl font-extrabold">安心のトリプルサポート体制</h3>
+                    <h3 className="text-3xl font-extrabold">安心のサポート体制</h3>
                     <p className="mt-4 text-gray-600 max-w-2xl mx-auto">導入後も、専任の担当者が貴社の採用活動を徹底的にサポート。初めてのAI利用でもご安心ください。</p>
                     <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                        <div className="bg-white p-6 rounded-lg shadow-md border"><PhoneIcon className="w-10 h-10 mx-auto text-blue-500"/><p className="mt-4 font-bold text-lg">お電話サポート</p></div>
                         <div className="bg-white p-6 rounded-lg shadow-md border"><MessageCircleIcon className="w-10 h-10 mx-auto text-green-500"/><p className="mt-4 font-bold text-lg">LINEチャットサポート</p></div>
                         <div className="bg-white p-6 rounded-lg shadow-md border"><UserCheckIcon className="w-10 h-10 mx-auto text-orange-500"/><p className="mt-4 font-bold text-lg">専任担当者</p></div>
                     </div>
@@ -536,10 +529,9 @@ const RecruitPartnerPage: NextPage = () => {
                     </div>
                 </section>
 
-
                 <section ref={registrationFormRef} id="registration-form" className="mt-24 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
-                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">すでに広告パートナーにお申込みの方は、こちらからは登録はできません。広告パートナーの管理画面からお申込みください。アカウント情報を登録し、先行予約を完了してください。クレジットカード支払いは月額8,800円、請求書払いをお申込みの場合は、年額105,600円を一括前払い割引価格92,400円でご利用いただけます。</p></div>
+                        <div className="text-center mb-10"><ZapIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" /><h2 className="text-3xl font-bold text-center mb-2">AI求人サービス 先行予約お申し込み</h2><p className="text-center text-gray-600">すでに広告パートナーにお申込みの方は、こちらからは登録はできません。広告パートナーの管理画面からお申込みください。アカウント情報を登録し、先行予約を完了してください。クレジットカード支払いは月額8,800円→先着100社6,600円、請求書払いをお申込みの場合は、年額105,600円を一括前払い割引価格92,400円→先着100社69,600円、でご利用いただけます。先着100社割引キャンペーン中！</p></div>
                         <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div> <label className="block text-gray-700 font-medium mb-2">企業名・店舗名 *</label> <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
@@ -633,7 +625,7 @@ const RecruitPartnerPage: NextPage = () => {
                                 <li>過去当社との契約に違反した者またはその関係者であると当社が判断した場合</li>
                                 <li>その他、当社が登録を適当でないと判断した場合</li>
                             </ul>
-                            <p><strong>第3条（利用料金及び支払方法）</strong><br/>1. 利用者は、本サービスの利用の対価として、当社が別途定める利用料金を、当社が指定する支払方法により当社に支払うものとします。利用料金は月額3,850円（税込）とします。<br/>2. 支払方法はクレジットカード決済または銀行振込（定価46,200円を年額一括の割引価格39,600円（税込）のみ「求人を停止しても返金はございません」）とします。<br/>3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも管理画面から次回の更新をキャンセルすることができます。月の途中で解約した場合でも、日割り返金は行われません。</p>
+                            <p><strong>第3条（利用料金及び支払方法）</strong><br/>1. 利用者は、本サービスの利用の対価として、当社が別途定める利用料金を、当社が指定する支払方法により当社に支払うものとします。利用料金は月額8,800円（税込）とします。<br/>2. 支払方法はクレジットカード決済または銀行振込（定価105,600円を年額一括の割引価格92,400円（税込）のみ「求人を停止しても返金はございません」）とします。<br/>3. 利用契約は毎月自動的に更新されるものとし、利用者はいつでも管理画面から次回の更新をキャンセルすることができます。月の途中で解約した場合でも、日割り返金は行われません。</p>
                             <p><strong>第4条（ユーザーID及びパスワードの管理）</strong><br/>1. 利用者は、自己の責任において、本サービスのユーザーID及びパスワードを適切に管理及び保管するものとし、これを第三者に利用させ、または貸与、譲渡、名義変更、売買等をしてはならないものとします。<br/>2. ユーザーIDまたはパスワードの管理不十分、使用上の過誤、第三者の使用等によって生じた損害に関する責任は利用者が負うものとし、当社は一切の責任を負いません。</p>
                             <p><strong>第5条（禁止事項）</strong><br/>利用者は、本サービスの利用にあたり、以下の各号のいずれかに該当する行為または該当すると当社が判断する行為をしてはなりません。<br/>
                             <ul className="list-disc list-inside pl-4 text-sm">

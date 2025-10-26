@@ -14,6 +14,7 @@ import { useRouter } from 'next/router';
 import { signOut, getAuth, onAuthStateChanged } from "firebase/auth"; 
 import { app } from "@/lib/firebase"; // 🚨 必要に応じてプロジェクトのパスへ調整
 import { useState, useEffect } from 'react';
+import React from 'react';
 
 // --- 型定義 (そのまま) ---
 interface Candidate {
@@ -65,11 +66,12 @@ const AIMatchingGuide = ({ show, onClose }: { show: boolean, onClose: () => void
                     <div className="border p-4 rounded-lg bg-gray-50">
                         <h4 className="text-xl font-semibold mb-3">📄 企業パートナー向け運用ガイド</h4>
                         <ol className="list-decimal list-inside space-y-2 pl-4 text-sm">
-                            <li>Step 1: プロフィール編集（/recruit/profile）でAI許容スコアと企業のアピールポイントを設定します。</li>
-                            <li>Step 2: 新規求人作成（/recruit/jobs/create）で給与と職種を設定し、AI審査を申請します。</li>
-                            <li>Step 3: 応募者リスト確認（/recruit/applicants）でAIスコア順に応募者を確認します。</li>
-                            <li>Step 4: 意思表示（承諾 or 見送り）を行い、マッチング成立させます。</li>
-                            <li>Step 5: マッチ成立した候補者の連絡先はダッシュボード下部に表示されます。</li>
+                            <li>Step 1: 企業プロフィール編集でAI許容スコアと企業のアピールポイントを設定し、保存してAI登録審査を申請します。</li>
+                            <li>Step 2: 新規求人作成で給与と職種を設定し、AI審査を申請すると、自動で公開されます。</li>
+                            <li>Step 3: 全求人一覧を確認してください。</li>
+                            <li>Step 4: 応募者リスト確認でAIスコア順に応募者を確認します。</li>
+                            <li>Step 5: 意思表示（承諾 or 見送り）を行い、マッチング成立させます。</li>
+                            <li>Step 6: マッチ成立した候補者の連絡先はダッシュボード下部に表示されます。</li>
                         </ol>
                     </div>
                 </div>
@@ -451,17 +453,14 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                     </div>
                 )}
                 
-                {/* ▼▼▼ 追加: ログイン案内バナー ▼▼▼ */}
+                {/* ▼▼▼ ログイン案内バナー (そのまま) ▼▼▼ */}
                 <div className="mb-10 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-800 rounded-lg shadow-sm">
                     <p className="text-base font-semibold">
                         <strong>ログインについて:</strong> ブラウザでadtownと検索してホームページからログインできます。
                     </p>
                 </div>
-                {/* ▲▲▲ 追加: ログイン案内バナー ▲▲▲ */}
+                {/* ▲▲▲ ログイン案内バナー ▲▲▲ */}
 
-                {/* PDF資料ダウンロードセクションは削除済み */}
-                {/* <section>...</section> */}
-                
                 {/* 1. AI運用サマリーとアクション */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">1. AI運用サマリーとアクション</h2>
@@ -522,7 +521,7 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                                <p className="text-gray-600">現在、新しい応募者はいません。</p>
                            ) : (
                                <div className="divide-y divide-gray-100">
-                                   {candidates.map((c) => (<CandidateCard key={c.id} candidate={c} />))}
+                                      {candidates.map((c) => (<CandidateCard key={c.id} candidate={c} />))}
                                </div>
                            )}
                            <Link href="/recruit/applicants" className="mt-4 block text-center text-indigo-600 hover:underline text-sm font-bold">
@@ -532,27 +531,27 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
 
                         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                             <h3 className="text-xl font-bold mb-4 flex items-center">
-                                 <RiContactsLine className="mr-2 text-blue-600" size={24} />
-                                 連絡先交換済みリスト ({contacts.length}件)
+                                   <RiContactsLine className="mr-2 text-blue-600" size={24} />
+                                   連絡先交換済みリスト ({contacts.length}件)
                             </h3>
                             {contacts.length === 0 ? (
                                 <p className="text-gray-600">まだマッチングが成立した候補者はいません。</p>
                             ) : (
                                 <div className="space-y-3">
-                                     {contacts.slice(0, 3).map((c) => (
-                                         <div key={c.id} className="p-3 bg-blue-50 rounded-lg flex justify-between items-center">
-                                             <div>
-                                                 <p className="font-semibold text-gray-900">{c.name} 様</p>
-                                                 <p className="text-xs text-gray-600">連絡先: {c.contactInfo}</p>
-                                             </div>
-                                             <RiCheckLine className="text-blue-500" size={20} />
-                                         </div>
-                                     ))}
-                                     {contacts.length > 3 && (
-                                         <p className="text-sm text-center text-gray-500">他 {contacts.length - 3} 件...</p>
-                                     )}
-                                 </div>
-                             )}
+                                       {contacts.slice(0, 3).map((c) => (
+                                           <div key={c.id} className="p-3 bg-blue-50 rounded-lg flex justify-between items-center">
+                                               <div>
+                                                   <p className="font-semibold text-gray-900">{c.name} 様</p>
+                                                   <p className="text-xs text-gray-600">連絡先: {c.contactInfo}</p>
+                                               </div>
+                                               <RiCheckLine className="text-blue-500" size={20} />
+                                           </div>
+                                       ))}
+                                        {contacts.length > 3 && (
+                                           <p className="text-sm text-center text-gray-500">他 {contacts.length - 3} 件...</p>
+                                        )}
+                                     </div>
+                            )}
                             <Link 
                                 href="/recruit/export-contacts"
                                 className="mt-4 block text-center text-green-600 hover:underline text-sm font-bold"
@@ -599,7 +598,40 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                 )}
             </main>
             
+            {/* 💡 修正: LINEお問い合わせセクションをメインタグの外、フッターの前に移動 */}
+            {/* LINEのお問い合わせボタンをフッターのログアウトボタンの直前（上）に配置 */}
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+                <section className="mt-6">
+                    <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <h2 className="text-lg font-bold text-gray-700 mb-1">LINEよりお問い合わせください。</h2>
+                            <p className="text-sm text-gray-500">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
+                        </div>
+                        <div 
+                            className="flex-shrink-0"
+                            dangerouslySetInnerHTML={{
+                                // 求人パートナー用のLINE IDを使用します
+                                __html: '<a href="https://lin.ee/aMc9H5W" target="_blank" rel="noopener noreferrer"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" border="0"></a>'
+                            }}
+                        />
+                    </div>
+                </section>
+            </div>
+
+            {/* AIMatchingGuideはそのまま */}
             <AIMatchingGuide show={showGuide} onClose={() => setShowGuide(false)} />
+
+            {/* フッター操作 (ログアウトボタンのみ) */}
+            <footer className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-8">
+                <section className="mt-6 grid grid-cols-1 gap-4">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full text-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700"
+                    >
+                        ログアウト
+                    </button>
+                </section>
+            </footer>
         </div>
     );
 };

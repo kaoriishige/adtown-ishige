@@ -1,7 +1,8 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
+import Script from 'next/script'; // 💡 修正 1: next/script をインポート
 import React from 'react';
-// ★★★ 修正箇所: importのパスを修正 ★★★
+// ★★★ 修正箇所: importのパスを修正（仮に正しいものとして維持） ★★★
 import { adminDb } from '../lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import * as admin from 'firebase-admin';
@@ -29,8 +30,16 @@ const FlyersPage: NextPage<FlyersProps> = ({ flyers }) => {
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
             <Head>
                 <title>{"チラシ情報"}</title>
-                <script src="https://cdn.tailwindcss.com"></script>
+                {/* 削除: <script src="https://cdn.tailwindcss.com"></script> */}
             </Head>
+            
+            {/* 💡 修正 2: Tailwind CSS CDNを <Script> コンポーネントで非同期読み込み */}
+            {/* beforeInteractive戦略で、ページがハイドレーションされる前に読み込む */}
+            <Script
+                src="https://cdn.tailwindcss.com"
+                strategy="beforeInteractive"
+            />
+            
             <div className="max-w-4xl mx-auto">
                 <header className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-800">最新のチラシ情報</h1>
@@ -65,6 +74,9 @@ const FlyersPage: NextPage<FlyersProps> = ({ flyers }) => {
 // ===============================
 export const getServerSideProps: GetServerSideProps = async () => {
     try {
+        // 🚨 Note: FirestoreのorderByを使用する場合、フィールド（'publishedAt'）に対して
+        // indexが設定されていないと、実行時にエラーになる可能性があります。
+        // Next.jsのプロジェクト構造から、Firebase Admin SDKが使用されていることが推測されます。
         const flyersSnapshot = await adminDb.collection('flyers')
             .where('published', '==', true)
             .orderBy('publishedAt', 'desc')

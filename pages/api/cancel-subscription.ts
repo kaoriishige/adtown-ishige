@@ -6,7 +6,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
 // Stripe SDKを初期化
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // @ts-expect-error
+  // @ts-expect-error StripeのAPIバージョン型定義が環境変数と合わない場合があるため
   apiVersion: '2024-06-20',
 });
 
@@ -29,6 +29,7 @@ export default async function handler(
   try {
     // 1. ユーザーを認証する
     const cookies = nookies.get({ req });
+    // IDトークンの検証
     const token = await adminAuth.verifyIdToken(cookies.token);
     const { uid } = token;
 
@@ -58,6 +59,7 @@ export default async function handler(
     });
 
     // 5. Firebase Authのカスタムクレームを更新する（任意ですが推奨）
+    // stripeRoleを'free'などに設定し、クライアント側でのアクセス制御に使用
     await adminAuth.setCustomUserClaims(uid, { stripeRole: 'free' });
 
     console.log(`ユーザー(UID: ${uid})のサブスクリプションが正常に解約予約されました。`);
@@ -65,6 +67,7 @@ export default async function handler(
 
   } catch (error) {
     console.error('Subscription cancellation error:', error);
+    // エラー型をチェックし、安全にメッセージにアクセスする
     const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました。';
     res.status(500).json({ error: `解約処理中にエラーが発生しました: ${errorMessage}` });
   }

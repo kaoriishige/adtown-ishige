@@ -76,7 +76,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
         const token = await adminAuth.verifyIdToken(cookies.token, true);
-　　　　 const userDoc = await adminDb.collection('users').doc(token.uid).get();
+const userDoc = await adminDb.collection('users').doc(token.uid).get();
         
         if (userDoc.exists && userDoc.data()?.role === 'admin') {
             return { redirect: { destination: '/admin', permanent: false } };

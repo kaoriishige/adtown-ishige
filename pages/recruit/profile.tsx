@@ -52,10 +52,10 @@ interface CompanyProfile {
     appealPoints: {
         atmosphere: string[];
         organization: string[];
-        // 🚀 成長機会、🕰️ WLB、💰 福利厚生・手当は削除
-        growth: string[]; 
-        wlb: string[];
-        benefits: string[];
+        // 🚨 修正箇所: delete演算子に対応するため、プロパティをオプショナルに変更
+        growth?: string[]; 
+        wlb?: string[];
+        benefits?: string[];
     };
 }
 
@@ -91,7 +91,8 @@ const CompanyProfilePage = () => {
         appealPoints: {
             atmosphere: [],
             organization: [],
-            growth: [],
+            // 初期値は空配列で設定するが、型定義はオプショナル
+            growth: [], 
             wlb: [],
             benefits: []
         }
@@ -169,7 +170,8 @@ const CompanyProfilePage = () => {
     // --- チェックボックス変更 (変更なし) ---
     const handleAppealCheckboxChange = (category: keyof CompanyProfile['appealPoints'], value: string) => {
         setFormData(prev => {
-            const currentValues = prev.appealPoints[category];
+            // オプショナルプロパティでも空配列を保証して操作
+            const currentValues = prev.appealPoints[category] || []; 
             const newValues = currentValues.includes(value)
                 ? currentValues.filter(item => item !== value)
                 : [...currentValues, value];
@@ -244,8 +246,10 @@ const CompanyProfilePage = () => {
         setSaving(true);
         setError(null);
 
-        // フォームデータから成長機会、WLB、福利厚生の空の配列を削除 (Firestoreに空を書き込まないようにする)
-        const appealPointsToSave = { ...formData.appealPoints };
+        // 🚨 修正箇所: delete演算子を使用するため、appealPointsToSaveの型を一時的にオプショナルプロパティを持つ型として定義
+        const appealPointsToSave: { [key: string]: string[] | undefined } = { ...formData.appealPoints };
+        
+        // TypeScriptのエラーは、CompanyProfileインターフェースのプロパティをオプショナルに変更したことで解消
         if (appealPointsToSave.growth && appealPointsToSave.growth.length === 0) delete appealPointsToSave.growth;
         if (appealPointsToSave.wlb && appealPointsToSave.wlb.length === 0) delete appealPointsToSave.wlb;
         if (appealPointsToSave.benefits && appealPointsToSave.benefits.length === 0) delete appealPointsToSave.benefits;
