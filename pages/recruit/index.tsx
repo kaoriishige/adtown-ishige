@@ -23,6 +23,7 @@ const PARTNER_LOGOS = [
 '/images/partner-sekiguchi02.png',
 '/images/partner-training_farm.png',
 '/images/partner-transunet.png',
+'/images/partner-koharu.png',
 '/images/partner-yamakiya.png'
 ];
 
@@ -418,7 +419,7 @@ const RecruitPartnerPage: NextPage = () => {
                                         </tr>
                                         <tr className="bg-gray-50">
                                             <td className="p-3 border font-bold">Step 2: 候補者の確認</td>
-                                            <td className="p-3 border">ダッシュボードで<strong>「マッチング候補者リスト（上位10名）」を毎日確認します。AIが計算したスコアとマッチ理由</strong>が表示されます。</td>
+                                            <td className="p-3 border">ダッシュボードで<strong>「マッチング候補者リスト（上位5名）」を毎日確認します。AIが計算したスコアとマッチ理由</strong>が表示されます。</td>
                                             <td className="p-3 border">貴社に本当にフィットする、応募意欲の高い人材に絞って情報が届きます。</td>
                                         </tr>
                                         <tr>
@@ -433,7 +434,7 @@ const RecruitPartnerPage: NextPage = () => {
                                         </tr>
                                         <tr>
                                             <td className="p-3 border font-bold">Step 5: 面接設定</td>
-                                            <td className="p-3 border">チャットを通じて、ユーザーと直接、面接日程の調整や初期質問を行います。</td>
+                                            <td className="p-3 border">アプリ内で、企業と求職者双方の意思確認や、面接・選考に進むための合意ができた後、アプリの機能を使って、氏名、電話番号、メールアドレスなどの連絡先情報を相互に開示します。</td>
                                             <td className="p-3 border">確度の高い候補者とスムーズに面接に進めます。</td>
                                         </tr>
                                     </tbody>

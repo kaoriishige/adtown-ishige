@@ -20,6 +20,7 @@ const PARTNER_LOGOS = [
 '/images/partner-sekiguchi02.png',
 '/images/partner-training_farm.png',
 '/images/partner-transunet.png',
+'/images/partner-koharu.png',
 '/images/partner-yamakiya.png'
 ];
 
@@ -310,7 +311,6 @@ const PartnerSignupPage = () => {
                     <p className="mt-4 text-lg text-gray-600">那須地域の魅力をもっと身近に、もっと便利に感じていただけるアプリです。
 ぜひ下記のご案内をご覧のうえ、ご利用ください。</p>
                 </section>
-
 
                 {/* Hero Section */}
                 <section className="text-center py-16 md:py-24">

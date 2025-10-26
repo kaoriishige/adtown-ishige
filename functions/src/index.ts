@@ -1,14 +1,17 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as functions from "firebase-functions/v1"; // ← v1を使用
 import * as admin from "firebase-admin";
 
-// ... (他のimport文)
+admin.initializeApp();
 
-export const playDailyLottery = onCall(async (request) => {
-    // v2では、認証情報は request.auth で受け取る
-    if (!request.auth) {
-        throw new HttpsError('unauthenticated', 'Authentication is required.');
-    }
-    const { uid } = request.auth;
-    const userRef = admin.firestore().collection('users').doc(uid);
-    // ... (以降のロジックはほぼ同じ)
-});
+// 毎日午前3時に実行するスケジュール関数
+export const dailyTask = functions.pubsub
+  .schedule("0 3 * * *")
+  .timeZone("Asia/Tokyo")
+  .onRun(async () => {
+    console.log("毎日午前3時に実行されました");
+    // ここに処理を書く（例: Firestoreデータ更新など）
+    return null;
+  });
+
+
+

@@ -29,6 +29,7 @@ const PARTNER_LOGOS = [
     // '/images/partner-tonbo.png', // 404
     '/images/partner-training_farm.png',
     '/images/partner-transunet.png',
+    '/images/partner-koharu.png',
     // '/images/partner-yamabuki.png', // 存在確認
     '/images/partner-yamakiya.png'
 ];
