@@ -1,145 +1,103 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import getStripeAdmin from '@/lib/stripe-admin';
-import * as admin from 'firebase-admin';
 
-// 🚨 修正: Netlifyの環境変数(process.env.URL)をフォールバックとして使用
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.URL || 'http://localhost:3000';
+// ✅ デプロイ環境に応じたBASE_URL検出ロジック
+const BASE_URL =
+process.env.NEXT_PUBLIC_BASE_URL || // 手動設定があれば優先
+process.env.URL || // ✅ Netlify本番で自動注入される
+process.env.DEPLOY_URL || // Netlifyプレビュー用
+(process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+'http://localhost:3000'; // 最後のフォールバック
 
-export default async function handler(
-    req: NextApiRequest,
-    res: NextApiResponse
-) {
-    if (req.method !== 'POST') {
-        res.setHeader('Allow', 'POST');
-        return res.status(405).end('Method Not Allowed');
-    }
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+if (req.method !== 'POST') {
+res.setHeader('Allow', 'POST');
+return res.status(405).end('Method Not Allowed');
+}
 
-    // 1. 環境変数マップの定義
-    const priceMapEnv = {
-        adver_monthly: process.env.STRIPE_AD_PRICE_ID,
-        adver_annual: process.env.STRIPE_AD_ANNUAL_PRICE_ID,
-        recruit_monthly: process.env.STRIPE_JOB_PRICE_ID,
-        recruit_annual: process.env.STRIPE_JOB_ANNUAL_PRICE_ID,
-    };
+const {
+email,
+companyName,
+contactPerson,
+phoneNumber,
+address,
+serviceType,
+billingCycle,
+} = req.body ?? {};
 
-    // サーバーのStripe Secret Keyが不足していないかを確認
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.NEXT_PUBLIC_BASE_URL) {
-        console.error(`[Subscribe API] サーバー設定エラー: STRIPE_SECRET_KEYまたはNEXT_PUBLIC_BASE_URLが不足しています。`);
-        return res.status(500).json({ error: 'サーバー設定が不完全です。主要な環境変数が不足しています。' });
-    }
-    
-    // 2. リクエストボディの展開とPrice IDの決定
-    const { email, password, serviceType, billingCycle, address, phoneNumber, trialEndDate, companyName, contactPerson } = req.body ?? {};
+// --- 必須チェック ---
+const missingFields = ['email', 'serviceType', 'billingCycle'].filter(
+(f: string) => !req.body?.[f]
+);
+if (missingFields.length > 0) {
+return res.status(400).json({ error: `Missing fields: ${missingFields.join(', ')}` });
+}
 
-    if (!email || !serviceType || !billingCycle) {
-        return res.status(400).json({ error: '必須項目(email, serviceType, billingCycle)が不足しています。' });
-    }
+const stripe = getStripeAdmin();
 
-    const priceKey = `${serviceType}_${billingCycle}` as keyof typeof priceMapEnv;
-    const priceId = priceMapEnv[priceKey];
+try {
+// ✅ Stripeに一時顧客を作成（Firebase登録はまだしない）
+const customer = await stripe.customers.create({
+email,
+name: companyName || contactPerson || email,
+metadata: {
+email,
+companyName: companyName || '',
+contactPerson: contactPerson || '',
+phoneNumber: phoneNumber || '',
+address: address || '',
+serviceType,
+billingCycle,
+},
+});
 
-    if (!priceId) {
-        console.error(`[Subscribe API] サーバー設定エラー: Price IDが未設定です (${priceKey})`);
-        return res.status(500).json({ error: `Price ID が未設定です: ${priceKey}。デプロイ環境のPrice ID設定を確認してください。` });
-    }
-    
-    const stripe = getStripeAdmin();
-    
-    let user: admin.auth.UserRecord | null = null;
-    let customerId: string | null = null;
-    let snapshot: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData> | undefined;
-    let isNewUser = false;
-    
-    const isAdverService = serviceType === 'adver';
-    const isRecruitService = serviceType === 'recruit';
+// ✅ Price ID 判定
+const priceKey = `${serviceType}_${billingCycle}`;
+const priceMap: Record<string, string | undefined> = {
+adver_monthly: process.env.STRIPE_AD_PRICE_ID,
+adver_annual: process.env.STRIPE_AD_ANNUAL_PRICE_ID,
+recruit_monthly: process.env.STRIPE_JOB_PRICE_ID,
+recruit_annual: process.env.STRIPE_JOB_ANNUAL_PRICE_ID,
+};
+const priceId = priceMap[priceKey];
+if (!priceId) throw new Error(`Price ID not found: ${priceKey}`);
 
-    try {
-        // --- 1. Firebase Authユーザーの作成または取得 (Authに仮登録) ---
-        try {
-            user = await adminAuth.getUserByEmail(email);
-        } catch (err: any) {
-            if (err.code === 'auth/user-not-found') {
-                isNewUser = true;
-                if (!password) throw new Error('新規登録にはパスワードが必要です。');
-                // Authに仮登録
-                user = await adminAuth.createUser({ email, password, displayName: contactPerson });
-            } else {
-                throw err;
-            }
-        }
-        
-        // --- 2. Stripe顧客の作成または取得 ---
-        const userDocRef = adminDb.collection('users').doc(user.uid);
-        snapshot = await userDocRef.get();
-        customerId = snapshot.data()?.stripeCustomerId;
-        
-        if (!customerId) {
-            const name = companyName || user.displayName || email;
-            const newCustomer = await stripe.customers.create({ email, name, metadata: { firebaseUid: user.uid } });
-            customerId = newCustomer.id;
-        }
+// 🚨 修正箇所: serviceTypeに基づいてキャンセルURLを動的に決定
+let cancel_url: string;
+if (serviceType === 'adver') {
+// 広告パートナー (partner/signup.tsx) に戻す
+cancel_url = `${BASE_URL}/partner/signup`; 
+} else if (serviceType === 'recruit') {
+// 求人パートナー (recruit/index.tsx) に戻す
+cancel_url = `${BASE_URL}/recruit`; 
+} else {
+cancel_url = `${BASE_URL}/`; // 不明な場合はトップページ
+}
 
-        // --- 3. Stripe Checkout Sessionの作成 (アトミック処理の核心) ---
-        const successUrl = `${BASE_URL}/partner/login?payment=success&user=${user.uid}`;
-        // サービスタイプに基づいてキャンセルURLを動的に変更
-        let cancelUrl: string;
-        if (serviceType === 'adver') {
-            cancelUrl = `${BASE_URL}/partner/signup`; // 広告パートナー
-        } else if (serviceType === 'recruit') {
-            cancelUrl = `${BASE_URL}/recruit`; // 求人パートナー
-        } else {
-            cancelUrl = `${BASE_URL}/`;
-        }
+// ✅ Checkoutセッション作成
+const session = await stripe.checkout.sessions.create({
+mode: 'subscription',
+payment_method_types: ['card'],
+customer: customer.id,
+line_items: [{ price: priceId, quantity: 1 }],
+// 決済成功時 → ログインページ
+success_url: `${BASE_URL}/partner/login?payment=success`,
+// 戻る（キャンセル）時 → 修正したURLを使用
+cancel_url: cancel_url,
+subscription_data: {
+metadata: customer.metadata,
+},
+locale: 'ja', // StripeのUIを日本語化
+});
 
-        const checkoutSession = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            mode: 'subscription',
-            customer: customerId,
-            line_items: [{ price: priceId, quantity: 1 }],
-            subscription_data: {
-                // trial_end: trialEndDate, // 無料期間は削除
-                metadata: { firebaseUid: user.uid, serviceType, billingCycle, email, companyName, contactPerson, phoneNumber, address }
-            },
-            success_url: successUrl,
-            cancel_url: cancelUrl, 
-            metadata: { firebaseUid: user.uid }
-        });
-        
-        // --- 4. 成功した場合のみ、Firestoreに本登録 ---
-        const rolesToAdd: string[] = [];
-        const existingRoles = snapshot?.data()?.roles || [];
-        if (isAdverService && !existingRoles.includes('adver')) rolesToAdd.push('adver');
-        if (isRecruitService && !existingRoles.includes('recruit')) rolesToAdd.push('recruit');
-
-        const dataToStore: { [key: string]: any } = {
-            uid: user.uid,
-            email,
-            displayName: contactPerson,
-            companyName: companyName || snapshot?.data()?.companyName || '',
-            address: address || snapshot?.data()?.address || '',
-            phoneNumber: phoneNumber || snapshot?.data()?.phoneNumber || '',
-            stripeCustomerId: customerId,
-            roles: rolesToAdd.length > 0 ? admin.firestore.FieldValue.arrayUnion(...rolesToAdd) : existingRoles,
-            [`${serviceType}SubscriptionStatus`]: 'pending_checkout', // 決済セッション作成済み
-            stripeSubscriptionId: checkoutSession.subscription,
-            createdAt: snapshot?.exists ? snapshot.data()!.createdAt : admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        await userDocRef.set(dataToStore, { merge: true });
-        
-        // --- 5. 決済ページへのリダイレクト情報を返す ---
-        res.status(200).json({ sessionId: checkoutSession.id, success: true });
-
-    } catch (e: any) {
-        // 🚨 6. エラーが発生した場合、Authの仮ユーザーをクリーンアップ
-        if (user && isNewUser && snapshot && !snapshot.exists) { 
-            await adminAuth.deleteUser(user.uid).catch(console.error); 
-        }
-        console.error('[Subscribe API Critical Error]', e);
-        res.status(500).json({ error: e.message || '決済処理中にシステムエラーが発生しました。' });
-    }
+return res.status(200).json({ sessionId: session.id });
+} catch (err: any) {
+console.error('[register-and-subscribe ERROR]', err);
+return res.status(500).json({
+error: err.message || 'Stripe checkout session creation failed.',
+hint: 'BASE_URL might be misconfigured on Netlify.',
+});
+}
 }
 
 
