@@ -1,29 +1,40 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin';
-import getStripeAdmin from '../../../lib/stripe-admin';
-import * as admin from 'firebase-admin'; // FirestoreのFieldValueのためにインポート
+import { adminAuth, adminDb } from '../../../lib/firebase-admin'; // パス調整
+import getStripeAdmin from '../../../lib/stripe-admin'; // パス調整
+import * as admin from 'firebase-admin';
 
-const NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || '';
+// 💡 外部URLを参照するための環境変数（Next.js側で設定されていることを想定）
+const NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || `https://${process.env.VERCEL_URL}` || 'http://localhost:3000';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse
+) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         return res.status(405).end('Method Not Allowed');
     }
 
+    // 1. サーバー設定チェック
+    const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
     const priceMapEnv = {
         adver_monthly: process.env.STRIPE_AD_PRICE_ID,
         adver_annual: process.env.STRIPE_AD_ANNUAL_PRICE_ID,
-        recruit_monthly: process.env.STRIPE_JOB_PRICE_ID,
-        recruit_annual: process.env.STRIPE_JOB_ANNUAL_PRICE_ID,
+        recruit_monthly: process.env.STRIPE_JOB_PRICE_ID, // STRIPE_JOB_PRICE_ID を使用
+        recruit_annual: process.env.STRIPE_JOB_ANNUAL_PRICE_ID, // STRIPE_JOB_ANNUAL_PRICE_ID を使用
     };
+    
+    // 必須キーのチェック
+    const requiredKeys = ['STRIPE_SECRET_KEY', 'STRIPE_JOB_PRICE_ID', 'STRIPE_JOB_ANNUAL_PRICE_ID'];
+    const missingKeys: string[] = requiredKeys.filter(key => !process.env[key] && key !== 'STRIPE_SECRET_KEY');
+    if (!STRIPE_SECRET_KEY) missingKeys.unshift('STRIPE_SECRET_KEY');
 
-    if (!process.env.NEXT_PUBLIC_BASE_URL || Object.values(priceMapEnv).some(v => !v)) {
-        console.error('[Subscribe API] サーバー設定エラー: 環境変数が不足しています。');
-        return res.status(500).json({ error: 'サーバー設定が不完全です。' });
+    if (missingKeys.length > 0) {
+        console.error(`[Subscribe API] サーバー設定エラー: 環境変数が不足しています: ${missingKeys.join(', ')}`);
+        return res.status(500).json({ error: `サーバー設定エラー: 必要な決済環境変数が不足しています (${missingKeys.join(', ')})` });
     }
-
-    const { companyName, email, password, serviceType, billingCycle, address, phoneNumber } = req.body ?? {};
+    
+    const { email, password, serviceType, billingCycle, address, phoneNumber, trialEndDate, companyName, contactPerson } = req.body ?? {};
 
     if (!email || !serviceType || !billingCycle) {
         return res.status(400).json({ error: '必須項目(email, serviceType, billingCycle)が不足しています。' });
@@ -35,160 +46,103 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!priceId) {
         return res.status(500).json({ error: `Price ID が未設定です: ${priceKey}` });
     }
+    
+    const stripe = getStripeAdmin();
+    
+    let user: admin.auth.UserRecord | null = null;
+    let customerId: string | null = null;
+    // snapshotはcatchブロックでdeleteUserの判定に利用するため、tryブロックの外で宣言
+    let snapshot: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData> | undefined;
+    let isNewUser = false;
+    
+    const isAdverService = serviceType === 'adver';
+    const isRecruitService = serviceType === 'recruit';
+
 
     try {
-        const stripe = getStripeAdmin();
-        let stripeCustomerId: string;
-        let firebaseUid: string;
-        let sessionMetadata: { [key: string]: string } = { serviceType };
-        let successUrl: string;
-        let isNewUser = false;
-
-        // ✅ prefer-const エラー修正
-        const isAdverService = serviceType === 'adver';
-        const isRecruitService = serviceType === 'recruit';
-
+        // --- 1. Firebase Authユーザーの作成または取得 (Authに仮登録) ---
         try {
-            // 既存ユーザー確認
-            const user = await adminAuth.getUserByEmail(email);
-            firebaseUid = user.uid;
-            console.log(`[Subscribe API] 既存ユーザーを検出: ${firebaseUid}`);
-
-            const userDocRef = adminDb.collection('users').doc(firebaseUid);
-            const userDoc = await userDocRef.get();
-            const userData = userDoc.data();
-            stripeCustomerId = userData?.stripeCustomerId;
-            const existingRoles: string[] = userData?.roles || [];
-
-            // --- Stripe顧客確認 ---
-            if (stripeCustomerId) {
-                try {
-                    const customer = await stripe.customers.retrieve(stripeCustomerId);
-                    if ((customer as any).deleted) {
-                        throw new Error('Stripe customer is deleted');
-                    }
-                    console.log(`[Subscribe API] 既存Stripe顧客ID (${stripeCustomerId}) は有効です。`);
-                } catch {
-                    console.warn(`[Subscribe API] 既存Stripe顧客ID (${stripeCustomerId}) が無効または削除済み。再作成します。`);
-                    const newCustomer = await stripe.customers.create({
-                        email,
-                        name: companyName || user.displayName,
-                        metadata: { firebaseUid },
-                    });
-                    stripeCustomerId = newCustomer.id;
-                    await userDocRef.update({
-                        stripeCustomerId,
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    });
-                }
-            } else {
-                const newCustomer = await stripe.customers.create({
-                    email,
-                    name: companyName || user.displayName,
-                    metadata: { firebaseUid },
-                });
-                stripeCustomerId = newCustomer.id;
-                await userDocRef.set(
-                    {
-                        stripeCustomerId,
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    },
-                    { merge: true }
-                );
-            }
-
-            sessionMetadata.firebaseUid = firebaseUid;
-
-            const rolesToAdd: string[] = [];
-            if (isAdverService && !existingRoles.includes('adver')) rolesToAdd.push('adver');
-            if (isRecruitService && !existingRoles.includes('recruit')) rolesToAdd.push('recruit');
-
-            if (rolesToAdd.length > 0) {
-                await userDocRef.update({
-                    roles: admin.firestore.FieldValue.arrayUnion(...rolesToAdd),
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                });
-                console.log(`[Subscribe API] 既存ユーザー ${firebaseUid} にロール [${rolesToAdd.join(', ')}] を追加しました。`);
-            }
-        } catch (error: any) {
-            if (error.code === 'auth/user-not-found') {
+            // 既存ユーザーを検索
+            user = await adminAuth.getUserByEmail(email);
+        } catch (err: any) {
+            if (err.code === 'auth/user-not-found') {
                 isNewUser = true;
-                console.log('[Subscribe API] 新規ユーザーとして処理します。');
-
-                if (!password) {
-                    return res.status(400).json({ error: '新規ユーザーの登録にはパスワードが必要です。' });
-                }
-
-                const authUser = await adminAuth.createUser({
-                    email,
-                    password,
-                    displayName: companyName,
-                });
-                firebaseUid = authUser.uid;
-
-                const newCustomer = await stripe.customers.create({
-                    email,
-                    name: companyName,
-                    metadata: { firebaseUid },
-                });
-                stripeCustomerId = newCustomer.id;
-
-                const initialRoles: string[] = [];
-                if (isAdverService) initialRoles.push('adver');
-                if (isRecruitService) initialRoles.push('recruit');
-
-                await adminDb
-                    .collection('users')
-                    .doc(firebaseUid)
-                    .set(
-                        {
-                            uid: firebaseUid,
-                            email,
-                            companyName: companyName || '',
-                            address: address || '',
-                            phoneNumber: phoneNumber || '',
-                            stripeCustomerId,
-                            roles: initialRoles,
-                            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                        },
-                        { merge: true }
-                    );
-
-                sessionMetadata = {
-                    ...req.body,
-                    is_new_user: 'true',
-                    serviceType,
-                    firebaseUid,
-                    companyName,
-                    address,
-                    phoneNumber,
-                };
+                if (!password) throw new Error('新規登録にはパスワードが必要です。');
+                // Authに仮登録
+                user = await adminAuth.createUser({ email, password, displayName: contactPerson });
             } else {
-                throw error;
+                throw err;
             }
         }
-
-        // ✅ 成功時URL修正：「partner/login」へ遷移
-        if (isNewUser) {
-            successUrl = `${NEXT_PUBLIC_BASE_URL}/partner/login?new=1`;
-        } else {
-            successUrl = `${NEXT_PUBLIC_BASE_URL}/partner/login`;
+        
+        // --- 2. Stripe顧客の作成または取得 ---
+        const userDocRef = adminDb.collection('users').doc(user.uid);
+        snapshot = await userDocRef.get();
+        customerId = snapshot.data()?.stripeCustomerId;
+        
+        if (!customerId) {
+            // Stripe顧客を新規作成
+            const name = companyName || user.displayName || email;
+            const newCustomer = await stripe.customers.create({ email, name, metadata: { firebaseUid: user.uid } });
+            customerId = newCustomer.id;
         }
 
-        const session = await stripe.checkout.sessions.create({
-            mode: 'subscription',
-            payment_method_types: ['card'],
-            customer: stripeCustomerId,
-            line_items: [{ price: priceId, quantity: 1 }],
-            success_url: successUrl,
-            cancel_url: req.headers.referer || `${NEXT_PUBLIC_BASE_URL}/`,
-            metadata: sessionMetadata,
-        });
+        // --- 3. Stripe Checkout Sessionの作成 (アトミック処理) ---
+        // 🚨 修正: success_urlを/partner/loginに設定
+        const successUrl = `${NEXT_PUBLIC_BASE_URL}/partner/login?payment=success&user=${user.uid}`;
+        const cancelUrl = `${NEXT_PUBLIC_BASE_URL}/cancel`;
 
-        return res.status(200).json({ sessionId: session.id, url: session.url });
+        const checkoutSession = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            mode: 'subscription',
+            customer: customerId,
+            line_items: [{ price: priceId, quantity: 1 }],
+            
+            // 🚨 修正: trialEndDateを削除したため、subscription_dataからtrial_endを削除
+            subscription_data: {
+                // trial_end: trialEndDate, // 課金が即時開始されるように削除
+                metadata: { firebaseUid: user.uid, serviceType, billingCycle }
+            },
+            success_url: successUrl, // 決済完了後、ログインページへリダイレクト
+            cancel_url: cancelUrl,
+            metadata: { firebaseUid: user.uid }
+        });
+        
+        // --- 4. 成功した場合のみ、Firestoreに本登録 ---
+        const rolesToAdd: string[] = [];
+        if (isAdverService && !(snapshot?.data()?.roles || []).includes('adver')) rolesToAdd.push('adver');
+        if (isRecruitService && !(snapshot?.data()?.roles || []).includes('recruit')) rolesToAdd.push('recruit');
+
+        const dataToStore: { [key: string]: any } = {
+            uid: user.uid,
+            email,
+            displayName: contactPerson,
+            companyName: companyName || snapshot?.data()?.companyName || '',
+            address: address || snapshot?.data()?.address || '',
+            phoneNumber: phoneNumber || snapshot?.data()?.phoneNumber || '',
+            stripeCustomerId: customerId,
+            roles: rolesToAdd.length > 0 ? admin.firestore.FieldValue.arrayUnion(...rolesToAdd) : snapshot?.data()?.roles,
+            [`${serviceType}SubscriptionStatus`]: 'pending_checkout', // 決済セッション作成済み
+            stripeSubscriptionId: checkoutSession.subscription, // サブスクリプションIDを記録 (後でWebhookで更新)
+            createdAt: snapshot?.exists ? snapshot.data()!.createdAt : admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        // 既存ユーザーの場合は merge:true
+        await userDocRef.set(dataToStore, { merge: true });
+        
+        // --- 5. 決済ページへのリダイレクト情報を返す ---
+        res.status(200).json({ sessionId: checkoutSession.id, success: true });
+
     } catch (e: any) {
-        console.error('[Subscribe API] エラー:', e);
-        return res.status(500).json({ error: e.message || 'サーバー内部エラー' });
+        // 🚨 6. エラーが発生した場合、Authの仮ユーザーをクリーンアップする (重要)
+        // isNewUserがtrue、かつFirestoreにドキュメントがない場合（仮登録の状態）のみ削除
+        if (user && isNewUser && snapshot && !snapshot.exists) { 
+            await adminAuth.deleteUser(user.uid).catch(console.error); 
+        }
+
+        console.error('[Subscribe API Critical Error]', e);
+        res.status(500).json({ error: e.message || '決済処理中にシステムエラーが発生しました。' });
     }
 }
 

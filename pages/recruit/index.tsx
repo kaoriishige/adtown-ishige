@@ -1,6 +1,3 @@
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../../lib/firebase';
 import Link from 'next/link';
 import Image from 'next/image';
 import { NextPage } from 'next';
@@ -11,6 +8,7 @@ import Head from 'next/head';
 // --- 画像パスの定義（public/images/に配置されていることを前提とする） ---
 const PARTNER_LOGOS = [
 '/images/partner-adtown.png',
+'/images/partner-aquas.png',
 '/images/partner-aquas.png',
 '/images/partner-celsiall.png',
 '/images/partner-dairin.png',
@@ -94,7 +92,11 @@ const RecruitPartnerPage: NextPage = () => {
 
     const registrationFormRef = useRef<HTMLDivElement>(null);
     // 初期処理
-    useEffect(() => { if (!stripePromise) { console.error("Stripe key missing"); setStripeError(true); } }, []);
+    useEffect(() => { 
+        // 🚨 修正: 以前のFirebaseクライアントSDKのインポートは削除されたため、ここではコメントアウト
+        // if (!stripePromise) { console.error("Stripe key missing"); setStripeError(true); } 
+        if (!stripePromise) { setStripeError(true); } 
+    }, []);
     
     // 住所からエリアを自動判定
     useEffect(() => {
@@ -206,7 +208,8 @@ const RecruitPartnerPage: NextPage = () => {
 
         setIsLoading(true);
         try {
-            const trialEndDate = Math.floor(SERVICE_START_DATE.getTime() / 1000);
+            // 🚨 修正箇所: トライアル期間の計算と送信を削除
+            const trialEndDate = undefined; // Math.floor(SERVICE_START_DATE.getTime() / 1000); を削除
             
             // 統一APIを呼び出し、ユーザー登録とStripe Checkoutセッションを作成
             const response = await fetch('/api/auth/register-and-subscribe', {
@@ -221,7 +224,7 @@ const RecruitPartnerPage: NextPage = () => {
                     phoneNumber,
                     email,
                     password,
-                    trialEndDate, // 課金開始日をAPIに渡す
+                    // trialEndDateを削除
                     paymentMethod: 'card', // ★追加：クレジットカード決済
                     billingCycle: 'monthly' // ★追加：請求サイクル（月払い）
                 }),
@@ -322,7 +325,7 @@ const RecruitPartnerPage: NextPage = () => {
                     </div>
                 </section>
                 {/* --- END: なぜ今、アプリ求人なのか？ --- */}
-            
+                
                 {/* --- START: 採用の悩み --- */}
                 <section className="py-16 bg-white rounded-2xl shadow-lg mt-20">
                     <div className="text-center">
@@ -442,53 +445,6 @@ const RecruitPartnerPage: NextPage = () => {
                             </div>
                             <div className="text-right mt-2 text-sm text-gray-500">Google スプレッドシートにエクスポート</div>
                         </div>
-
-                        {/* --- 3. 求職者ユーザー向け運用ガイド --- */}
-                        <div>
-                            <h3 className="text-2xl font-bold mb-4 pb-2 border-b-2 border-orange-500">3. 求職者ユーザー向け運用ガイド</h3>
-                            <p className="mb-6 text-gray-600 leading-relaxed">
-                                プロフィールを詳細に登録することで、AIが能動的に最適な求人を提案し、不必要な応募の手間を省きます。
-                            </p>
-                            <h4 className="text-xl font-semibold mb-4">📋 使い方：登録から面接確約までの流れ</h4>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead className="bg-gray-100">
-                                        <tr>
-                                            <th className="p-3 border">ステップ</th>
-                                            <th className="p-3 border">実施内容</th>
-                                            <th className="p-3 border">成果</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td className="p-3 border font-bold">Step 1: プロフィール登録</td>
-                                            <td className="p-3 border"><strong>希望条件（給与、勤務地、WLBなど）</strong>を最優先で、詳細にチェック項目を埋めます。</td>
-                                            <td className="p-3 border">貴方の希望がAIにインプットされ、AIが地域内の求人をスクリーニングします。</td>
-                                        </tr>
-                                        <tr className="bg-gray-50">
-                                            <td className="p-3 border font-bold">Step 2: おすすめ求人の確認</td>
-                                            <td className="p-3 border">ユーザーダッシュボードで<strong>「AI厳選おすすめ求人（上位5社）」</strong>を毎日確認します。</td>
-                                            <td className="p-3 border">貴方の希望（特にランキング上位項目）に最も一致した企業が提案されます。</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="p-3 border font-bold">Step 3: 意思表示（応募/興味あり）</td>
-                                            <td className="p-3 border">提案された求人に対し、「応募」（面接確約オファーなしの場合）または「興味あり」（企業からのスカウトを待つ場合）を選択します。</td>
-                                            <td className="p-3 border">企業に貴方の興味が伝わり、企業からのスカウトを受けるチャンスが生まれます。</td>
-                                        </tr>
-                                        <tr className="bg-gray-50">
-                                            <td className="p-3 border font-bold">Step 4: マッチング成立</td>
-                                            <td className="p-3 border">企業からの「スカウト（面接確約オファー）」を受け入れる、または直接応募する。</td>
-                                            <td className="p-3 border">マッチング成立！ アプリ内チャット機能が解放されます。</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="p-3 border font-bold">Step 5: 面接設定</td>
-                                            <td className="p-3 border">アプリ内で、企業と求職者双方の意思確認や、面接・選考に進むための合意ができた後、アプリの機能を使って、氏名、電話番号、メールアドレスなどの連絡先情報を相互に開示します。</td>
-                                            <td className="p-3 border">履歴書送付などの手間なく、すぐに面接に進めます。</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
@@ -572,6 +528,15 @@ const RecruitPartnerPage: NextPage = () => {
                                 {getButtonText()}
                             </button>
                             <p className="text-sm text-center -mt-2 text-gray-500">クレジットカードでのお支払いは上記からお願いします。</p>
+
+                            {/* 💡 修正箇所: LINEボタンの追加 */}
+                            <div className="mt-6 p-4 border border-red-300 rounded-lg bg-red-50 flex items-center justify-between">
+                                <p className="text-sm font-semibold text-red-800">
+                                    決済エラーなどの問題があった場合は、LINEからご連絡ください。
+                                </p>
+                                <div dangerouslySetInnerHTML={{ __html: '<a href="https://lin.ee/gpEb35P" target="_blank" rel="noopener noreferrer"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" border="0"></a>' }} />
+                            </div>
+                            
                         </form>
                         <p className="text-sm text-center mt-6">
                             すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
@@ -600,6 +565,15 @@ const RecruitPartnerPage: NextPage = () => {
                                 {getInvoiceButtonText()}
                             </button>
                             {!isFormValid && <p className="text-red-500 text-sm mt-2">※ PDFダウンロードには、フォームの必須項目を全て満たし、規約に同意してください。</p>}
+                            
+                            {/* 💡 修正箇所: LINEボタンの追加（請求書セクション内） */}
+                            <div className="mt-6 p-4 border border-red-300 rounded-lg bg-red-50 flex items-center justify-between">
+                                <p className="text-sm font-semibold text-red-800">
+                                    決済エラーなどの問題があった場合は、LINEからご連絡ください。
+                                </p>
+                                <div dangerouslySetInnerHTML={{ __html: '<a href="https://lin.ee/gpEb35P" target="_blank" rel="noopener noreferrer"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" border="0"></a>' }} />
+                            </div>
+
                         </section>
                     </div>
                 </section>
