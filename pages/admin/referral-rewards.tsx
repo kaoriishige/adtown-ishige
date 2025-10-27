@@ -29,13 +29,14 @@ interface StoreReferralData {
 
 interface ReferralRewardsProps {
   initialData: StoreReferralData[];
-  error?: string;
+  error?: string | null; // 🚨 修正: errorの型に null を許容
 }
 
 // --- サーバーサイド ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
   let initialData: StoreReferralData[] = [];
-  let error: string | undefined;
+  // 🚨 修正: 'undefined' ではなく 'null' で初期化
+  let error: string | null = null; 
 
   try {
     // 認証を無効化（開発用）
@@ -113,7 +114,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     initialData = [];
   }
 
-  return { props: { initialData, error } };
+  // 🚨 修正: 'error' が 'undefined' になる可能性を排除
+  return { props: { initialData, error: error || null } };
 };
 
 // --- クライアント側 ---
@@ -233,7 +235,7 @@ const ReferralRewardsPage: NextPage<ReferralRewardsProps> = ({ initialData, erro
       alert(`支払い記録に失敗しました: ${e.message}`);
       console.error('Payment Record Error:', e);
     }
-  }; // ← ✅ セミコロン追加済み
+  }; 
 
   const totalUnpaid = referralData.reduce((sum, d) => sum + d.unpaidAmount, 0);
 

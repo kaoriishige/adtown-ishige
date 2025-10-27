@@ -19,8 +19,10 @@ interface Store {
   // 各サービスタイプ固有のステータスと支払い方法を追加
   adverSubscriptionStatus?: 'active' | 'trialing' | 'pending_invoice' | 'canceled' | 'past_due' | null;
   recruitSubscriptionStatus?: 'active' | 'trialing' | 'pending_invoice' | 'canceled' | 'past_due' | null;
-  adverPaymentMethod?: 'credit_card' | 'invoice' | 'unknown' | null;
-  recruitPaymentMethod?: 'credit_card' | 'invoice' | 'unknown' | null;
+  
+  // 🚨 修正: PaymentMethod ではなく billingCycle を読み込む
+  adverBillingCycle?: 'monthly' | 'annual' | null;
+  recruitBillingCycle?: 'monthly' | 'annual' | null;
 }
 
 interface ManageStoresPageProps {
@@ -56,8 +58,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         // 各サービスタイプ固有のステータスと支払い方法を取得
         adverSubscriptionStatus: data.adverSubscriptionStatus || null,
         recruitSubscriptionStatus: data.recruitSubscriptionStatus || null,
-        adverPaymentMethod: data.adverPaymentMethod || null,
-        recruitPaymentMethod: data.recruitPaymentMethod || null,
+        
+        // 🚨 修正: サービス固有のbillingCycleがない場合、共有のbillingCycleを参照
+        adverBillingCycle: data.adverBillingCycle || data.billingCycle || null,
+        recruitBillingCycle: data.recruitBillingCycle || data.billingCycle || null,
       };
     });
 
@@ -128,11 +132,18 @@ const ManageStoresPage: NextPage<ManageStoresPageProps> = ({ initialStores }) =>
   const getPaymentStatus = (store: Store) => {
     const statuses: { role: string, method: string | null, status: string | null }[] = [];
 
+    // 🚨 修正: 支払い方法の判定ロジックを billingCycle に変更
+    const getMethodDisplay = (cycle: string | null | undefined) => {
+        if (cycle === 'monthly') return <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-1.5 rounded-full">クレカ (月額)</span>;
+        if (cycle === 'annual') return <span className="bg-teal-100 text-teal-800 text-xs font-medium px-1.5 rounded-full">請求書 (年額)</span>;
+        return <span className="bg-gray-200 text-gray-700 text-xs font-medium px-1.5 rounded-full">---</span>;
+    };
+
     // 広告サービスの状態を取得
     if (store.roles.includes('adver')) {
       statuses.push({
         role: '広告',
-        method: store.adverPaymentMethod || null,
+        method: store.adverBillingCycle || null, // 修正
         status: store.adverSubscriptionStatus || null
       });
     }
@@ -141,7 +152,7 @@ const ManageStoresPage: NextPage<ManageStoresPageProps> = ({ initialStores }) =>
     if (store.roles.includes('recruit')) {
       statuses.push({
         role: '求人',
-        method: store.recruitPaymentMethod || null,
+        method: store.recruitBillingCycle || null, // 修正
         status: store.recruitSubscriptionStatus || null
       });
     }
@@ -154,14 +165,9 @@ const ManageStoresPage: NextPage<ManageStoresPageProps> = ({ initialStores }) =>
     return (
       <div className="flex flex-col space-y-1">
         {statuses.map(s => {
-          let methodBadge, statusBadge;
-
-          // 支払い方法バッジ
-          switch (s.method) {
-            case 'credit_card': methodBadge = <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-1.5 rounded-full">クレカ</span>; break;
-            case 'invoice': methodBadge = <span className="bg-teal-100 text-teal-800 text-xs font-medium px-1.5 rounded-full">請求書</span>; break;
-            default: methodBadge = <span className="bg-gray-200 text-gray-700 text-xs font-medium px-1.5 rounded-full">---</span>;
-          }
+          // 🚨 修正: 'let' を 'const' に変更 (ESLint: prefer-const)
+          const methodBadge = getMethodDisplay(s.method); // 修正
+          let statusBadge;
 
           // 購読ステータスバッジ
           switch (s.status) {
@@ -170,6 +176,8 @@ const ManageStoresPage: NextPage<ManageStoresPageProps> = ({ initialStores }) =>
             case 'pending_invoice': statusBadge = <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-1.5 rounded-full">請求書待ち</span>; break;
             case 'canceled': statusBadge = <span className="bg-red-100 text-red-800 text-xs font-medium px-1.5 rounded-full">解約済</span>; break;
             case 'past_due': statusBadge = <span className="bg-red-500 text-white text-xs font-medium px-1.5 rounded-full">支払遅延</span>; break;
+            // 🚨 修正: 決済実行中のステータスを追加
+            case 'pending_checkout': statusBadge = <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-1.5 rounded-full">決済実行中</span>; break;
             default: statusBadge = <span className="bg-gray-100 text-gray-800 text-xs font-medium px-1.5 rounded-full">未設定</span>; 
           }
 
@@ -242,7 +250,8 @@ const ManageStoresPage: NextPage<ManageStoresPageProps> = ({ initialStores }) =>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{store.address}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                    <button onClick={() => router.push(`/admin/edit-store/${store.id}`)} className="text-indigo-600 hover:text-indigo-900">編集</button>
+                    {/* 🚨 修正箇所: 「編集」ボタンを削除 */}
+                    {/* <button onClick={() => router.push(`/admin/edit-store/${store.id}`)} className="text-indigo-600 hover:text-indigo-900">編集</button> */}
                     <button onClick={() => handleDeleteStore(store.id)} disabled={isDeleting === store.id} className="text-red-600 hover:text-red-900 disabled:opacity-50">
                       {isDeleting === store.id ? '削除中...' : '削除'}
                     </button>

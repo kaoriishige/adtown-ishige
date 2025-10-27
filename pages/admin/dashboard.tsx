@@ -85,47 +85,95 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     */
 
     try {
-        // --- 1. パートナー数の集計 ---
+        // --- 1. 定数の定義 (料金) ---
+        // 🚨注意: これらの料金は環境変数から取得するか、Stripe Price IDと突き合わせるのが最善です
+        const AD_MONTHLY_RATE = 3300; 
+        const JOB_MONTHLY_RATE = 6600; // 申込ページ(apply.tsx)によると先着100社は6,600円
+        
+        // 申込ページ(apply.tsx)のFAQより: 
+        // 請求書払い(年額) 105,600円 -> 割引 92,400円 -> 先着100社 69,600円
+        const AD_ANNUAL_RATE = 69600; // 広告も同額と仮定
+        const JOB_ANNUAL_RATE = 69600; 
+
+        // --- 2. パートナーデータの取得 ---
         const usersSnap = await adminDb.collection('users').get();
-        
-        // 🚨 修正箇所: totalRevenueを0で初期化
-        let totalRevenue = 0; 
-        let monthlySubscriptionRevenue = 0;
-        
         const partners = usersSnap.docs.map(doc => doc.data());
-        
-        const advertiserPartners = partners.filter(p => p.roles?.includes('adver')).length;
-        const recruiterPartners = partners.filter(p => p.roles?.includes('recruit')).length;
 
-        // 有効パートナーと収益の集計
-        const activeAdvertisers = partners.filter(p => p.roles?.includes('adver') && p.adverSubscriptionStatus === 'active').length;
-        const activeRecruiters = partners.filter(p => p.roles?.includes('recruit') && p.recruitSubscriptionStatus === 'active').length;
+        // --- 3. 変数の初期化 ---
+        let advertiserPartners = 0;
+        let recruiterPartners = 0;
+        let activeAdvertisers = 0;
+        let activeRecruiters = 0;
+        let pendingInvoicePartners = 0;
+        let totalRevenue = 0;
+        let monthlySubscriptionRevenue = 0;
 
-        // Stripe情報やサブスクリプション情報に基づいて収益を集計
-        // 🚨 注意: 正確な収益計算はStripe Webhookや専用の収益集計APIで行うべきですが、ここではFirestoreデータに基づく簡易集計を行います。
-        
-        // 簡易的な収益計算ロジック (実際の単価に置き換える必要があります)
-        const AD_MONTHLY_RATE = 3300; // 仮の月額料金 (広告パートナー)
-        const JOB_MONTHLY_RATE = 8800; // 仮の月額料金 (求人パートナー)
+        // --- 4. 収益とステータスの集計 (ロジック修正) ---
+        partners.forEach(p => {
+            const roles = p.roles || [];
+            
+            // 広告パートナー (adver)
+            if (roles.includes('adver')) {
+                advertiserPartners++;
+                const status = p.adverSubscriptionStatus;
+                const cycle = p.billingCycle; // billingCycleは共有と仮定
 
-        // 1. 月次見込収益 (サブスクライブしているアクティブユーザーからの月額換算)
-        monthlySubscriptionRevenue = (activeAdvertisers * AD_MONTHLY_RATE) + (activeRecruiters * JOB_MONTHLY_RATE);
-        
-        // pendingInvoicePartnersの集計
-        const pendingInvoicePartners = partners.filter(p => p.adverSubscriptionStatus === 'pending_invoice' || p.recruitSubscriptionStatus === 'pending_invoice').length;
+                if (status === 'active') {
+                    activeAdvertisers++;
+                    if (cycle === 'monthly') {
+                        monthlySubscriptionRevenue += AD_MONTHLY_RATE;
+                        totalRevenue += (p.lifetimeRevenue || AD_MONTHLY_RATE); 
+                    } else if (cycle === 'annual') {
+                        totalRevenue += (p.invoicePaidRevenue || p.lifetimeRevenue || AD_ANNUAL_RATE);
+                    }
+                } else if (status === 'pending_invoice') {
+                    pendingInvoicePartners++;
+                    totalRevenue += (p.invoicePaidRevenue || AD_ANNUAL_RATE);
+                } else if (status === 'pending_checkout') {
+                    if (cycle === 'monthly') {
+                        totalRevenue += (p.lifetimeRevenue || AD_MONTHLY_RATE);
+                    } else if (cycle === 'annual') {
+                        totalRevenue += (p.lifetimeRevenue || AD_ANNUAL_RATE);
+                    }
+                } else if (!status) { 
+                    // 🚨 修正: ステータスがnull/undefinedだがロールがある場合 (請求書払いの可能性)
+                    totalRevenue += AD_ANNUAL_RATE; // 年額（請求書）と仮定
+                    pendingInvoicePartners++; // 請求書待ちとしてカウント
+                }
+            }
+            
+            // 求人パートナー (recruit)
+            if (roles.includes('recruit')) {
+                recruiterPartners++;
+                const status = p.recruitSubscriptionStatus;
+                const cycle = p.billingCycle; // billingCycleは共有と仮定
 
-        // 2. 累計収益の計算 (実績ベース)
-        // 🚨 修正箇所: 請求書払い（年払い）の実績は、activeステータス時にlifetimeRevenue等に加算されていることを想定
-        // lifetimeRevenue, annualRevenue, oneTimeRevenueなど、すべての実績収益フィールドを合算するロジックを適用
-        totalRevenue = partners.reduce((sum, p) => {
-            const lifetime = p.lifetimeRevenue || 0; // クレジットカード払い実績
-            const invoice = p.invoicePaidRevenue || 0; // 請求書払い実績 (支払いが確認され、Firestoreに書き込まれた額)
-            return sum + lifetime + invoice;
-        }, 0);
-        
+                if (status === 'active') {
+                    activeRecruiters++;
+                    if (cycle === 'monthly') {
+                        monthlySubscriptionRevenue += JOB_MONTHLY_RATE;
+                        totalRevenue += (p.lifetimeRevenue || JOB_MONTHLY_RATE);
+                    } else if (cycle === 'annual') {
+                        totalRevenue += (p.invoicePaidRevenue || p.lifetimeRevenue || JOB_ANNUAL_RATE);
+                    }
+                } else if (status === 'pending_invoice') {
+                    pendingInvoicePartners++;
+                    totalRevenue += (p.invoicePaidRevenue || JOB_ANNUAL_RATE);
+                } else if (status === 'pending_checkout') {
+                    if (cycle === 'monthly') {
+                        totalRevenue += (p.lifetimeRevenue || JOB_MONTHLY_RATE);
+                    } else if (cycle === 'annual') {
+                        totalRevenue += (p.lifetimeRevenue || JOB_ANNUAL_RATE);
+                    }
+                } else if (!status) { 
+                    // 🚨 修正: ステータスがnull/undefinedだがロールがある場合 (請求書払いの可能性)
+                    totalRevenue += JOB_ANNUAL_RATE; // 年額（請求書）と仮定
+                    pendingInvoicePartners++; // 請求書待ちとしてカウント
+                }
+            }
+        });
 
-        // --- 2. 紹介料の集計 ---
-        // 🚨 紹介料の計算ロジックは非常に複雑になるため、ここでは 'referralPayouts' コレクションを仮定します。
+        // --- 5. 紹介料の集計 ---
         const payoutsSnap = await adminDb.collection('referralPayouts')
             .where('status', '==', 'pending')
             .get();
@@ -248,11 +296,11 @@ const AdminDashboardPage: NextPage<{ data: DashboardData }> = ({ data }) => {
 
                     {/* 紹介料支払い */}
                     <div className="bg-white p-5 rounded-lg shadow-md border-t-4 border-purple-500">
-                        <h3 className="text-lg font-bold mb-3 text-purple-700 flex items-center"><DollarSign className="w-5 h-5 mr-2"/> 紹介料支払い (広告パートナー関連)</h3>
+                        <h3 className="text-lg font-bold mb-3 text-purple-700 flex items-center"><DollarSign className="w-5 h-5 mr-2"/> 店舗紹介料管理</h3>
                         <p className="text-sm text-gray-600 mb-2">未払い紹介料総額:</p>
                         <p className="text-2xl font-extrabold text-red-600 mb-2">{formatCurrency(data.referralPayoutsDue)}</p>
                         <Link href="/admin/referral-rewards" className="mt-3 block text-sm text-purple-600 hover:underline">
-                            → 支払い管理へ
+                            → 店舗紹介料管理へ
                         </Link>
                     </div>
 
@@ -260,7 +308,6 @@ const AdminDashboardPage: NextPage<{ data: DashboardData }> = ({ data }) => {
                     <div className="bg-white p-5 rounded-lg shadow-md border-t-4 border-gray-300">
                         <h3 className="text-lg font-bold mb-3 text-gray-700 flex items-center"><Zap className="w-5 h-5 mr-2"/> 開発情報</h3>
                         <p className="text-sm text-gray-600 mb-2">本番環境稼働中</p>
-                        {/* 修正箇所: 最終更新日を固定値 (2025/10/27) に変更 */}
                         <p className="text-sm text-gray-600">最終更新: 2025/10/27 (サーバー時間)</p>
                         <Link href="/admin/help" className="mt-3 block text-sm text-gray-600 hover:underline">
                             → ヘルプ/マニュアル
