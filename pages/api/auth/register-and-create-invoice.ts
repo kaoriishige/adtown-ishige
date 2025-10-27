@@ -1,8 +1,10 @@
-// pages/api/auth/register-and-create-invoice.ts
+// /pages/api/auth/register-and-create-invoice.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import getStripeAdmin from '@/lib/stripe-admin';
-import admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.URL || 'http://localhost:3000';
 
 // --- 発行元情報 ---
 const ISSUER_TIN = process.env.ISSUER_TIN || 'T7060001012602';
@@ -21,7 +23,6 @@ const BANK_TRANSFER_DETAILS_JAPANESE = `
 登録番号: ${ISSUER_TIN}
 住所: ${ISSUER_ADDRESS}
 ※振込手数料はお客様にてご負担をお願い申し上げます。
-※入金確認後に管理ページへのログイン情報をお届けします。
 `;
 
 const formatPhoneNumberForFirebase = (phoneNumber: string): string | undefined => {
@@ -31,90 +32,7 @@ const formatPhoneNumberForFirebase = (phoneNumber: string): string | undefined =
   return phoneNumber;
 };
 
-const getOrCreateUserAndStripeCustomer = async (data: {
-  email: string;
-  password?: string;
-  companyName: string;
-  address: string;
-  contactPerson: string;
-  phoneNumber: string;
-  serviceType: string;
-}): Promise<{ user: admin.auth.UserRecord; customerId: string }> => {
-  const { email, password, companyName, address, contactPerson, phoneNumber, serviceType } = data;
-  const stripe = getStripeAdmin();
-  let user: admin.auth.UserRecord;
-
-  try {
-    user = await adminAuth.getUserByEmail(email);
-  } catch (err: any) {
-    if (err.code === 'auth/user-not-found') {
-      if (!password) throw new Error('新規ユーザーの登録にはパスワードが必要です。');
-      user = await adminAuth.createUser({
-        email,
-        password,
-        displayName: contactPerson,
-        phoneNumber: formatPhoneNumberForFirebase(phoneNumber),
-      });
-    } else {
-      throw err;
-    }
-  }
-
-  const userDocRef = adminDb.collection('users').doc(user.uid);
-  const snapshot = await userDocRef.get();
-  let customerId = snapshot.data()?.stripeCustomerId;
-  let shouldUpdateFirestore = !customerId;
-
-  if (customerId) {
-    try {
-      await stripe.customers.retrieve(customerId);
-    } catch (e: any) {
-      if (e?.type === 'StripeInvalidRequestError' && e?.code === 'resource_missing') {
-        console.warn(`Stripe customer ${customerId} not found. Recreating customer for user ${user.uid}.`);
-        customerId = undefined as any;
-      } else {
-        throw e;
-      }
-    }
-  }
-
-  if (!customerId) {
-    const newCustomer = await stripe.customers.create({
-      email,
-      name: companyName,
-      phone: phoneNumber,
-      address: { country: 'JP', line1: address },
-      metadata: { firebaseUid: user.uid },
-    });
-    customerId = newCustomer.id;
-    shouldUpdateFirestore = true;
-  }
-
-  const dataToStore: { [key: string]: any } = {
-    uid: user.uid,
-    email,
-    displayName: contactPerson,
-    companyName,
-    address,
-    phoneNumber,
-    stripeCustomerId: customerId,
-    roles: admin.firestore.FieldValue.arrayUnion(serviceType),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  };
-  if (!snapshot.exists) {
-    dataToStore.createdAt = admin.firestore.FieldValue.serverTimestamp();
-  }
-  if (shouldUpdateFirestore) {
-    await userDocRef.set(dataToStore, { merge: true });
-  }
-
-  return { user, customerId };
-};
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<void> {
+export default async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).end('Method Not Allowed');
@@ -123,29 +41,40 @@ export default async function handler(
 
   const adAnnualPriceId = process.env.STRIPE_AD_ANNUAL_PRICE_ID;
   const jobAnnualPriceId = process.env.STRIPE_JOB_ANNUAL_PRICE_ID;
-  if (!adAnnualPriceId || !jobAnnualPriceId) {
-    res.status(500).json({ error: 'サーバー設定が不完全です。' });
-    return;
+
+  const missingKeys: string[] = [];
+  if (!process.env.STRIPE_SECRET_KEY) missingKeys.push('STRIPE_SECRET_KEY');
+  if (!adAnnualPriceId) missingKeys.push('STRIPE_AD_ANNUAL_PRICE_ID');
+  if (!jobAnnualPriceId) missingKeys.push('STRIPE_JOB_ANNUAL_PRICE_ID');
+
+  if (missingKeys.length > 0) {
+    console.error(`[Invoice API] 環境変数不足: ${missingKeys.join(', ')}`);
+    return res
+      .status(500)
+      .json({ error: `サーバー設定エラー: ${missingKeys.join(', ')} が設定されていません。` });
   }
+
+  let user: admin.auth.UserRecord | null = null;
+  let snapshot: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData> | undefined;
+  let isNewUser = false;
 
   try {
     const { serviceType, companyName, address, contactPerson, phoneNumber, email, password } = req.body;
 
     if (!['adver', 'recruit'].includes(serviceType)) {
-      res.status(400).json({ error: `無効なサービスタイプです: ${serviceType}` });
+      res.status(400).json({ error: `無効なサービスタイプ: ${serviceType}` });
       return;
     }
 
-    const requiredFields = ['serviceType', 'companyName', 'address', 'contactPerson', 'phoneNumber', 'email'];
-    const missingFields = requiredFields.filter(f => !req.body[f]);
+    const missingFields = ['serviceType', 'companyName', 'address', 'contactPerson', 'phoneNumber', 'email'].filter(
+      (f) => !req.body[f]
+    );
 
     if (!password) {
       try {
         await adminAuth.getUserByEmail(email);
       } catch (e: any) {
-        if (e.code === 'auth/user-not-found') {
-          missingFields.push('password');
-        }
+        if (e.code === 'auth/user-not-found') missingFields.push('password');
       }
     }
 
@@ -157,25 +86,49 @@ export default async function handler(
     const priceId = serviceType === 'adver' ? adAnnualPriceId : jobAnnualPriceId;
     const productName = serviceType === 'adver' ? '広告パートナー 年間利用料' : 'AI求人パートナー 年間利用料';
 
-    const { user, customerId } = await getOrCreateUserAndStripeCustomer({
-      companyName,
-      address,
-      contactPerson,
-      phoneNumber,
-      email,
-      password,
-      serviceType,
-    });
+    // --- 1. Firebase Authユーザー作成または取得 ---
+    try {
+      user = await adminAuth.getUserByEmail(email);
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found') {
+        isNewUser = true;
+        if (!password) throw new Error('新規登録にはパスワードが必要です。');
+        user = await adminAuth.createUser({
+          email,
+          password,
+          displayName: contactPerson,
+          phoneNumber: formatPhoneNumberForFirebase(phoneNumber),
+        });
+      } else {
+        throw err;
+      }
+    }
+
+    // --- 2. Stripe顧客作成または取得 ---
+    const userDocRef = adminDb.collection('users').doc(user.uid);
+    snapshot = await userDocRef.get();
+    let customerId = snapshot.data()?.stripeCustomerId;
 
     const stripe = getStripeAdmin();
 
-    // 🧾 銀行振込付き請求書を作成
+    if (!customerId) {
+      const newCustomer = await stripe.customers.create({
+        email,
+        name: companyName,
+        phone: phoneNumber,
+        address: { country: 'JP', line1: address },
+        metadata: { firebaseUid: user.uid },
+      });
+      customerId = newCustomer.id;
+    }
+
+    // --- 3. 請求書作成 ---
     const invoice = await stripe.invoices.create({
       customer: customerId,
       collection_method: 'send_invoice',
       days_until_due: 30,
       footer: BANK_TRANSFER_DETAILS_JAPANESE,
-      auto_advance: false,
+      auto_advance: false, // finalize前にinvoiceItems追加
     });
 
     await stripe.invoiceItems.create({
@@ -185,46 +138,61 @@ export default async function handler(
       description: productName,
     });
 
-    // ✅ finalizedInvoice は再代入されないため const に変更
     const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
 
-    // Firestore に請求情報を保存
+    // --- 4. Firestoreへ登録 ---
     await adminDb.collection('users').doc(user.uid).set(
       {
+        uid: user.uid,
+        email,
+        displayName: contactPerson,
+        companyName,
+        address,
+        phoneNumber,
+        stripeCustomerId: customerId,
+        roles: admin.firestore.FieldValue.arrayUnion(serviceType),
         [`${serviceType}SubscriptionStatus`]: 'pending_invoice',
+        billingCycle: 'annual',
         stripeInvoiceId: finalizedInvoice.id,
+        createdAt: snapshot.exists
+          ? snapshot.data()!.createdAt
+          : admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }
     );
 
-    // PDF / Hosted Invoice URL の生成を待つ
-    const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+    // --- 5. PDF生成確認 ---
+    const wait = (ms: number): Promise<void> =>
+      new Promise<void>((resolve): void => {
+        setTimeout(resolve, ms);
+      });
 
     let pdfUrl = finalizedInvoice.invoice_pdf;
-    let hostedUrl = finalizedInvoice.hosted_invoice_url;
-
-    if (!pdfUrl || !hostedUrl) {
-      await wait(3000);
+    if (!pdfUrl) {
+      await wait(4000);
       const retrieved = await stripe.invoices.retrieve(finalizedInvoice.id);
-      pdfUrl = retrieved.invoice_pdf || pdfUrl;
-      hostedUrl = retrieved.hosted_invoice_url || hostedUrl;
+      pdfUrl = retrieved.invoice_pdf;
     }
 
-    if (!pdfUrl && !hostedUrl) {
-      res.status(200).json({ success: true, invoiceId: finalizedInvoice.id });
-      return;
-    }
+    if (!pdfUrl) throw new Error('Stripe請求書PDFが生成されませんでした。');
 
-    res.status(200).json({ success: true, pdfUrl, hostedUrl, invoiceId: finalizedInvoice.id });
+    res.status(200).json({ success: true, pdfUrl });
   } catch (e: any) {
+    if (user && isNewUser && snapshot && !snapshot.exists) {
+      await adminAuth.deleteUser(user.uid).catch(console.error);
+    }
+
     console.error('[Invoice API Error]', e);
     const errorMessage =
-      e?.type === 'StripeInvalidRequestError' && e?.message?.includes('No such customer')
+      e.type === 'StripeInvalidRequestError' && e.message.includes('No such customer')
         ? 'Stripe顧客情報に問題が発生しました。再度お試しください。'
         : e.message || '不明なエラー';
+
     res.status(500).json({ error: errorMessage });
   }
 }
+
 
 
 

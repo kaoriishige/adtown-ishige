@@ -1,10 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import getStripeAdmin from '@/lib/stripe-admin';
 
-const NEXT_PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_BASE_URL ||
-  `https://${process.env.VERCEL_URL}` ||
-  'http://localhost:3000';
+// ✅ デプロイ環境に応じたBASE_URL検出ロジック
+const BASE_URL =
+  process.env.NEXT_PUBLIC_BASE_URL || // 手動設定があれば優先
+  process.env.URL ||                  // ✅ Netlify本番で自動注入される
+  process.env.DEPLOY_URL ||           // Netlifyプレビュー用
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+  'http://localhost:3000';            // 最後のフォールバック
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -22,13 +25,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     billingCycle,
   } = req.body ?? {};
 
+  // --- 必須チェック ---
+  const missingFields = ['email', 'serviceType', 'billingCycle'].filter(
+    f => !req.body?.[f]
+  );
+  if (missingFields.length > 0) {
+    return res.status(400).json({ error: `Missing fields: ${missingFields.join(', ')}` });
+  }
+
   const stripe = getStripeAdmin();
 
   try {
-    // ✅ Stripe上に仮顧客を作成（Firebaseには登録しない）
+    // ✅ Stripeに一時顧客を作成（Firebase登録はまだしない）
     const customer = await stripe.customers.create({
       email,
-      name: companyName || contactPerson,
+      name: companyName || contactPerson || email,
       metadata: {
         email,
         companyName: companyName || '',
@@ -51,25 +62,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const priceId = priceMap[priceKey];
     if (!priceId) throw new Error(`Price ID not found: ${priceKey}`);
 
-    // ✅ Checkoutセッション作成（まだ登録はしない）
+    // ✅ Checkoutセッション作成
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       customer: customer.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${NEXT_PUBLIC_BASE_URL}/partner/login?payment=success`,
-      cancel_url: `${NEXT_PUBLIC_BASE_URL}/recruit`,
+      // 決済成功時 → ログインページ
+      success_url: `${BASE_URL}/partner/login?payment=success`,
+      // 戻る（キャンセル）時 → recruitページ
+      cancel_url: `${BASE_URL}/recruit`,
       subscription_data: {
         metadata: customer.metadata,
       },
+      locale: 'ja', // StripeのUIを日本語化
     });
 
     return res.status(200).json({ sessionId: session.id });
   } catch (err: any) {
     console.error('[register-and-subscribe ERROR]', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      error: err.message || 'Stripe checkout session creation failed.',
+      hint: 'BASE_URL might be misconfigured on Netlify.',
+    });
   }
 }
+
 
 
 
