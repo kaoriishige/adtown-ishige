@@ -7,7 +7,7 @@ import * as admin from 'firebase-admin';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.URL || 'http://localhost:3000';
 
 // --- 発行元情報 ---
-const ISSUER_TIN = process.env.ISSUER_TIN || 'T7060001012602'; // インボイス番号
+const ISSUER_TIN = process.env.ISSUER_TIN || 'T7060001012602'; // インボイス登録番号
 const ISSUER_ADDRESS = '栃木県那須塩原市石林698-35';
 
 const BANK_TRANSFER_DETAILS_JAPANESE = `
@@ -20,9 +20,10 @@ const BANK_TRANSFER_DETAILS_JAPANESE = `
 (カブシキガイシャアドタウン ダイヒョウトリシマリヤク イシゲカヲリ)
 
 発行元: 株式会社adtown
-登録番号: ${ISSUER_TIN}
+インボイス登録番号: ${ISSUER_TIN}
 住所: ${ISSUER_ADDRESS}
 ※振込手数料はお客様にてご負担をお願い申し上げます。
+※ご入金の確認が取れましたら、ログイン情報をお送りします。
 `;
 
 const formatPhoneNumberForFirebase = (phoneNumber: string): string | undefined => {
@@ -196,6 +197,7 @@ export default async function handler(
         res.status(500).json({ error: errorMessage });
     }
 }
+
 
 
 
