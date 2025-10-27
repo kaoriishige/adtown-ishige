@@ -20,17 +20,13 @@ const PARTNER_LOGOS = [
     '/images/partner-kokoro.png',
     '/images/partner-meithu.png',
     '/images/partner-midcityhotel.png',
-    // '/images/partner-nikkou.png', // 404
-    // '/images/partner-oluolu.png', // 404
     '/images/partner-omakaseauto.png',
     '/images/partner-poppo.png',
-    // '/images/partner-Quattro.png', // 404
     '/images/partner-sekiguchi02.png',
-    // '/images/partner-tonbo.png', // 404
     '/images/partner-training_farm.png',
     '/images/partner-transunet.png',
     '/images/partner-koharu.png',
-    // '/images/partner-yamabuki.png', // 存在確認
+    '/images/partner-koharu.png',
     '/images/partner-yamakiya.png'
 ];
 
