@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '../../../lib/firebase-admin'; // パス調整
-import getStripeAdmin from '../../../lib/stripe-admin'; // パス調整
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import getStripeAdmin from '@/lib/stripe-admin';
 import * as admin from 'firebase-admin';
 
 // 💡 外部URLを参照するための環境変数（Next.js側で設定されていることを想定）
@@ -15,31 +15,37 @@ export default async function handler(
         return res.status(405).end('Method Not Allowed');
     }
 
-    // 1. サーバー設定チェック
+    // 1. サーバー設定チェック (エラーの原因箇所を明確化)
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+    const RECRUIT_MONTHLY_PRICE_ID = process.env.STRIPE_JOB_PRICE_ID;
+    const RECRUIT_ANNUAL_PRICE_ID = process.env.STRIPE_JOB_ANNUAL_PRICE_ID;
+    
     const priceMapEnv = {
         adver_monthly: process.env.STRIPE_AD_PRICE_ID,
         adver_annual: process.env.STRIPE_AD_ANNUAL_PRICE_ID,
-        recruit_monthly: process.env.STRIPE_JOB_PRICE_ID, // STRIPE_JOB_PRICE_ID を使用
-        recruit_annual: process.env.STRIPE_JOB_ANNUAL_PRICE_ID, // STRIPE_JOB_ANNUAL_PRICE_ID を使用
+        recruit_monthly: RECRUIT_MONTHLY_PRICE_ID,
+        recruit_annual: RECRUIT_ANNUAL_PRICE_ID,
     };
-    
-    // 必須キーのチェック
-    const requiredKeys = ['STRIPE_SECRET_KEY', 'STRIPE_JOB_PRICE_ID', 'STRIPE_JOB_ANNUAL_PRICE_ID'];
-    const missingKeys: string[] = requiredKeys.filter(key => !process.env[key] && key !== 'STRIPE_SECRET_KEY');
-    if (!STRIPE_SECRET_KEY) missingKeys.unshift('STRIPE_SECRET_KEY');
+
+    const missingKeys: string[] = [];
+    if (!STRIPE_SECRET_KEY) missingKeys.push('STRIPE_SECRET_KEY');
+    if (!priceMapEnv.recruit_monthly) missingKeys.push('STRIPE_JOB_PRICE_ID');
+    if (!priceMapEnv.recruit_annual) missingKeys.push('STRIPE_JOB_ANNUAL_PRICE_ID');
 
     if (missingKeys.length > 0) {
         console.error(`[Subscribe API] サーバー設定エラー: 環境変数が不足しています: ${missingKeys.join(', ')}`);
         return res.status(500).json({ error: `サーバー設定エラー: 必要な決済環境変数が不足しています (${missingKeys.join(', ')})` });
     }
     
-    const { email, password, serviceType, billingCycle, address, phoneNumber, trialEndDate, companyName, contactPerson } = req.body ?? {};
+    const { email, password, serviceType, billingCycle, address, contactPerson, phoneNumber, trialEndDate, companyName } = req.body ?? {};
+    const stripe = getStripeAdmin();
+    
+    let user: admin.auth.UserRecord | null = null;
+    let customerId: string | null = null;
+    let snapshot: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData> | undefined;
+    let isNewUser = false;
 
-    if (!email || !serviceType || !billingCycle) {
-        return res.status(400).json({ error: '必須項目(email, serviceType, billingCycle)が不足しています。' });
-    }
-
+    // Price IDの決定
     const priceKey = `${serviceType}_${billingCycle}` as keyof typeof priceMapEnv;
     const priceId = priceMapEnv[priceKey];
 
@@ -47,17 +53,8 @@ export default async function handler(
         return res.status(500).json({ error: `Price ID が未設定です: ${priceKey}` });
     }
     
-    const stripe = getStripeAdmin();
-    
-    let user: admin.auth.UserRecord | null = null;
-    let customerId: string | null = null;
-    // snapshotはcatchブロックでdeleteUserの判定に利用するため、tryブロックの外で宣言
-    let snapshot: admin.firestore.DocumentSnapshot<admin.firestore.DocumentData> | undefined;
-    let isNewUser = false;
-    
     const isAdverService = serviceType === 'adver';
     const isRecruitService = serviceType === 'recruit';
-
 
     try {
         // --- 1. Firebase Authユーザーの作成または取得 (Authに仮登録) ---
@@ -81,14 +78,12 @@ export default async function handler(
         customerId = snapshot.data()?.stripeCustomerId;
         
         if (!customerId) {
-            // Stripe顧客を新規作成
             const name = companyName || user.displayName || email;
             const newCustomer = await stripe.customers.create({ email, name, metadata: { firebaseUid: user.uid } });
             customerId = newCustomer.id;
         }
 
-        // --- 3. Stripe Checkout Sessionの作成 (アトミック処理) ---
-        // 🚨 修正: success_urlを/partner/loginに設定
+        // --- 3. Stripe Checkout Sessionの作成 (アトミック処理の核心) ---
         const successUrl = `${NEXT_PUBLIC_BASE_URL}/partner/login?payment=success&user=${user.uid}`;
         const cancelUrl = `${NEXT_PUBLIC_BASE_URL}/cancel`;
 
@@ -98,9 +93,9 @@ export default async function handler(
             customer: customerId,
             line_items: [{ price: priceId, quantity: 1 }],
             
-            // 🚨 修正: trialEndDateを削除したため、subscription_dataからtrial_endを削除
+            // 無料期間を無効化
             subscription_data: {
-                // trial_end: trialEndDate, // 課金が即時開始されるように削除
+                // trial_end: trialEndDate, // クライアント側で削除済
                 metadata: { firebaseUid: user.uid, serviceType, billingCycle }
             },
             success_url: successUrl, // 決済完了後、ログインページへリダイレクト
@@ -109,6 +104,7 @@ export default async function handler(
         });
         
         // --- 4. 成功した場合のみ、Firestoreに本登録 ---
+        // 決済セッション作成が成功したため、Firestoreに永続化する
         const rolesToAdd: string[] = [];
         if (isAdverService && !(snapshot?.data()?.roles || []).includes('adver')) rolesToAdd.push('adver');
         if (isRecruitService && !(snapshot?.data()?.roles || []).includes('recruit')) rolesToAdd.push('recruit');
@@ -145,6 +141,7 @@ export default async function handler(
         res.status(500).json({ error: e.message || '決済処理中にシステムエラーが発生しました。' });
     }
 }
+
 
 
 
