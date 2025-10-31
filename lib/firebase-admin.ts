@@ -1,49 +1,40 @@
+// lib/firebaseAdmin.ts
 import * as admin from "firebase-admin";
-import fs from "fs";
 
 let adminDbInstance: admin.firestore.Firestore;
 let adminAuthInstance: admin.auth.Auth;
 
-if (typeof window === 'undefined') {
-  let serviceAccount: admin.ServiceAccount | null = null;
+if (typeof window === "undefined") {
+  if (!admin.apps.length) {
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
-  try {
-    // ① 環境変数から読み込み
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    } 
-    // ② ファイルから読み込み
-    else if (fs.existsSync("firebase-service-account.json")) {
-      const jsonData = fs.readFileSync("firebase-service-account.json", "utf8");
-      serviceAccount = JSON.parse(jsonData);
+    if (!projectId || !clientEmail || !privateKey) {
+      throw new Error("❌ Firebase Admin credentials are missing in environment variables.");
     }
 
-    if (!admin.apps.length) {
-      if (!serviceAccount) {
-        throw new Error("Firebase Admin credentials not found (環境変数 or JSONファイル)");
-      }
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      }),
+    });
 
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      console.log("✅ Firebase Admin SDK initialized successfully.");
-    }
-
-    adminDbInstance = admin.firestore();
-    adminAuthInstance = admin.auth();
-
-  } catch (error: any) {
-    console.error("🔴 Firebase Admin initialization FAILED:", error.message);
-    throw new Error("Firebase Admin initialization failed. Check service account credentials.");
+    console.log("✅ Firebase Admin SDK initialized successfully (using env vars).");
   }
 
+  adminDbInstance = admin.firestore();
+  adminAuthInstance = admin.auth();
 } else {
-  throw new Error("❌ Firebase Admin SDK should not be imported on client side.");
+  throw new Error("❌ Firebase Admin SDK should not be used on the client side.");
 }
 
 export const adminDb = adminDbInstance;
 export const adminAuth = adminAuthInstance;
 export { admin };
+
 
 
 
