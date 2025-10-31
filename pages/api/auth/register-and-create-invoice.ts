@@ -109,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         mode: 'subscription',
         payment_method_types: ['card'],
         customer: customerId,
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: [{ price: priceId,  }],
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: { firebaseUid, serviceType, billingCycle },
@@ -151,7 +151,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         amount: amountYen * 100, // 金額を直接指定
         currency: 'jpy',
         description,
-        quantity: 1,
         metadata: {
           firebaseUid,
           serviceType,
