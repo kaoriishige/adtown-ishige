@@ -278,7 +278,7 @@ const PartnerSignupPage: NextPage = () => {
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-800">みんなの那須アプリ</h1>
                     <button onClick={scrollToForm} className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg animate-pulse">
-                        無料ダッシュボードへ
+                        無料集客広告へ
                     </button>
                 </div>
             </header>
@@ -295,8 +295,8 @@ const PartnerSignupPage: NextPage = () => {
                     <p className="text-orange-500 font-semibold">地元企業＆店舗を応援するadtownからのご提案</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         「集客に困っている店舗様」は必見！<br />
-                        <span className="text-orange-600">無料登録で広告管理ページへアクセス！</span><br />
-                        広告を無料でスタートし、必要に応じて有料機能を利用！
+                        <span className="text-orange-600"> アプリ集客広告を無料でスタート！</span><br />
+                        ！無料登録で広告管理ページへアクセス！
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
                         まずは<strong className="font-bold">無料</strong>で広告管理ページにログインし、店舗情報の登録（広告掲載）を始めましょう。
@@ -304,7 +304,7 @@ const PartnerSignupPage: NextPage = () => {
                     </p>
                     <div className="mt-8">
                         <button onClick={scrollToForm} className="bg-gradient-to-r from-teal-500 to-blue-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-                            無料でアカウントを作成する
+                            無料で集客広告を出す
                         </button>
                         <p className="mt-2 text-sm text-gray-500">登録は3分、料金は一切かかりません。</p>
                     </div>

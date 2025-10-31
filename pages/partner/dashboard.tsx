@@ -321,6 +321,8 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                         </h2>
                         <p className="mt-2 text-lg">
                             すべての機能（特にAIマッチング）を利用するために、先に**お店の基本情報を完全に登録**してください。
+                        <p className="mt-2 text-lg"></p>    
+                            ログインは、ブラウザでadtownと検索してホームページから行ってください。
                         </p>
                         <Link href="/partner/profile" legacyBehavior>
                             <a className="inline-block mt-4 bg-red-600 text-white font-extrabold py-2 px-6 rounded-full shadow-lg hover:bg-red-700 transition duration-150">
@@ -337,7 +339,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                             💡 現在、無料の基本機能（店舗情報登録）をご利用中です
                         </h2>
                         <p className="mt-2 text-lg">
-                            **クーポン、集客AI、紹介料プログラム、LINEでお客様とマッチング**を利用して、売上と収益を最大化しましょう！
+                            **集客AI、クーポン、紹介料収入プログラム、LINEでお客様とAIマッチング**を利用して、売上と収益を最大化しましょう！
                         </p>
                         <Link href="/partner/subscribe_plan" legacyBehavior>
                             <a className="inline-block mt-4 bg-orange-600 text-white font-extrabold py-3 px-8 rounded-full shadow-lg hover:bg-orange-700 transition duration-150">
@@ -458,6 +460,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                             <div className="flex flex-col">
                                 <h2 className="text-lg font-bold text-gray-700 mb-1">LINEよりお問い合わせください。</h2>
                                 <p className="text-sm text-gray-500">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
+                                <p className="text-sm text-gray-500">ログインは、ブラウザでadtownと検索してホームページから行ってください。</p>
                             </div>
                             <div 
                                 dangerouslySetInnerHTML={{

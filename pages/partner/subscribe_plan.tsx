@@ -308,7 +308,7 @@ const PartnerSubscribePage: React.FC = () => {
           <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
             集客と収益を最大化する <span className="text-orange-600">有料パートナープラン</span>
           </h1>
-          <p className="mt-3 text-gray-600">無料掲載に加えて、AIマッチング・分析ツールが利用可能。</p>
+          <p className="mt-3 text-gray-600">無料掲載に加えて、集客AI、クーポン、紹介料収入プログラム、LINEでお客様とAIマッチングが利用可能。</p>
           <p className="mt-2 text-sm text-red-600 font-bold">【先着100社限定】割引価格で提供中！</p>
           <p className="mt-2 text-gray-500 text-sm">現在ログイン中: {user.email}</p>
         </div>
@@ -320,7 +320,7 @@ const PartnerSubscribePage: React.FC = () => {
             price={MONTHLY_PRICE_DISPLAY}
             billingCycle="monthly"
             priceId={PRICE_ID_MONTHLY}
-            features={['クレカ決済で毎月自動更新', '月単位で解約可能', 'まずはお試しに最適']}
+            features={['クレカ決済で毎月自動更新', '月単位で解約可能', 'まずはお試しに最適','集客AI','紹介料収入プログラム','LINEでお客様とAIマッチング']}
             isRecommended={true}
             userInfo={userInfo}
             onCheckoutSuccess={handleCheckoutSuccess} // ハンドラを渡す

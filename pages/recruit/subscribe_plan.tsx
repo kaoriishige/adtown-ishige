@@ -350,6 +350,8 @@ const RecruitSubscribePage: React.FC = () => {
             billingCycle="annual"
             priceId={PRICE_ID_ANNUAL_CARD} 
             features={[
+              'AIマッチング候補者リスト',
+              'AI求人アドバイス機能',
               '年1回払い（クレカ）',
               `先着割引で最もお得 (¥${ANNUAL_PRICE_CARD_DISPLAY.toLocaleString()})`,
               'クレジットカードで自動更新',
@@ -365,6 +367,8 @@ const RecruitSubscribePage: React.FC = () => {
             billingCycle="annual_invoice" 
             priceId={PRICE_ID_ANNUAL_INVOICE} 
             features={[
+              'AIマッチング候補者リスト',
+              'AI求人アドバイス機能',
               '銀行振込による前払い',
               `先着割引で最もお得 (¥${ANNUAL_PRICE_INVOICE_DISPLAY.toLocaleString()})`,
               '経理処理に対応した請求書発行',

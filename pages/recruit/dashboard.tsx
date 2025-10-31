@@ -185,7 +185,7 @@ const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
         <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100 flex justify-between items-start hover:shadow-lg transition-shadow">
             <div>
                 <h3 className="text-lg font-bold text-gray-800">{recruitment.title}</h3>
-                <div className={`mt-1 inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${statusDisplay.color}`}>
+                <div className="mt-1 inline-block px-2 py-0.5 text-xs font-semibold rounded-full border ${statusDisplay.color}">
                     {statusDisplay.text}
                 </div>
                 {recruitment.verificationStatus === 'rejected' && (
@@ -463,6 +463,10 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                         <RiLogoutBoxRLine size={20} />
                         <span>ログアウト</span>
                     </button>
+                    {/* ★ 修正2: 案内文を追加 */}
+                    <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
+                        ログインは、ブラウザでadtownと検索してホームページから行ってください。
+                    </p>
                 </div>
             </div>
         );
@@ -549,6 +553,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                             <RiLogoutBoxRLine size={20} />
                             <span>ログアウト</span>
                         </button>
+                        {/* ★ 修正1: 案内文を追加 (1/3) */}
                         <p className="text-xs text-gray-500 mt-1 max-w-xs">
                             ログインは、ブラウザでadtownと検索してホームページから行ってください。
                         </p>
@@ -575,6 +580,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                         </h2>
                         <p className="mt-2 text-lg">
                             **AIマッチング** と **AIアドバイス** を利用して、採用のミスマッチを防ぎ、コストを削減しましょう！
+                        
                         </p>
                         <Link href="/recruit/subscribe_plan" legacyBehavior>
                             {/* ★ 求人用の課金ページパス (ご自身のプロジェクトに合わせて変更してください) */}
@@ -597,6 +603,8 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                 {/* ★★★ 1. 求人管理（複数の求人掲載無料） ★★★ */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">1. 求人管理（複数の求人掲載無料）</h2>
+                    
+            
                     {/* ★★★ 変更点: カードの順番を変更 ★★★ */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <DashboardCard
@@ -627,6 +635,10 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                             isPaid={isPaid}
                         />
                     </div>
+                    {/* ★ 修正3: 案内文を追加 (2/3) */}
+                    <p className="text-sm text-gray-500 mt-4 text-center">
+                        ログインは、ブラウザでadtownと検索してホームページから行ってください。
+                    </p>
                 </section>
 
                 <hr className="my-8" />
@@ -712,7 +724,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                             recruitments.slice(0, 4).map((r) => <RecruitmentCard key={r.id} recruitment={r} />)
                         )}
                         {recruitments.length > 4 && (
-                            <Link href="/recruit/jobs" className="mt-4 text-center text-indigo-600 hover:underline font-bold md:col-span-2">
+                            <Link href="/recruit/jobs" className="mt-4 block text-center text-indigo-600 hover:underline font-bold md:col-span-2">
                                 全ての求人を見る ({recruitments.length} 件) <RiArrowRightLine className="inline ml-1" />
                             </Link>
                         )}
@@ -727,15 +739,15 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {isPaid && (
                              <DashboardCard
-                                href="/cancel-subscription" // hrefはダミー
-                                icon={<RiCloseCircleLine size={28} />}
-                                title="サブスクリプションの解約"
-                                description="有料AIプランの自動更新を停止（解約）します"
-                                color="red"
-                                isPro={true} // 有料会員専用
-                                isPaid={isPaid}
-                                onClick={handleOpenCancelModal} // モーダルを開く
-                            />
+                                 href="/cancel-subscription" // hrefはダミー
+                                 icon={<RiCloseCircleLine size={28} />}
+                                 title="サブスクリプションの解約"
+                                 description="有料AIプランの自動更新を停止（解約）します"
+                                 color="red"
+                                 isPro={true} // 有料会員専用
+                                 isPaid={isPaid}
+                                 onClick={handleOpenCancelModal} // モーダルを開く
+                             />
                         )}
                         {/* 広告パートナーでない場合のみ表示 */}
                         {!isUserAdPartner && (
@@ -759,19 +771,19 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                                <h3 className="text-xl font-bold mb-4 flex items-center">
-                                   <RiUserSearchLine className="mr-2 text-yellow-600" size={24} />
-                                   AI推薦候補者リスト (最新5件)
-                               </h3>
+                                    <RiUserSearchLine className="mr-2 text-yellow-600" size={24} />
+                                    AI推薦候補者リスト (最新5件)
+                                </h3>
                                {candidates.length === 0 ? (
-                                   <p className="text-gray-600">現在、新しい応募者はいません。</p>
-                               ) : (
-                                   <div className="divide-y divide-gray-100">
-                                       {candidates.map((c) => (<CandidateCard key={c.id} candidate={c} />))}
-                                   </div>
-                               )}
-                               <Link href="/recruit/applicants" className="mt-4 block text-center text-indigo-600 hover:underline text-sm font-bold">
-                                   全応募者リストを見る
-                               </Link>
+                                    <p className="text-gray-600">現在、新しい応募者はいません。</p>
+                                ) : (
+                                    <div className="divide-y divide-gray-100">
+                                        {candidates.map((c) => (<CandidateCard key={c.id} candidate={c} />))}
+                                    </div>
+                                )}
+                                <Link href="/recruit/applicants" className="mt-4 block text-center text-indigo-600 hover:underline text-sm font-bold">
+                                    全応募者リストを見る
+                                </Link>
                             </div>
 
                             <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
@@ -809,13 +821,17 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                 )}
             </main>
             
-            {/* ★★★ フッター（広告パートナーと同様のレイアウトに変更） ★★★ */}
+            {/* ★★★ フッター（案内文を追加） ★★★ */}
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
                 <section className="mt-6">
                     <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
                         <div className="flex flex-col">
                             <h2 className="text-lg font-bold text-gray-700 mb-1">LINEよりお問い合わせください。</h2>
                             <p className="text-sm text-gray-500">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
+                            {/* ★ 修正4: 案内文を追加 (3/3 - LINEの下) */}
+                            <p className="text-xs text-gray-500 mt-2">
+                                ログインは、ブラウザでadtownと検索してホームページから行ってください。
+                            </p>
                         </div>
                         <div 
                             className="flex-shrink-0"
@@ -837,9 +853,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                     >
                         ログアウト
                     </button>
-                    <p className="text-xs text-gray-500 mt-2 text-center">
-                        ログインは、ブラウザでadtownと検索してホームページから行ってください。
-                    </p>
+                    {/* 案内文の重複を防ぐため、フッター最下部からは削除 */}
                 </section>
             </footer>
         </div>

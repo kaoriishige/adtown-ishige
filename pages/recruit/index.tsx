@@ -229,7 +229,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-800">AIマッチング求人</h1>
                     <button onClick={scrollToForm} className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg animate-pulse">
-                        無料ダッシュボードへ
+                        無料で求人掲載へ
                     </button>
                 </div>
             </header>
@@ -246,16 +246,16 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                     <p className="text-orange-500 font-semibold">地元企業を応援するadtownからのご提案</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         「採用に困っている企業様」は必見！<br />
-                        <span className="text-orange-600">無料で求人掲載管理ページへアクセス！</span><br />
-                        求人広告を無料でスタートし、必要に応じて有料AI機能を利用！
+                        <span className="text-orange-600">アプリ求人広告を無料でスタート！</span><br />
+                        無料で求人掲載管理ページへアクセス！
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
-                        まずは<strong className="font-bold">無料</strong>でダッシュボードにログインし、求人情報の登録（広告掲載）を始めましょう。
+                        まずは<strong className="font-bold">無料</strong>で求人掲載管理ページにログインし、求人情報の登録（広告掲載）を始めましょう。
                         有料機能（求人マッチングAI、求人アドバイスAI）は、求人管理ページ内で**いつでも**お申し込みいただけます。
                     </p>
                     <div className="mt-8">
                         <button onClick={scrollToForm} className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-                            無料でアカウントを作成する
+                            無料で求人広告を掲載する
                         </button>
                         <p className="mt-2 text-sm text-gray-500">登録は3分、料金は一切かかりません。</p>
                     </div>
@@ -408,7 +408,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
                         <div className="text-center mb-10">
                             <p className="text-gray-700 leading-relaxed">
-                                まずは無料でダッシュボードにログインし、すぐに求人掲載をスタートしましょう。<br/>
+                                まずは無料で求人管理ページにログインし、すぐに求人掲載をスタートしましょう。<br/>
                                 <strong className="text-red-600 font-bold">有料AIプランの割引枠（月額8,800円→6,600円）</strong>を確保するためにも、今すぐご登録ください。
                             </p>
                         </div>
