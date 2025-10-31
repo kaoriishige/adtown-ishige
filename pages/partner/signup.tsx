@@ -300,7 +300,7 @@ const PartnerSignupPage: NextPage = () => {
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
                         まずは<strong className="font-bold">無料</strong>で広告管理ページにログインし、店舗情報の登録（広告掲載）を始めましょう。
-                        有料機能（クーポン、集客AI、紹介料）は、ダッシュボード内で**いつでも**お申し込みいただけます。
+                        有料機能（クーポン、集客AI、紹介料、お客様を貴店LINEに誘導）は、広告管理ページ内で**いつでも**お申し込みいただけます。
                     </p>
                     <div className="mt-8">
                         <button onClick={scrollToForm} className="bg-gradient-to-r from-teal-500 to-blue-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
