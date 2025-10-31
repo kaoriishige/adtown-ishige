@@ -7,15 +7,37 @@ import { app, db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/router';
 
+console.log('🔍 ENV CHECK:', {
+  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+  monthly: process.env.NEXT_PUBLIC_STRIPE_AD_PRICE_ID,
+  annual: process.env.NEXT_PUBLIC_STRIPE_AD_ANNUAL_PRICE_ID,
+  invoice: process.env.NEXT_PUBLIC_STRIPE_AD_ANNUAL_INVOICE_PRICE_ID,
+});
+
 // Stripe公開鍵
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
 : null;
 
-// ★★★ 求人用の環境変数 ★★★
-const PRICE_ID_MONTHLY = process.env.NEXT_PUBLIC_STRIPE_JOB_PRICE_ID || 'missing_recruit_monthly_id';
-const PRICE_ID_ANNUAL_CARD = process.env.NEXT_PUBLIC_STRIPE_JOB_ANNUAL_PRICE_ID || 'missing_recruit_annual_card_id';
-const PRICE_ID_ANNUAL_INVOICE = process.env.NEXT_PUBLIC_STRIPE_JOB_ANNUAL_INVOICE_PRICE_ID || 'missing_recruit_annual_invoice_id';
+// ★★★ 求人用の環境変数 (柔軟な参照に修正) ★★★
+// 月額プラン
+const PRICE_ID_MONTHLY = 
+    process.env.NEXT_PUBLIC_STRIPE_JOB_PRICE_ID || 
+    process.env.STRIPE_JOB_PRICE_ID || 
+    'missing_recruit_monthly_id';
+
+// 年額（クレカ）
+const PRICE_ID_ANNUAL_CARD = 
+    process.env.NEXT_PUBLIC_STRIPE_JOB_ANNUALCR_PRICE_ID || 
+    process.env.STRIPE_JOB_ANNUALCR_PRICE_ID || 
+    process.env.NEXT_PUBLIC_STRIPE_JOB_ANNUAL_PRICE_ID || 
+    'missing_recruit_annualcr_id'; 
+
+// 年額（請求書）
+const PRICE_ID_ANNUAL_INVOICE = 
+    process.env.NEXT_PUBLIC_STRIPE_JOB_ANNUAL_INVOICE_PRICE_ID || 
+    process.env.STRIPE_JOB_ANNUAL_INVOICE_PRICE_ID || 
+    'missing_recruit_annual_invoice_id';
 
 
 // ★★★ 求人用の料金 ★★★
@@ -35,16 +57,25 @@ const CheckCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 </svg>
 );
 
-// ★★★ Stripe Checkout セッション作成＆リダイレクト (求人用) ★★★
+// 請求書決済完了後のステータスを保持する型
+interface InvoiceSuccessData {
+    pdfUrl: string;
+    bankDetails: string;
+}
+
+
+// ★★★ Stripe Checkout セッション作成＆API呼び出し (リダイレクトを廃止) ★★★
 const redirectToCheckout = async (
 priceId: string,
 paymentMethod: 'card' | 'invoice',
 billingCycle: 'monthly' | 'annual' | 'annual_invoice',
 userInfo: { firebaseUid: string; email: string }
-) => {
+): Promise<{ success: true, invoiceData?: InvoiceSuccessData, sessionId?: string }> => {
 try {
   if (!stripePromise) throw new Error('Stripeキーが未設定です');
-  if (priceId.startsWith('missing_')) throw new Error('求人プランの価格IDが設定されていません。');
+  // Price ID の存在チェック (設定忘れを防ぐ)
+  if (priceId.startsWith('missing')) throw new Error('求人プランの価格IDが設定されていません。');
+
 
   // ★ 広告パートナーと同じAPIを流用
   const response = await fetch('/api/auth/register-and-create-invoice', { 
@@ -53,10 +84,10 @@ try {
     body: JSON.stringify({
       priceId,
       paymentMethod,
-      serviceType: 'recruit', // ★ サービスタイプを 'recruit' に設定
+      serviceType: 'recruit', // サービスタイプを 'recruit' に設定
       firebaseUid: userInfo.firebaseUid,
       email: userInfo.email,
-      billingCycle, // ★ billingCycle を渡す
+      billingCycle, // billingCycle を渡す
     }),
   });
 
@@ -64,43 +95,36 @@ try {
   if (!response.ok || data.error) throw new Error(data.error || '決済セッションの作成に失敗しました。');
 
   if (paymentMethod === 'invoice') {
-    // 請求書払い
-    
+    // 請求書払いロジックを修正
     let alertMessage = '請求書払いによる申し込みを受け付けました。';
 
-    // 請求書ダウンロード処理を強化 (広告パートナー側と同じロジックを適用)
+    // ダウンロード処理を強化 (ブラウザブロック対策)
     if (data.pdfUrl) {
-      const a = document.createElement('a');
-      a.href = data.pdfUrl;
-      a.download = '請求書.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      // 新しいウィンドウで開く処理を併用
+      // 1. 新しいウィンドウで開く処理を併用 (ブロックされてもユーザーが手動でDLできる)
       window.open(data.pdfUrl, '_blank');
       
       alertMessage += '\n\n請求書PDFの発行と、新しいタブでの表示を試行しました。';
-      alertMessage += 'もしダウンロードが始まらない場合は、新しいタブ（またはポップアップウィンドウ）から手動でPDFを保存してください。';
+      alertMessage += 'もし新しいタブが開かない場合は、画面の【請求書PDFをダウンロード/表示】ボタンをご利用ください。';
     }
 
     alertMessage += '\n\n【重要】入金が確認されるまで、有料プランの機能はご利用いただけません。';
     alert(alertMessage);
     
-    // ★ 求人ダッシュボードへリダイレクト
-    window.location.href = '/recruit/dashboard?payment_status=invoice_pending';
+    // 自動ダウンロード/リダイレクトを廃止し、成功データを返す
+    return {
+        success: true,
+        invoiceData: { pdfUrl: data.pdfUrl, bankDetails: data.bankDetails },
+    }; 
 
   } else {
-    // クレジットカード
-    const stripe = await stripePromise;
-    if (!stripe) throw new Error('Stripeの初期化に失敗しました');
-    const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-    if (error) throw new Error(error.message);
+    // クレジットカード決済
+    return { success: true, sessionId: data.sessionId };
   }
 
 } catch (err: any) {
   console.error('Checkout Error:', err);
   alert(`エラー: ${err.message || '不明なエラーが発生しました'}`);
+  throw err; // 呼び出し元でエラーを捕捉させる
 }
 };
 
@@ -113,6 +137,8 @@ interface PriceCardProps {
   features: string[];
   isRecommended: boolean;
   userInfo: { firebaseUid: string; email: string };
+  // 決済後の処理を親コンポーネントに伝達するハンドラを追加
+  onCheckoutSuccess: (type: 'card' | 'invoice', data?: InvoiceSuccessData) => void; 
 }
 
 const PriceCard: React.FC<PriceCardProps> = ({
@@ -124,6 +150,7 @@ priceId,
 features,
 isRecommended,
 userInfo,
+onCheckoutSuccess, // 追加
 }) => {
   const [loading, setLoading] = useState(false);
   const isInvoice = billingCycle === 'annual_invoice';
@@ -135,15 +162,41 @@ userInfo,
       return;
     }
     setLoading(true);
-    await redirectToCheckout(priceId, isInvoice ? 'invoice' : 'card', billingCycle, userInfo);
-    setLoading(false);
+    try {
+        const result = await redirectToCheckout(priceId, isInvoice ? 'invoice' : 'card', billingCycle, userInfo);
+        
+        if (result.success) {
+            if (isInvoice) {
+                // 請求書決済完了を通知し、PDF情報を渡す
+                onCheckoutSuccess('invoice', result.invoiceData); 
+            } else {
+                // クレカ決済開始
+                const stripe = await stripePromise;
+                if (!stripe) throw new Error('Stripeの初期化に失敗しました');
+                
+                // Stripe Checkoutへのリダイレクト
+                const { error } = await stripe.redirectToCheckout({ sessionId: result.sessionId });
+                if (error) throw new Error(error.message);
+
+                onCheckoutSuccess('card'); // (実際にはリダイレクトされるため、この行は到達しない可能性が高い)
+            }
+        }
+    } catch (e) {
+        // エラーは redirectToCheckout で alert 済み
+    } finally {
+        setLoading(false);
+    }
   };
+
+  const buttonClass = isInvoice ? 
+      'bg-blue-600 hover:bg-blue-700' : 
+      'bg-orange-600 hover:bg-orange-700';
 
   return (
     <div className={`p-8 rounded-xl shadow-xl flex flex-col ${isRecommended ? 'bg-white border-4 border-orange-500 scale-[1.05]' : 'bg-gray-50 border'}`}>
-      {isRecommended && (
+      {(isRecommended || isInvoice) && (
         <div className="text-sm font-bold text-white bg-orange-500 py-1 px-4 rounded-full self-center -mt-10 mb-2">
-          先着100社様 限定価格
+          {isInvoice ? '年額一括' : '先着100社様 限定価格'}
         </div>
       )}
       <h3 className="text-2xl font-extrabold text-gray-900 mb-1">{title}</h3>
@@ -156,7 +209,7 @@ userInfo,
       <button
         onClick={handleClick}
         disabled={loading}
-        className={`mt-6 w-full text-white font-bold py-3 rounded-lg shadow-md ${isInvoice ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'} disabled:opacity-50`}
+        className={`mt-6 w-full text-white font-bold py-3 rounded-lg shadow-md ${buttonClass} disabled:opacity-50`}
       >
         {loading ? '処理中...' : isInvoice ? '請求書で申し込む' : 'クレジットカードで申し込む'}
       </button>
@@ -171,18 +224,30 @@ userInfo,
 
 const RecruitSubscribePage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  // 共通のisPaidを削除し、recruitSubscriptionStatusのみで判定
+  // サービス固有のステータスで判定 (他のサービスの影響を受けない)
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null); 
   const [loading, setLoading] = useState(true);
+  // 請求書決済完了後の情報を保持するステートを追加
+  const [invoiceSuccess, setInvoiceSuccess] = useState<InvoiceSuccessData | null>(null); 
   const auth = getAuth(app);
   const router = useRouter(); 
+
+  // 決済成功時のハンドラ。画面表示を切り替えるトリガーとなる
+  const handleCheckoutSuccess = (type: 'card' | 'invoice', data?: InvoiceSuccessData) => {
+    if (type === 'invoice' && data) {
+        // 請求書決済が完了したら、専用の完了画面を表示するためにステートを更新
+        setInvoiceSuccess(data);
+    }
+    // カード決済の場合はStripeがリダイレクトするため、ここでは何もしない
+  };
+
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         const docRef = doc(db, 'users', currentUser.uid);
-        // 🚨 修正: オプション引数を削除し、エラーを解消
+        // エラー回避のためオプション引数を削除 
         const snap = await getDoc(docRef); 
         
         if (snap.exists()) {
@@ -199,14 +264,43 @@ const RecruitSubscribePage: React.FC = () => {
   if (loading) return <div className="flex justify-center items-center h-screen text-gray-600">読み込み中...</div>;
   
   if (!user) {
-    // ログインページにリダイレクト
     if (typeof window !== 'undefined') {
         router.push('/partner/login');
     }
     return <div className="flex justify-center items-center h-screen text-gray-600">ログインページにリダイレクトします...</div>;
   }
     
-  // 判定はrecruitSubscriptionStatusが 'active' または 'trialing' の場合のみ有料として扱う
+  // 請求書決済完了後の画面表示と、pending_invoiceの状態の処理を統合
+  if (invoiceSuccess || subscriptionStatus === 'pending_invoice')
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6 text-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg border-4 border-yellow-500 max-w-lg mx-auto">
+            <h1 className="text-2xl font-bold text-yellow-700 mb-4">請求書の発行を完了しました ⚠️</h1>
+            <p className="text-lg text-gray-700 mb-4">
+                銀行振込による入金確認中です。恐れ入りますが、入金が確認されるまでお待ちください。
+                {/* PDFダウンロードリンクを直接表示 */}
+                {(invoiceSuccess?.pdfUrl || subscriptionStatus === 'pending_invoice') && (
+                    <div className="mt-4">
+                        <a 
+                            href={invoiceSuccess?.pdfUrl || '#'} // PDF URLがない場合はリンクを無効化
+                            target="_blank" // 新しいタブで開く
+                            rel="noopener noreferrer"
+                            className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-bold inline-block"
+                        >
+                            請求書PDFをダウンロード/表示
+                        </a>
+                        <p className="text-xs text-gray-500 mt-2">（新しいタブでPDFが開きます）</p>
+                    </div>
+                )}
+            </p>
+            <p className="text-gray-500 mb-6">入金確認後、管理者により有料プランが有効化されます。</p>
+            {/* ユーザーが手動でダッシュボードへ戻るボタン */}
+            <Link href="/recruit/dashboard" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">ダッシュボード（入金待ち）へ</Link>
+        </div>
+      </div>
+    );
+    
+  // 'active' または 'trialing' の場合、有料として扱う
   if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') 
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
@@ -215,20 +309,7 @@ const RecruitSubscribePage: React.FC = () => {
       </div>
     );
   
-  // 'pending_invoice' (入金待ち) の場合
-  if (subscriptionStatus === 'pending_invoice')
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6 text-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg border-4 border-yellow-500">
-            <h1 className="text-2xl font-bold text-yellow-700 mb-4">請求書の発行を完了しました ⚠️</h1>
-            <p className="text-lg text-gray-700 mb-4">銀行振込による入金確認中です。恐れ入りますが、入金が確認されるまでお待ちください。</p>
-            <p className="text-gray-500 mb-6">入金確認後、管理者により有料プランが有効化されます。</p>
-            <Link href="/recruit/dashboard" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">ダッシュボード（入金待ち）へ</Link>
-        </div>
-      </div>
-    );
-
-
+  // 決済フローが開始されていない、プラン選択画面の表示
   const userInfo = { firebaseUid: user.uid, email: user.email || '' };
 
   return (
@@ -260,6 +341,7 @@ const RecruitSubscribePage: React.FC = () => {
             ]}
             isRecommended={true}
             userInfo={userInfo}
+            onCheckoutSuccess={handleCheckoutSuccess} // ハンドラを渡す
           />
           <PriceCard
             title="年額プラン（クレカ）"
@@ -274,12 +356,13 @@ const RecruitSubscribePage: React.FC = () => {
             ]}
             isRecommended={false}
             userInfo={userInfo}
+            onCheckoutSuccess={handleCheckoutSuccess} // ハンドラを渡す
           />
           <PriceCard
             title="年額プラン（請求書）"
             price={ANNUAL_PRICE_INVOICE_DISPLAY} 
             originalPrice={ORIGINAL_ANNUAL_PRICE_DISPLAY} 
-            billingCycle="annual_invoice"
+            billingCycle="annual_invoice" 
             priceId={PRICE_ID_ANNUAL_INVOICE} 
             features={[
               '銀行振込による前払い',
@@ -288,6 +371,7 @@ const RecruitSubscribePage: React.FC = () => {
             ]}
             isRecommended={false}
             userInfo={userInfo}
+            onCheckoutSuccess={handleCheckoutSuccess} // ハンドラを渡す
           />
         </div>
 

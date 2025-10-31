@@ -337,7 +337,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
                             💡 現在、無料の基本機能（店舗情報登録）をご利用中です
                         </h2>
                         <p className="mt-2 text-lg">
-                            **クーポン、集客AI、紹介料プログラム**を利用して、売上と収益を最大化しましょう！
+                            **クーポン、集客AI、紹介料プログラム、LINEでお客様とマッチング**を利用して、売上と収益を最大化しましょう！
                         </p>
                         <Link href="/partner/subscribe_plan" legacyBehavior>
                             <a className="inline-block mt-4 bg-orange-600 text-white font-extrabold py-3 px-8 rounded-full shadow-lg hover:bg-orange-700 transition duration-150">
