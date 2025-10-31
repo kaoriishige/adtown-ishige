@@ -1,116 +1,177 @@
-'use client';
-import { NextPage } from 'next';
-import { useState } from 'react';
-import { useRouter } from 'next/router';
+import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import Head from 'next/head';
+import { useRouter } from 'next/router'; 
+import { adminDb } from '@/lib/firebase-admin'; // 🚨 パスを確認
+import React from 'react';
+import { MapPin, Tag, ArrowLeft, ArrowRight, DollarSign, Store, Loader2, MessageSquare } from 'lucide-react'; 
+import { FieldPath } from 'firebase-admin/firestore'; 
 
-// カテゴリ型定義
-type CategoryKey =
-  | "飲食関連"
-  | "買い物関連"
-  | "美容・健康関連"
-  | "住まい・暮らし関連"
-  | "教育・習い事関連"
-  | "車・バイク関連"
-  | "観光・レジャー関連"
-  | "ペット関連"
-  | "専門サービス関連"
-  | "その他";
+// --- 型定義 ---
+interface StoreSummary {
+    id: string;
+    storeName: string;
+    mainCategory: string;
+    subCategory: string;
+    area: string;
+    address: string;
+    couponCount: number; // 💡 クーポン件数を表示
+    landingPageUrl: string; 
+}
 
-// パートナー登録画面と一致させたカテゴリデータ
-const categoryData: Record<CategoryKey, string[]> = {
-  "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋"],
-  "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店"],
-  "美容・健康関連": ["美容室・理容室", "ネイルサロン", "エステサロン", "リラクゼーション・マッサージ", "整体・整骨院・鍼灸院", "個人経営の薬局", "クリニック・歯科医院"],
-  "住まい・暮らし関連": ["工務店・建築・リフォーム", "水道・電気工事", "不動産会社", "クリーニング店", "造園・植木屋", "便利屋"],
-  "教育・習い事関連": ["学習塾・家庭教師", "ピアノ・音楽教室", "英会話教室", "書道・そろばん教室", "スポーツクラブ・道場", "パソコン教室", "料理教室"],
-  "車・バイク関連": ["自動車販売店・自動車整備・修理工場", "ガソリンスタンド", "バイクショップ"],
-  "観光・レジャー関連": ["ホテル・旅館・ペンション", "日帰り温泉施設", "観光施設・美術館・博物館", "体験工房（陶芸・ガラスなど）", "牧場・農園", "キャンプ場・グランピング施設", "ゴルフ場", "貸し別荘"],
-  "ペット関連": ["動物病院", "トリミングサロン", "ペットホテル・ドッグラン"],
-  "専門サービス関連": ["弁護士・税理士・行政書士などの士業", "デザイン・印刷会社", "写真館", "保険代理店", "カウンセリング", "コンサルティング"],
-  "その他": ["その他"],
-};
+interface DealsListPageProps {
+    stores: StoreSummary[];
+    mainCategory: string;
+    subCategory: string;
+    area: string;
+    error: string | null;
+}
 
-const mainCategories = Object.keys(categoryData) as CategoryKey[];
+// ----------------------------------------------------------------------
+// サーバーサイドデータ取得 (クエリパラメータでのフィルタリング)
+// ----------------------------------------------------------------------
+export const getServerSideProps: GetServerSideProps = async (context) => {
+    // クエリパラメータから情報を取得
+    const mainCategory = context.query.main as string;
+    const area = context.query.area as string;
+    const subCategory = context.query.sub as string || 'すべて';
 
-const DealsCategoryPage: NextPage = () => {
-  const router = useRouter();
-  const [expandedCategory, setExpandedCategory] = useState<CategoryKey | null>(null);
-
-  const handleCategoryClick = (category: CategoryKey) => {
-    if (category === 'その他') {
-      router.push(`/deals/select-area?main=${encodeURIComponent(category)}&sub=${encodeURIComponent('その他')}`);
-      return;
+    if (!mainCategory || !area) {
+        return { props: { stores: [], mainCategory: '不明', subCategory: subCategory, area: '不明', error: "カテゴリまたはエリア情報が不足しています。" } };
     }
-    setExpandedCategory(prev => (prev === category ? null : category));
-  };
+    
+    // エリアとカテゴリ名のデコード (URLエンコード対策)
+    const decodedArea = decodeURIComponent(area);
+    const decodedMain = decodeURIComponent(mainCategory);
 
-  return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      <Head>
-        <title>カテゴリ選択 - 地域のお店を探す</title>
-      </Head>
+    try {
+        // 1. stores コレクションからデータを取得するためのクエリを構築
+        let query = adminDb.collection('stores')
+            .where('status', 'in', ['approved', 'active']) // 公開中の店舗のみ
+            .where('mainCategory', '==', decodedMain)
+            .where('area', '==', decodedArea);
+            
+        // 'すべて' ではない場合のみ、subCategoryでフィルタリングを追加
+        if (subCategory && subCategory !== 'すべて' && subCategory !== 'すべて' /* 重複チェック */) {
+             query = query.where('subCategory', '==', subCategory);
+        }
+        
+        // 🚨 複合インデックスが必須: status (A), mainCategory (A), area (A), subCategory (A)
+        const storesSnap = await query.get();
 
-      <header className="bg-white p-4 text-center sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800">地域のお店を探す</h1>
-        <p className="text-gray-600 mt-1">カテゴリを選択してください</p>
-      </header>
+        const stores: StoreSummary[] = storesSnap.docs.map(doc => {
+            const data = doc.data();
+            
+            return {
+                id: doc.id,
+                storeName: data.storeName || '店舗名未登録',
+                mainCategory: decodedMain,
+                subCategory: data.subCategory || subCategory,
+                area: decodedArea,
+                address: data.address || '住所不明',
+                couponCount: data.couponCount || 0, // 💡 deals コレクションから取得が必要
+                // 💡 ランディングページへのリンク (動的ルーティングを使用)
+                landingPageUrl: `/deals/store/${doc.id}`, 
+            };
+        });
 
-      <main className="p-4 max-w-4xl mx-auto">
-        <div className="text-center my-4">
-          <button
-            onClick={() => router.push('/home')}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg text-sm"
-          >
-            ← ホームに戻る
-          </button>
-        </div>
+        return { 
+            props: { 
+                stores, 
+                mainCategory: decodedMain, 
+                subCategory: subCategory, 
+                area: decodedArea, 
+                error: null 
+            } 
+        };
 
-        <div className="space-y-4">
-          {mainCategories.map(mainCat => (
-            <div key={mainCat}>
-              <button
-                onClick={() => handleCategoryClick(mainCat)}
-                className="w-full p-5 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 text-left flex justify-between items-center"
-              >
-                <span className="text-xl font-bold text-gray-800">{mainCat}</span>
-                {mainCat !== 'その他' && (
-                  <span
-                    className={`transform transition-transform duration-300 ${
-                      expandedCategory === mainCat ? 'rotate-180' : ''
-                    }`}
-                  >
-                    ▼
-                  </span>
-                )}
-              </button>
-
-              {mainCat !== 'その他' && (
-                <div
-                  className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                    expandedCategory === mainCat ? 'max-h-96 mt-2' : 'max-h-0'
-                  }`}
-                >
-                  <div className="p-4 bg-gray-100 rounded-b-lg grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {categoryData[mainCat].map((subCat) => (
-                      <Link
-                        key={subCat}
-                        href={`/deals/select-area?main=${encodeURIComponent(mainCat)}&sub=${encodeURIComponent(subCat)}`}
-                        className="block p-3 bg-white text-gray-700 rounded-md hover:bg-blue-500 hover:text-white transition-colors"
-                      >
-                        {subCat}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </main>
-    </div>
-  );
+    } catch (err: any) {
+        console.error("Deals List SSR Error:", err);
+        return { 
+            props: { 
+                stores: [], 
+                mainCategory: decodedMain, 
+                subCategory: subCategory, 
+                area: decodedArea, 
+                error: `データ取得中に予期せぬエラーが発生しました: ${err.message}. インデックスまたはセキュリティルールを確認してください。` 
+            } 
+        };
+    }
 };
 
-export default DealsCategoryPage;
+// ----------------------------------------------------------------------
+// ページコンポーネント (UI)
+// ----------------------------------------------------------------------
+const DealsListPage: NextPage<DealsListPageProps> = ({ stores, mainCategory, subCategory, area, error }) => {
+    const router = useRouter();
+
+    if (error) {
+        return <div className="min-h-screen p-10 text-red-600 bg-red-50">{error}</div>;
+    }
+
+    // UI表示用のカテゴリテキスト
+    const categoryText = subCategory === 'すべて' ? mainCategory : `${mainCategory} > ${subCategory}`;
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <Head><title>{area} の店舗一覧 | {mainCategory}</title></Head>
+            
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                
+                <button 
+                    onClick={() => router.back()}
+                    className="text-indigo-600 hover:underline flex items-center mb-6"
+                >
+                    <ArrowLeft size={18} className="mr-2" /> エリア選択に戻る
+                </button>
+
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{area} の店舗一覧</h1>
+                <p className="text-sm text-gray-600 mb-6">
+                    カテゴリ: <strong className="text-indigo-600">{categoryText}</strong>
+                </p>
+
+                {stores.length === 0 ? (
+                    <div className="p-10 text-center bg-white rounded-xl shadow-lg">
+                        <p className="text-lg text-gray-600">この条件に一致する店舗は見つかりませんでした。</p>
+                        <p className="text-sm text-gray-500 mt-2">（カテゴリ、またはエリアを変更してお試しください）</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {stores.map((store) => (
+                            <Link href={store.landingPageUrl} key={store.id} legacyBehavior>
+                                <a 
+                                    className="block bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl hover:border-indigo-400 transition-all"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <h2 className="text-xl font-bold text-gray-900">{store.storeName}</h2>
+                                        {store.couponCount > 0 && (
+                                            <span className="text-sm font-bold text-green-700 bg-green-100 px-3 py-1 rounded-full flex items-center">
+                                                <DollarSign size={16} className='mr-1' /> クーポン {store.couponCount} 件あり
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-3 text-sm text-gray-600 space-y-1">
+                                        <div className="flex items-center">
+                                            <MapPin size={16} className="mr-2 text-red-500" />
+                                            {store.address}
+                                        </div>
+                                        <div className="flex items-center">
+                                            <Tag size={16} className="mr-2 text-blue-500" />
+                                            {store.subCategory}
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex justify-end text-indigo-600 font-semibold items-center">
+                                        店舗詳細へ <ArrowRight size={18} className="ml-1" />
+                                    </div>
+                                </a>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default DealsListPage;

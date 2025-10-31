@@ -1,10 +1,11 @@
+// pages/recruit/jobs/create.tsx (企業求人作成ページ修正版)
 import Head from 'next/head';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // Firebase Client SDK
-import { Loader2, Building, Briefcase, ArrowLeft, Sparkles, MessageSquare, JapaneseYen, MapPin, Laptop, Send, CheckSquare, Clock, Tag, UserCheck } from 'lucide-react'; // UserCheck アイコンを追加
+import { Loader2, Building, Briefcase, ArrowLeft, Sparkles, MessageSquare, JapaneseYen, MapPin, Laptop, Send, CheckSquare, Clock, Tag, UserCheck, CalendarDays, ListOrdered } from 'lucide-react'; // CalendarDays, ListOrdered を追加
 import Link from 'next/link';
 import React from 'react';
 
@@ -29,19 +30,17 @@ const jobCategoryOptions = [
     "農業・林業・畜産",
     "その他"
 ];
-const employmentTypeOptions = ["正社員", "契約社員", "アルバイト・パート", "業務委託"];
+// 💡 スキマ短時間バイトを雇用形態に追加
+const employmentTypeOptions = ["正社員", "契約社員", "アルバイト・パート", "スキマ短時間バイト", "業務委託"]; 
 
 // --- 企業プロフィールと求職者プロフィールで共有される価値観チェックリスト ---
-// CompanyProfilePageから流用
 const growthOptions = ["OJT（実務を通じた教育制度）", "メンター制度（先輩社員によるサポート）", "定期的な社内研修あり", "社外研修・セミナー参加支援あり", "資格取得支援制度あり", "書籍・教材購入補助あり", "AI・DX関連の研修あり", "海外研修・グローバル教育あり", "キャリア面談制度あり", "評価・昇進が明確（スキルや成果で評価）", "社内表彰・インセンティブ制度あり", "他部署への異動・チャレンジを歓迎", "社員の挑戦を応援する文化", "失敗を許容する文化（トライ＆エラーを奨励）", "社内勉強会・ナレッジシェア会あり", "社外講師や専門家を招いた学習機会あり"];
 const wlbOptions = ["フルリモート勤務可", "一部リモート勤務可（ハイブリッドワーク）", "フレックスタイム制あり", "残業少なめ（月20時間以内）", "完全週休2日制", "年間休日120日以上", "有給休暇取得率が高い", "産休・育休取得実績あり", "時短勤務制度あり", "介護・看護休暇あり", "副業・兼業OK", "私服勤務OK", "勤務地選択可（地方・在宅勤務など）", "長期休暇制度あり（リフレッシュ・サバティカルなど）", "定時退社を推奨", "家庭・育児と両立しやすい環境"];
 const benefitsOptions = ["社会保険完備", "通勤手当・交通費支給", "在宅勤務手当あり", "家賃補助・住宅手当あり", "家族手当あり", "賞与・ボーナスあり", "成果連動インセンティブあり", "ストックオプション制度あり", "健康診断・人間ドック補助あり", "福利厚生サービス（例：リロクラブ、ベネフィットステーション等）加入", "食事補助・社員食堂あり", "書籍・ツール購入補助あり", "PC・デバイス支給（業務用）", "勤続表彰・特別休暇あり", "社員旅行・懇親イベントあり", "社内カフェ・フリードリンクあり", "資格手当・成果手当あり", "退職金制度あり", "定年後再雇用制度あり", "制服貸与"];
-
-
-// 企業プロフィールから継承するが、求人側で編集はしない
 const atmosphereOptions = ["フラットな社風", "チームワーク重視", "個人主義", "成果主義", "挑戦を歓迎する", "落ち着いた雰囲気", "スピード感がある", "オープンなコミュニケーション", "若手が活躍", "ベテランが活躍", "男女問わず活躍", "多国籍チーム", "リモート中心", "オフィス出社中心", "カジュアルな雰囲気", "フォーマルな雰囲気"];
 const organizationOptions = ["サステナビリティ・社会貢献を重視", "地域密着型の事業を展開", "スタートアップ・ベンチャー志向", "安定成長志向", "社会課題解決をテーマにしている", "AI・デジタル技術を積極活用", "顧客満足より「顧客成功」を重視", "働く人の多様性・個性を尊重", "社長・経営層と距離が近い", "オープンで透明性のある経営"];
 
+const ALL_DAYS = ['月', '火', '水', '木', '金', '土', '日']; // 勤務曜日のマスターデータ
 
 const JobCreatePage = () => {
     const router = useRouter();
@@ -49,9 +48,9 @@ const JobCreatePage = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [companyName, setCompanyName] = useState('');
-    const [profileStatus, setProfileStatus] = useState<'verified' | 'pending' | 'rejected' | 'draft'>('draft'); // 💡 プロフィール承認状態をより詳細に管理
+    const [profileStatus, setProfileStatus] = useState<'verified' | 'pending' | 'rejected' | 'draft'>('draft'); 
     const isProfileVerified = profileStatus === 'verified';
-    const [aiFeedbackProfile, setAiFeedbackProfile] = useState(''); // プロフィールからのAIフィードバック
+    const [aiFeedbackProfile, setAiFeedbackProfile] = useState(''); 
     const [error, setError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
@@ -68,12 +67,12 @@ const JobCreatePage = () => {
         requiredSkills: '',
         welcomeSkills: '',
         jobDescription: '',
-        // ★新規追加フィールド
-        hiringBackground: '',       // 採用背景
-        idealCandidate: '',         // 求める人物像
-        salaryStructure: '',        // 昇給・賞与体系
-        paidLeaveSystem: '',        // 有給休暇取得
-        // ★新規追加ここまで
+        hiringBackground: '', 
+        idealCandidate: '', 
+        salaryStructure: '', 
+        paidLeaveSystem: '', 
+        // 💡 勤務曜日のデータフィールドを追加
+        workingDays: [] as string[],
         appealPoints: {
             growth: [] as string[],
             wlb: [] as string[],
@@ -96,17 +95,14 @@ const JobCreatePage = () => {
                 if (snap.exists()) {
                     const companyData = snap.data();
                     setCompanyName(companyData.companyName || '');
-                    // 💡 プロフィールステータスをセット
                     setProfileStatus(companyData.verificationStatus || 'draft');
                     setAiFeedbackProfile(companyData.aiFeedback || '');
                     
-                    // 企業プロフィールから AppealPoints と Location を初期値として読み込む
                     setFormData(prev => ({
                         ...prev,
                         location: companyData.address || '', 
                         appealPoints: {
                             ...prev.appealPoints,
-                            // 企業プロフィールから読み込み、求人側で編集可能に
                             growth: companyData.appealPoints?.growth || [],
                             wlb: companyData.appealPoints?.wlb || [],
                             benefits: companyData.appealPoints?.benefits || [],
@@ -115,7 +111,6 @@ const JobCreatePage = () => {
                         }
                     }));
                 } else {
-                    // recruiters ドキュメントがない場合
                     setCompanyName('プロフィール未登録');
                     setProfileStatus('draft');
                 }
@@ -151,12 +146,29 @@ const JobCreatePage = () => {
             return { ...prev, appealPoints: { ...prev.appealPoints, [category]: newValues } };
         });
     };
+    
+    // 💡 勤務曜日ボタンのトグル処理
+    const toggleWorkingDay = useCallback((day: string) => {
+        setFormData(prev => {
+            const currentDays = prev.workingDays;
+            const isSelected = currentDays.includes(day);
+            const newDays = isSelected
+                ? currentDays.filter(d => d !== day)
+                : [...currentDays, day];
+            
+            // 曜日順にソートして保存
+            return {
+                ...prev,
+                workingDays: newDays.sort((a, b) => ALL_DAYS.indexOf(a) - ALL_DAYS.indexOf(b)),
+            };
+        });
+    }, []);
+
 
     // --- 求人登録とAI審査の申請 ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // 💡 企業プロフィール承認チェック
         if (!user || !isProfileVerified) { 
             alert('企業プロフィールが未承認のため、求人を登録できません。先にプロフィールを承認してください。');
             return;
@@ -166,11 +178,9 @@ const JobCreatePage = () => {
         setError(null);
         let newJobId = '';
         try {
-            // 💡 修正: コレクションを 'recruitments' に変更
             const docRef = await addDoc(collection(db, 'recruitments'), { 
                 jobTitle: formData.jobTitle,
                 employmentType: formData.employmentType,
-                // その他が選択された場合は自由入力を採用
                 jobCategory: formData.jobCategory === 'その他' ? formData.otherJobCategory : formData.jobCategory,
                 salaryType: formData.salaryType,
                 salaryMin: Number(formData.salaryMin) || 0,
@@ -181,20 +191,15 @@ const JobCreatePage = () => {
                 requiredSkills: formData.requiredSkills,
                 welcomeSkills: formData.welcomeSkills,
                 jobDescription: formData.jobDescription,
-                // ★新規追加フィールドの保存
                 hiringBackground: formData.hiringBackground,
                 idealCandidate: formData.idealCandidate,
                 salaryStructure: formData.salaryStructure,
                 paidLeaveSystem: formData.paidLeaveSystem,
-                // ★新規追加ここまで
+                workingDays: formData.workingDays, // 💡 勤務曜日を保存
                 appealPoints: formData.appealPoints,
-                uid: user.uid, // 企業ID
-                
-                // ==========================================================
-                verificationStatus: 'pending_review', // 審査ステータス: 審査待ち
-                status: 'draft',                     // 運用ステータス: 常に下書きにリセット
-                // ==========================================================
-                
+                uid: user.uid, 
+                verificationStatus: 'pending_review', 
+                status: 'draft', 
                 aiFeedback: 'AIが求人内容を審査中です...',
                 createdAt: serverTimestamp(),
             });
@@ -206,8 +211,8 @@ const JobCreatePage = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ jobId: newJobId, uid: user.uid }), 
             });
+            
             if (!response.ok) {
-                // API呼び出し自体が失敗した場合
                 throw new Error('AI審査システムの初期化に失敗しました。');
             }
             
@@ -219,7 +224,6 @@ const JobCreatePage = () => {
             console.error("申請エラー:", err);
             
             if (newJobId && user) {
-                // エラーが発生した場合、求人ステータスを修正要請に戻す
                 const jobDocRef = doc(db, 'recruitments', newJobId); 
                 await updateDoc(jobDocRef, {
                     verificationStatus: 'rejected',
@@ -234,28 +238,12 @@ const JobCreatePage = () => {
 
     if (loading) return <div className="flex justify-center items-center h-screen text-lg text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファイルデータを読み込み中...</div>;
 
-    // 企業プロフィールのアラートメッセージ
+    // 企業プロフィールのアラートメッセージ (省略 - 変更なし)
     const getProfileAlertMessage = () => {
         switch (profileStatus) {
-            case 'pending':
-                return { 
-                    title: '企業プロフィールは現在「AI審査中」です。', 
-                    body: `求人登録はプロフィール承認後に可能になります。AIからのフィードバック: ${aiFeedbackProfile || '承認待ちです。'}`,
-                    color: 'bg-yellow-100 text-yellow-800'
-                };
-            case 'rejected':
-                return { 
-                    title: '企業プロフィールは「修正要請」の状態です。', 
-                    body: `先に企業プロフィールを編集し、再申請が必要です。AIからのフィードバック: ${aiFeedbackProfile || '内容を確認してください。'}`,
-                    color: 'bg-red-100 text-red-800'
-                };
-            case 'draft':
-            default:
-                return { 
-                    title: '企業プロフィールが未登録です。', 
-                    body: 'AIマッチング機能を開始するには、先に企業プロフィールを完成させ、AI審査の承認を受けてください。',
-                    color: 'bg-red-100 text-red-800'
-                };
+            case 'pending': return { title: '企業プロフィールは現在「AI審査中」です。', body: `求人登録はプロフィール承認後に可能になります。AIからのフィードバック: ${aiFeedbackProfile || '承認待ちです。'}`, color: 'bg-yellow-100 text-yellow-800' };
+            case 'rejected': return { title: '企業プロフィールは「修正要請」の状態です。', body: `先に企業プロフィールを編集し、再申請が必要です。AIからのフィードバック: ${aiFeedbackProfile || '内容を確認してください。'}`, color: 'bg-red-100 text-red-800' };
+            case 'draft': default: return { title: '企業プロフィールが未登録です。', body: 'AIマッチング機能を開始するには、先に企業プロフィールを完成させ、AI審査の承認を受けてください。', color: 'bg-red-100 text-red-800' };
         }
     }
 
@@ -271,7 +259,7 @@ const JobCreatePage = () => {
             </header>
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 
-                {/* 💡 プロフィール未承認アラート (視認性向上) */}
+                {/* 💡 プロフィール未承認アラート */}
                 {!isProfileVerified && (
                     <div className={`p-4 mb-8 ${getProfileAlertMessage().color} rounded-lg text-sm border-l-4 border-current`}>
                         <p className="font-bold">{getProfileAlertMessage().title}</p>
@@ -286,7 +274,7 @@ const JobCreatePage = () => {
                     <div>
                         <p className="text-sm font-semibold text-indigo-600 flex items-center"><Building className="w-4 h-4 mr-2" />{companyName}</p>
                         <h1 className="text-3xl font-bold text-gray-900 mt-1">新規求人の作成</h1>
-                        <p className="mt-2 text-sm text-gray-600">この求人独自の「スペック」を入力してください。入力後、AIによるマッチングスコアリングと審査が自動で開始されます。</p>
+                        <p className="mt-2 text-sm text-gray-600">この求人独自の「スペック」を入力してください。入力後、AI審査に申請をクリックで自動で開始されます。</p>
                     </div>
 
                     {/* フォームセクション (未承認時は非活性化) */}
@@ -311,8 +299,8 @@ const JobCreatePage = () => {
 
                         {/* 💡 AIマッチング最重要項目 (給与・勤務地) - 強調 */}
                         <section className="space-y-6 p-6 rounded-lg bg-blue-50 border border-blue-200">
-                            <h2 className="text-xl font-semibold text-blue-800 flex items-center"><Sparkles className="w-5 h-5 mr-2" />AIマッチング最重要項目</h2>
-                            <p className="text-sm text-blue-700">※ 給与と勤務地は、AIが候補者をマッチングする際の**最も重要な基準**となります。正確に入力してください。</p>
+                            <h2 className="text-xl font-semibold text-blue-800 flex items-center"><Sparkles className="w-5 h-5 mr-2" />下記の項目を入力</h2>
+                            <p className="text-sm text-blue-700">※ 求人マッチングAIでは、給与と勤務地は、AIが候補者をマッチングする際の**最も重要な基準**となります。正確に入力してください。</p>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 flex items-center"><JapaneseYen className="w-4 h-4 mr-1" />給与タイプ *</label>
                                 <div className="mt-2 flex gap-4">
@@ -326,9 +314,35 @@ const JobCreatePage = () => {
                                 <div><label htmlFor="salaryMax" className="block text-sm font-medium text-gray-700">最高{formData.salaryType}（{formData.salaryType === '年収' ? '万円' : '円'}） *</label><input type="number" id="salaryMax" name="salaryMax" value={formData.salaryMax} onChange={handleChange} required className="mt-1 block w-full input" placeholder={formData.salaryType === '年収' ? '例：600' : '例：2500'} /></div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div><label htmlFor="workingHours" className="block text-sm font-medium text-gray-700 flex items-center"><Clock className="w-4 h-4 mr-1" />勤務時間 *</label><textarea id="workingHours" name="workingHours" value={formData.workingHours} onChange={handleChange} required rows={2} className="mt-1 block w-full input" placeholder="例：10:00〜19:00（休憩1時間）など" /></div>
+                                {/* 💡 勤務時間（記入） */}
+                                <div><label htmlFor="workingHours" className="block text-sm font-medium text-gray-700 flex items-center"><Clock className="w-4 h-4 mr-1" />勤務時間 *</label><textarea id="workingHours" name="workingHours" value={formData.workingHours} onChange={handleChange} required rows={2} className="mt-1 block w-full input" placeholder="例：10:00〜19:00（休憩1時間） / スキマバイトは当日4時間など" /></div>
                                 <div><label htmlFor="location" className="block text-sm font-medium text-gray-700 flex items-center"><MapPin className="w-4 h-4 mr-1" />勤務地 *</label><input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required className="mt-1 block w-full input" /></div>
                                 <div><label htmlFor="remotePolicy" className="block text-sm font-medium text-gray-700 flex items-center"><Laptop className="w-4 h-4 mr-1" />リモートワーク許容レベル *</label><select id="remotePolicy" name="remotePolicy" value={formData.remotePolicy} onChange={handleChange} className="mt-1 block w-full input"><option value="no">出社必須</option><option value="hybrid">ハイブリッド可</option><option value="full">フルリモート可</option></select></div>
+                                
+                                {/* 💡 勤務曜日（印付け形式） */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 flex items-center mb-1"><CalendarDays className="w-4 h-4 mr-1" />勤務曜日（複数選択）</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {ALL_DAYS.map(day => (
+                                            <button
+                                                key={day}
+                                                type="button" 
+                                                onClick={() => toggleWorkingDay(day)} 
+                                                className={`
+                                                    px-3 py-1 text-xs font-medium rounded-md border transition-colors
+                                                    ${formData.workingDays.includes(day)
+                                                        ? 'bg-indigo-600 text-white border-indigo-600' 
+                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                    }
+                                                `}
+                                            >
+                                                {day}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">※ 選択した曜日を勤務日として求職者に提示します。</p>
+                                </div>
+
                             </div>
                         </section>
 
@@ -409,6 +423,7 @@ const JobCreatePage = () => {
                                 </div>
                             </div>
                         </section>
+
 
                         {/* 具体的な仕事内容・スキル */}
                         <section className="space-y-6">

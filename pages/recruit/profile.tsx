@@ -60,10 +60,6 @@ interface CompanyProfile {
 }
 
 
-// --- AIスコアリングの仕組みに関するデータ (完全に削除) ---
-// 以前存在していたaiScoringCriteriaの定義を削除しました。
-
-
 const CompanyProfilePage = () => {
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
@@ -72,6 +68,9 @@ const CompanyProfilePage = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    
+    // ★★★ 課金ステータス(isPaid)を state で管理 ★★★
+    const [isPaid, setIsPaid] = useState(false);
 
 
     const [formData, setFormData] = useState<CompanyProfile>({
@@ -114,14 +113,26 @@ const CompanyProfilePage = () => {
     }, [router]);
 
 
-    // --- Firestoreからプロフィール読み込み ---
+    // --- Firestoreからプロフィール読み込み (★★★ isPaid も取得) ★★★
     const loadCompanyProfile = async (uid: string) => {
         setLoading(true);
-        const userRef = doc(db, 'recruiters', uid);
+        const recruiterRef = doc(db, 'recruiters', uid);
+        const userRef = doc(db, 'users', uid); // ★ ユーザーの'users'ドキュメント
         try {
-            const snap = await getDoc(userRef);
-            if (snap.exists()) {
-                const data = snap.data();
+            // ★ recruiter と user のドキュメントを並行取得
+            const [recruiterSnap, userSnap] = await Promise.all([
+                getDoc(recruiterRef),
+                getDoc(userRef)
+            ]);
+
+            // ★ isPaid ステータスをセット
+            if (userSnap.exists()) {
+                setIsPaid(!!userSnap.data().isPaid);
+            }
+
+            // 既存のプロフィール情報をセット
+            if (recruiterSnap.exists()) {
+                const data = recruiterSnap.data();
                 setFormData(prev => ({
                     ...prev,
                     companyName: data.companyName || '',
@@ -239,10 +250,18 @@ const CompanyProfilePage = () => {
     };
 
 
-    // --- 保存＆AI審査申請 ---
+    // --- ★★★ 保存＆AI審査申請 (isPaid チェック追加) ★★★ ---
     const handleSaveAndSubmitForReview = async (e: React.FormEvent, isManualReset: boolean = false) => {
         e.preventDefault();
         if (!user) return;
+
+        // ★★★ 有料機能の保存を制限 ★★★
+        if (!isPaid && formData.minMatchScore !== 60) {
+            setError("AIマッチング許容スコアの設定は有料プラン限定機能です。保存するにはスコアをデフォルトの60に戻してください。");
+            setSaving(false);
+            return;
+        }
+        
         setSaving(true);
         setError(null);
 
@@ -413,34 +432,56 @@ const CompanyProfilePage = () => {
                     )}
 
 
-                    {/* マッチングスコア */}
-                    <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
-                            <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
-                        </h2>
-                        {/* ★修正：スコアリングの仕組みを説明するテーブルの削除 */}
-                        <p className="text-sm text-yellow-700">
-                            応募者リストに表示されるための最低スコアです。60〜99点の範囲で設定できます。
-                            高く設定するほど、マッチ度の高い候補者のみが表示されます。
-                        </p>
-                        <div>
-                            <label htmlFor="minMatchScore" className="block text-sm font-bold text-gray-700">
-                                最低許容スコア (60〜99点)
-                            </label>
-                            <input
-                                type="number"
-                                id="minMatchScore"
-                                name="minMatchScore"
-                                value={formData.minMatchScore}
-                                onChange={handleChange}
-                                min="60"
-                                max="99"
-                                required
-                                className="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold text-center"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">※ デフォルトは60点です。</p>
-                        </div>
-                    </section>
+                    {/* ★★★ マッチングスコア (有料/無料 で表示切り替え) ★★★ */}
+                    {isPaid ? (
+                        <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
+                                <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
+                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white bg-green-500">
+                                    ご利用中
+                                </span>
+                            </h2>
+                            <p className="text-sm text-yellow-700">
+                                応募者リストに表示されるための最低スコアです。60〜99点の範囲で設定できます。
+                                高く設定するほど、マッチ度の高い候補者のみが表示されます。
+                            </p>
+                            <div>
+                                <label htmlFor="minMatchScore" className="block text-sm font-bold text-gray-700">
+                                    最低許容スコア (60〜99点)
+                                </label>
+                                <input
+                                    type="number"
+                                    id="minMatchScore"
+                                    name="minMatchScore"
+                                    value={formData.minMatchScore}
+                                    onChange={handleChange}
+                                    min="60"
+                                    max="99"
+                                    required
+                                    className="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold text-center"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">※ デフォルトは60点です。</p>
+                            </div>
+                        </section>
+                    ) : (
+                        <section className="space-y-4 p-6 bg-gray-100 border border-gray-300 rounded-lg text-center opacity-80">
+                            <h2 className="text-xl font-semibold text-gray-700 flex items-center justify-center">
+                                <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
+                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white bg-red-500">
+                                    有料限定
+                                </span>
+                            </h2>
+                            <p className="text-gray-600">
+                                AIマッチング許容スコアの設定は、有料AIプランの機能です。
+                            </p>
+                            <Link href="/recruit/subscribe_plan" legacyBehavior>
+                                <a className="inline-block mt-2 bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg">
+                                    有料AIプランに申し込む
+                                </a>
+                            </Link>
+                        </section>
+                    )}
+                    {/* ★★★ 変更ここまで ★★★ */}
 
 
                     {/* 基本情報 */}
@@ -625,6 +666,7 @@ const CompanyProfilePage = () => {
 
 
 export default CompanyProfilePage;
+
 
 
 

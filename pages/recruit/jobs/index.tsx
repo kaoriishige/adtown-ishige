@@ -27,9 +27,10 @@ interface Job {
 interface JobsPageProps {
     companyName: string;
     jobs: Job[];
+    isPaid: boolean; // ★★★ 課金ステータスを追加 ★★★
 }
 
-// --- SSR: サーバーサイドでのデータ取得 (変更なし) ---
+// --- SSR: サーバーサイドでのデータ取得 (★★★ isPaid を追加) ★★★
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
@@ -41,6 +42,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }
 
         const userSnap = await adminDb.collection('users').doc(uid).get();
+        if (!userSnap.exists) {
+             return { redirect: { destination: '/partner/login?error=user_not_found', permanent: false } };
+        }
+
         const userData = userSnap.data()!;
         const companyName = userData.companyName || '求人パートナー';
         const userRoles: string[] = userData.roles || [];
@@ -48,13 +53,16 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
              return { redirect: { destination: '/partner/login?error=permission_denied', permanent: false } };
         }
         
+        // ★★★ isPaid を取得 ★★★
+        const isPaid = !!userData.isPaid;
+
         const jobsQuery = await adminDb.collection('recruitments').where('uid', '==', uid).orderBy('createdAt', 'desc').get();
         
         const jobsPromises = jobsQuery.docs.map(async (doc: admin.firestore.QueryDocumentSnapshot) => {
              const data = doc.data();
              
              const verificationStatus = data.verificationStatus || 'draft'; 
-             const currentStatus = data.status || 'draft';                   
+             const currentStatus = data.status || 'draft';             
 
              const applicantsSnap = await adminDb.collection('applicants')
                  .where('recruitmentId', '==', doc.id)
@@ -72,15 +80,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
         const jobs = await Promise.all(jobsPromises);
 
-        return { props: { companyName, jobs } };
+        // ★★★ isPaid を props に渡す ★★★
+        return { props: { companyName, jobs, isPaid } };
+
     } catch (error) {
         console.error('JobsPage getServerSideProps error:', error);
         return { redirect: { destination: '/partner/login', permanent: false } };
     }
 };
 
-// --- メインページコンポーネント ---
-const JobsPage: NextPage<JobsPageProps> = ({ companyName, jobs }) => {
+// --- メインページコンポーネント (★★★ isPaid を受け取る) ---
+const JobsPage: NextPage<JobsPageProps> = ({ companyName, jobs, isPaid }) => {
     const router = useRouter();
     
     // =================================================================
@@ -226,13 +236,30 @@ const JobsPage: NextPage<JobsPageProps> = ({ companyName, jobs }) => {
                             </div>
                         </div>
                     ) : (
+                        // ★★★ 変更点: 0件の場合の表示を更新 ★★★
                         <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
                             <p className="text-gray-500 text-lg">現在、有効な求人は登録されていません。</p>
-                            <p className="text-gray-500 mt-2">新しい求人を作成して、AIマッチングを開始しましょう。</p>
+                            
+                            {/* ★ ご要望の文言を追加 ★ */}
+                            <p className="text-gray-500 mt-2">新しい求人を作成して、開始しましょう。</p>
+
                             <Link href="/recruit/jobs/create" className="mt-6 inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
                                 <RiAddLine className="mr-3" size={24} />
                                 新しい求人を作成する
                             </Link>
+
+                            {/* ★★★ 有料プランボタンの追加 (isPaid が false の場合のみ) ★★★ */}
+                            {!isPaid && (
+                                <div className="mt-8 pt-6 border-t border-gray-200 max-w-lg mx-auto">
+                                     <p className="text-lg font-semibold text-gray-700">AIマッチング機能で、さらに採用を加速しませんか？</p>
+                                     <p className="text-gray-500 mt-2">AIによる候補者の自動提案やスカウト機能は有料プランでご利用いただけます。</p>
+                                     <Link href="/recruit/subscribe_plan" legacyBehavior>
+                                        <a className="inline-block mt-4 bg-orange-500 text-white font-extrabold py-3 px-8 rounded-full shadow-lg hover:bg-orange-700 transition duration-150">
+                                            有料AIプランに申し込む
+                                        </a>
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

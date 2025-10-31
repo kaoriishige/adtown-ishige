@@ -8,7 +8,9 @@ import {
     RiBuilding4Line, RiFileList3Line, RiUserSearchLine, RiLogoutBoxRLine,
     RiLayout2Line, RiContactsLine, RiLoader2Line,
     RiAdvertisementLine, RiErrorWarningLine, RiArrowRightLine, RiHandHeartLine,
-    RiAwardLine, RiPencilRuler2Line, RiCheckLine, RiHourglassLine, RiEditCircleLine, RiDownloadLine 
+    RiAwardLine, RiPencilRuler2Line, RiCheckLine, RiHourglassLine, RiEditCircleLine, RiDownloadLine,
+    RiBrainLine, RiLightbulbFlashLine, // ★ 有料機能用アイコン
+    RiCloseCircleLine, RiAlertFill, RiLoader4Line // ★ 解約モーダル用
 } from 'react-icons/ri';
 import { useRouter } from 'next/router';
 import { signOut, getAuth, onAuthStateChanged } from "firebase/auth"; 
@@ -16,7 +18,7 @@ import { app } from "@/lib/firebase"; // 🚨 必要に応じてプロジェク�
 import { useState, useEffect } from 'react';
 import React from 'react';
 
-// --- 型定義 (そのまま) ---
+// --- 型定義 ---
 interface Candidate {
     id: string;
     name: string;
@@ -50,6 +52,14 @@ interface DashboardProps {
     profileExists: boolean;
     queryFailed: boolean;
     reviewSummary: { totalJobsCount: number, verified: number, pending: number, rejected: number, activeTotal: number };
+    isPaid: boolean; // ★★★ 課金ステータスを追加 ★★★
+    partnerData: { // ★★★ 広告パートナーダッシュボードとの互換性のため追加 ★★★
+        uid: string;
+        companyName: string;
+        email: string;
+        roles: string[];
+        isPaid: boolean;
+    };
 }
 
 // --- AIMatchingGuide コンポーネント (そのまま) ---
@@ -85,17 +95,19 @@ const AIMatchingGuide = ({ show, onClose }: { show: boolean, onClose: () => void
     );
 };
 
-// --- DashboardCard コンポーネント (ダウンロード機能削除のためシンプル化) ---
+// ★★★ DashboardCard コンポーネントを ActionButton (広告ダッシュボード) と同様のロジックに変更 ★★★
 interface DashboardCardProps {
     href: string;
     icon: React.ReactNode;
     title: string;
     description: string;
     color: 'indigo' | 'green' | 'red' | 'yellow' | 'purple' | 'blue';
-    // download?: string; // ダウンロード機能削除のため削除
+    isPro: boolean; // 有料機能か
+    isPaid: boolean; // 支払済みか
+    onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void; // モーダル用
 }
 
-const DashboardCard = ({ href, icon, title, description, color }: DashboardCardProps) => {
+const DashboardCard = ({ href, icon, title, description, color, isPro, isPaid, onClick }: DashboardCardProps) => {
     const colorMap: any = {
         indigo: 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200',
         green: 'bg-green-100 text-green-600 group-hover:bg-green-200',
@@ -105,37 +117,52 @@ const DashboardCard = ({ href, icon, title, description, color }: DashboardCardP
         blue: 'bg-blue-100 text-blue-600 group-hover:bg-blue-200',
     };
     
-    // hrefはそのまま
-    const encodedHref = href;
+    const isDisabled = isPro && !isPaid;
+    // ★ 求人用の課金ページパス (ご自身のプロジェクトに合わせて変更してください)
+    const finalHref = isDisabled ? "/recruit/subscribe_plan" : href; 
 
     const cardContent = (
-        <div className="flex items-start space-x-4">
-            <div className={`p-4 rounded-xl ${colorMap[color]}`}>{icon}</div>
-            <div>
-                <h3 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600">{title}</h3>
-                <p className="text-gray-500 mt-1 text-sm">{description}</p>
-            </div>
-        </div>
-    );
-
-    // downloadがないため、常にLinkを使用
-    return (
-        <Link
-            href={encodedHref} 
-            legacyBehavior 
+        <a 
+            onClick={onClick}
+            className={`group block bg-white p-6 rounded-xl shadow-lg border border-gray-100 transition-all ${
+                isDisabled
+                ? 'opacity-50 cursor-not-allowed bg-gray-50'
+                : 'hover:shadow-2xl hover:border-indigo-400 cursor-pointer'
+            }`}
         >
-            <a
-                className="group block bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-2xl hover:border-indigo-400 transition-all cursor-pointer"
-            >
-                {cardContent}
-            </a>
+            <div className="flex items-start space-x-4">
+                <div className={`p-4 rounded-xl ${colorMap[color]} ${isDisabled ? 'grayscale' : ''}`}>{icon}</div>
+                <div>
+                    <h3 className={`text-xl font-bold ${isDisabled ? 'text-gray-500' : 'text-gray-800 group-hover:text-indigo-600'}`}>
+                        {title}
+                        {isPro && (
+                            <span className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white ${isPaid ? 'bg-green-500' : 'bg-red-500'}`}>
+                                {isPaid ? 'ご利用中' : '有料限定'}
+                            </span>
+                        )}
+                    </h3>
+                    <p className={`mt-1 text-sm ${isDisabled ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
+                </div>
+            </div>
+        </a>
+    );
+    
+    if (onClick) {
+        return cardContent; // モーダル用
+    }
+
+    return (
+        <Link href={finalHref} legacyBehavior>
+            {cardContent}
         </Link>
     );
 };
+// ★★★ DashboardCard 修正ここまで ★★★
+
 
 // --- RecruitmentCard コンポーネント (そのまま) ---
 const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
-
+    // ... (既存の RecruitmentCard コードは変更なし) ...
     const getStatusDisplay = (status: RecruitmentStatus) => {
         switch (status) {
             case 'pending_review':
@@ -179,30 +206,31 @@ const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
     );
 };
 
-// --- getServerSideProps: Firestoreからデータ取得 (そのまま) ---
+// --- ★★★ getServerSideProps: isPaid と partnerData を追加 ★★★ ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
     let queryFailed = false;
     const candidates: Candidate[] = [];
     const contacts: Candidate[] = [];
     let recruitments: Recruitment[] = [];
-
     const reviewSummary = { totalJobsCount: 0, verified: 0, pending: 0, rejected: 0, activeTotal: 0 };
 
     try {
         const cookies = nookies.get(context);
-        // session cookie を検証（adminAuth はプロジェクトの export に合わせてください）
         const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
         const { uid } = token;
 
-        // ユーザーとリクルーターの情報取得
         const recruiterSnap = await adminDb.collection('recruiters').doc(uid).get();
         const userSnap = await adminDb.collection('users').doc(uid).get();
         if (!userSnap.exists) throw new Error("Company user not found.");
 
-        let companyName = userSnap.data()!.companyName || userSnap.data()!.email || "未設定の会社名";
+        const userData = userSnap.data()!;
+        let companyName = userData.companyName || userData.email || "未設定の会社名";
         let minMatchScore = 60;
-        const isUserAdPartner = userSnap.data()!.roles?.includes('adver') || false;
+        const isUserAdPartner = userData.roles?.includes('adver') || false;
         const profileExists = recruiterSnap.exists;
+
+        // ★★★ isPaid を users コレクションから取得 ★★★
+        const isPaid = !!userData.isPaid; 
 
         if (profileExists) {
             const recruiterData = recruiterSnap.data()!;
@@ -249,16 +277,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             });
 
             reviewSummary.totalJobsCount = allJobs.length;
-
             const applicantsCounts = await Promise.all(applicantsCountPromises);
             const applicantsCountMap = new Map(applicantsCounts.map(a => [a.id, a.size]));
 
             recruitments = allJobs.map(job => ({
-                id: job.id,
-                title: job.title,
-                status: job.status,
-                verificationStatus: job.verificationStatus,
-                aiFeedback: job.aiFeedback,
+                ...job,
                 applicantsCount: applicantsCountMap.get(job.id) || 0,
             }));
         } catch (e) {
@@ -267,14 +290,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }
 
         // --- AI推薦候補者 (candidates) 取得 ---
-        if (profileExists) {
+        if (profileExists && isPaid) { // ★ 有料会員のみ候補者を取得
             const candidatesQuery = await adminDb
                 .collection('applicants')
                 .where('partnerId', '==', uid)
                 .where('status', '==', 'applied')
                 .limit(5)
                 .get();
-
+            // ... (candidates の取得ロジックは変更なし) ...
             for (const doc of candidatesQuery.docs) {
                 const app = doc.data();
                 const userProfileSnap = await adminDb.collection('userProfiles').doc(app.userId).get();
@@ -296,13 +319,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }
 
         // --- 連絡先交換済み (contacts) 取得 ---
-        if (profileExists) {
+        if (profileExists && isPaid) { // ★ 有料会員のみ連絡先を取得
             const contactsSnap = await adminDb
                 .collection('matches')
                 .where('companyUid', '==', uid)
                 .where('status', '==', 'contact_exchange_complete')
                 .get();
-
+            // ... (contacts の取得ロジックは変更なし) ...
             for (const doc of contactsSnap.docs) {
                 const m = doc.data();
                 const contactUserSnap = await adminDb.collection('userProfiles').doc(m.userUid).get();
@@ -321,33 +344,75 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             }
         }
 
+        // ★★★ props に isPaid と partnerData を追加 ★★★
         return {
-            props: { companyName, candidates, contacts, recruitments, isUserAdPartner, minMatchScore, profileExists, queryFailed, reviewSummary },
+            props: { 
+                companyName, 
+                candidates, 
+                contacts, 
+                recruitments, 
+                isUserAdPartner, 
+                minMatchScore, 
+                profileExists, 
+                queryFailed, 
+                reviewSummary,
+                isPaid, // 追加
+                partnerData: { // 追加
+                    uid: uid,
+                    companyName: companyName,
+                    email: userData.email || '',
+                    roles: userData.roles || [],
+                    isPaid: isPaid,
+                }
+            },
         };
     } catch (error) {
         console.error("Error in recruit/dashboard:", error);
-        // 認証エラーや取得失敗時はログインページへリダイレクト
         return { redirect: { destination: '/partner/login', permanent: false } };
     }
 };
 
-// --- ページ本体 (そのまま) ---
-const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, contacts, recruitments, isUserAdPartner, minMatchScore, profileExists, queryFailed, reviewSummary }) => {
+// --- ★★★ ページ本体 (レイアウト変更、モーダル・案内文追加) ★★★ ---
+const RecruitDashboard: NextPage<DashboardProps> = (props) => {
+    const { 
+        companyName, candidates, contacts, recruitments, isUserAdPartner, 
+        minMatchScore, profileExists, queryFailed, reviewSummary, 
+        isPaid, partnerData // isPaid と partnerData を受け取る
+    } = props;
+
     const router = useRouter();
+    const { payment_status } = router.query;
     const auth = getAuth(app);
     const [showGuide, setShowGuide] = useState(false);
-    
+    const [showCancelModal, setShowCancelModal] = useState(false); // ★ 解約モーダル
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            // ローカルの認証状態とサーバ側プロファイルの両方で確認
             if (!user && !profileExists) {
                 router.replace('/partner/login');
             }
         });
         return () => unsubscribe(); 
     }, [router, auth, profileExists]);
+    
+    // ★ 決済完了後のトークンリフレッシュ
+    useEffect(() => {
+        const refresh = async () => {
+            await auth.currentUser?.getIdToken(true).catch(e => console.error("Token refresh failed:", e)); 
+        };
+        if (payment_status === 'success') {
+            console.log("Payment Status:", payment_status);
+            refresh();
+        }
+    }, [auth, payment_status]);
 
-    // CandidateCard
+    // ★ 解約モーダルを開く
+    const handleOpenCancelModal = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault();
+        setShowCancelModal(true);
+    };
+
+    // CandidateCard (変更なし)
     const CandidateCard = ({ candidate }: { candidate: Candidate }) => (
         <div className="flex justify-between items-center py-3">
             <div>
@@ -359,7 +424,6 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                     </span>
                 </div>
             </div>
-            
             <Link
                 href={`/recruit/applicants?recruitmentId=${candidate.recruitmentId}&candidateId=${candidate.id}`}
                 className="text-sm font-bold text-indigo-600 hover:text-indigo-800 flex items-center"
@@ -369,6 +433,7 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
         </div>
     );
 
+    // プロフィール未登録時の表示 (変更なし)
     if (!profileExists) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -384,6 +449,8 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                         title="プロフィールを登録・編集"
                         description="こちらから必須情報を入力してください。"
                         color="red"
+                        isPro={false} // プロフ登録は無料
+                        isPaid={isPaid}
                     />
                     <button
                         onClick={async () => {
@@ -401,13 +468,14 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
         );
     }
 
+    // ★ ログアウト処理
     const handleLogout = async () => {
         await signOut(auth);
         await fetch('/api/auth/sessionLogout', { method: 'POST' });
         router.push('/partner/login');
     };
     
-
+    // サマリーカード (変更なし)
     const ReviewSummaryCard = ({ icon, title, count, color, description }: { icon: JSX.Element, title: string, count: number, color: string, description: string }) => (
         <div className={`p-4 rounded-xl shadow-md border ${color}`}>
             <div className="flex items-center space-x-3">
@@ -421,24 +489,73 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans">
-            <Head><title>AI求人パートナー ダッシュボード</title></Head>
+            <Head><title>AI求人パートナー ダッシュボード ({isPaid ? '有料会員' : '無料会員'})</title></Head>
 
-            <header className="bg-white shadow-md sticky top-0 z-10">
-                <div className="max-w-6xl mx-auto px-6 py-6 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900">AI求人パートナー ダッシュボード</h1>
-                        <p className="text-gray-500 text-sm mt-1">ようこそ、{companyName} 様。</p>
-                    </div>
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-2 text-sm text-red-600 hover:bg-red-600 hover:text-white p-3 rounded-xl bg-red-100 font-semibold shadow-sm"
+            {/* ★★★ 解約確認モーダル (広告パートナーから移植) ★★★ */}
+            {showCancelModal && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+                    onClick={() => setShowCancelModal(false)}
+                >
+                    <div 
+                        className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <RiLogoutBoxRLine size={20} />
-                        <span>ログアウト</span>
-                    </button>
+                        <div className="p-6 text-center">
+                            <div className="flex justify-center mb-4">
+                                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                                    <RiAlertFill className="h-10 w-10 text-red-600" />
+                                </div>
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-3">本当に解約しますか？</h2>
+                            <p className="text-gray-600 mb-6">
+                                「解約手続きに進む」ボタンを押すと、サブスクリプションの解約ページに移動します。
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={() => setShowCancelModal(false)}
+                                    className="w-full px-4 py-3 rounded-lg font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+                                >
+                                    キャンセル
+                                </button>
+                                <Link href="/cancel-subscription" legacyBehavior>
+                                    <a className="w-full px-4 py-3 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors text-center">
+                                        解約手続きに進む
+                                    </a>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ★★★ ヘッダー (広告パートナーと同様のレイアウトに変更) ★★★ */}
+            <header className="bg-white shadow-sm sticky top-0 z-10">
+                <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">AI求人パートナー ダッシュボード</h1>
+                        <p className="text-sm text-gray-600 mt-1">
+                            ようこそ、<span className="font-bold">{companyName}</span> 様 
+                            <span className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white ${isPaid ? 'bg-indigo-600' : 'bg-gray-500'}`}>
+                                {isPaid ? '有料AIプラン' : '無料プラン'}
+                            </span>
+                        </p>
+                    </div>
+                    <div className="flex flex-col items-end text-right">
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center space-x-2 text-sm text-gray-600 hover:text-red-600 p-2 rounded-lg transition-colors font-semibold"
+                        >
+                            <RiLogoutBoxRLine size={20} />
+                            <span>ログアウト</span>
+                        </button>
+                        <p className="text-xs text-gray-500 mt-1 max-w-xs">
+                            ログインは、ブラウザでadtownと検索してホームページから行ってください。
+                        </p>
+                    </div>
                 </div>
             </header>
-
+            
             <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
                 
                 {queryFailed && (
@@ -447,23 +564,114 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                             <RiErrorWarningLine className="mr-2" />
                             データ読み込みエラー: Firestore インデックスが必要な可能性があります
                         </p>
-                        <p className="text-sm mt-1">
-                            ダッシュボードの一部データの読み込みに失敗しました。管理コンソールのログを確認し、必要な複合インデックスを作成してください。
+                    </div>
+                )}
+
+                {/* ★★★ 有料プラン誘導バナー (isPaid: falseの場合のみ表示) ★★★ */}
+                {!isPaid && (
+                    <div className="mb-8 p-6 bg-yellow-100 border-4 border-yellow-400 text-yellow-800 rounded-lg shadow-lg text-center">
+                        <h2 className="text-2xl font-extrabold text-yellow-900">
+                            💡 現在、無料の求人掲載をご利用中です
+                        </h2>
+                        <p className="mt-2 text-lg">
+                            **AIマッチング** と **AIアドバイス** を利用して、採用のミスマッチを防ぎ、コストを削減しましょう！
                         </p>
+                        <Link href="/recruit/subscribe_plan" legacyBehavior>
+                            {/* ★ 求人用の課金ページパス (ご自身のプロジェクトに合わせて変更してください) */}
+                            <a className="inline-block mt-4 bg-orange-600 text-white font-extrabold py-3 px-8 rounded-full shadow-lg hover:bg-orange-700 transition duration-150">
+                                有料AIプランに申し込む
+                            </a>
+                        </Link>
                     </div>
                 )}
                 
-                {/* ▼▼▼ ログイン案内バナー (そのまま) ▼▼▼ */}
-                <div className="mb-10 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-800 rounded-lg shadow-sm">
-                    <p className="text-base font-semibold">
-                        <strong>ログインについて:</strong> ブラウザでadtownと検索してホームページからログインできます。
-                    </p>
-                </div>
-                {/* ▲▲▲ ログイン案内バナー ▲▲▲ */}
+                {/* ★★★ 決済ステータス表示 (広告パートナーから移植) ★★★ */}
+                {payment_status === 'success' && isPaid && (
+                    <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md mb-8">
+                        <p className="font-bold">有料AIプランのご登録ありがとうございます！</p>
+                        <p>すべての機能がご利用可能になりました。</p>
+                    </div>
+                )}
 
-                {/* 1. AI運用サマリーとアクション */}
+
+                {/* ★★★ 1. 求人管理（複数の求人掲載無料） ★★★ */}
                 <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">1. AI運用サマリーとアクション</h2>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">1. 求人管理（複数の求人掲載無料）</h2>
+                    {/* ★★★ 変更点: カードの順番を変更 ★★★ */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <DashboardCard
+                            href="/recruit/profile"
+                            icon={<RiBuilding4Line size={28} />}
+                            title="企業プロフィールを編集"
+                            description="AIマッチングの基準となる会社情報、ロゴを設定します"
+                            color="indigo"
+                            isPro={false} // 無料
+                            isPaid={isPaid}
+                        />
+                        <DashboardCard
+                            href="/recruit/jobs/create" 
+                            icon={<RiFileList3Line size={28} />} 
+                            title="新しい求人の作成" 
+                            description="給与・勤務条件を設定し、AI審査を申請" 
+                            color="green"
+                            isPro={false} // 無料
+                            isPaid={isPaid}
+                        />
+                        <DashboardCard 
+                            href="/recruit/jobs" 
+                            icon={<RiLayout2Line size={28} />} 
+                            title="全求人一覧を管理" 
+                            description="求人の編集・公開設定を変更" 
+                            color="blue"
+                            isPro={false} // 無料
+                            isPaid={isPaid}
+                        />
+                    </div>
+                </section>
+
+                <hr className="my-8" />
+
+                {/* ★★★ 2. AI機能（有料） ★★★ */}
+                <section>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. AI機能（有料）</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <DashboardCard 
+                            href="/recruit/applicants"
+                            icon={<RiUserSearchLine size={28} />} 
+                            title="AIマッチング候補者リスト"
+                            description="AIが推薦するマッチ度の高い応募者を確認します"
+                            color="yellow"
+                            isPro={true} // 有料
+                            isPaid={isPaid}
+                        />
+                        <DashboardCard 
+                            href="/recruit/advice" // ★ 仮のパス
+                            icon={<RiLightbulbFlashLine size={28} />} 
+                            title="AI求人アドバイス" 
+                            description="AIが求人票を分析し、改善点を提案します" 
+                            color="purple"
+                            isPro={true} // 有料
+                            isPaid={isPaid}
+                        />
+                        <DashboardCard 
+                            href="/recruit/export-contacts"
+                            icon={<RiDownloadLine size={28} />} 
+                            title="連絡先CSVダウンロード" 
+                            description="マッチングが成立した候補者の連絡先を一覧で出力します" 
+                            color="green"
+                            isPro={true} // 有料
+                            isPaid={isPaid}
+                        />
+                    </div>
+                </section>
+                
+                <hr className="my-8" />
+
+                {/* ★★★ 3. 応募・審査状況 ★★★ */}
+                <section>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">3. 応募・審査状況</h2>
+                    
+                    {/* サマリー */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                         <ReviewSummaryCard
                             icon={<RiCheckLine size={30} className="text-green-600" />}
@@ -493,84 +701,12 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <DashboardCard
-                            href="/recruit/profile"
-                            icon={<RiBuilding4Line size={28} />}
-                            title="企業プロフィールを編集"
-                            description="AIマッチングの基準となる会社情報、ロゴを設定します"
-                            color="indigo"
-                        />
-                        <DashboardCard href="/recruit/jobs/create" icon={<RiFileList3Line size={28} />} title="新しい求人の作成" description="給与・勤務条件を設定し、AI審査を申請" color="green" />
-                        <DashboardCard href="/recruit/jobs" icon={<RiLayout2Line size={28} />} title="全求人一覧を管理" description="求人の編集・公開設定を変更" color="indigo" />
-                    </div>
-                </section>
-
-                <hr className="my-8" />
-                
-                {/* 2. 応募者とマッチングの管理 */}
-                <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. 応募者とマッチングの管理</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                           <h3 className="text-xl font-bold mb-4 flex items-center">
-                               <RiUserSearchLine className="mr-2 text-yellow-600" size={24} />
-                               新規応募者リスト (最新5件)
-                           </h3>
-                           {candidates.length === 0 ? (
-                               <p className="text-gray-600">現在、新しい応募者はいません。</p>
-                           ) : (
-                               <div className="divide-y divide-gray-100">
-                                      {candidates.map((c) => (<CandidateCard key={c.id} candidate={c} />))}
-                               </div>
-                           )}
-                           <Link href="/recruit/applicants" className="mt-4 block text-center text-indigo-600 hover:underline text-sm font-bold">
-                               全応募者リストを見る
-                           </Link>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                            <h3 className="text-xl font-bold mb-4 flex items-center">
-                                   <RiContactsLine className="mr-2 text-blue-600" size={24} />
-                                   連絡先交換済みリスト ({contacts.length}件)
-                            </h3>
-                            {contacts.length === 0 ? (
-                                <p className="text-gray-600">まだマッチングが成立した候補者はいません。</p>
-                            ) : (
-                                <div className="space-y-3">
-                                       {contacts.slice(0, 3).map((c) => (
-                                           <div key={c.id} className="p-3 bg-blue-50 rounded-lg flex justify-between items-center">
-                                               <div>
-                                                   <p className="font-semibold text-gray-900">{c.name} 様</p>
-                                                   <p className="text-xs text-gray-600">連絡先: {c.contactInfo}</p>
-                                               </div>
-                                               <RiCheckLine className="text-blue-500" size={20} />
-                                           </div>
-                                       ))}
-                                        {contacts.length > 3 && (
-                                           <p className="text-sm text-center text-gray-500">他 {contacts.length - 3} 件...</p>
-                                        )}
-                                     </div>
-                            )}
-                            <Link 
-                                href="/recruit/export-contacts"
-                                className="mt-4 block text-center text-green-600 hover:underline text-sm font-bold"
-                            >
-                                <RiDownloadLine className="inline mr-1" /> 連絡先CSVをダウンロード
-                            </Link>
-                        </div>
-                    </div>
-                </section>
-
-                <hr className="my-8" />
-
-                {/* 3. 個別求人ステータス */}
-                <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">3. 個別求人ステータス（最新の審査状況）</h2>
+                    {/* 個別求人ステータス */}
+                    <h3 className="text-xl font-bold mb-4">個別求人ステータス（最新の審査状況）</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {recruitments.length === 0 && !queryFailed ? (
                             <div className="p-6 bg-white rounded-xl shadow-lg border border-gray-100 md:col-span-2">
-                                <p className="text-gray-600">まだ求人は登録されていません。作成ボタンから始めましょう。</p>
+                                <p className="text-gray-600">まだ求人は登録されていません。「新しい求人の作成」から始めましょう。</p>
                             </div>
                         ) : (
                             recruitments.slice(0, 4).map((r) => <RecruitmentCard key={r.id} recruitment={r} />)
@@ -582,24 +718,98 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                         )}
                     </div>
                 </section>
+                
+                <hr className="my-8" />
+                
+                {/* ★★★ 4. アカウント管理 (解約ボタン) ★★★ */}
+                <section>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">4. アカウント管理</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {isPaid && (
+                             <DashboardCard
+                                href="/cancel-subscription" // hrefはダミー
+                                icon={<RiCloseCircleLine size={28} />}
+                                title="サブスクリプションの解約"
+                                description="有料AIプランの自動更新を停止（解約）します"
+                                color="red"
+                                isPro={true} // 有料会員専用
+                                isPaid={isPaid}
+                                onClick={handleOpenCancelModal} // モーダルを開く
+                            />
+                        )}
+                        {/* 広告パートナーでない場合のみ表示 */}
+                        {!isUserAdPartner && (
+                            <DashboardCard 
+                                href="/partner/ad-subscribe" // 広告パートナー登録LPへ
+                                icon={<RiAdvertisementLine size={28} />} 
+                                title="広告掲載パートナーになる" 
+                                description="集客AIやクーポン機能も利用する" 
+                                color="purple"
+                                isPro={false} // これは別サービスへの誘導
+                                isPaid={isPaid}
+                            />
+                        )}
+                    </div>
+                </section>
 
-                {/* 4. 広告パートナー募集中 */}
-                {!isUserAdPartner && (
+                {/* 5. 応募者とマッチングの管理 (有料機能なのでisPaidでラップ) */}
+                {isPaid && (
                     <section>
-                       <h2 className="text-2xl font-bold mb-6 border-b pb-2">4. 広告パートナー募集中</h2>
-                       <DashboardCard 
-                            href="/partner/ad-subscribe" 
-                            icon={<RiAdvertisementLine size={28} />} 
-                            title="広告掲載パートナーになる" 
-                            description="ダッシュボードの広告枠を利用し、より強力に企業ブランドをアピールできます。" 
-                            color="purple" 
-                       />
+                        <h2 className="text-2xl font-bold mb-6 border-b pb-2">5. マッチング結果（有料）</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                               <h3 className="text-xl font-bold mb-4 flex items-center">
+                                   <RiUserSearchLine className="mr-2 text-yellow-600" size={24} />
+                                   AI推薦候補者リスト (最新5件)
+                               </h3>
+                               {candidates.length === 0 ? (
+                                   <p className="text-gray-600">現在、新しい応募者はいません。</p>
+                               ) : (
+                                   <div className="divide-y divide-gray-100">
+                                       {candidates.map((c) => (<CandidateCard key={c.id} candidate={c} />))}
+                                   </div>
+                               )}
+                               <Link href="/recruit/applicants" className="mt-4 block text-center text-indigo-600 hover:underline text-sm font-bold">
+                                   全応募者リストを見る
+                               </Link>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                                <h3 className="text-xl font-bold mb-4 flex items-center">
+                                    <RiContactsLine className="mr-2 text-blue-600" size={24} />
+                                    連絡先交換済みリスト ({contacts.length}件)
+                                </h3>
+                                {contacts.length === 0 ? (
+                                    <p className="text-gray-600">まだマッチングが成立した候補者はいません。</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {contacts.slice(0, 3).map((c) => (
+                                            <div key={c.id} className="p-3 bg-blue-50 rounded-lg flex justify-between items-center">
+                                                <div>
+                                                    <p className="font-semibold text-gray-900">{c.name} 様</p>
+                                                    <p className="text-xs text-gray-600">連絡先: {c.contactInfo}</p>
+                                                </div>
+                                                <RiCheckLine className="text-blue-500" size={20} />
+                                            </div>
+                                        ))}
+                                        {contacts.length > 3 && (
+                                            <p className="text-sm text-center text-gray-500">他 {contacts.length - 3} 件...</p>
+                                        )}
+                                    </div>
+                                )}
+                                <Link 
+                                    href="/recruit/export-contacts"
+                                    className="mt-4 block text-center text-green-600 hover:underline text-sm font-bold"
+                                >
+                                    <RiDownloadLine className="inline mr-1" /> 連絡先CSVをダウンロード
+                                </Link>
+                            </div>
+                        </div>
                     </section>
                 )}
             </main>
             
-            {/* 💡 修正: LINEお問い合わせセクションをメインタグの外、フッターの前に移動 */}
-            {/* LINEのお問い合わせボタンをフッターのログアウトボタンの直前（上）に配置 */}
+            {/* ★★★ フッター（広告パートナーと同様のレイアウトに変更） ★★★ */}
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
                 <section className="mt-6">
                     <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
@@ -610,7 +820,6 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                         <div 
                             className="flex-shrink-0"
                             dangerouslySetInnerHTML={{
-                                // 求人パートナー用のLINE IDを使用します
                                 __html: '<a href="https://lin.ee/aMc9H5W" target="_blank" rel="noopener noreferrer"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" border="0"></a>'
                             }}
                         />
@@ -618,10 +827,8 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                 </section>
             </div>
 
-            {/* AIMatchingGuideはそのまま */}
             <AIMatchingGuide show={showGuide} onClose={() => setShowGuide(false)} />
 
-            {/* フッター操作 (ログアウトボタンのみ) */}
             <footer className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-8">
                 <section className="mt-6 grid grid-cols-1 gap-4">
                     <button
@@ -630,6 +837,9 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
                     >
                         ログアウト
                     </button>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                        ログインは、ブラウザでadtownと検索してホームページから行ってください。
+                    </p>
                 </section>
             </footer>
         </div>
@@ -637,7 +847,6 @@ const RecruitDashboard: NextPage<DashboardProps> = ({ companyName, candidates, c
 };
 
 export default RecruitDashboard;
-
 
 
 
