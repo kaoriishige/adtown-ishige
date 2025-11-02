@@ -4,6 +4,7 @@ import getStripeAdmin from '@/lib/stripe-admin';
 import Stripe from 'stripe';
 import * as admin from 'firebase-admin';
 
+// Stripe Webhook Secret (環境変数から取得)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 const stripe = getStripeAdmin();
 
@@ -40,7 +41,6 @@ async function handleSubscriptionUpdate(
       stripeSubscriptionId: subscriptionId,
       isPaid: isActive,
       [`${serviceType}SubscriptionStatus`]: status,
-      roles: admin.firestore.FieldValue.arrayUnion(serviceRole),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -157,25 +157,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: err.message });
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
