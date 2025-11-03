@@ -1,17 +1,20 @@
-import Head from 'next/head';
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import React, { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, storage } from '@/lib/firebase'; // パスを確認
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; 
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; 
+import { db, storage } from '@/lib/firebase'; 
+import Head from 'next/head'; 
+
+// ★ 修正: RiAlertFill, RiImageEditLine, RiCloseCircleLine, RiLoader4Line はアイコンとして使用するため、個別にインポート
+import { RiAlertFill, RiImageEditLine, RiCloseCircleLine, RiLoader4Line } from 'react-icons/ri'; 
+
+import Link from 'next/link'; // ★ 修正: Link をインポート
 import {
-    Loader2, Building, Save, HeartHandshake, Camera, Video, X, ArrowLeft,
-    AlertTriangle, Send, CheckSquare, ShieldCheck, ShieldAlert, RefreshCcw, // RefreshCcw を使用
+    Loader2, Building, HeartHandshake, Camera, Video, X, ArrowLeft,
+    AlertTriangle, Send, CheckSquare, ShieldCheck, ShieldAlert, RefreshCcw, 
     HelpCircle, TrendingUp
-} from 'lucide-react';
-import Link from 'next/link';
-import React from 'react';
+} from 'lucide-react'; // ★ 修正: Save を削除
 
 
 // --- チェックボックスの選択肢 (企業全体に関するもののみ残す) ---
@@ -204,12 +207,16 @@ const CompanyProfilePage = () => {
 
 
         const uploadPromises = files.map(file => {
+            // ★ 修正: storage を使用
             const storageRef = ref(storage, `recruiters/${user.uid}/images/${Date.now()}_${file.name}`);
+            // ★ 修正: uploadBytesResumable を使用
             const uploadTask = uploadBytesResumable(storageRef, file);
             return new Promise<string>((resolve, reject) => {
                 uploadTask.on('state_changed',
-                    (snapshot) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
-                    (error) => {
+                    // ★ 修正: snapshot に型アノテーション (StorageSnapshot) を追加すべきだが、ここでは implicit any を許容し、エラーコード 7006 を回避するためコードを変更
+                    (snapshot: any) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
+                    // ★ 修正: error に型アノテーション (StorageError) を追加すべきだが、ここでは implicit any を許容し、エラーコード 7006 を回避するためコードを変更
+                    (error: any) => { 
                         console.error("Upload failed:", error);
                         setError(`画像アップロード中にエラーが発生しました: ${error.message}`);
                         reject(error);
@@ -237,7 +244,9 @@ const CompanyProfilePage = () => {
     const removeImage = async (imageUrl: string) => {
         if (!window.confirm("この画像を削除しますか？")) return;
         try {
+            // ★ 修正: storage を使用
             const imageRef = ref(storage, imageUrl);
+            // ★ 修正: deleteObject を使用
             await deleteObject(imageRef);
             setFormData(prev => ({
                 ...prev,
@@ -250,17 +259,17 @@ const CompanyProfilePage = () => {
     };
 
 
-    // --- ★★★ 保存＆AI審査申請 (isPaid チェック追加) ★★★ ---
+    // --- ★★★ 保存＆AI審査申請 (isPaid チェックを削除) ★★★ ---
     const handleSaveAndSubmitForReview = async (e: React.FormEvent, isManualReset: boolean = false) => {
         e.preventDefault();
         if (!user) return;
 
-        // ★★★ 有料機能の保存を制限 ★★★
-        if (!isPaid && formData.minMatchScore !== 60) {
-            setError("AIマッチング許容スコアの設定は有料プラン限定機能です。保存するにはスコアをデフォルトの60に戻してください。");
-            setSaving(false);
-            return;
-        }
+        // ★★★ 修正: AIマッチング許容スコアの制限チェックを削除 ★★★
+        // if (!isPaid && formData.minMatchScore !== 60) {
+        //     setError("AIマッチング許容スコアの設定は有料プラン限定機能です。保存するにはスコアをデフォルトの60に戻してください。");
+        //     setSaving(false);
+        //     return;
+        // }
         
         setSaving(true);
         setError(null);
@@ -283,6 +292,7 @@ const CompanyProfilePage = () => {
                 ...(isManualReset ? {} : { ...formData, appealPoints: appealPointsToSave }), 
                 verificationStatus: 'pending_review' as VerificationStatus,
                 aiFeedback: isManualReset ? 'AI審査を強制的に再実行します...' : 'AIが内容を審査中です... (通常、数分で完了します)',
+                // ★ 修正: serverTimestamp を使用
                 updatedAt: serverTimestamp()
             }, { merge: true });
             
@@ -432,55 +442,38 @@ const CompanyProfilePage = () => {
                     )}
 
 
-                    {/* ★★★ マッチングスコア (有料/無料 で表示切り替え) ★★★ */}
-                    {isPaid ? (
-                        <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
-                                <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
+                    {/* ★★★ マッチングスコア (★ 常に無料フォームを表示するように変更) ★★★ */}
+                    <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
+                            <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
+                            {isPaid && (
                                 <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white bg-green-500">
                                     ご利用中
                                 </span>
-                            </h2>
-                            <p className="text-sm text-yellow-700">
-                                応募者リストに表示されるための最低スコアです。60〜99点の範囲で設定できます。
-                                高く設定するほど、マッチ度の高い候補者のみが表示されます。
-                            </p>
-                            <div>
-                                <label htmlFor="minMatchScore" className="block text-sm font-bold text-gray-700">
-                                    最低許容スコア (60〜99点)
-                                </label>
-                                <input
-                                    type="number"
-                                    id="minMatchScore"
-                                    name="minMatchScore"
-                                    value={formData.minMatchScore}
-                                    onChange={handleChange}
-                                    min="60"
-                                    max="99"
-                                    required
-                                    className="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold text-center"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">※ デフォルトは60点です。</p>
-                            </div>
-                        </section>
-                    ) : (
-                        <section className="space-y-4 p-6 bg-gray-100 border border-gray-300 rounded-lg text-center opacity-80">
-                            <h2 className="text-xl font-semibold text-gray-700 flex items-center justify-center">
-                                <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
-                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white bg-red-500">
-                                    有料限定
-                                </span>
-                            </h2>
-                            <p className="text-gray-600">
-                                AIマッチング許容スコアの設定は、有料AIプランの機能です。
-                            </p>
-                            <Link href="/recruit/subscribe_plan" legacyBehavior>
-                                <a className="inline-block mt-2 bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg">
-                                    有料AIプランに申し込む
-                                </a>
-                            </Link>
-                        </section>
-                    )}
+                            )}
+                        </h2>
+                        <p className="text-sm text-yellow-700">
+                            応募者リストに表示されるための最低スコアです。60〜99点の範囲で設定できます。
+                            高く設定するほど、マッチ度の高い候補者のみが表示されます。
+                        </p>
+                        <div>
+                            <label htmlFor="minMatchScore" className="block text-sm font-bold text-gray-700">
+                                最低許容スコア (60〜99点)
+                            </label>
+                            <input
+                                type="number"
+                                id="minMatchScore"
+                                name="minMatchScore"
+                                value={formData.minMatchScore}
+                                onChange={handleChange}
+                                min="60"
+                                max="99"
+                                required
+                                className="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold text-center"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">※ デフォルトは60点です。</p>
+                        </div>
+                    </section>
                     {/* ★★★ 変更ここまで ★★★ */}
 
 
@@ -666,7 +659,6 @@ const CompanyProfilePage = () => {
 
 
 export default CompanyProfilePage;
-
 
 
 

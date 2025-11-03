@@ -1,30 +1,33 @@
 {
   "compilerOptions": {
+    // --- Next.js 推奨の基本設定 ---
     "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
+    "noEmit": true, // Next.jsがコンパイルを行うため、tscはファイルを出力しない
+    "module": "esnext", // ES Modules を使用
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    
+    // --- エイリアスパス ('@/' の解決) ---
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@/*": ["./*"]
+    },
+
+    // --- ご提示いただいた設定 (維持) ---
+    "strict": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node"
   },
+  
+  // --- コンパイル対象 ('No inputs' エラーの解決) ---
   "include": [
     "next-env.d.ts",
     "**/*.ts",
@@ -33,5 +36,7 @@
   "exclude": [
     "node_modules"
   ]
+  // "outDir": "lib" は削除します（Next.jsは .next ディレクトリを使用するため）
+  // "compileOnSave": true は不要です（'next dev' が自動で行うため）
 }
 

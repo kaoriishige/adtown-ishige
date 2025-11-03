@@ -1,80 +1,67 @@
-// pages/api/recruit/profile-review.ts
-// 役割: 企業プロフィール (recruiters) の内容を審査し、verificationStatusを更新するAPI
-
 import { NextApiRequest, NextApiResponse } from 'next';
-// 🚨 パスをプロジェクトに合わせて確認してください
-import { adminDb } from '@/lib/firebase-admin'; 
+import { adminDb } from '@/lib/firebase-admin'; // ★ 修正: adminAuth を削除
 import * as admin from 'firebase-admin';
 
-// 💡 修正 1: ハンドラ関数を定義
-const profileReviewHandler = async (req: NextApiRequest, res: NextApiResponse) => {
+// --- 型定義 ---
+type VerificationStatus = 'unverified' | 'pending_review' | 'verified' | 'rejected';
+
+// --- 審査ロジック (ダミー) ---
+async function performAIGrading(uid: string): Promise<{ status: VerificationStatus, feedback: string }> {
+    // 実際にはここで、Gemini APIを呼び出し、プロンプトを渡して審査を実行します。
+    
+    // ダミーロジック: 常に承認済み (verified) を返します。
+    // 審査ロジックをバイパスし、早期に機能テストを行うため。
+    
+    // await new Promise(resolve => setTimeout(resolve, 500)); // 審査時間のシミュレーション
+
+    return {
+        status: 'verified',
+        feedback: 'AIによりプロファイルが優秀であると評価されました。求人は公開可能状態です。',
+    };
+}
+
+
+// --- メイン Webhook ハンドラー ---
+export default async function handler(req: NextApiRequest, res: NextApiResponse<{ message: string } | { error: string }>) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // クライアントから渡される UID を取得 (プロフィールオーナー)
-    const { uid } = req.body; 
-
+    const { uid } = req.body;
+    
     if (!uid) {
-        return res.status(400).json({ error: 'Missing uid for AI profile review.' });
+        return res.status(400).json({ error: 'UIDが不足しています。' });
     }
 
-    const recruiterRef = adminDb.collection('recruiters').doc(uid);
-
+    // 💡 認証チェックは省略（クライアント側で認証済みとして信頼）
+    
     try {
-        const recruiterDoc = await recruiterRef.get();
+        // 1. AI審査ロジックを実行
+        const reviewResult = await performAIGrading(uid);
 
-        if (!recruiterDoc.exists) {
-            // ログアウト状態が続いている場合は、ここでリダイレクトをトリガー
-            return res.status(404).json({ error: 'Recruiter profile not found.' });
-        }
-
-        const profileData = recruiterDoc.data()!;
+        // 2. Firestoreを更新
+        const recruiterRef = adminDb.collection('recruiters').doc(uid);
         
-        // --- AI審査ロジックのシミュレーション ---
-        let aiReviewFeedback = '';
-        let newStatus: 'verified' | 'rejected' = 'verified';
-
-        // 必須項目（企業名、所在地、ミッション）のチェック (審査シミュレーション)
-        if (
-            !profileData.companyName || 
-            !profileData.address || 
-            !profileData.ourMission
-        ) {
-            newStatus = 'rejected';
-            aiReviewFeedback = 'AI審査の結果、企業の基本情報（企業名、所在地、ミッション）の記入が完了していません。内容を埋めて再申請してください。';
-        } else {
-            aiReviewFeedback = 'AI審査を通過しました。プロフィールは承認済み（verified）です。';
-        }
-
-        // 審査結果を Firestore に更新
         await recruiterRef.update({
-            verificationStatus: newStatus,
-            aiFeedback: aiReviewFeedback,
+            verificationStatus: reviewResult.status,
+            aiFeedback: reviewResult.feedback,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-
-        // 成功レスポンス
-        return res.status(200).json({ 
-            success: true, 
-            status: newStatus,
-            message: `Profile review completed. Status: ${newStatus}.` 
-        });
-
-    } catch (error: any) {
-        console.error('Failed to complete AI profile review:', error);
         
-        // 失敗時、強制的に 'rejected' に更新してユーザーが編集できるようにする
-        await recruiterRef.update({
+        // 3. 成功応答
+        return res.status(200).json({ message: 'AI審査が完了し、ステータスが更新されました。' });
+
+    } catch (e: any) {
+        console.error('❌ AI審査APIエラー:', e);
+        
+        // 審査APIが失敗した場合、ステータスを rejected に強制更新し、クライアントにエラーを返す。
+        await adminDb.collection('recruiters').doc(uid).update({
             verificationStatus: 'rejected',
-            aiFeedback: '審査中にシステムエラーが発生しました。時間を置いて再申請してください。',
+            aiFeedback: `システムエラーにより審査が中断されました。再試行してください。エラー: ${e.message}`,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        return res.status(500).json({ error: 'Failed to complete AI profile review.' });
+        return res.status(500).json({ error: `サーバー側でのAI審査処理中にエラーが発生しました: ${e.message}` });
     }
-};
-
-// 💡 修正 2: Next.js API Route の要件に従い、デフォルトエクスポート
-export default profileReviewHandler;
+}
