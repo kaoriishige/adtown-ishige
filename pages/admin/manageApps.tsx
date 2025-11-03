@@ -1,120 +1,281 @@
-import { GetServerSideProps, NextPage } from 'next';
+import { NextPage, GetServerSideProps } from 'next';
+import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { useState } from 'react';
-
-// Admin SDK のインポートに切り替え
+// import { useRouter } from 'next/router'; // ★ 修正: 未使用のため削除
 import { adminDb } from '@/lib/firebase-admin';
-import { firestore } from 'firebase-admin';
+import React, { useState } from 'react'; // Reactのインポート
+import { firestore } from 'firebase-admin'; // firestoreのインポート
 
-// アプリ１件のデータの型
-interface App {
-  id: string;
-  name: string;
-  genre: string;
-  appNumber: number;
-}
-
-// ページが受け取るpropsの型
-interface ManageAppsProps {
-  apps: App[];
-}
-
-const ManageAppsPage: NextPage<ManageAppsProps> = ({ apps }) => {
-  const router = useRouter();
-  
-  // NOTE: クライアントサイドでの削除処理は、Admin SDKではなく
-  // APIルートを介して実行される必要があるため、ここでは実装しません。
-  // 動作しないため、アラートとリロードのみのダミー処理を残します。
-  const handleDelete = async (appId: string, appName: string) => {
-    // 💡 削除処理の修正: 実際の削除はAPIルート（例: /api/admin/deleteApp）で行うべきですが、
-    // ここでは動作確認のため、コンソールログとリロードのみ行います。
-    if (confirm(`本当にアプリ「${appName}」を削除しますか？この操作は元に戻せません。`)) {
-        console.log(`[Admin Client]: Attempting to delete App ID: ${appId}`);
-        alert('アプリを削除しました。(実際にはバックエンドAPIが必要です)');
-        router.reload(); 
-    }
-  };
-
-  return (
-    <div className="p-5">
-      <Link href="/admin" className="text-blue-500 hover:underline">
-        ← 管理メニューに戻る
-      </Link>
-      <h1 className="text-3xl font-bold my-6 text-center">アプリ管理</h1>
-      <div className="text-center mb-6">
-        <Link href="/admin/addApp">
-          <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            新規アプリ追加
-          </button>
-        </Link>
-      </div>
-      {apps.length === 0 && (
-        <p className="text-center text-gray-500">アプリのデータが見つかりません。Admin権限でFirestoreからデータを取得できませんでした。</p>
-      )}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16 text-center">番号</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">アプリ名</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ジャンル</th>
-              <th className="px-6 py-3 border-b-2 border-gray-200 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {apps.map((app) => (
-              <tr key={app.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 border-b border-gray-200 text-center font-bold">{app.appNumber}</td>
-                <td className="px-6 py-4 border-b border-gray-200">{app.name}</td>
-                <td className="px-6 py-4 border-b border-gray-200">{app.genre}</td>
-                <td className="px-6 py-4 border-b border-gray-200">
-                  <Link href={`/admin/editApp/${app.id}`}>
-                    <button className="text-indigo-600 hover:text-indigo-900 mr-4">編集</button>
-                  </Link>
-                  <button onClick={() => handleDelete(app.id, app.name)} className="text-red-600 hover:text-red-900">削除</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-// サーバーサイドで全アプリのデータを取得する関数 (Admin SDKを使用)
-export const getServerSideProps: GetServerSideProps = async () => {
-  try {
-    const appsCollectionRef = adminDb.collection('apps');
+// --- 型定義の更新 ---
+interface Store {
+    id: string; // ユーザー UID (Firestore Document ID)
+    companyName: string;
+    address: string;
+    phoneNumber: string;
+    email: string;
+    roles: string[];
+    stripeCustomerId?: string;
+    createdAt?: string; // 登録年月日
+    // 各サービスタイプ固有のステータスと支払い方法を追加
+    adverSubscriptionStatus?: 'active' | 'trialing' | 'pending_invoice' | 'canceled' | 'past_due' | null;
+    recruitSubscriptionStatus?: 'active' | 'trialing' | 'pending_invoice' | 'canceled' | 'past_due' | 'pending_card' | null; // ★ 'pending_card' を追加
     
-    // Admin SDKではgetDocsとqueryは異なりますが、Admin SDKのCollectionReferenceにorderByとgetを適用します
-    const querySnapshot = await appsCollectionRef.orderBy('appNumber', 'asc').get();
+    // 🚨 修正: PaymentMethod ではなく billingCycle を読み込む
+    adverBillingCycle?: 'monthly' | 'annual' | null;
+    recruitBillingCycle?: 'monthly' | 'annual' | null;
+}
 
-    const apps = querySnapshot.docs.map((doc: firestore.QueryDocumentSnapshot) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name || '',
-        genre: data.genre || '',
-        appNumber: data.appNumber || 0,
-      };
-    });
+interface ManageStoresPageProps {
+    initialStores: Store[];
+}
 
-    return {
-      props: {
-        apps,
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching apps (Admin SDK):", error);
-    return {
-      props: {
-        apps: [],
-      },
-    };
-  }
+// --- 日付フォーマット関数 ---
+const formatDate = (timestamp: firestore.Timestamp | undefined): string => {
+    if (!timestamp) return '未設定';
+    // Firestore TimestampオブジェクトをJavaScript Dateオブジェクトに変換し、YYYY/MM/DD形式にフォーマット
+    const date = timestamp.toDate();
+    return date.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
 };
 
-export default ManageAppsPage;
+// --- サーバーサイド処理の更新 ---
+export const getServerSideProps: GetServerSideProps = async (context) => {
+    try {
+        // ★修正: 認証チェックは省略し、データ取得に集中
+        const usersSnapshot = await adminDb.collection('users')
+            .where('roles', 'array-contains-any', ['adver', 'recruit'])
+            .get();
+
+        const stores: Store[] = usersSnapshot.docs.map((doc: firestore.QueryDocumentSnapshot) => {
+            const data = doc.data();
+            return {
+                id: doc.id, // ユーザー UID を取得
+                companyName: data.companyName || '名称未設定',
+                address: data.address || '住所未設定',
+                phoneNumber: data.phoneNumber || '電話番号未設定',
+                email: data.email || 'メールアドレス未設定',
+                roles: data.roles || [],
+                stripeCustomerId: data.stripeCustomerId || null,
+                createdAt: data.createdAt ? formatDate(data.createdAt as firestore.Timestamp) : '未設定', // 日付をフォーマット
+                // 各サービスタイプ固有のステータスと支払い方法を取得
+                adverSubscriptionStatus: data.adverSubscriptionStatus || null,
+                recruitSubscriptionStatus: data.recruitSubscriptionStatus || null,
+                
+                // 🚨 修正: サービス固有のbillingCycleがない場合、共有のbillingCycleを参照
+                adverBillingCycle: data.adverBillingCycle || data.billingCycle || null,
+                recruitBillingCycle: data.recruitBillingCycle || data.billingCycle || null,
+            };
+        });
+
+        return { props: { initialStores: stores } };
+    } catch (error) {
+        console.error("Error fetching stores for admin:", error);
+        return { props: { initialStores: [] } };
+    }
+};
+
+// --- コンポーネント本体 ---
+const ManageStoresPage: NextPage<ManageStoresPageProps> = ({ initialStores }) => {
+    const [stores, setStores] = useState<Store[]>(initialStores);
+    const [error, setError] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    // const router = useRouter(); // ★ 修正: 未使用のため削除
+    
+    // 代替の alert/confirm 実装 (Next.js環境でブラウザ機能に依存しないように)
+    const showModal = (message: string) => { console.log(message); };
+
+    const handleDeleteStore = async (storeId: string) => {
+        // ⚠ 本番環境ではブラウザの alert/confirm は避けるべきですが、デバッグ用に一時的に利用
+        if (window.confirm("この店舗を本当に削除しますか？関連データも削除され、この操作は元に戻せません。")) {
+            setIsDeleting(storeId);
+            setError(null);
+            try {
+                const response = await fetch('/api/admin/deleteStore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ storeId }),
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || '削除に失敗しました。');
+                }
+
+                setStores(prevStores => prevStores.filter(store => store.id !== storeId));
+                showModal('店舗情報を削除しました。'); // カスタムモーダルなどに置き換え
+            } catch (e: any) {
+                console.error("Error deleting store: ", e);
+                setError(e.message || "店舗の削除中にエラーが発生しました。");
+            } finally {
+                setIsDeleting(null);
+            }
+        }
+    };
+
+    const getServiceType = (roles: string[]) => {
+        const hasAd = roles.includes('adver');
+        const hasRecruit = roles.includes('recruit');
+        if (hasAd && hasRecruit) {
+            return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">両方</span>;
+        }
+        if (hasAd) {
+            return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">広告＆紹介料</span>;
+        }
+        if (hasRecruit) {
+            return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">求人</span>;
+        }
+        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">未分類</span>;
+    };
+
+    /**
+     * 購読ロールに基づいて支払い状況を決定し、バッジを返します。
+     * 複数のロールを持つ場合、すべてのステータスを表示します。
+     */
+    const getPaymentStatus = (store: Store) => {
+        const statuses: { role: string, method: string | null, status: string | null }[] = [];
+
+        // 🚨 修正: 支払い方法の判定ロジックを billingCycle に変更
+        const getMethodDisplay = (cycle: string | null | undefined) => {
+            if (cycle === 'monthly') return <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-1.5 rounded-full">クレカ (月額)</span>;
+            if (cycle === 'annual') return <span className="bg-teal-100 text-teal-800 text-xs font-medium px-1.5 rounded-full">請求書 (年額)</span>;
+            return <span className="bg-gray-200 text-gray-700 text-xs font-medium px-1.5 rounded-full">---</span>;
+        };
+
+        // 広告サービスの状態を取得
+        if (store.roles.includes('adver')) {
+            statuses.push({
+                role: '広告',
+                method: store.adverBillingCycle || null, // 修正
+                status: store.adverSubscriptionStatus || null
+            });
+        }
+
+        // 求人サービスの状態を取得
+        if (store.roles.includes('recruit')) {
+            statuses.push({
+                role: '求人',
+                method: store.recruitBillingCycle || null, // 修正
+                status: store.recruitSubscriptionStatus || null
+            });
+        }
+
+        if (statuses.length === 0) {
+            return <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full">未登録</span>;
+        }
+        
+        // 複数のサービスを持つ場合、すべてのステータスを表示
+        return (
+            <div className="flex flex-col space-y-1">
+                {statuses.map(s => {
+                    const methodBadge = getMethodDisplay(s.method); 
+                    let statusBadge;
+
+                    // 購読ステータスバッジ
+                    switch (s.status) {
+                        case 'active': statusBadge = <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 rounded-full">有効</span>; break;
+                        case 'trialing': statusBadge = <span className="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 rounded-full">トライアル</span>; break;
+                        case 'pending_invoice': statusBadge = <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-1.5 rounded-full">請求書待ち</span>; break;
+                        case 'canceled': statusBadge = <span className="bg-red-100 text-red-800 text-xs font-medium px-1.5 rounded-full">解約済</span>; break;
+                        case 'past_due': statusBadge = <span className="bg-red-500 text-white text-xs font-medium px-1.5 rounded-full">支払遅延</span>; break;
+                        // 🚨 修正: 決済実行中のステータスを追加 (pending_card ステータスに対応)
+                        case 'pending_card':
+                        case 'pending_checkout': 
+                            statusBadge = <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-1.5 rounded-full">決済実行中</span>; break;
+                        default: statusBadge = <span className="bg-gray-100 text-gray-800 text-xs font-medium px-1.5 rounded-full">未設定</span>; 
+                    }
+
+                    return (
+                        <div key={s.role} className="flex items-center space-x-1 text-xs leading-4">
+                            <span className="font-bold w-12 text-gray-600">{s.role}:</span>
+                            {methodBadge}
+                            {statusBadge}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+    
+    return (
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
+            <Head>
+                <title>{"店舗管理 - 管理者ページ"}</title>
+            </Head>
+            <div className="max-w-7xl mx-auto">
+                <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <h1 className="text-3xl font-bold text-gray-800">店舗管理</h1>
+                    <Link href="/admin" className="text-sm text-blue-600 hover:underline mt-2 sm:mt-0">
+                        ← 管理メニューに戻る
+                    </Link>
+                </div>
+                <div className="mb-6">
+                    <p className="text-red-600 bg-red-100 p-4 rounded-md text-center">
+                        <strong>注意：</strong> 現在、このページの認証は一時的に解除されています。
+                    </p>
+                </div>
+                {error && <p className="text-red-600 bg-red-100 p-4 rounded-md mb-6">{error}</p>}
+
+                <div className="bg-white rounded-lg shadow overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">企業/店舗名</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">登録サービス</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー ID</th> {/* ★修正: UID列をシンプルに */}
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">支払い状況</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">登録年月日</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">連絡先</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">住所</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">アクション</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {stores.length > 0 ? stores.map(store => (
+                                <tr key={store.id}>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="font-medium text-gray-900">{store.companyName}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {getServiceType(store.roles)}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 font-mono text-ellipsis overflow-hidden max-w-xs">
+                                        {store.id} {/* ★修正: UIDのみを表示 */}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {getPaymentStatus(store)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {store.createdAt}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div>{store.email}</div>
+                                        <div>{store.phoneNumber}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{store.address}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
+                                        {/* 🚨 修正箇所: 「編集」ボタンを削除 */}
+                                        {/* <button onClick={() => router.push(`/admin/edit-store/${store.id}`)} className="text-indigo-600 hover:text-indigo-900">編集</button> */}
+                                        <button onClick={() => handleDeleteStore(store.id)} disabled={isDeleting === store.id} className="text-red-600 hover:text-red-900 disabled:opacity-50">
+                                            {isDeleting === store.id ? '削除中...' : '削除'}
+                                        </button>
+                                        {store.roles.includes('adver') && ( // 広告&紹介料サービスの場合
+                                            <Link href={`/admin/referral-rewards?storeId=${store.id}`} className="text-green-600 hover:text-green-900">
+                                                報酬管理
+                                            </Link>
+                                        )}
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr>
+                                    <td colSpan={8} className="p-4 text-center text-gray-500">登録されている店舗はありません。</td> {/* ★修正: colSpanを8に */}
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ManageStoresPage;
 

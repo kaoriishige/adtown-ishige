@@ -316,8 +316,9 @@ const PartnerSubscribePage: React.FC = () => {
         {/* プラン一覧 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
           <PriceCard
-            title="月額プラン"
+            title="月額プラン（クレカ）"
             price={MONTHLY_PRICE_DISPLAY}
+            originalPrice={4400}
             billingCycle="monthly"
             priceId={PRICE_ID_MONTHLY}
             features={['クレカ決済で毎月自動更新', '月単位で解約可能', 'まずはお試しに最適','集客AI','紹介料収入プログラム','LINEでお客様とAIマッチング']}
@@ -331,7 +332,7 @@ const PartnerSubscribePage: React.FC = () => {
             originalPrice={52800}
             billingCycle="annual"
             priceId={PRICE_ID_ANNUAL} // 柔軟な参照変数
-            features={['年1回払いでお得', `年間¥${ANNUAL_SAVINGS.toLocaleString()}割引`, '長期利用向け']}
+            features={['年1回払いでお得', `年間¥${ANNUAL_SAVINGS.toLocaleString()}割引`, '長期利用向け','集客AI','紹介料収入プログラム','LINEでお客様とAIマッチング']}
             isRecommended={false}
             userInfo={userInfo}
             onCheckoutSuccess={handleCheckoutSuccess} // ハンドラを渡す
@@ -342,7 +343,7 @@ const PartnerSubscribePage: React.FC = () => {
             originalPrice={52800}
             billingCycle="annual_invoice"
             priceId={PRICE_ID_ANNUAL_INVOICE} // 柔軟な参照変数
-            features={['銀行振込による前払い', '経理処理に対応した請求書発行', '法人利用に最適']}
+            features={['銀行振込による前払い', '経理処理に対応した請求書発行', '法人利用に最適','集客AI','紹介料収入プログラム','LINEでお客様とAIマッチング']}
             isRecommended={false}
             userInfo={userInfo}
             onCheckoutSuccess={handleCheckoutSuccess} // ハンドラを渡す
