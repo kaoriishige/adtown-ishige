@@ -2,38 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Head from 'next/head';
-import { useRouter } from 'next/router'; // useRouterを追加
-// ★★★ Firebaseの認証とFirestoreのインポート ★★★
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { useRouter } from 'next/router'; 
 import { NextPage } from 'next';
-// 🚨 パスはプロジェクトに合わせてください
-// このファイルはFirebaseの初期化を必要とします
-// import { auth, db } from '../../lib/firebase'; 
-// (上記インポートがないため、エラーを避けるため型定義とダミーオブジェクトを使用)
-
-// --- Firebaseの型定義（ダミー） ---
-declare const auth: ReturnType<typeof getAuth>; 
-declare const db: any; // Firestoreのダミー
-
+import { User } from 'firebase/auth'; // User型は setCurrentAuthUser で使用するため残す
 
 // --- 画像パスの定義（public/images/に配置されていることを前提とする） ---
 const PARTNER_LOGOS = [
-    '/images/partner-adtown.png',
-    '/images/partner-aquas.png',
-    '/images/partner-celsiall.png',
-    '/images/partner-dairin.png',
-    '/images/partner-kanon.png',
-    '/images/partner-kokoro.png',
-    '/images/partner-meithu.png',
-    '/images/partner-midcityhotel.png',
-    '/images/partner-omakaseauto.png',
-    '/images/partner-poppo.png',
-    '/images/partner-sekiguchi02.png',
-    '/images/partner-training_farm.png',
-    '/images/partner-transunet.png',
-    '/images/partner-koharu.png',
-    '/images/partner-yamakiya.png'
+    '/images/partner-adtown.png', '/images/partner-aquas.png', '/images/partner-celsiall.png', '/images/partner-dairin.png',
+    '/images/partner-kanon.png', '/images/partner-kokoro.png', '/images/partner-meithu.png', '/images/partner-midcityhotel.png',
+    '/images/partner-omakaseauto.png', '/images/partner-poppo.png', '/images/partner-sekiguchi02.png', '/images/partner-training_farm.png',
+    '/images/partner-transunet.png', '/images/partner-koharu.png', '/images/partner-yamakiya.png'
 ];
 
 
@@ -43,40 +21,53 @@ const XCircleIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http
 const MessageCircleIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> );
 const UserCheckIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg> );
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="6 9 12 15 18 9"></polyline></svg> );
-const ZapIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> );
+const ClipboardCheckIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 2v4"></path><path d="M8 4h8"></path><polyline points="9 14 12 17 15 14"></polyline></svg> );
 
 // --- Utility Components ---
 const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (
         <div className="border-b">
-            <button onClick={() => setIsOpen(!isOpen)} className="w-full text-left py-5 flex justify-between items-center hover:bg-gray-50 transition-colors">
+            <button 
+                onClick={() => setIsOpen(!isOpen)} 
+                className="w-full text-left py-5 flex justify-between items-center hover:bg-gray-50 transition-colors"
+            >
                 <span className="text-lg font-medium text-gray-800 pr-2">{question}</span>
                 <ChevronDownIcon className={`w-6 h-6 text-orange-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             {isOpen && ( <div className="pb-5 pt-2 px-2 text-gray-600 bg-gray-50">{children}</div> )}
         </div>
-    )
+    );
 };
 
 // Custom hook for persistent state using sessionStorage
 const usePersistentState = (key: string, defaultValue: any) => {
     const [state, setState] = useState(() => {
         if (typeof window === 'undefined') { return defaultValue; }
-        try { const storedValue = window.sessionStorage.getItem(key); return storedValue ? JSON.parse(storedValue) : defaultValue; } catch (error) { console.error(error); return defaultValue; }
+        try { 
+            const storedValue = window.sessionStorage.getItem(key); 
+            return storedValue ? JSON.parse(storedValue) : defaultValue; 
+        } catch (error) { 
+            console.error(error); 
+            return defaultValue; 
+        }
     });
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            try { window.sessionStorage.setItem(key, JSON.stringify(state)); } catch (error) { console.error(error); }
+            try { 
+                window.sessionStorage.setItem(key, JSON.stringify(state)); 
+            } catch (error) { 
+                console.error(error); 
+            }
         }
     }, [key, state]);
     return [state, setState];
 };
 
 
-const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
+const RecruitSignupPage: NextPage = () => { 
     const router = useRouter(); 
-    
+
     // Form state management
     const [companyName, setCompanyName] = usePersistentState('recruitForm_companyName', '');
     const [address, setAddress] = usePersistentState('recruitForm_address', '');
@@ -87,17 +78,16 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
     const [confirmEmail, setConfirmEmail] = usePersistentState('recruitForm_confirmEmail', '');
     const [password, setPassword] = usePersistentState('recruitForm_password', '');
     const [agreed, setAgreed] = usePersistentState('recruitForm_agreed', false);
-    
+
     // UI state management
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showTerms, setShowTerms] = useState(false);
-    
-    // 認証状態管理 (広告パートナーのコードからロジックを簡略化)
-    const [currentAuthUser, setCurrentAuthUser] = useState<User | null>(null);
-    const [isDataLoading, setIsDataLoading] = useState(false); // 求人LPでは自動入力を除外して簡略化
 
-    // カウントダウンロジック
+    // 認証状態管理 (使用しないロジックは削除)
+    const [currentAuthUser, setCurrentAuthUser] = useState<User | null>(null);
+    const [isDataLoading] = useState(false); // 常にfalseにしてローディングUIをスキップ
+
     const [registeredCount] = useState(45); // 求人用のダミー値
     const totalSlots = 100;
     const remainingSlots = totalSlots - registeredCount;
@@ -105,16 +95,9 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
     const registrationFormRef = useRef<HTMLDivElement>(null);
 
 
-    // --- 認証ユーザーの確認 (自動入力ロジックを削除して簡略化) ---
+    // --- 認証ユーザーの確認 ---
     useEffect(() => {
-        // Firebase Authが使用可能であれば、認証状態を確認
-        if (typeof auth !== 'undefined') {
-            const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
-                setCurrentAuthUser(user);
-                // NOTE: ここでは既存ユーザーのデータ自動取得・リダイレクトロジックは省略
-            });
-            return () => unsubscribe();
-        }
+        setCurrentAuthUser(null);
     }, []);
 
     // Auto-detect area from address
@@ -147,11 +130,11 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
     );
 
     /**
-     * 【★新規無料登録】フォーム入力の検証と無料アカウントの作成、ログインページへリダイレクト
-     */
+    * 【★新規無料登録】フォーム入力の検証と無料アカウントの作成、ログインページへリダイレクト
+    */
     const handleFreeSignup = async () => {
         setError(null);
-        
+
         if (!isFormValid) {
             setError('パートナーダッシュボードへ進むには、フォームの必須項目を全て満たし、規約に同意してください。');
             scrollToForm();
@@ -160,7 +143,6 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
 
         setIsLoading(true);
         try {
-            // ★ 求人用('recruit')の無料登録APIを呼び出す
             const response = await fetch('/api/auth/register-free-partner', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -173,15 +155,15 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                     phoneNumber,
                     email,
                     password,
-                    existingUid: currentAuthUser?.uid // 既存ユーザーのUIDを渡す
+                    existingUid: currentAuthUser?.uid 
                 }),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                if (data.error && data.error.includes('already in use') || data.error && data.error.includes('exists')) {
-                   setError('このメールアドレスは既に使用されています。ログイン後、ダッシュボードへ移動するか、求人サービスを追加してください。');
+                if (data.error && (data.error.includes('already in use') || data.error.includes('exists'))) {
+                    setError('このメールアドレスは既に使用されています。ログイン後、ダッシュボードへ移動するか、求人サービスを追加してください。');
                 } else {
                     throw new Error(data.error || 'サーバーでエラーが発生しました。');
                 }
@@ -193,7 +175,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                     window.sessionStorage.removeItem(key); 
                 } 
             });
-            
+
             // 登録成功後、ログインページへリダイレクト
             router.push('/partner/login?signup_success=true');
 
@@ -209,8 +191,8 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
         if (isLoading) return 'アカウント作成中...';
         return '無料でダッシュボードに進む';
     };
-    
-    // ロード中UI
+
+    // ロード中UI (isDataLoadingは常にfalseなので、このブロックは実行されない)
     if (isDataLoading) {
         return (
             <div className="flex justify-center items-center h-screen bg-gray-50">
@@ -218,7 +200,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
             </div>
         );
     }
-    
+
 
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
@@ -234,24 +216,24 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                 </div>
             </header>
             <main className="container mx-auto px-6">
-                
+
                 {/* Hero Section - 無料を強調 */}
                 <section className="text-center pt-16 pb-8">
                     <h2 className="text-3xl font-bold text-gray-800">おかげさまで株式会社adtown20周年、感謝企画</h2>
                     <p className="mt-4 text-lg text-gray-600">日頃よりご支援いただいている那須地域の皆さまへの感謝を込めて、
                     このたび「みんなの那須アプリ」のAI求人サービスを開始いたします。</p>
                 </section>
-                
+
                 <section className="text-center py-16 md:py-24">
                     <p className="text-orange-500 font-semibold">地元企業を応援するadtownからのご提案</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         「採用に困っている企業様」は必見！<br />
-                        <span className="text-orange-600">アプリ求人広告を無料でスタート！</span><br />
+                        <span className="text-orange-600">WebでもSNSでもない、第３の求人方法を無料でスタート！</span><br />
                         無料で求人掲載管理ページへアクセス！
                     </h2>
                     <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
                         まずは<strong className="font-bold">無料</strong>で求人掲載管理ページにログインし、求人情報の登録（広告掲載）を始めましょう。
-                        有料機能（求人マッチングAI、求人アドバイスAI）は、求人管理ページ内で**いつでも**お申し込みいただけます。
+                        有料機能（求人マッチングAI、求人アドバイスAI）は、求人管理ページ内で<strong className="font-bold">いつでも</strong>お申し込みいただけます。
                     </p>
                     <div className="mt-8">
                         <button onClick={scrollToForm} className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
@@ -260,46 +242,40 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                         <p className="mt-2 text-sm text-gray-500">登録は3分、料金は一切かかりません。</p>
                     </div>
                 </section>
-                
-                {/* ★★★ 修正箇所: 求人の悩みセクションを追加 ★★★ */}
+
+                {/* ★★★ 求人の悩みセクション ★★★ */}
                 <section className="mt-12 md:mt-16 py-8 bg-white rounded-2xl shadow-lg border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center px-6">
                         <h3 className="text-2xl font-extrabold text-gray-800 mb-6">
                             こんな採用の悩み、ありませんか？
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                            
-                            {/* 1. コストの悩み */}
                             <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border border-red-200">
                                 <XCircleIcon className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                                 <p className="text-base font-medium text-gray-700">
                                     求人費用をかけても、思うように応募がこない...
                                 </p>
                             </div>
-                            {/* 2. 離職の悩み */}
                             <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border border-red-200">
                                 <XCircleIcon className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                                 <p className="text-base font-medium text-gray-700">
                                     採用したのに、数ヶ月で辞める...
                                 </p>
                             </div>
-                            {/* 3. ミスマッチの悩み */}
                             <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border border-red-200">
                                 <XCircleIcon className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                                 <p className="text-base font-medium text-gray-700">
                                     求めるスキルや人柄と合わず採用に至らない...
                                 </p>
                             </div>
-                            
                         </div>
                         <p className="mt-8 text-xl font-bold text-orange-600">
                             「みんなの那須アプリ」の無料登録が、採用成功の第一歩です！
                         </p>
                     </div>
                 </section>
-                {/* ★★★ 新規追加セクションここまで ★★★ */}
 
-                
+
                 {/* Campaign Section */}
                 <section className="bg-yellow-100 border-t-4 border-b-4 border-yellow-400 text-yellow-900 p-6 rounded-lg shadow-md my-12 text-center">
                     <h3 className="text-2xl font-bold">【先着100社様 限定】有料AIプランの**月額費用割引**キャンペーン実施中！</h3>
@@ -317,31 +293,64 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                     </div>
                 </section>
 
-
-                {/* App Advantage Section */}
+                {/* ★★★ 修正箇所: 以前削除された「社会的証明」セクションを復元 ★★★ */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
-                        <h3 className="text-3xl font-extrabold">なぜ今、アプリ求人なのか？答えは「圧倒的な見込み客」です。</h3>
+                        <h3 className="text-3xl font-extrabold">第３の求人方法、それは「アプリ求人」、なぜアプリなのか？答えは「圧倒的な地元の見込み客」です。</h3>
                         <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-                            『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。
+                            那須地域限定の『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
-                            貴社の求人情報は、この<strong className="font-bold">爆発的に増え続ける「未来の求職者」</strong>に直接届くのです。
+                            貴社の求人情報は、この<strong className="font-bold">爆発的に増え続ける「御社が求める求職者」</strong>に直接届くのです。
                         </p>
                     </div>
                 </section>
+                {/* ★★★ 復元ここまで ★★★ */}
 
-                {/* --- START: 採用の悩み --- (省略: 上に移動) */}
+                {/* ★★★ 新規追加セクション: 1.【無料プラン】 (画像の内容) ★★★ */}
+                <section className="mt-20">
+                    <div className="max-w-4xl mx-auto p-6 bg-green-700 text-white rounded-xl shadow-lg">
+                        <h3 className="text-2xl font-extrabold mb-4 border-b border-green-500 pb-2">
+                            【無料プラン・待ちの求人】(先着100社)
+                        </h3>
+                        <div className="space-y-4">
+                            <div className="flex items-start space-x-3">
+                                <ClipboardCheckIcon className="w-6 h-6 text-green-300 flex-shrink-0 mt-1" />
+                                <div>
+                                    <p className="text-lg font-bold">
+                                        「待ち」の採用：「採用コスト0円」で求人を掲載
+                                    </p>
+                                    <p className="text-sm text-green-100 mt-1">
+                                        求人広告の掲載費用は一切かかりません。まずは無料で求人情報を登録し、「AIでマッチング」した御社と相性のいいアプリユーザーからの応募を待つ「待ち」の採用活動をリスクゼロで始められます。
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-start space-x-3">
+                                <UsersIcon className="w-6 h-6 text-green-300 flex-shrink-0 mt-1" />
+                                <div>
+                                    <p className="text-lg font-bold">
+                                        応募が来た際、ミスマッチを防ぐ「AIマッチ度判定」
+                                    </p>
+                                    <p className="text-sm text-green-100 mt-1">
+                                        応募者のプロフィールや希望条件と、貴社が求める人物像をAIが自動で判定。「マッチ度 80%」のように可視化し、採用のミスマッチを初期段階で防ぎます。
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {/* ★★★ 新規追加セクションここまで ★★★ */}
+
 
                 {/* Monetization Mechanism Section - 有料機能として再定義 */}
                 <section className="mt-20">
-                    <h3 className="text-3xl font-extrabold text-center">【有料の価値】2つのAI機能で採用を成功に導く</h3>
+                    <h3 className="text-3xl font-extrabold text-center">【有料プラン・攻めの求人】2つのAI機能で採用を成功に導く</h3>
                     <p className="mt-4 text-center text-gray-600 max-w-3xl mx-auto">無料の求人掲載で採用の第一歩を踏み出した後、さらに強力な有料AI機能でミスマッチを防ぎ、採用コストを削減できます。</p>
                     <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                         <div className="text-center p-6 bg-yellow-50 rounded-lg shadow-lg border-yellow-300 border">
                             <div className="bg-yellow-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">AI</div>
-                            <h4 className="text-xl font-bold">求人マッチングAI（有料）</h4>
-                            <p className="mt-2 text-gray-600">アプリユーザーの価値観や希望条件に基づき、最も貴社にフィットする「理想の人材」にピンポイントでスカウトを送信します。</p>
+                            <h4 className="text-xl font-bold">求人マッチングAI「攻めの求人」（有料）</h4>
+                            <p className="mt-2 text-gray-600">アプリユーザーの価値観や希望条件に基づき、AIマッチングで、最も貴社にフィットする「理想の人材」にピンポイントでスカウトを送信する攻めの求人です。</p>
                         </div>
                         <div className="text-center p-6 bg-orange-50 rounded-lg shadow-lg border-orange-300 border">
                             <div className="bg-orange-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">AI</div>
@@ -422,7 +431,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                                 <div> <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label> <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                             </div>
                             <div> <label className="block text-gray-700 font-medium mb-2">所在地 *</label> <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須町、大田原市のいずれかである必要があります。</p>} </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
                                 <div> <label className="block text-gray-700 font-medium mb-2">電話番号 *</label> <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
                                 <div> <label className="block text-gray-700 font-medium mb-2">パスワード (6文字以上) *</label> <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/> </div>
@@ -440,7 +449,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                                     </span>
                                 </label>
                             </div>
-                            
+
                             {/* Error display area */}
                             {error && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
 
@@ -448,7 +457,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                             <button type="button" onClick={handleFreeSignup} disabled={isLoading || !isFormValid} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                 {getButtonText()}
                             </button>
-                            <p className="text-sm text-center -mt-2 text-gray-500">ご登録後、ログインしてダッシュボードより有料AI機能をお申込みいただけます。</p>
+                            <p className="text-sm text-center -mt-2 text-gray-500">ご登録後、ログインして管理ページより有料AI機能をお申込みいただけます。</p>
                         </form>
                         <p className="text-sm text-center mt-6">
                             すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
@@ -456,7 +465,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                     </div>
                 </section>
             </main>
-            
+
             <footer className="bg-white mt-20 border-t">
                 <div className="container mx-auto px-6 py-8 text-center text-gray-600">
                     <p>&copy; {new Date().getFullYear()} 株式会社adtown. All Rights Reserved.</p>
@@ -475,7 +484,7 @@ const RecruitSignupPage: NextPage = () => { // NextPage 型を適用
                         <div className="overflow-y-auto space-y-4 pr-2">
                             <p><strong>第1条（適用）</strong><br/>本規約は、株式会社adtown（以下「当社」といいます。）が提供するAIマッチング求人サービス（以下「本サービス」といいます。）の利用に関する一切の関係に適用されます。</p>
                             <p><strong>第2条（利用資格）</strong><br />本サービスは、当社が別途定める審査基準を満たした法人または個人事業主（以下「パートナー」といいます。）のみが利用できるものとします。</p>
-                            
+
                             <p><strong>第3条（利用料金）</strong><br />
                                 1. 本サービスの基本機能（求人情報の登録・掲載）は**無料**です。<br/>
                                 2. パートナーは、以下の**有料機能**を利用する場合、当社に対し、別途定める利用料金（月額<strong className="font-bold">8,800円</strong>（税込）、先着100社限定で6,600円）を支払うものとします。有料機能への申し込みは、ダッシュボード内で行えます。<br/>

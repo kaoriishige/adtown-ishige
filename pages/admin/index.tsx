@@ -12,7 +12,6 @@ const AdminPage: NextPage = () => {
     const userViewLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-green-600 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-green-500 transition-transform transform hover:scale-105 text-center";
     
     // 新しいスタイル定義
-    const rewardLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-yellow-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-yellow-500 transition-transform transform hover:scale-105 text-center";
     const payoutLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-teal-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-teal-500 transition-transform transform hover:scale-105 text-center";
 
     return (
@@ -29,10 +28,7 @@ const AdminPage: NextPage = () => {
             </div>
             
             <nav className="space-y-5">
-                <Link href="/mypage" target="_blank" rel="noopener noreferrer" className={userViewLinkStyle}>
-                    👁️ 一般ユーザーのマイページを確認
-                </Link>
-                <hr />
+                {/* 削除: 一般ユーザーのマイページを確認 */}
                 <Link href="/admin/dashboard" className={primaryLinkStyle}>
                     📊 運営ダッシュボード
                 </Link>
@@ -44,9 +40,7 @@ const AdminPage: NextPage = () => {
                 <Link href="/admin/referral-rewards" className={payoutLinkStyle}>
                     💰 店舗紹介料管理
                 </Link>
-                <Link href="/admin/user-rewards" className={rewardLinkStyle}>
-                    🌟 ユーザーリワード管理
-                </Link>
+                {/* 削除: 🌟 ユーザーリワード管理 (ユーザー管理に統合) */}
 
                 <hr />
                 
@@ -57,22 +51,15 @@ const AdminPage: NextPage = () => {
                     店舗管理
                 </Link>
                 <Link href="/admin/user-management" className={linkStyle}>
-                    ユーザー管理
+                    👤 ユーザー管理
                 </Link>
                 
-                {/* 削除されたリンク（プッシュ通知、問い合わせ、承認系）はここには含まれない */}
-                
-                <Link href="/admin/landing-editor" className={linkStyle}>
-                    ランディングページ編集
-                </Link>
+                {/* 削除されたリンク */}
+                {/* 削除: ランディングページ編集 */}
+                {/* 削除: 関数手動実行 */}
+                {/* 削除: 運用ガイド */}
                 <Link href="/admin/export" className={linkStyle}>
                     CSV出力
-                </Link>
-                <Link href="/admin/manual-functions" className={linkStyle}>
-                    関数手動実行
-                </Link>
-                <Link href="/admin/guide" className={linkStyle}>
-                    運用ガイド
                 </Link>
             </nav>
         </div>

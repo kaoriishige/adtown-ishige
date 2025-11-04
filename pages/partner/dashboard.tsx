@@ -149,7 +149,10 @@ redirect: { destination: '/partner/login?error=permission_denied', permanent: fa
 };
 }
 
-const isPaid = !!userData.isPaid; 
+// ★★★ 修正箇所: データ移行後の新しいフィールドを参照する ★★★
+// isPaidを廃止し、adverSubscriptionStatusが 'Paid' であれば有料とみなす
+const isPaid = userData.adverSubscriptionStatus === 'Paid'; 
+// ★★★ 修正ここまで ★★★
 
 return {
 props: {
@@ -205,17 +208,23 @@ setStoreData({ mainCategory: '未登録' });
 fetchStoreStatus();
 }, [partnerData.uid]);
 
-// 決済完了後のトークンリフレッシュ
+// 決済完了後のトークンリフレッシュと強制リロード
 useEffect(() => {
 const refresh = async () => {
-await auth.currentUser?.getIdToken(true).catch(e => console.error("Token refresh failed:", e)); 
+    // 1. トークンをリフレッシュし、新しい権限を強制的に取得
+    await auth.currentUser?.getIdToken(true).catch(e => console.error("Token refresh failed:", e)); 
+    
+    // 2. クエリパラメータを削除してページを再読み込み (ハイドレーションエラーを回避)
+    router.replace('/partner/dashboard', undefined, { shallow: true });
 };
 
-if (payment_status) {
-console.log("Payment Status:", payment_status);
-refresh();
+if (payment_status === 'success') {
+    console.log("Payment Status:", payment_status);
+    refresh();
 }
-}, [auth, payment_status]);
+// 依存配列に router を追加
+}, [auth, payment_status, router]);
+
 
 // ログアウト処理
 const handleLogout = async () => {
@@ -319,9 +328,11 @@ className="flex items-center space-x-2 text-sm text-gray-600 hover:text-red-600 
 ⚠️ 【重要】店舗プロフィールが未登録です
 </h2>
 <p className="mt-2 text-lg">
-すべての機能（特にAIマッチング）を利用するために、先に**お店の基本情報を完全に登録**してください。
-<p className="mt-2 text-lg"></p> 	
-ログインは、ブラウザでadtownと検索してホームページから行ってください。
+  すべての機能（特にAIマッチング）を利用するために、先に
+  <strong>お店の基本情報を完全に登録</strong>してください。
+</p>
+<p className="mt-2 text-lg">
+  ログインは、ブラウザでadtownと検索してホームページから行ってください。
 </p>
 <Link href="/partner/profile" legacyBehavior>
 <a className="inline-block mt-4 bg-red-600 text-white font-extrabold py-2 px-6 rounded-full shadow-lg hover:bg-red-700 transition duration-150">
@@ -463,7 +474,7 @@ onClick={handleOpenCancelModal} // モーダルを開く関数を渡す
 <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
 <div className="flex flex-col">
 <h2 className="text-lg font-bold text-gray-700 mb-1">LINEよりお問い合わせください。</h2>
-<p className="text-sm text-gray-500">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
+<p className="text-sm text-gray-500 mt-1">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
 <p className="text-sm text-gray-500">ログインは、ブラウザでadtownと検索してホームページから行ってください。</p>
 </div>
 <div 
@@ -497,4 +508,3 @@ className="w-full text-center py-3 px-4 border border-transparent rounded-md sha
 };
 
 export default PartnerDashboard;
-
