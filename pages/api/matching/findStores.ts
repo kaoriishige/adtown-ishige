@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { db } from '../../../lib/firebase';
+import { db } from '@/lib/firebase'; // ★ 修正: 絶対パス @/lib/firebase に統一
 import { collection, getDocs, query, where, DocumentData } from 'firebase/firestore';
 
 // グローバル変数の型を宣言
@@ -7,9 +7,8 @@ declare const __app_id: string;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // ===============================
-// ★ 修正: ファイルの冒頭で必要な型定義をすべて宣言します。
+// ★ 修正: 必要なすべての型定義をファイル冒頭に統合
 // ===============================
-
 interface UserAnswer { q: string; a: string; }
 
 interface SearchCriteria {
@@ -36,8 +35,7 @@ interface MatchResult {
     matchRate: number;
 }
 
-
-// --- AIモデル設定 ---
+// --- AIモデル設定 (省略) ---
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -46,17 +44,17 @@ const SEARCH_CRITERIA_SCHEMA = {
     properties: {
         "keywords": {
             type: "ARRAY",
-            description: "ユーザーの回答から抽出した検索キーワード (例: おしゃれ, 静か, 家族向け, イタリアン)",
+            description: "ユーザーの回答から抽出した検索キーワード",
             items: { type: "STRING" }
         },
         "priceRange": {
             type: "STRING",
-            description: "価格帯 (low: 〜3000円, mid: 3000〜8000円, high: 8000円〜, any: 指定なし)",
+            description: "価格帯",
             enum: ['low', 'mid', 'high', 'any']
         },
         "mustHaves": {
             type: "ARRAY",
-            description: "絶対に必要な条件 (例: 個室あり、駐車場あり)",
+            description: "絶対に必要な条件",
             items: { type: "STRING" }
         }
     },
@@ -102,7 +100,7 @@ export default async function handler(
 }
 
 // ===============================
-// AI処理関数
+// ユーティリティ関数
 // ===============================
 async function getSearchCriteriaFromAI(category: string, userPrompt: string): Promise<SearchCriteria> {
     const systemPrompt = `あなたは、ユーザーの回答から最適な店舗を検索するための検索条件を抽出するAIアシスタントです。
@@ -113,14 +111,8 @@ ${userPrompt}
 これらの回答から、ユーザーのニーズを最も正確に表す検索条件をJSON形式で生成してください。`;
 
     const payload = {
-        contents: [{
-            parts: [{ text: systemPrompt }]
-        }],
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: SEARCH_CRITERIA_SCHEMA,
-            temperature: 0.2
-        }
+        contents: [{ parts: [{ text: systemPrompt }] }],
+        generationConfig: { responseMimeType: "application/json", responseSchema: SEARCH_CRITERIA_SCHEMA, temperature: 0.2 }
     };
 
     const response = await fetch(GEMINI_API_URL, {
@@ -139,12 +131,8 @@ ${userPrompt}
     return JSON.parse(jsonText) as SearchCriteria;
 }
 
-// ===============================
-// Firestore処理関数
-// ===============================
 async function fetchAllStoresByCategory(category: string): Promise<StoreProfile[]> {
     const stores: StoreProfile[] = [];
-    // NOTE: パスは現在のファイル構造に合わせていますが、'../../../lib/firebase' のインポートエラーがないか確認してください
     const usersCollection = collection(db, 'artifacts', appId, 'users'); 
     const usersSnapshot = await getDocs(usersCollection);
 
@@ -161,12 +149,8 @@ async function fetchAllStoresByCategory(category: string): Promise<StoreProfile[
     return stores;
 }
 
-// ===============================
-// マッチングロジック関数
-// ===============================
 function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): MatchResult[] {
     const results: MatchResult[] = [];
-
     const MAX_POSSIBLE_SCORE = 100; 
 
     for (const store of stores) {
@@ -174,7 +158,6 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
         
         // 1. 必須条件のチェック (30点)
         let mustHaveMet = true;
-        // ★ 修正: 'must'に型を指定 (string)
         criteria.mustHaves.forEach((must: string) => { 
             if (!(store.description.includes(must) || store.selectedAiTargetsString.includes(must))) {
                 mustHaveMet = false;
@@ -183,21 +166,16 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
         
         if (!mustHaveMet) {
             results.push({
-                id: store.id,
-                name: store.storeName,
-                description: store.description,
-                category: store.mainCategory,
-                imageUrl: store.mainImageUrl || 'https://placehold.co/600x400/808080/FFF?text=No+Image',
-                matchRate: 0 
+                id: store.id, name: store.storeName, description: store.description, category: store.mainCategory,
+                imageUrl: store.mainImageUrl || 'https://placehold.co/600x400/808080/FFF?text=No+Image', matchRate: 0 
             });
             continue;
         } else {
-             matchScore += 30; // 必須条件クリアで30点加点
+             matchScore += 30;
         }
 
         // 2. キーワードマッチング (40点)
         let keywordMatches = 0;
-        // ★ 修正: 'keyword'に型を指定 (string)
         criteria.keywords.forEach((keyword: string) => { 
             if (store.selectedAiTargetsString.includes(keyword) || store.storeName.includes(keyword)) {
                 keywordMatches++;
@@ -212,7 +190,6 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
 
         // 4. 説明文内のキーワードマッチング (20点)
         let descriptionMatches = 0;
-        // ★ 修正: 'keyword'に型を指定 (string)
         criteria.keywords.slice(0, 3).forEach((keyword: string) => { 
              if (store.description.includes(keyword)) {
                 descriptionMatches++;
@@ -220,14 +197,11 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
         });
         matchScore += (20 * (descriptionMatches / 3));
         
-        // 5. 最終的なマッチ率を計算 (スコアは最大100%に制限されます)
+        // 5. 最終的なマッチ率を計算
         const finalMatchRate = Math.min(MAX_POSSIBLE_SCORE, Math.round(matchScore));
         
         results.push({
-            id: store.id,
-            name: store.storeName,
-            description: store.description,
-            category: store.mainCategory,
+            id: store.id, name: store.storeName, description: store.description, category: store.mainCategory,
             imageUrl: store.mainImageUrl || 'https://placehold.co/600x400/808080/FFF?text=No+Image',
             matchRate: finalMatchRate
         });
@@ -235,4 +209,3 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
 
     return results;
 }
-

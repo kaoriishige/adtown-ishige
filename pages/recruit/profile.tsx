@@ -14,7 +14,7 @@ import {
     Loader2, Building, HeartHandshake, Camera, Video, X, ArrowLeft,
     AlertTriangle, Send, CheckSquare, ShieldCheck, ShieldAlert, RefreshCcw, 
     HelpCircle, TrendingUp
-} from 'lucide-react'; // ★ 修正: Save を削除
+} from 'lucide-react'; 
 
 
 // --- チェックボックスの選択肢 (企業全体に関するもののみ残す) ---
@@ -55,11 +55,12 @@ interface CompanyProfile {
     appealPoints: {
         atmosphere: string[];
         organization: string[];
-        // 🚨 修正箇所: delete演算子に対応するため、プロパティをオプショナルに変更
         growth?: string[]; 
         wlb?: string[];
         benefits?: string[];
     };
+    // ★ isPaidは状態管理用として必要
+    isPaid: boolean;
 }
 
 
@@ -97,7 +98,8 @@ const CompanyProfilePage = () => {
             growth: [], 
             wlb: [],
             benefits: []
-        }
+        },
+        isPaid: false, // 初期値
     });
 
 
@@ -109,7 +111,7 @@ const CompanyProfilePage = () => {
                 setUser(currentUser);
                 loadCompanyProfile(currentUser.uid);
             } else {
-                router.push('/partner/login');
+                router.push('/partner/login'); // 求人パートナーもパートナーログインを使用していると仮定
             }
         });
         return () => unsubscribe();
@@ -119,26 +121,26 @@ const CompanyProfilePage = () => {
     // --- Firestoreからプロフィール読み込み (★★★ isPaid も取得) ★★★
     const loadCompanyProfile = async (uid: string) => {
         setLoading(true);
-        const recruiterRef = doc(db, 'recruiters', uid);
-        const userRef = doc(db, 'users', uid); // ★ ユーザーの'users'ドキュメント
+        // 許可されている 'users' ドキュメントを参照
+        const userRef = doc(db, 'users', uid); 
+        
         try {
-            // ★ recruiter と user のドキュメントを並行取得
-            const [recruiterSnap, userSnap] = await Promise.all([
-                getDoc(recruiterRef),
-                getDoc(userRef)
-            ]);
+            const userSnap = await getDoc(userRef);
 
-            // ★ isPaid ステータスをセット
             if (userSnap.exists()) {
-                setIsPaid(!!userSnap.data().isPaid);
-            }
+                const data = userSnap.data();
+                
+                // ★ isPaid ステータスをセット (recruitSubscriptionStatus を参照)
+                const isRecruitPaid = data.recruitSubscriptionStatus === 'Paid' || data.recruitSubscriptionStatus === 'active';
+                setIsPaid(isRecruitPaid);
 
-            // 既存のプロフィール情報をセット
-            if (recruiterSnap.exists()) {
-                const data = recruiterSnap.data();
+                // ★ 既存のプロフィール情報をセット (usersドキュメントに求人プロファイルデータが混在していると仮定)
                 setFormData(prev => ({
                     ...prev,
-                    companyName: data.companyName || '',
+                    // 課金ステータス
+                    isPaid: isRecruitPaid,
+                    // 求人プロファイルデータ (usersドキュメントから読み取る)
+                    companyName: data.companyName || data.storeName || '', // companyNameがない場合 storeNameを使用
                     address: data.address || '',
                     phoneNumber: data.phoneNumber || '',
                     website: data.website || '',
@@ -159,7 +161,11 @@ const CompanyProfilePage = () => {
                         benefits: data.appealPoints?.benefits || [],
                     }
                 }));
+            } else {
+                // userドキュメントが存在しない場合
+                setError("ユーザー情報が見つかりません。");
             }
+
         } catch (e) {
             console.error("Firestore読み込みエラー:", e);
             setError("データの読み込みに失敗しました。Firestoreの設定をご確認ください。");
@@ -205,17 +211,12 @@ const CompanyProfilePage = () => {
         setError(null);
         setUploadProgress(0);
 
-
         const uploadPromises = files.map(file => {
-            // ★ 修正: storage を使用
             const storageRef = ref(storage, `recruiters/${user.uid}/images/${Date.now()}_${file.name}`);
-            // ★ 修正: uploadBytesResumable を使用
             const uploadTask = uploadBytesResumable(storageRef, file);
             return new Promise<string>((resolve, reject) => {
                 uploadTask.on('state_changed',
-                    // ★ 修正: snapshot に型アノテーション (StorageSnapshot) を追加すべきだが、ここでは implicit any を許容し、エラーコード 7006 を回避するためコードを変更
                     (snapshot: any) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
-                    // ★ 修正: error に型アノテーション (StorageError) を追加すべきだが、ここでは implicit any を許容し、エラーコード 7006 を回避するためコードを変更
                     (error: any) => { 
                         console.error("Upload failed:", error);
                         setError(`画像アップロード中にエラーが発生しました: ${error.message}`);
@@ -225,7 +226,6 @@ const CompanyProfilePage = () => {
                 );
             });
         });
-
 
         Promise.all(uploadPromises)
             .then(urls => setFormData(prev => ({
@@ -244,9 +244,7 @@ const CompanyProfilePage = () => {
     const removeImage = async (imageUrl: string) => {
         if (!window.confirm("この画像を削除しますか？")) return;
         try {
-            // ★ 修正: storage を使用
             const imageRef = ref(storage, imageUrl);
-            // ★ 修正: deleteObject を使用
             await deleteObject(imageRef);
             setFormData(prev => ({
                 ...prev,
@@ -259,49 +257,47 @@ const CompanyProfilePage = () => {
     };
 
 
-    // --- ★★★ 保存＆AI審査申請 (isPaid チェックを削除) ★★★ ---
+    // --- ★★★ 保存＆AI審査申請 (isPaid undefined エラーを解消) ★★★ ---
     const handleSaveAndSubmitForReview = async (e: React.FormEvent, isManualReset: boolean = false) => {
         e.preventDefault();
         if (!user) return;
-
-        // ★★★ 修正: AIマッチング許容スコアの制限チェックを削除 ★★★
-        // if (!isPaid && formData.minMatchScore !== 60) {
-        //     setError("AIマッチング許容スコアの設定は有料プラン限定機能です。保存するにはスコアをデフォルトの60に戻してください。");
-        //     setSaving(false);
-        //     return;
-        // }
         
         setSaving(true);
         setError(null);
 
-        // 🚨 修正箇所: delete演算子を使用するため、appealPointsToSaveの型を一時的にオプショナルプロパティを持つ型として定義
         const appealPointsToSave: { [key: string]: string[] | undefined } = { ...formData.appealPoints };
         
-        // TypeScriptのエラーは、CompanyProfileインターフェースのプロパティをオプショナルに変更したことで解消
         if (appealPointsToSave.growth && appealPointsToSave.growth.length === 0) delete appealPointsToSave.growth;
         if (appealPointsToSave.wlb && appealPointsToSave.wlb.length === 0) delete appealPointsToSave.wlb;
         if (appealPointsToSave.benefits && appealPointsToSave.benefits.length === 0) delete appealPointsToSave.benefits;
 
-
         try {
-            const userRef = doc(db, 'recruiters', user.uid);
+            // 'users' ドキュメントを更新
+            const userRef = doc(db, 'users', user.uid);
             
-            // 1. Firestoreのステータスを即座に 'pending_review' に更新 (マニュアルリセットも含む)
-            await setDoc(userRef, {
-                // フォーム送信時は全ての内容を保存。リセット時は保存しない。
-                ...(isManualReset ? {} : { ...formData, appealPoints: appealPointsToSave }), 
+            // ★★★ 修正ポイント: isPaidフィールドを分解代入で安全に除外する ★★★
+            // Firestoreに送信すべきでないisPaidフィールドを、undefinedとして送るのを防ぐ。
+            const { isPaid, ...formDataWithoutIsPaid } = formData; 
+
+            const dataToSave = {
+                ...(isManualReset ? {} : { 
+                    ...formDataWithoutIsPaid, // isPaidを除外したプロファイルデータ
+                    appealPoints: appealPointsToSave,
+                }), 
                 verificationStatus: 'pending_review' as VerificationStatus,
                 aiFeedback: isManualReset ? 'AI審査を強制的に再実行します...' : 'AIが内容を審査中です... (通常、数分で完了します)',
-                // ★ 修正: serverTimestamp を使用
                 updatedAt: serverTimestamp()
-            }, { merge: true });
+            };
+            
+            // setDocでマージ書き込み
+            await setDoc(userRef, dataToSave, { merge: true });
             
             // UIを更新
             setFormData(prev => ({...prev, verificationStatus: 'pending_review', aiFeedback: isManualReset ? 'AI審査を強制的に再実行します...' : 'AIが内容を審査中です...'}));
 
 
             // 2. AI審査APIの呼び出し
-            const response = await fetch('/api/recruit/profile-review', { // 💡 修正: パスを /api/recruit/profile-review に変更
+            const response = await fetch('/api/recruit/profile-review', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ uid: user.uid })
@@ -309,10 +305,8 @@ const CompanyProfilePage = () => {
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: `HTTP Error: ${response.status}` }));
-                // サーバーエラー時、強制却下ロジックが走ることを期待し、ここでエラーを throw
                 throw new Error(errorData.error || `AI審査APIの呼び出しに失敗しました。(${response.status})`);
             }
-
 
             // 3. ユーザーに通知し、ダッシュボードへリダイレクト
             alert('✅ プロフィールを保存し、AI審査を開始しました。ダッシュボードに戻り、結果をご確認ください。');
@@ -323,7 +317,6 @@ const CompanyProfilePage = () => {
             setError(`エラーが発生しました: ${err.message}`);
             console.error("申請エラー:", err);
             
-            // APIエラーが発生した場合、UIをRejected相当にすぐに更新 (サーバー側での強制却下を反映)
             setFormData(prev => ({...prev, verificationStatus: 'rejected', aiFeedback: 'システムエラーにより審査は中断されました。内容を確認し、再申請してください。'}));
         } finally {
             setSaving(false);
@@ -333,7 +326,6 @@ const CompanyProfilePage = () => {
     // 💡 強制リセット用のヘルパー関数
     const handleManualReset = () => {
         if (window.confirm('AI審査がフリーズした場合、この操作で強制的に再審査を開始できます。フォーム内容は保存されません。続行しますか？')) {
-            // フォームデータは更新せず、ステータスとAPI呼び出しのみ実行
             handleSaveAndSubmitForReview({ preventDefault: () => {} } as React.FormEvent, true); 
         }
     };
@@ -405,6 +397,20 @@ const CompanyProfilePage = () => {
 
 
             <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                
+                {/* 課金ステータス通知 */}
+                {isPaid && (
+                    <div className="p-4 mb-6 bg-indigo-100 text-indigo-800 rounded-lg font-bold">
+                        ⭐︎ AIマッチング許容スコアを自由に設定できます。
+                    </div>
+                )}
+                {!isPaid && (
+                    <div className="p-4 mb-6 bg-yellow-100 text-yellow-800 rounded-lg">
+                        AIマッチング許容スコアは**デフォルトの60点に固定**されています。自由に設定することができます。
+                    </div>
+                )}
+
+
                 <form onSubmit={handleSaveAndSubmitForReview} className="bg-white p-8 rounded-lg shadow-md space-y-12">
                     {/* タイトルとボタン */}
                     <div className="flex justify-between items-start">
@@ -442,21 +448,16 @@ const CompanyProfilePage = () => {
                     )}
 
 
-                    {/* ★★★ マッチングスコア (★ 常に無料フォームを表示するように変更) ★★★ */}
+                    {/* ★★★ マッチングスコア (★ 常にフォームを表示するように変更) ★★★ */}
                     <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
                             <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
-                            {isPaid && (
-                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white bg-green-500">
-                                    ご利用中
-                                </span>
-                            )}
                         </h2>
                         <p className="text-sm text-yellow-700">
                             応募者リストに表示されるための最低スコアです。60〜99点の範囲で設定できます。
                             高く設定するほど、マッチ度の高い候補者のみが表示されます。
                         </p>
-                        <div>
+                        <div className={`mt-4 ${!isPaid ? 'opacity-60 pointer-events-none' : ''}`}>
                             <label htmlFor="minMatchScore" className="block text-sm font-bold text-gray-700">
                                 最低許容スコア (60〜99点)
                             </label>
@@ -469,9 +470,10 @@ const CompanyProfilePage = () => {
                                 min="60"
                                 max="99"
                                 required
+                                disabled={!isPaid} // 有料時のみ編集可能
                                 className="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold text-center"
                             />
-                            <p className="text-xs text-gray-500 mt-1">※ デフォルトは60点です。</p>
+                            <p className="text-xs text-gray-500 mt-1">※ 無料プランでは60点に固定されます。</p>
                         </div>
                     </section>
                     {/* ★★★ 変更ここまで ★★★ */}
@@ -575,8 +577,6 @@ const CompanyProfilePage = () => {
                             </div>
                         </div>
 
-                        {/* 🚀 成長機会, 🕰️ WLB, 💰 福利厚生 のセクションは削除されました。 */}
-
                     </section>
 
 
@@ -659,6 +659,5 @@ const CompanyProfilePage = () => {
 
 
 export default CompanyProfilePage;
-
 
 

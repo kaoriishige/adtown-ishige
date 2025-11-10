@@ -82,6 +82,7 @@ const getStatusBadgeClass = (statusText: string): string => {
 // ===============================
 // サーバーサイドでのデータ取得 (SSR)
 // ===============================
+/* ★ 認証を解除するためコメントアウト
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
@@ -146,6 +147,19 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         };
     }
 };
+*/
+
+// ★ 認証解除のため、ダミーのpropsでページをレンダリング
+export const getServerSideProps: GetServerSideProps = async (context) => {
+    // 本来はここで認証チェックとデータ取得を行う
+    // 認証解除中は空のデータを渡す
+    return {
+        props: {
+            partners: [], // 空の配列
+        },
+    };
+};
+
 
 // ===============================
 // 管理画面ページコンポーネント
@@ -180,7 +194,7 @@ const ManageStoresPage: NextPage<ManageStoresProps> = ({ partners }) => {
                     <h1 className="text-2xl font-bold text-gray-900">
                         店舗管理
                     </h1>
-                    <Link href="/admin/dashboard" legacyBehavior>
+                    <Link href="/admin" legacyBehavior> {/* ★ リンク先を /admin に修正 */}
                         <a className="text-sm font-medium text-blue-600 hover:text-blue-800">
                             ← 管理メニューに戻る
                         </a>
@@ -194,6 +208,15 @@ const ManageStoresPage: NextPage<ManageStoresProps> = ({ partners }) => {
                     <p><strong>注意：</strong> 現在、このページの認証は一時的に解除されています。（※このメッセージは開発用です）</p>
                 </div>
             </div>
+
+            {/* ★ 認証解除時のメッセージ */}
+            {partners.length === 0 && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+                    <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md" role="alert">
+                        <p>現在認証が解除されているため、データは表示されません。認証を有効にすると、店舗データが表示されます。</p>
+                    </div>
+                </div>
+            )}
 
             {/* メインコンテンツ - テーブル */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

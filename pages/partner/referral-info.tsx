@@ -70,7 +70,7 @@ const ReferralInfoPage: NextPage<ReferralInfoProps> = ({ user }) => {
                 <div className="bg-white p-8 rounded-lg shadow-xl text-center">
                     <h2 className="text-xl font-bold text-gray-800">お客様にアプリを紹介しましょう！</h2>
                     <p className="mt-2 text-gray-600">
-                        以下のURLまたはQRコードからお客様がアプリに登録すると、あなたに紹介報酬が支払われます。
+                        以下のURLまたはQRコードからお客様が有料アプリ480円に登録すると、あなたに紹介報酬が30%支払われます。
                     </p>
                     <div className="mt-8">
                         <label className="block text-sm font-medium text-gray-700 text-left">紹介用URL</label>

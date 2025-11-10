@@ -27,22 +27,21 @@ interface StoreListPageProps {
 // 修正後の Store Card Component
 const StoreCard: React.FC<{ store: Store }> = ({ store }) => {
   return (
-    // 💡 修正点 1: legacyBehaviorとpassHrefを削除。classNameを<Link>に直接適用。
-    // <Link>の直下は単一の要素である<div>になります。
-    <Link 
-      href={`/stores/${store.id}`} 
+    <Link
+      href={`/stores/${store.id}`}
       className="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow overflow-hidden cursor-pointer"
     >
-      <div className="w-full"> 
+      <div className="w-full">
         <div className="relative h-40 w-full">
           <Image
-            src={store.mainImageUrl || '/images/placeholder.png'}
+            src={store.mainImageUrl || "/images/placeholder.png"}
             alt={store.storeName}
-            // 💡 修正点 2: layout/objectFitをfill/styleに置き換え、Next.js 13+の推奨に対応。
-            fill 
+            fill
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
             style={{ objectFit: "cover" }}
-            onError={(e) => { (e.target as HTMLImageElement).src = '/images/placeholder.png'; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/images/placeholder.png";
+            }}
           />
         </div>
         <div className="p-4">
@@ -52,13 +51,14 @@ const StoreCard: React.FC<{ store: Store }> = ({ store }) => {
             {store.address}
           </p>
           <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-            {store.description?.split('\n')[0] || ''}
+            {store.description?.split("\n")[0] || ""}
           </p>
         </div>
       </div>
     </Link>
   );
 };
+
 
 // --- ページコンポーネント ---
 const StoreListPage: NextPage<StoreListPageProps> = ({ stores, mainCategory, subCategory, area }) => {

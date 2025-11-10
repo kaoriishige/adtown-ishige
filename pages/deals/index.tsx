@@ -1,177 +1,238 @@
-import { GetServerSideProps, NextPage } from 'next';
-import Link from 'next/link';
+import { useState, useMemo } from 'react';
+import type { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
-import { useRouter } from 'next/router'; 
-import { adminDb } from '@/lib/firebase-admin'; // 🚨 パスを確認
-import React from 'react';
-import { MapPin, Tag, ArrowLeft, ArrowRight, DollarSign, Store, Loader2, MessageSquare } from 'lucide-react'; 
-import { FieldPath } from 'firebase-admin/firestore'; 
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { db } from '@/lib/firebase'; // ★ 修正: 絶対パス @/lib/firebase に統一
+import { collection, getDocs, query, orderBy, limit, DocumentData } from 'firebase/firestore';
+import { RiSearchLine, RiMapPinLine, RiCoupon3Line, RiFilter2Line } from 'react-icons/ri';
+import { IoSparklesSharp } from 'react-icons/io5';
+
+// グローバル変数の型を宣言
+declare const __app_id: string;
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- 型定義 ---
-interface StoreSummary {
+interface Deal {
     id: string;
+    storeId: string;
     storeName: string;
     mainCategory: string;
-    subCategory: string;
-    area: string;
-    address: string;
-    couponCount: number; // 💡 クーポン件数を表示
-    landingPageUrl: string; 
+    type: 'お得情報' | 'クーポン' | 'フードロス';
+    title: string;
+    description: string;
+    imageUrl?: string;
 }
 
-interface DealsListPageProps {
-    stores: StoreSummary[];
-    mainCategory: string;
-    subCategory: string;
-    area: string;
+interface DealsPageProps {
+    initialDeals: Deal[];
     error: string | null;
 }
 
-// ----------------------------------------------------------------------
-// サーバーサイドデータ取得 (クエリパラメータでのフィルタリング)
-// ----------------------------------------------------------------------
-export const getServerSideProps: GetServerSideProps = async (context) => {
-    // クエリパラメータから情報を取得
-    const mainCategory = context.query.main as string;
-    const area = context.query.area as string;
-    const subCategory = context.query.sub as string || 'すべて';
+// カテゴリデータ (パートナープロファイルと共通)
+const mainCategories = [
+    '飲食関連', '買い物関連', '美容・健康関連', '住まい・暮らし関連',
+    '教育・習い事関連', 'スポーツ関連', '車・バイク関連', '観光・レジャー関連',
+    'ペット関連', '専門サービス関連', 'その他',
+];
 
-    if (!mainCategory || !area) {
-        return { props: { stores: [], mainCategory: '不明', subCategory: subCategory, area: '不明', error: "カテゴリまたはエリア情報が不足しています。" } };
-    }
-    
-    // エリアとカテゴリ名のデコード (URLエンコード対策)
-    const decodedArea = decodeURIComponent(area);
-    const decodedMain = decodeURIComponent(mainCategory);
+// ===============================
+// サーバーサイドデータフェッチ
+// ===================================
+export const getServerSideProps: GetServerSideProps = async () => {
+    let initialDeals: Deal[] = [];
+    let error: string | null = null;
+    const DEALS_LIMIT = 50; 
 
     try {
-        // 1. stores コレクションからデータを取得するためのクエリを構築
-        let query = adminDb.collection('stores')
-            .where('status', 'in', ['approved', 'active']) // 公開中の店舗のみ
-            .where('mainCategory', '==', decodedMain)
-            .where('area', '==', decodedArea);
-            
-        // 'すべて' ではない場合のみ、subCategoryでフィルタリングを追加
-        if (subCategory && subCategory !== 'すべて' && subCategory !== 'すべて' /* 重複チェック */) {
-             query = query.where('subCategory', '==', subCategory);
+        const usersCollection = collection(db, 'artifacts', appId, 'users');
+        const usersSnapshot = await getDocs(usersCollection);
+
+        for (const userDoc of usersSnapshot.docs) {
+            const storesRef = collection(db, 'artifacts', appId, 'users', userDoc.id, 'stores');
+            const storesSnapshot = await getDocs(storesRef);
+
+            if (storesSnapshot.empty) continue;
+
+            for (const storeDoc of storesSnapshot.docs) {
+                const storeData = storeDoc.data();
+                const dealsRef = collection(storesRef, storeDoc.id, 'deals');
+                const dealsQuery = query(dealsRef, orderBy("createdAt", "desc"), limit(5));
+                const dealsSnapshot = await getDocs(dealsQuery);
+
+                dealsSnapshot.docs.forEach(dealDoc => {
+                    const dealData = dealDoc.data();
+                    initialDeals.push({
+                        id: dealDoc.id,
+                        storeId: storeDoc.id,
+                        storeName: storeData.storeName || '名称不明',
+                        mainCategory: storeData.mainCategory || 'その他',
+                        type: dealData.type,
+                        title: dealData.title,
+                        description: dealData.description,
+                        imageUrl: dealData.imageUrl,
+                    });
+                });
+            }
         }
-        
-        // 🚨 複合インデックスが必須: status (A), mainCategory (A), area (A), subCategory (A)
-        const storesSnap = await query.get();
 
-        const stores: StoreSummary[] = storesSnap.docs.map(doc => {
-            const data = doc.data();
-            
-            return {
-                id: doc.id,
-                storeName: data.storeName || '店舗名未登録',
-                mainCategory: decodedMain,
-                subCategory: data.subCategory || subCategory,
-                area: decodedArea,
-                address: data.address || '住所不明',
-                couponCount: data.couponCount || 0, // 💡 deals コレクションから取得が必要
-                // 💡 ランディングページへのリンク (動的ルーティングを使用)
-                landingPageUrl: `/deals/store/${doc.id}`, 
-            };
-        });
-
-        return { 
-            props: { 
-                stores, 
-                mainCategory: decodedMain, 
-                subCategory: subCategory, 
-                area: decodedArea, 
-                error: null 
-            } 
-        };
+        initialDeals = initialDeals.slice(0, DEALS_LIMIT);
 
     } catch (err: any) {
-        console.error("Deals List SSR Error:", err);
-        return { 
-            props: { 
-                stores: [], 
-                mainCategory: decodedMain, 
-                subCategory: subCategory, 
-                area: decodedArea, 
-                error: `データ取得中に予期せぬエラーが発生しました: ${err.message}. インデックスまたはセキュリティルールを確認してください。` 
-            } 
-        };
+        console.error("DealsPage getServerSideProps error:", err);
+        error = "データ読み込みに失敗しました。";
     }
+
+    return {
+        props: { initialDeals, error },
+    };
 };
 
-// ----------------------------------------------------------------------
-// ページコンポーネント (UI)
-// ----------------------------------------------------------------------
-const DealsListPage: NextPage<DealsListPageProps> = ({ stores, mainCategory, subCategory, area, error }) => {
+// ===============================
+// メインコンポーネント
+// ===================================
+const DealsPage: NextPage<DealsPageProps> = ({ initialDeals, error }) => {
     const router = useRouter();
+    const initialCategory = router.query.category as string || 'すべて';
+    
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+    const [selectedDealType, setSelectedDealType] = useState('すべて');
+    const dealTypes = ['すべて', 'お得情報', 'クーポン', 'フードロス'];
 
+    // フィルタリングロジック
+    const filteredDeals = useMemo(() => {
+        return initialDeals.filter(deal => {
+            if (selectedCategory !== 'すべて' && deal.mainCategory !== selectedCategory) {
+                return false;
+            }
+            if (selectedDealType !== 'すべて' && deal.type !== selectedDealType) {
+                return false;
+            }
+            if (searchTerm.trim() === '') {
+                return true;
+            }
+
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            return (
+                deal.title.toLowerCase().includes(lowerSearchTerm) ||
+                deal.storeName.toLowerCase().includes(lowerSearchTerm) ||
+                deal.description.toLowerCase().includes(lowerSearchTerm)
+            );
+        });
+    }, [initialDeals, searchTerm, selectedCategory, selectedDealType]);
+
+    const getDealColor = (type: string) => {
+        switch(type) {
+            case 'クーポン': return 'bg-yellow-500';
+            case 'フードロス': return 'bg-red-500';
+            default: return 'bg-green-500';
+        }
+    };
+    
     if (error) {
-        return <div className="min-h-screen p-10 text-red-600 bg-red-50">{error}</div>;
+        return <div className="p-8 text-red-600">エラー: {error}</div>;
     }
-
-    // UI表示用のカテゴリテキスト
-    const categoryText = subCategory === 'すべて' ? mainCategory : `${mainCategory} > ${subCategory}`;
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Head><title>{area} の店舗一覧 | {mainCategory}</title></Head>
-            
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                
-                <button 
-                    onClick={() => router.back()}
-                    className="text-indigo-600 hover:underline flex items-center mb-6"
-                >
-                    <ArrowLeft size={18} className="mr-2" /> エリア選択に戻る
-                </button>
+            <Head>
+                <title>お得＆クーポン情報一覧</title>
+            </Head>
 
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{area} の店舗一覧</h1>
-                <p className="text-sm text-gray-600 mb-6">
-                    カテゴリ: <strong className="text-indigo-600">{categoryText}</strong>
-                </p>
-
-                {stores.length === 0 ? (
-                    <div className="p-10 text-center bg-white rounded-xl shadow-lg">
-                        <p className="text-lg text-gray-600">この条件に一致する店舗は見つかりませんでした。</p>
-                        <p className="text-sm text-gray-500 mt-2">（カテゴリ、またはエリアを変更してお試しください）</p>
+            <header className="bg-white shadow-md sticky top-0 z-10">
+                <div className="max-w-xl mx-auto p-4">
+                    <h1 className="text-2xl font-bold text-gray-800 flex items-center mb-4">
+                        <RiCoupon3Line className="text-orange-500 mr-2" /> お得＆クーポン情報一覧
+                    </h1>
+                    
+                    {/* 検索バー */}
+                    <div className="relative mb-4">
+                        <RiSearchLine className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                            type="text"
+                            placeholder="店舗名、キーワードで検索..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                        />
                     </div>
-                ) : (
-                    <div className="space-y-4">
-                        {stores.map((store) => (
-                            <Link href={store.landingPageUrl} key={store.id} legacyBehavior>
-                                <a 
-                                    className="block bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl hover:border-indigo-400 transition-all"
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <h2 className="text-xl font-bold text-gray-900">{store.storeName}</h2>
-                                        {store.couponCount > 0 && (
-                                            <span className="text-sm font-bold text-green-700 bg-green-100 px-3 py-1 rounded-full flex items-center">
-                                                <DollarSign size={16} className='mr-1' /> クーポン {store.couponCount} 件あり
-                                            </span>
-                                        )}
-                                    </div>
 
-                                    <div className="mt-3 text-sm text-gray-600 space-y-1">
-                                        <div className="flex items-center">
-                                            <MapPin size={16} className="mr-2 text-red-500" />
-                                            {store.address}
-                                        </div>
-                                        <div className="flex items-center">
-                                            <Tag size={16} className="mr-2 text-blue-500" />
-                                            {store.subCategory}
-                                        </div>
-                                    </div>
-                                    <div className="mt-4 flex justify-end text-indigo-600 font-semibold items-center">
-                                        店舗詳細へ <ArrowRight size={18} className="ml-1" />
-                                    </div>
-                                </a>
-                            </Link>
-                        ))}
+                    {/* フィルターボタン */}
+                    <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+                        <RiFilter2Line className="text-gray-500 flex-shrink-0" size={24} />
+                        {/* カテゴリドロップダウン */}
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="flex-shrink-0 px-3 py-1 border border-gray-300 rounded-full text-sm appearance-none bg-white hover:bg-gray-100"
+                        >
+                            <option value="すべて">全カテゴリ</option>
+                            {mainCategories.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                        {/* 種別ドロップダウン */}
+                        <select
+                            value={selectedDealType}
+                            onChange={(e) => setSelectedDealType(e.target.value)}
+                            className="flex-shrink-0 px-3 py-1 border border-gray-300 rounded-full text-sm appearance-none bg-white hover:bg-gray-100"
+                        >
+                            {dealTypes.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
+                        
+                        {/* AIマッチングへの導線 */}
+                        <Link href="/matching" legacyBehavior>
+                            <a className="flex-shrink-0 px-3 py-1 text-sm font-bold bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center">
+                                <IoSparklesSharp className="mr-1" /> AIで探す
+                            </a>
+                        </Link>
+                    </div>
+
+                </div>
+            </header>
+            
+            <main className="max-w-xl mx-auto p-4 space-y-4">
+
+                {filteredDeals.length === 0 && (
+                    <div className="text-center p-8 bg-white rounded-lg shadow-md mt-4">
+                        <p className="text-lg text-gray-600">お探しの情報は見つかりませんでした。</p>
                     </div>
                 )}
-            </div>
+
+                {filteredDeals.map(deal => (
+                    <Link href={`/stores/view/${deal.storeId}`} key={deal.id} legacyBehavior>
+                        <a className="block bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-gray-100">
+                            <div className="flex p-4">
+                                {deal.imageUrl && (
+                                    <img src={deal.imageUrl} alt={deal.title} className="w-20 h-20 object-cover rounded-lg mr-4 flex-shrink-0" />
+                                )}
+                                <div className="min-w-0 flex-grow">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <p className="text-xs text-gray-500 flex items-center">
+                                            <RiMapPinLine className="mr-1" /> {deal.storeName}
+                                        </p>
+                                        <span className="text-xs bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full flex-shrink-0">
+                                            {deal.mainCategory}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className={`text-xs text-white font-semibold px-2 py-0.5 rounded-full ${getDealColor(deal.type)}`}>
+                                            {deal.type}
+                                        </span>
+                                        <h2 className="text-lg font-bold text-gray-800 truncate">{deal.title}</h2>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{deal.description}</p>
+                                </div>
+                            </div>
+                        </a>
+                    </Link>
+                ))}
+            </main>
         </div>
     );
 };
 
-export default DealsListPage;
+export default DealsPage;

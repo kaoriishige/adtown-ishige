@@ -555,7 +555,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                             💡 現在、無料の求人掲載をご利用中です
                         </h2>
                         <p className="mt-2 text-lg">
-                            **攻めの採用（AIスカウト）** と **AIアドバイス** を利用して、応募がない潜在候補者を獲得し、採用を成功させましょう！
+                            有料プランを利用して、攻めの採用（AIスカウト）と AIアドバイスを利用して、応募がない潜在候補者を獲得し、採用を成功させましょう！
                         </p>
                         <Link href="/recruit/subscribe_plan" legacyBehavior>
                             <a className="inline-block mt-4 bg-orange-600 text-white font-extrabold py-3 px-8 rounded-full shadow-lg hover:bg-orange-700 transition duration-150">
@@ -630,7 +630,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
 
                 {/* ★★★ 2. 求人管理（複数の求人掲載無料） ★★★ */}
                 <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. 求人管理（複数の求人掲載無料）</h2>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. 求人管理（複数の求人掲載無料・待ちの無料プラン）</h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <DashboardCard
@@ -671,7 +671,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                 {/* ★★★ 3. 応募者管理・マッチング (基本機能) (無料機能) ★★★ */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">
-                        3. 応募者管理・マッチング (基本機能)
+                        3. 応募者管理・マッチング (基本機能・待ちの無料プラン)
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* 3-1. 応募者リスト（AIマッチ度確認） */}
@@ -709,7 +709,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                         <div className="mb-6 p-4 bg-gray-100 border-l-4 border-red-600 text-gray-800 rounded-md">
                             <p className="font-extrabold mb-1 text-red-700">【有料AIプラン限定】</p>
                             <p className="text-base font-semibold">
-                                無料の「待ちの採用」では不十分な場合、**有料プラン**で**AIが厳選した潜在候補者へ能動的にアプローチ**し、採用成功率を飛躍的に向上させます。
+                                無料の「待ちの採用」では不十分な場合、**有料プランで*AIが厳選した潜在候補者へ能動的にアプローチ**し、採用成功率を飛躍的に向上させます。
                             </p>
                             <Link href="/recruit/subscribe_plan" className="inline-block mt-3 px-4 py-2 bg-red-600 text-white rounded-md font-bold hover:bg-red-700 transition">
                                 有料AIプランの詳細を見る
@@ -812,6 +812,5 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
 };
 
 export default RecruitDashboard;
-
 
 

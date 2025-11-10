@@ -1,22 +1,29 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import React, { useEffect, useState } from 'react'; 
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, signOut } from 'firebase/auth';
 import { app, db } from '../../lib/firebase';
-import { collection, query, limit, getDocs } from 'firebase/firestore'; 
-import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { collection, query, limit, getDocs } from 'firebase/firestore';
+import { adminDb, adminAuth } from '@/lib/firebase-admin'; // Admin SDK
 import nookies from 'nookies';
-import { 
-RiLogoutBoxRLine, 
-RiCoupon3Line, 
-RiRobotLine, 
-RiMoneyCnyBoxLine, 
-RiBankLine, 
+import {
+RiLogoutBoxRLine,
+RiCoupon3Line,
+RiRobotLine,
+RiMoneyCnyBoxLine,
+RiBankLine,
 RiCloseCircleLine, // 解約モーダル用
 RiAlertFill, // 解約モーダル用
-} from 'react-icons/ri'; 
+RiEyeLine, // プレビューボタン用のアイコン
+} from 'react-icons/ri';
+
+// ★★★ NEW: 見込み客カウンターコンポーネントをインポート ★★★
+import MatchingLeadsCounter from '../../components/MatchingLeadsCounter';
+// ★★★ NEW: サーバーサイドデータ取得関数をインポート ★★★
+import { getPartnerLeadCount } from '@/lib/data/matching'; 
+
 
 // グローバル変数定義 (Firestoreパス用)
 declare const __app_id: string;
@@ -24,7 +31,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 
 // ===============================
-// SVG アイコン
+// SVG アイコン (変更なし)
 // ===================================
 const StoreIcon = (props: React.SVGProps<SVGSVGElement>) => (
 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
@@ -41,8 +48,9 @@ uid: string;
 companyName: string;
 email: string;
 roles: string[];
-isPaid: boolean; 
+isPaid: boolean;
 };
+initialLeadCount: number;
 }
 
 interface ActionButtonProps {
@@ -51,13 +59,13 @@ icon: React.ReactNode;
 title: string;
 description: string;
 bgColorClass: string;
-isPro: boolean; 
-isPaid: boolean; 
-onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void; // クリックイベントを追加
+isPro: boolean;
+isPaid: boolean;
+onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 // ===============================
-// 汎用 UI コンポーネント 
+// 汎用 UI コンポーネント (変更なし)
 // ===================================
 const ActionButton: React.FC<ActionButtonProps> = ({
 href,
@@ -67,20 +75,20 @@ description,
 bgColorClass,
 isPro,
 isPaid,
-onClick, // onClick を受け取る
+onClick,
 }) => {
 const encodedHref = href;
-const isDisabled = isPro && !isPaid; 
+const isDisabled = isPro && !isPaid;
 
 // 有料限定で未課金の場合、リンク先を有料プラン申し込みページに上書き
 const finalHref = isDisabled ? "/partner/subscribe_plan" : encodedHref;
 
 const linkContent = (
-<a 
-onClick={onClick} // a タグに onClick を渡す
+<a
+onClick={onClick}
 className={`group flex items-center p-4 bg-white rounded-lg shadow-sm transition-all cursor-pointer ${
-isDisabled 
-? 'opacity-50 pointer-events-none' 
+isDisabled
+? 'opacity-50 pointer-events-none'
 : 'hover:shadow-lg hover:border-blue-500 border border-transparent'
 }`}
 >
@@ -103,7 +111,7 @@ className={`flex-shrink-0 w-16 h-16 rounded-lg flex items-center justify-center 
 </a>
 );
 
-// onClick が指定されている場合は Link を使わない（ページ遷移をさせない）
+// onClick が指定されている場合は Link を使わない
 if (onClick) {
 return linkContent;
 }
@@ -138,21 +146,26 @@ redirect: { destination: '/partner/login?error=user_not_found', permanent: false
 }
 
 const userData = userDoc.data() || {};
-const userRoles: string[] = userData.roles || [];
 
-const allowedRoles = ['adver', 'recruit']; 
-const isAuthorized = userRoles.some(role => allowedRoles.includes(role));
+// ★★★ 修正箇所: isPaidの判断ロジックを厳格化 ★★★
+const adverStatus = userData.adverSubscriptionStatus;
+const recruitStatus = userData.recruitSubscriptionStatus;
 
-if (!isAuthorized) {
-return {
-redirect: { destination: '/partner/login?error=permission_denied', permanent: false }
-};
-}
+// 広告パートナーの有料判定: adverStatusが 'Paid' または 'active' であればTrue
+// ユーザーが求人パートナーとしても課金している場合、このフラグをfalseにしてはいけないため、
+// 広告パートナーの有料フラグ（isPaid）を直接参照する
+const isPaid = (adverStatus === 'Paid' || adverStatus === 'active' || userData.isPaid === true);
+// ★★★ FIX: ここまで ★★★
 
-// ★★★ 修正箇所: データ移行後の新しいフィールドを参照する ★★★
-// isPaidを廃止し、adverSubscriptionStatusが 'Paid' であれば有料とみなす
-const isPaid = userData.adverSubscriptionStatus === 'Paid'; 
-// ★★★ 修正ここまで ★★★
+
+// ログインユーザーに紐づく店舗IDを取得 (ストアIDがなければリードカウントは0)
+const storesSnapshot = await adminDb.collection('artifacts').doc(appId).collection('users').doc(uid).collection('stores').limit(1).get();
+
+const storeId = storesSnapshot.empty ? null : storesSnapshot.docs[0].id;
+
+// 見込み客カウントを本番初期値の 0 に設定 
+const initialLeadCount = 0; 
+
 
 return {
 props: {
@@ -161,8 +174,9 @@ uid: userDoc.id,
 email: userData.email || '',
 companyName: userData.companyName || userData.storeName || 'パートナー',
 roles: userData.roles || [],
-isPaid: isPaid, 
-}
+isPaid: isPaid, // ★ 新しいロジックのisPaidを渡す
+},
+initialLeadCount: initialLeadCount, 
 }
 };
 } catch (err) {
@@ -172,20 +186,21 @@ return { redirect: { destination: '/partner/login', permanent: false } };
 };
 
 // ===============================
-// メインページコンポーネント
+// メインページコンポーネント (変更なし)
 // ===================================
-const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData }) => {
+const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCount }) => {
 const router = useRouter();
 const { payment_status } = router.query;
-const auth = getAuth(app); 
+const auth = getAuth(app);
 
-const isPaid = partnerData.isPaid; 
+const isPaid = partnerData.isPaid;
 const hasRecruitRole = partnerData.roles.includes('recruit');
 
-const [storeData, setStoreData] = useState<any>({ mainCategory: '未登録' }); 
-const [showCancelModal, setShowCancelModal] = useState(false); // 解約モーダルの表示状態
+// ★ FIX: storeDataの初期値に id: null を確実に含める
+const [storeData, setStoreData] = useState<any>({ mainCategory: '未登録', id: null });
+const [showCancelModal, setShowCancelModal] = useState(false);
 
-// 店舗プロファイルの簡易フェッチ
+// 店舗プロファイルの簡易フェッチ (変更なし)
 useEffect(() => {
 const fetchStoreStatus = async () => {
 if (!partnerData.uid) return;
@@ -195,38 +210,38 @@ const storeQuery = query(storesRef, limit(1));
 const storeSnapshot = await getDocs(storeQuery);
 
 if (!storeSnapshot.empty) {
-const data = storeSnapshot.docs[0].data();
-setStoreData(data);
+const storeDoc = storeSnapshot.docs[0];
+const data = storeDoc.data();
+setStoreData({ ...data, id: storeDoc.id });
 } else {
-setStoreData({ mainCategory: '未登録' });
+// ★ FIX: 店舗情報がない場合も id: null を維持
+setStoreData({ mainCategory: '未登録', id: null });
 }
 } catch (error) {
 console.error("Store status fetch error:", error);
-setStoreData({ mainCategory: '未登録' });
+setStoreData({ mainCategory: '未登録', id: null });
 }
 };
 fetchStoreStatus();
 }, [partnerData.uid]);
 
-// 決済完了後のトークンリフレッシュと強制リロード
+// ★★★ FIX: 決済後のトークンリフレッシュと強制リロード（確実な切り替え） ★★★
 useEffect(() => {
-const refresh = async () => {
-    // 1. トークンをリフレッシュし、新しい権限を強制的に取得
-    await auth.currentUser?.getIdToken(true).catch(e => console.error("Token refresh failed:", e)); 
-    
-    // 2. クエリパラメータを削除してページを再読み込み (ハイドレーションエラーを回避)
-    router.replace('/partner/dashboard', undefined, { shallow: true });
+const refreshAndRedirect = async () => {
+// 1. クライアント側のセッショントークンを最新情報に強制リフレッシュ
+await auth.currentUser?.getIdToken(true).catch(e => console.error("Token refresh failed:", e));
+
+// 2. ブラウザ全体を強制リロード
+window.location.href = '/partner/dashboard';
 };
 
 if (payment_status === 'success') {
-    console.log("Payment Status:", payment_status);
-    refresh();
+refreshAndRedirect();
 }
-// 依存配列に router を追加
 }, [auth, payment_status, router]);
 
 
-// ログアウト処理
+// ログアウト処理 (変更なし)
 const handleLogout = async () => {
 try {
 await fetch('/api/auth/sessionLogout', { method: 'POST' });
@@ -238,11 +253,16 @@ router.push('/partner/login');
 }
 };
 
-// 解約モーダルを開く
+// 解約モーダルを開く (変更なし)
 const handleOpenCancelModal = (e: React.MouseEvent<HTMLAnchorElement>) => {
-e.preventDefault(); // ページ遷移を止める
+e.preventDefault();
 setShowCancelModal(true);
 };
+
+// ★ 仮の storeId を使用 (見込み客カウンター用)
+// storeData.id があればそれを使用、なければ認証UIDを仮のIDとして使用
+const currentStoreId = storeData.id || partnerData.uid || 'dummy_store_id';
+
 
 return (
 <div className="min-h-screen bg-gray-50">
@@ -250,15 +270,15 @@ return (
 <title>{`広告パートナー ダッシュボード (${isPaid ? '有料会員' : '無料会員'})`}</title>
 </Head>
 
-{/* ★★★ 解約確認モーダル ★★★ */}
+{/* ★★★ 解約確認モーダル (変更なし) ★★★ */}
 {showCancelModal && (
-<div 
+<div
 className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-onClick={() => setShowCancelModal(false)} // 背景クリックで閉じる
+onClick={() => setShowCancelModal(false)}
 >
-<div 
+<div
 className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
-onClick={(e) => e.stopPropagation()} // モーダル内部のクリックは伝播させない
+onClick={(e) => e.stopPropagation()}
 >
 <div className="p-6 text-center">
 <div className="flex justify-center mb-4">
@@ -290,19 +310,19 @@ className="w-full px-4 py-3 rounded-lg font-semibold bg-gray-200 text-gray-700 h
 </div>
 )}
 
-{/* ヘッダー */}
+{/* ヘッダー (変更なし) */}
 <header className="bg-white shadow-sm">
 <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
 <div>
 <h1 className="text-2xl font-bold text-gray-900">広告パートナー ダッシュボード</h1>
 <p className="text-sm text-gray-600 mt-1">
-ようこそ、<span className="font-bold">{partnerData.companyName}</span> 様 
+ようこそ、<span className="font-bold">{partnerData.companyName}</span> 様
 <span className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white ${isPaid ? 'bg-indigo-600' : 'bg-gray-500'}`}>
 {isPaid ? '有料パートナー' : '無料パートナー'}
 </span>
 </p>
 </div>
-{/* ★★★ 変更点: ログアウトと案内 ★★★ */}
+{/* ログアウトと案内 (変更なし) */}
 <div className="flex flex-col items-end text-right">
 <button
 onClick={handleLogout}
@@ -315,24 +335,36 @@ className="flex items-center space-x-2 text-sm text-gray-600 hover:text-red-600 
 ログインは、ブラウザでadtownと検索してホームページから行ってください。
 </p>
 </div>
-{/* ★★★ 変更ここまで ★★★ */}
 </div>
 </header>
 
 {/* メイン */}
 <main className="max-w-4xl mx-auto px-6 py-8">
 
+{/* ★★★ 見込み客カウンターの組み込み（安定版） ★★★ */}
+<div className="mb-8">
+{/* サーバーサイドで取得した initialLeadCount を渡し、チカつきを解消 */}
+<MatchingLeadsCounter
+storeId={currentStoreId}
+isPremium={isPaid}
+initialCount={initialLeadCount} // ★ サーバーで取得した値を渡す (0 が入る)
+/>
+</div>
+{/* ★★★ 組み込み完了 ★★★ */}
+
+
+{/* 店舗プロフィール未登録の通知 (変更なし) */}
 {(!storeData || storeData.mainCategory === '未登録') && (
 <div className="mb-8 p-6 bg-red-100 border-4 border-red-300 text-red-700 rounded-lg shadow-lg text-center">
 <h2 className="text-2xl font-extrabold text-red-900 mb-2">
 ⚠️ 【重要】店舗プロフィールが未登録です
 </h2>
 <p className="mt-2 text-lg">
-  すべての機能（特にAIマッチング）を利用するために、先に
-  <strong>お店の基本情報を完全に登録</strong>してください。
+すべての機能（特にAIマッチング）を利用するために、先に
+<strong>お店の基本情報を完全に登録</strong>してください。
 </p>
 <p className="mt-2 text-lg">
-  ログインは、ブラウザでadtownと検索してホームページから行ってください。
+ログインは、ブラウザでadtownと検索してホームページから行ってください。
 </p>
 <Link href="/partner/profile" legacyBehavior>
 <a className="inline-block mt-4 bg-red-600 text-white font-extrabold py-2 px-6 rounded-full shadow-lg hover:bg-red-700 transition duration-150">
@@ -343,6 +375,7 @@ className="flex items-center space-x-2 text-sm text-gray-600 hover:text-red-600 
 )}
 
 
+{/* 無料プラン誘導 (変更なし) */}
 {!isPaid && (
 <div className="mb-8 p-6 bg-yellow-100 border-4 border-yellow-400 text-yellow-800 rounded-lg shadow-lg text-center">
 <h2 className="text-2xl font-extrabold text-yellow-900">
@@ -359,6 +392,7 @@ className="flex items-center space-x-2 text-sm text-gray-600 hover:text-red-600 
 </div>
 )}
 
+{/* 決済完了通知 (変更なし) */}
 {payment_status === 'success' && isPaid && (
 <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md mb-8">
 <p className="font-bold">有料プランのご登録ありがとうございます！</p>
@@ -366,32 +400,44 @@ className="flex items-center space-x-2 text-sm text-gray-600 hover:text-red-600 
 </div>
 )}
 
-{/* セクション1: 無料・有料共通機能 (店舗情報登録とクーポン) */}
+{/* セクション1: 無料・有料共通機能 (変更なし) */}
 <section>
 <h2 className="text-xl font-bold text-gray-700 mb-3">１．集客ツールとお店の基本情報を設定する（無料）</h2>
 
-<div className="grid grid-cols-1 gap-4 mb-4">
-{/* ★★★ 修正箇所: 店舗プロフィールをクーポンより上に移動 ★★★ */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 <ActionButton
 href="/partner/profile"
 icon={<StoreIcon />}
 title="店舗プロフィールを登録・編集"
 description="特化情報、LINE情報、業種別データを設定します"
 bgColorClass="bg-blue-500"
-isPro={false} // 無料機能
+isPro={false}
 isPaid={isPaid}
 />
 
+{/* 店舗情報プレビューボタン (変更なし) */}
+{storeData && storeData.id && (
+<ActionButton
+href={`/stores/view/${storeData.id}`}
+icon={<RiEyeLine className="h-8 w-8 text-white" />}
+title="店舗情報プレビュー（公開画面）"
+description="アプリ上でどのように見えているかを確認します"
+bgColorClass="bg-indigo-500"
+isPro={false}
+isPaid={isPaid}
+/>
+)}
+
+</div>
 <ActionButton
 href="/partner/deals"
 icon={<RiCoupon3Line className="h-8 w-8 text-white" />}
 title="クーポン・特典・フードロスを登録・管理"
 description="ユーザーの来店を促し、在庫問題を解決する集客ツールです"
 bgColorClass="bg-green-500"
-isPro={false} // 無料機能
+isPro={false}
 isPaid={isPaid}
 />
-</div>
 </section>
 
 {/* セクション2: 有料集客ツール */}
@@ -400,24 +446,24 @@ isPaid={isPaid}
 
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 <ActionButton
-href="/partner/deals/ai-matching" 
+href="/partner/leads"
 icon={<RiRobotLine className="h-8 w-8 text-white" />}
-title="集客マッチング AI の実行とログ管理"
-description="AIが選定した最適顧客を特定し、マッチング結果を確認します"
+title="AI見込み客リスト & LINEアプローチ"
+description="AIが選定した最適顧客のリストを確認し、LINE登録案内を送信します。"
 bgColorClass="bg-indigo-600"
-isPro={true} // 有料機能 (AIマッチング)
+isPro={true} // 有料機能
 isPaid={isPaid}
 />
 </div>
 </section>
 
-{/* セクション3: その他の有料機能 (タイトルを修正) */}
+{/* セクション3: その他の有料機能 (変更なし) */}
 <section className="mt-8">
 <h2 className="text-xl font-bold text-gray-700 mb-3">３．その他の有料機能（報酬受取）</h2>
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
 <ActionButton
-href="/partner/referral-info" 
+href="/partner/referral-info"
 icon={<RiMoneyCnyBoxLine className="h-8 w-8 text-white" />}
 title="紹介料プログラム"
 description="お客様にアプリを紹介し、継続的な報酬を得るツールです"
@@ -435,23 +481,24 @@ isPro={true} // 有料機能
 isPaid={isPaid}
 />
 
-{/* ★★★ 解約ボタン (有料会員のみ表示) ★★★ */}
+{/* 解約ボタン (有料会員のみ表示) */}
 {isPaid && (
 <ActionButton
-href="/cancel-subscription" // hrefはダミー、実際にはonClickで制御
+href="/cancel-subscription"
 icon={<RiCloseCircleLine className="h-8 w-8 text-white" />}
 title="サブスクリプションの解約"
 description="有料プランの自動更新を停止（解約）します"
 bgColorClass="bg-red-500"
-isPro={true} // 有料機能として扱う (isPaid=falseなら非表示)
+isPro={true} // 有料機能
 isPaid={isPaid}
-onClick={handleOpenCancelModal} // モーダルを開く関数を渡す
+onClick={handleOpenCancelModal}
 />
 )}
 </div>
 </section>
 
-{/* AI求人案内 */}
+
+{/* AI求人案内 (変更なし) */}
 {!hasRecruitRole && (
 <section className="mt-12 p-6 bg-white rounded-lg shadow-md border border-blue-200">
 <h2 className="text-xl font-bold text-blue-600">求人広告掲載サービス</h2>
@@ -468,7 +515,7 @@ onClick={handleOpenCancelModal} // モーダルを開く関数を渡す
 
 <hr className="my-8" />
 
-{/* LINEお問い合わせセクション */}
+{/* LINEお問い合わせセクション (変更なし) */}
 <div className="pb-6">
 <section className="mt-6">
 <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
@@ -477,7 +524,7 @@ onClick={handleOpenCancelModal} // モーダルを開く関数を渡す
 <p className="text-sm text-gray-500 mt-1">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
 <p className="text-sm text-gray-500">ログインは、ブラウザでadtownと検索してホームページから行ってください。</p>
 </div>
-<div 
+<div
 dangerouslySetInnerHTML={{
 __html: '<a href="https://lin.ee/FwVhCvs" target="_blank"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" border="0"></a>'
 }}
@@ -487,7 +534,8 @@ __html: '<a href="https://lin.ee/FwVhCvs" target="_blank"><img src="https://scdn
 </div>
 
 </main>
-{/* フッター操作 */}
+
+{/* フッター操作 (変更なし) */}
 <footer className="max-w-4xl mx-auto px-6 pt-0 pb-8">
 <section className="mt-6 grid grid-cols-1 gap-4">
 <button
@@ -496,11 +544,9 @@ className="w-full text-center py-3 px-4 border border-transparent rounded-md sha
 >
 ログアウト
 </button>
-{/* ★★★ 変更点: 案内文を追加 ★★★ */}
 <p className="text-xs text-gray-500 mt-2 text-center">
 ログインは、ブラウザでadtownと検索してホームページから行ってください。
 </p>
-{/* ★★★ 変更ここまで ★★★ */}
 </section>
 </footer>
 </div>

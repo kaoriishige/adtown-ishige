@@ -312,7 +312,7 @@ const PartnerSignupPage: NextPage = () => {
                 </section>
                 
                 <section className="text-center py-16 md:py-24">
-                    <p className="text-orange-500 font-semibold">地元企業＆店舗を応援するadtownからのご提案</p>
+                    <p className="text-orange-500 font-semibold">那須地域の地元企業＆店舗を応援するadtownからのご提案</p>
                     <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
                         「集客に困っている店舗様」は必見！<br />
                         <span className="text-orange-600"> SNSでもなくWebでもない、第３の集客方法を無料でスタート！</span><br />
@@ -388,7 +388,7 @@ const PartnerSignupPage: NextPage = () => {
                 
                 {/* ★★★ 修正追加: 【無料の価値】セクション ★★★ */}
                 <section className="mt-20">
-                    <h3 className="text-3xl font-extrabold text-center border-b pb-2 mb-8">【無料の価値・待ちの集客】今すぐ集客を始めるための基本機能</h3>
+                    <h3 className="text-3xl font-extrabold text-center border-b pb-2 mb-8">【無料の価値・待ちの集客】今すぐ集客マッチングAIを始めるための基本機能</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div className="text-center p-6 bg-green-50 rounded-lg shadow-lg border-green-300 border">
                             <div className="bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4"><ShoppingBagIcon size={30} /></div>
