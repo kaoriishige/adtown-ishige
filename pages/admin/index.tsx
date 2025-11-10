@@ -4,6 +4,16 @@ import Link from 'next/link';
 import nookies from 'nookies';
 // Admin SDKのインポート
 import { adminAuth, adminDb } from '@/lib/firebase-admin'; 
+import { 
+RiLogoutBoxRLine, 
+RiCoupon3Line, 
+RiRobotLine, 
+RiMoneyCnyBoxLine, 
+RiBankLine, 
+RiCloseCircleLine, // 解約モーダル用
+RiAlertFill, // 解約モーダル用
+RiEyeLine, // プレビューボタン用のアイコン
+} from 'react-icons/ri'; 
 
 const AdminPage: NextPage = () => {
 const linkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-gray-700 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-gray-600 transition-transform transform hover:scale-105 text-center";
@@ -29,39 +39,37 @@ return (
 </div>
 
 <nav className="space-y-5">
-{/* 削除: 一般ユーザーのマイページを確認 */}
+{/* 上部主要ボタン */}
 <Link href="/admin/dashboard" className={primaryLinkStyle}>
 📊 運営ダッシュボード
 </Link>
 <Link href="/admin/settings" className={settingsLinkStyle}>
 ⚙️ 各種設定
 </Link>
-
-{/* 報酬管理の分割 */}
-<Link href="/admin/referral-rewards" className={payoutLinkStyle}>
+<Link href="/admin/referral-rewards" className={userViewLinkStyle}>
 💰 店舗紹介料管理
 </Link>
-{/* 削除: 🌟 ユーザーリワード管理 (ユーザー管理に統合) */}
 
-<hr />
+<hr className="my-5 border-gray-300" />
 
-<Link href="/admin/manageApps" className={linkStyle}>
-アプリ管理 (CRUD)
-</Link>
+{/* ★★★ 修正箇所: 店舗管理とアプリ管理を入れ替え ★★★ */}
+
 <Link href="/admin/manageStores" className={linkStyle}>
 店舗管理
 </Link>
+<Link href="/admin/manageApps" className={linkStyle}>
+アプリ管理 (CRUD)
+</Link>
+
 <Link href="/admin/user-management" className={linkStyle}>
 👤 ユーザー管理
 </Link>
 
-{/* 削除されたリンク */}
-{/* 削除: ランディングページ編集 */}
-{/* 削除: 関数手動実行 */}
-{/* 削除: 運用ガイド */}
 <Link href="/admin/export" className={linkStyle}>
 CSV出力
 </Link>
+{/* ★★★ 修正ここまで ★★★ */}
+
 </nav>
 </div>
 );
@@ -84,7 +92,9 @@ return { redirect: { destination: '/partner/login', permanent: false } };
 // ユーザーロールを取得
 const userDoc = await adminDb.collection('users').doc(uid).get();
 if (!userDoc.exists) {
-return { redirect: { destination: '/partner/login?error=user_not_found', permanent: false } };
+return {
+redirect: { destination: '/partner/login?error=user_not_found', permanent: false }
+};
 }
 
 const userData = userDoc.data() || {};

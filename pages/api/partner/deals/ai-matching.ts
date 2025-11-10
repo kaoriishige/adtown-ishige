@@ -1,5 +1,7 @@
+// pages/api/partner/deals/ai-matching.ts
+
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { db } from '../../../lib/firebase';
+import { db } from 'lib/firebase';
 import { collection, getDocs, query, where, DocumentData } from 'firebase/firestore';
 
 // グローバル変数の型を宣言
@@ -7,7 +9,7 @@ declare const __app_id: string;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // ===============================
-// ★ 修正: ファイルの冒頭で必要な型定義をすべて宣言します。
+// ★★★ 型定義ブロックを修正 ★★★
 // ===============================
 
 interface UserAnswer { q: string; a: string; }
@@ -74,7 +76,8 @@ export default async function handler(
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
     if (!GEMINI_API_KEY) {
-         return res.status(500).json({ error: 'サーバー側の設定エラー: GEMINI_API_KEYが設定されていません。' });
+        // NOTE: 環境変数設定が正しいか確認してください
+        return res.status(500).json({ error: 'サーバー側の設定エラー: GEMINI_API_KEYが設定されていません。' });
     }
 
     const { category, answers }: { category: string, answers: UserAnswer[] } = req.body;
@@ -174,7 +177,6 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
         
         // 1. 必須条件のチェック (30点)
         let mustHaveMet = true;
-        // ★ 修正: 'must'に型を指定 (string)
         criteria.mustHaves.forEach((must: string) => { 
             if (!(store.description.includes(must) || store.selectedAiTargetsString.includes(must))) {
                 mustHaveMet = false;
@@ -197,7 +199,6 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
 
         // 2. キーワードマッチング (40点)
         let keywordMatches = 0;
-        // ★ 修正: 'keyword'に型を指定 (string)
         criteria.keywords.forEach((keyword: string) => { 
             if (store.selectedAiTargetsString.includes(keyword) || store.storeName.includes(keyword)) {
                 keywordMatches++;
@@ -212,11 +213,10 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
 
         // 4. 説明文内のキーワードマッチング (20点)
         let descriptionMatches = 0;
-        // ★ 修正: 'keyword'に型を指定 (string)
         criteria.keywords.slice(0, 3).forEach((keyword: string) => { 
              if (store.description.includes(keyword)) {
-                descriptionMatches++;
-            }
+                 descriptionMatches++;
+             }
         });
         matchScore += (20 * (descriptionMatches / 3));
         
@@ -235,4 +235,3 @@ function calculateMatchRates(criteria: SearchCriteria, stores: StoreProfile[]): 
 
     return results;
 }
-
