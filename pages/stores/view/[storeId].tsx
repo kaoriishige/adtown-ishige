@@ -1,99 +1,105 @@
+// [storeId].tsx - 最終コンバージョン最適化LPコード（全データ反映版）
+
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect } from 'react';
-import Link from 'next/link'; // Next.js Linkコンポーネントを使用
+import Link from 'next/link';
 import Error from 'next/error';
-// Ri Icons は JSX で使用されているためインポート
+// Ri Icons
 import { RiMapPinLine, RiGlobalLine, RiTimeLine, RiPhoneLine, RiMailLine, RiStarFill } from 'react-icons/ri';
-import { FaLine, FaBolt, FaCheckCircle } from 'react-icons/fa'; // LINE, アイコン用
-import nookies from 'nookies'; 
-import { adminDb } from '@/lib/firebase-admin'; // ★★★ インポート維持 ★★★
+import { FaLine, FaAngleRight } from 'react-icons/fa'; // LINE, アイコン用
+// import nookies from 'nookies'; // 未使用のためコメントアウト維持
+import { adminDb } from '@/lib/firebase-admin'; // Firestore Admin SDK (サーバーサイド用)
 
 // =========================================================================
-// 1. DUMMY/PLACEHOLDER DEFINITIONS (ローカルでの実行時エラー回避用)
+// 1. DUMMY/PLACEHOLDER DEFINITIONS
 // =========================================================================
 
-// グローバル変数定義 (Firestoreパス用)
 declare const __app_id: string;
 const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
+// ******************************************************
+// DUMMY DATA FOR FALLBACK (StoreData 型に合わせるように構造を変更)
+// ******************************************************
+const DUMMY_STORE_DATA = {
+    id: 'dummy-store-id', 
+    name: 'AIコンサルティングファーム', 
+    mainCategory: '経営コンサルティング',
+    tagline: '集客のAI化とコスト最適化で、3ヶ月以内に利益率を15%向上させます。',
+    description: '**選ばれる理由：**\n\n【3ヶ月以内の結果保証】\n最新のAIマーケティング戦略とデータ分析に基づき、最短期間で目に見える成果をお約束します。\n\n【専属AIコンサルタント】\n御社の業種に特化した経験豊富なコンサルタントが、AIの導入から運用までをフルサポートします。',
+    
+    images: [
+        'https://placehold.co/1200x600/102048/ffffff?text=Professional+Consulting+Hero',
+        'https://placehold.co/800x400/334155/ffffff?text=Office+View',
+    ],
+    
+    address: '東京都千代田区大手町 1-5-1',
+    phoneNumber: '03-1234-5678',
+    email: 'info@preview-consult.com', 
+    url: 'https://preview-consulting.com', 
+    lineLiffUrl: 'https://liff.line.me/1234567890', 
+    hours: '平日 9:00〜18:00 (土日祝休)',
+    ownerId: 'dummy-owner-uid', 
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    isPublished: true,
+    specialtyPoints: ['完全成果報酬型', 'AI集客のプロフェッショナル', '3ヶ月での利益率改善保証'], 
+    averageRating: 4.9, 
+    reviewCount: 78,
+};
+
+// <--- 修正1: createFirestoreDummyReference 関数を完全に定義し、スコープエラーを解消 --->
 // **実行時エラー回避のためのロバストな adminDb ダミー実装**
-// .collection().doc().collection()... のネストを許可し、実行時エラーを防ぐ
 const createFirestoreDummyReference = (isDoc = false): any => {
     // 常に自身を返すことで、.collection()や.doc()のネストを許可する
     const ref: any = {
         collection: (name: string) => createFirestoreDummyReference(false),
         doc: (id: string) => createFirestoreDummyReference(true),
-        limit: (l: number) => ref, // .limit() もサポート
+        limit: (l: number) => ref,
         
         // 最後の.get()に対するダミーレスポンス
         get: async () => {
             if (isDoc) {
                 // doc.get() に対するレスポンス
                 return {
-                    exists: true, // 常に存在すると仮定し、ダミーデータを返す
+                    exists: true,
                     id: 'dummy-store-id',
+                    // rawData が返す可能性のあるフィールドを含める
                     data: () => ({ 
-                        ...DUMMY_STORE_DATA,
-                        id: 'dummy-store-id',
+                        ...DUMMY_STORE_DATA, 
+                        storeName: DUMMY_STORE_DATA.name, 
+                        websiteUrl: DUMMY_STORE_DATA.url,
+                        mainImageUrl: DUMMY_STORE_DATA.images[0],
+                        galleryImageUrls: DUMMY_STORE_DATA.images.slice(1),
                     }),
                 };
             }
-            // collection.get() に対するレスポンス (通常このページでは使用しないが念のため)
+            // collection.get() に対するレスポンス
             return { empty: true, docs: [] }; 
         },
     };
     return ref;
 };
+// <--- 修正1: ここまで --->
 
-// adminDb, adminAuth のダミー関数を直接定義 (ローカル環境を想定)
-// NOTE: importされたadminDbが使用できない場合、これらがフォールバックとして機能します。
-// 衝突回避のため、import文はそのまま残し、実行時にanyキャストを使用します。
-const adminAuth: any = { verifySessionCookie: (s: any, b: any) => Promise.resolve({ uid: 'dummy-uid' }) };
-
-// ダミーデータ
-const DUMMY_STORE_DATA = {
-    name: 'AIマッチング専門コンサルティング',
-    mainCategory: '経営コンサルティング',
-    tagline: '中小企業の売上UPに特化！AIを活用した集客で結果を出します。',
-    description: '私たちは、地域の中小企業に特化した経営コンサルティングファームです。\n\n【AI集客の導入支援】\n最新のAI技術を活用し、競合他社には真似できない独自の集客チャネルを構築します。ターゲット顧客をAIが分析し、最適なメッセージとタイミングでアプローチします。\n\n【事業再構築とコスト最適化】\n既存事業のムダを徹底的に洗い出し、最新技術を導入することで、生産性を劇的に向上させます。お客様の利益を最優先に考えた提案を行います。\n\n【長期的な伴走サポート】\n契約したら終わりではなく、3年間、四半期ごとに進捗を確認し、市場の変化に応じた戦略の調整を継続的に実施します。',
-    images: [
-        'https://placehold.co/1200x600/3B82F6/ffffff?text=Store+Image+1',
-        'https://placehold.co/800x400/10B981/ffffff?text=Store+Image+2',
-        'https://placehold.co/800x400/F59E0B/ffffff?text=Store+Image+3',
-    ],
-    address: '東京都千代田区大手町 1-5-1',
-    phoneNumber: '03-1234-5678',
-    email: 'info@preview-consult.com',
-    url: 'https://preview-consulting.com',
-    lineLiffUrl: 'https://liff.line.me/1234567890',
-    hours: '平日 9:00〜18:00',
-    ownerId: 'dummy-owner-uid', 
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    isPublished: true,
-    specialtyPoints: ['AIを活用したニッチな集客戦略', '経験豊富な元大手コンサルタント在籍', '完全成果報酬制度あり'],
-    averageRating: 4.8,
-    reviewCount: 35,
-};
 
 // ===============================
-// 2. TYPE DEFINITIONS
+// 2. TYPE DEFINITIONS 
 // ===================================
 interface StoreData {
     id: string;
-    name: string;
+    name: string; // 表示用の名前
     mainCategory: string;
     tagline: string;
     description: string;
     images: string[];
-    address: string;
-    phoneNumber: string;
-    email: string;
-    url: string;
-    lineLiffUrl?: string;
-    hours: string;
+    address: string | null;
+    phoneNumber: string | null;
+    email: string | null;
+    url: string | null; // WebサイトURL
+    lineLiffUrl?: string | null;
+    hours: string | null; // 営業時間
     ownerId: string;
     createdAt: string;
     updatedAt: string;
@@ -111,8 +117,27 @@ interface StoreViewProps {
 // ===============================
 // 3. SERVER SIDE LOGIC (getServerSideProps)
 // ===================================
-export const getServerSideProps: GetServerSideProps<StoreViewProps> = async (context) => {
-    const { storeId } = context.query;
+
+const cleanString = (val: any) => { 
+    if (val === undefined || val === null || val === '') { return null; }
+    if (typeof val === 'string' && val.trim() === '') { return null; }
+    return val;
+};
+const safeToISOString = (timestamp: any, fallback: string): string => { 
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        try {
+            return timestamp.toDate().toISOString();
+        } catch (e) {
+            return fallback;
+        }
+    }
+    if (typeof timestamp === 'string') { return timestamp; }
+    return fallback;
+};
+
+
+export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ query }) => {
+    const { storeId } = query;
     
     if (!storeId || typeof storeId !== 'string') {
         return { props: { store: null, error: 'Invalid Store ID' } };
@@ -121,250 +146,259 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async (con
     const userId = 'dummy-user-id'; 
 
     try {
-        const cookies = nookies.get(context); 
-        // const token = await (adminAuth as any).verifySessionCookie(cookies.session || '', true);
-
-        // ★★★ ネストされたFirestoreクエリ ★★★
-        // adminDbが本番環境であれば正常に動き、ローカルのダミーで上書きされていればダミーロジックが実行される
-        const storeRef = (adminDb as any)
-            .collection("artifacts")
-            .doc(APP_ID)
-            .collection("users")
-            .doc(userId) 
-            .collection("stores")
-            .doc(storeId);
+        const dbInstance = (adminDb && (adminDb as any).collection) ? adminDb : { collection: createFirestoreDummyReference };
+        
+        const storeRef = (dbInstance as any)
+            .collection("artifacts").doc(APP_ID).collection("users").doc(userId).collection("stores").doc(storeId);
 
         const storeDoc = await storeRef.get();
 
-        if (!(storeDoc as any).exists) {
-            // 見つからない場合はダミーデータを使用
-            console.warn(`Store not found for ID: ${storeId}. Using dummy data.`);
-            return {
-                props: {
-                    store: { ...DUMMY_STORE_DATA, id: storeId },
-                    error: null
-                }
-            };
+        const rawData = (storeDoc as any).exists ? (storeDoc as any).data() : {};
+
+        // データの整形
+        const mergedData: StoreData = {
+            id: storeDoc.id || storeId,
+            
+            // ★★★ 編集ページからの主要なデータマッピング ★★★
+            name: rawData.storeName || DUMMY_STORE_DATA.name, 
+            mainCategory: rawData.mainCategory || DUMMY_STORE_DATA.mainCategory,
+            tagline: rawData.tagline || DUMMY_STORE_DATA.tagline,
+            description: rawData.description || DUMMY_STORE_DATA.description,
+            
+            // 画像: mainImageUrl と galleryImageUrls を統合
+            images: cleanString(rawData.mainImageUrl) 
+                ? [cleanString(rawData.mainImageUrl), ...rawData.galleryImageUrls || []].filter((url: string) => url) 
+                : DUMMY_STORE_DATA.images,
+            
+            // 基本情報
+            address: cleanString(rawData.address), 
+            phoneNumber: cleanString(rawData.phoneNumber),
+            url: cleanString(rawData.websiteUrl || rawData.url), // websiteUrl を優先
+            lineLiffUrl: cleanString(rawData.lineLiffUrl),
+            specialtyPoints: rawData.specialtyPoints || DUMMY_STORE_DATA.specialtyPoints, 
+            
+            // その他のフィールド
+            email: cleanString(rawData.email || DUMMY_STORE_DATA.email), 
+            hours: cleanString(rawData.hours || DUMMY_STORE_DATA.hours), 
+            ownerId: rawData.ownerId || DUMMY_STORE_DATA.ownerId,
+            isPublished: rawData.isPublished ?? DUMMY_STORE_DATA.isPublished, 
+            averageRating: rawData.averageRating || 0,
+            reviewCount: rawData.reviewCount || 0,
+            
+            createdAt: safeToISOString(rawData.createdAt, DUMMY_STORE_DATA.createdAt),
+            updatedAt: safeToISOString(rawData.updatedAt, DUMMY_STORE_DATA.updatedAt),
+        };
+        
+        // データが極端に不足している場合のフォールバック
+        if (!storeDoc.exists || !mergedData.name || !mergedData.address) {
+             console.warn(`Store ID ${storeId} is missing essential data or not found.`);
+             
+             return {
+                 props: {
+                    store: mergedData, 
+                    error: (storeDoc.exists && mergedData.name && mergedData.address) ? null : (
+                        (storeDoc.exists ? "基本情報が未入力です。" : "店舗データが見つかりませんでした。") + "プレビューまたは不完全なデータが表示されています。"
+                    ),
+                 }
+             };
         }
 
-        const storeData = (storeDoc as any).data() as StoreData;
-        
-        return {
-            props: {
-                store: { 
-                    ...storeData, 
-                    id: storeDoc.id,
-                    createdAt: storeData.createdAt || new Date().toISOString(),
-                    updatedAt: storeData.updatedAt || new Date().toISOString(),
-                },
-                error: null,
-            }
-        };
+
+        return { props: { store: mergedData, error: null } };
 
     } catch (err) {
         console.error('Data fetching error in getServerSideProps:', err);
-        
-        // 実行時エラーが発生した場合、ダミーデータで続行
-        return {
-            props: {
-                store: { ...DUMMY_STORE_DATA, id: storeId },
-                error: `データ取得エラー: ${(err as any).message || '不明なエラー'}`, 
-            }
+        return { 
+             props: { 
+                 store: DUMMY_STORE_DATA as StoreData,
+                 error: `データ取得中に深刻なエラーが発生しました: ${(err as any).message || '不明なエラー'}` 
+             } 
         };
     }
 };
 
 // ===============================
-// 4. HELPER COMPONENTS (CTA Button and Info Item)
+// 4. HELPER COMPONENTS (LPデザイン用)
 // ===================================
-const LineCTAButton: React.FC<{ store: StoreData, text: string, className?: string }> = ({ store, text, className = '' }) => (
-    store.lineLiffUrl ? (
+
+// LINE CTAボタンコンポーネント (デザインを刷新)
+const LineCTAButton: React.FC<{ store: StoreData, text: string, subText: string, className?: string, isPrimary?: boolean }> = ({ store, text, subText, className = '', isPrimary = true }) => (
+    cleanString(store.lineLiffUrl) ? (
         <a
-            href={store.lineLiffUrl}
+            href={store.lineLiffUrl!} 
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center justify-center font-bold px-8 py-4 rounded-xl shadow-2xl transition transform hover:scale-[1.03] animate-pulse-slow ${className}`}
+            className={`flex flex-col items-center justify-center p-4 rounded-xl shadow-2xl transition transform hover:scale-[1.02] text-center font-sans ${isPrimary ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-500 shadow-lg' : 'bg-green-600 text-white hover:bg-green-700 shadow-md'} ${className}`}
         >
-            <FaLine className="w-6 h-6 mr-3" />
-            {text}
+            <span className={`inline-flex items-center text-xl md:text-2xl font-black ${isPrimary ? 'text-gray-900' : 'text-white'}`}>
+                <FaLine className="w-6 h-6 mr-3" />
+                {text}
+            </span>
+            <span className="text-sm mt-1 font-semibold opacity-90">{subText}</span>
         </a>
     ) : (
-        <span className="text-sm text-gray-500 italic">LINE LIFF URLが未登録です</span>
+        <span className="text-sm text-gray-500 italic text-center p-4 border rounded-lg bg-gray-100 w-full">LINE連携URLが未登録です</span>
     )
 );
 
 // 店舗紹介文をブロックに分割するヘルパー
 const parseDescription = (description: string) => {
-    const blocks: { title: string; content: string }[] = [];
     let parts = description.split(/【(.+?)】/g).filter(p => p.trim());
-
-    if (parts.length === 0) return blocks;
-
-    const currentTitle = "店舗の想い・ストーリー";
-
-    // 最初のブロックを設定 (タイトルタグ外のテキスト)
-    if (parts[0].trim() && !parts[0].includes('【')) {
-        blocks.push({ title: currentTitle, content: parts[0].trim() });
-        parts = parts.slice(1); // 最初の要素を処理済みとして削除
+    if (parts.length === 0) return [];
+    const blocks: { title: string; content: string }[] = [];
+    if (parts.length > 0 && !parts[0].includes('【') && parts[0].trim()) {
+        blocks.push({ title: "導入文", content: parts[0].trim() }); 
+        parts = parts.slice(1);
     }
-
-    // 残りのタイトルと内容を処理
     for (let i = 0; i < parts.length; i += 2) {
         const title = parts[i].trim();
         const content = (parts[i + 1] || '').trim();
-        if (title && content) {
-            blocks.push({ title, content });
-        }
+        if (title && content) { blocks.push({ title, content }); }
     }
-
-    return blocks.map(block => ({
-        ...block,
-        content: block.content.trim(),
-    }));
+    return blocks.map(block => ({ ...block, content: block.content.trim() }));
 };
-
-// 補助コンポーネント
-const InfoItem: React.FC<{ icon: React.ElementType, title: string, content: string, isLink?: string, isExternal?: boolean }> = ({ icon: Icon, title, content, isLink, isExternal }) => (
-    <div className="flex items-start text-gray-700">
-        <Icon className="flex-shrink-0 w-6 h-6 mr-3 mt-1 text-indigo-500" />
-        <div>
-            <h3 className="font-bold text-gray-800">{title}</h3>
-            {isLink ? (
-                <a 
-                    href={isLink} 
-                    target={isExternal ? "_blank" : "_self"} 
-                    rel={isExternal ? "noopener noreferrer" : undefined}
-                    className="text-blue-600 hover:underline break-all"
-                >
-                    {content}
-                </a>
-            ) : (
-                <p>{content}</p>
-            )}
-        </div>
-    </div>
-);
 
 
 // ===============================
 // 5. MAIN COMPONENT (StoreView)
 // ===================================
 const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
-    const router = useRouter();
+    const router = useRouter(); 
 
-    // ページ表示後3秒後にプッシュトリガーをログに出力するロジック（そのまま維持）
+    // ページ表示後3秒後にプッシュトリガーをログに出力するロジック
     useEffect(() => {
         if (!store) return; 
         const timer = setTimeout(() => {
             console.log(`[LINE PUSH] 3秒後、${store.name}へのLINE登録を促すプッシュ処理をトリガーしました。`);
         }, 3000); 
         return () => clearTimeout(timer); 
-    }, [store]); 
+    }, [store]);
 
-
-    // 早期リターン
     if (error && !store) {
         return <Error statusCode={500} title={`エラーが発生しました: ${error}`} />;
     }
-
     if (!store) {
         return <Error statusCode={404} title="店舗が見つかりませんでした" />;
     }
 
+    const [mainImage, ...galleryImages] = store.images;
     const contentBlocks = parseDescription(store.description);
+    const starRating = Math.max(0, Math.min(5, Math.round(store.averageRating * 2) / 2)); 
+    const displaySpecialtyPoints = store.specialtyPoints.filter(p => cleanString(p));
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans">
+        <div className="min-h-screen bg-white font-sans text-gray-800">
             <Head>
-                <title>{store.name} | 店舗情報</title> {/* ★★★ 修正: プレビュー削除済み ★★★ */}
+                <title>{store.name} | {store.tagline}</title> 
                 <meta name="description" content={store.tagline || store.description.substring(0, 150)} />
+                <meta property="og:title" content={store.name} />
+                <meta property="og:image" content={mainImage} />
+                <meta property="og:url" content={`${process.env.NEXT_PUBLIC_BASE_URL || ''}${router.asPath}`} />
             </Head>
 
-            <header className="bg-white shadow-md">
-                <div className="max-w-4xl mx-auto px-4 py-4">
-                    <h1 className="text-2xl font-bold text-gray-900">店舗情報</h1> {/* ★★★ 修正: プレビュー削除済み ★★★ */}
-                    <p className="text-sm text-gray-500 mt-1">
-                        このページは、アプリ上で一般に公開される情報です。 {/* ★★★ 修正: プレビュー削除済み ★★★ */}
-                    </p>
+            {/* ヘッダー - シンプルなナビゲーション */}
+            <header className="bg-white shadow-sm sticky top-0 z-20">
+                <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+                    <span className="text-xl font-extrabold text-gray-900 tracking-tight">
+                        {store.name}
+                    </span>
+                    <LineCTAButton 
+                        store={store}
+                        text="無料相談" 
+                        subText="" 
+                        isPrimary={false}
+                        className="p-2 px-4 h-10 w-auto shadow-md text-sm font-semibold rounded-full hidden sm:flex"
+                    />
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto px-4 py-8">
-                
-                {/* エラーメッセージ表示 (ダミーデータで続行した場合など) */}
-                {error && (
-                    <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md">
-                        <p className="font-bold">警告:</p>
-                        <p>{error}</p>
-                        <p className="text-sm mt-1">ダミーデータで表示を継続しています。</p>
+            <main>
+                {/* 1. HERO SECTION - 強力なファーストビュー */}
+                <section 
+                    className="relative bg-gray-900 text-white pt-16 pb-20 overflow-hidden" 
+                    style={{ backgroundImage: `linear-gradient(rgba(16, 32, 72, 0.9), rgba(16, 32, 72, 0.9)), url(${mainImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                >
+                    <div className="max-w-4xl mx-auto px-4 text-center">
+                        <p className="text-sm font-semibold mb-3 text-yellow-400 uppercase tracking-widest">{store.mainCategory}</p>
+                        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+                            {store.tagline}
+                        </h1>
+                        <h2 className="text-xl md:text-2xl font-light mb-8 opacity-90">
+                            {store.name}
+                        </h2>
+
+                        {/* 評価と信頼要素 */}
+                        <div className="flex justify-center items-center mb-10 space-x-6">
+                            {store.reviewCount > 0 && (
+                                <div className="flex items-center space-x-1">
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <RiStarFill key={i} className={`w-6 h-6 ${starRating >= i ? 'text-yellow-400' : 'text-gray-500/50'}`} />
+                                    ))}
+                                    <span className="text-2xl font-bold ml-2 text-yellow-400">{store.averageRating.toFixed(1)}</span>
+                                    <span className="text-sm text-gray-300">({store.reviewCount}件)</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* メインCTA */}
+                        <LineCTAButton 
+                            store={store}
+                            text="【無料】AIコンサルタントにLINEで相談" 
+                            subText="今すぐ課題をヒアリング！強引な勧誘なし" 
+                            className="w-full sm:w-2/3 mx-auto max-w-sm animate-pulse-slow"
+                            isPrimary={true}
+                        />
+
+                        {error && (
+                            <div className="mt-8 bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded-md text-sm">
+                                データ取得警告: {error}
+                            </div>
+                        )}
                     </div>
+                </section>
+                
+                {/* 2. THREE PROMISES - 3つの強みを強調 */}
+                {displaySpecialtyPoints.length > 0 && (
+                    <section className="py-16 bg-gray-50">
+                        <div className="max-w-6xl mx-auto px-4">
+                            <h2 className="text-3xl font-extrabold text-center mb-12 text-gray-900">
+                                貴社が{store.name}を選ぶべき<span className="text-red-600">3つの理由</span>
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {displaySpecialtyPoints.slice(0, 3).map((point, i) => (
+                                    <div key={i} className="text-center p-6 bg-white rounded-xl shadow-lg border-t-4 border-blue-600">
+                                        <span className="inline-block bg-blue-600 text-white text-3xl font-black rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">{i + 1}</span>
+                                        <h3 className="text-xl font-bold mb-3 text-gray-900">{point}</h3>
+                                        <p className="text-sm text-gray-600">
+                                            {/* データにないため仮の詳細説明 */}
+                                            {i === 0 && "成果に直結する戦略のみをご提案。ムダな投資はさせません。"}
+                                            {i === 1 && "最新AI技術とベテランの知見を融合し、競合優位性を築きます。"}
+                                            {i === 2 && "長期的なビジネス成長を見据え、継続的なサポートを提供します。"}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
                 )}
 
 
-                {/* メインコンテンツ */}
-                <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                    
-                    {/* 1. Hero Section - インパクトとCTA */}
-                    <section
-                        className="relative min-h-[50vh] flex items-center bg-cover bg-center"
-                        style={{ backgroundImage: `url(${store.images[0] || 'https://placehold.co/1200x600/3B82F6/ffffff?text=Consulting+Hero'})` }}
-                    >
-                        <div className="absolute inset-0 bg-gray-900/75"></div>
-                        <div className="relative max-w-6xl mx-auto px-6 py-12 text-white z-10 w-full">
-                            <span className="text-sm font-semibold mb-2 inline-block bg-indigo-500 px-3 py-1 rounded-full">{store.mainCategory}</span>
-                            <h1 className="text-4xl md:text-5xl font-extrabold mb-3 leading-tight tracking-tight">
-                                {store.name}
-                            </h1>
-                            <h2 className="text-xl md:text-2xl font-light text-indigo-200 mb-6 border-l-4 border-yellow-400 pl-3">
-                                {store.tagline}
-                            </h2>
-                            
-                            {/* 評価スター */}
-                            <div className="flex items-center space-x-2 mb-8">
-                                {[1, 2, 3, 4, 5].map(i => (
-                                    <RiStarFill key={i} className={`w-6 h-6 ${store.averageRating >= i ? 'text-yellow-400' : 'text-gray-500/50'}`} />
-                                ))}
-                                <span className="text-lg font-semibold ml-2">
-                                    {store.averageRating.toFixed(1)} / 5.0
-                                </span>
-                                <span className="text-sm text-indigo-200">({store.reviewCount}件のレビュー)</span>
-                            </div>
-
-                            <LineCTAButton 
-                                store={store}
-                                text="【無料相談】LINEで専門家に今すぐ相談する" 
-                                className="bg-green-500 text-white hover:bg-green-600 shadow-green-500/50"
-                            />
-                            <p className="text-sm mt-3 text-indigo-100">※ 強引な勧誘は一切ありません。お気軽にどうぞ。</p>
-                        </div>
-                    </section>
-
-
-                    {/* 2. Feature/Description Section - 詳細なサービス説明 */}
-                    <section className="bg-white px-6 py-16">
-                        <h2 className="text-3xl font-bold text-center text-gray-800 mb-10 border-b pb-4">
-                            {store.name}のサービス詳細と理念
+                {/* 3. CORE SERVICE DESCRIPTION - サービス詳細 */}
+                <section className="py-20 bg-white">
+                    <div className="max-w-4xl mx-auto px-4">
+                        <h2 className="text-3xl font-extrabold text-center mb-12 text-gray-900">
+                            サービス理念と具体的な提供内容
                         </h2>
-                        
-                        {/* 強みタグ */}
-                        <div className="flex flex-wrap gap-2 justify-center mb-10">
-                            {store.specialtyPoints.map((point, i) => (
-                                <span key={i} className="flex items-center text-base font-medium bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full shadow-sm border border-indigo-200">
-                                    <FaCheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                                    {point}
-                                </span>
-                            ))}
-                        </div>
 
                         {contentBlocks.length > 0 ? (
-                            <div className="space-y-12">
+                            <div className="space-y-10">
                                 {contentBlocks.map(({ title, content }, i) => (
-                                    <div key={i} className="p-6 border-l-4 border-indigo-500 bg-gray-50 rounded-lg shadow-md">
-                                        <h3 className="text-xl font-extrabold text-indigo-700 mb-4 flex items-center">
-                                            <FaBolt className="w-5 h-5 mr-3 flex-shrink-0 text-indigo-500" />
+                                    <div key={i} className="border-b pb-8">
+                                        <h3 className="text-2xl font-extrabold text-blue-800 mb-4 flex items-center">
+                                            <FaAngleRight className="w-5 h-5 mr-3 flex-shrink-0 text-yellow-500" />
                                             {title}
                                         </h3>
-                                        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                        <p className="text-lg text-gray-700 leading-relaxed whitespace-pre-wrap pl-8 border-l-4 border-gray-200">
                                             {content}
                                         </p>
                                     </div>
@@ -372,76 +406,131 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                             </div>
                         ) : (
                             <div className="text-center text-gray-600 italic">
-                                <p>{store.description || "この店舗の紹介文が未登録です。"}</p>
+                                <p>詳細なサービス紹介文が未登録です。</p>
                             </div>
                         )}
-                    </section>
-                    
-                    {/* 3. Gallery Section - ギャラリー */}
-                    {store.images.length > 1 && (
-                        <section className="px-6 py-16 bg-gray-100">
-                            <h2 className="text-3xl font-bold text-center mb-10 text-gray-800">
-                                業務・オフィス風景
-                            </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                                {store.images.slice(1).map((url: string, i: number) => ( 
-                                    <img
-                                        key={i}
-                                        src={url}
-                                        alt={`ギャラリー画像 ${i + 2}`}
-                                        className="w-full h-48 object-cover rounded-xl shadow-lg transform hover:scale-[1.02] transition duration-300"
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).onerror = null; 
-                                            (e.target as HTMLImageElement).src = `https://placehold.co/400x300/ccc/000?text=Image+${i+2}`;
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    )}
+                        
+                        {/* ギャラリー */}
+                        {galleryImages.length > 0 && (
+                            <div className="mt-16 pt-8 border-t border-gray-200">
+                                <h3 className="text-2xl font-bold mb-6 text-gray-800">実績・オフィス風景 
 
-                    {/* 4. Final CTA - 逃さない行動喚起 */}
-                    <section className="bg-gradient-to-r from-blue-700 to-indigo-700 py-16 text-center text-white">
-                        <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
-                            **まずはLINEで無料診断・相談を！**
+[Image of business meeting and office setting]
+</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {galleryImages.slice(0, 4).map((url: string, i: number) => ( 
+                                        <img
+                                            key={i}
+                                            src={url}
+                                            alt={`ギャラリー画像 ${i + 2}`}
+                                            className="w-full h-48 object-cover rounded-lg shadow-md"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).onerror = null; 
+                                                (e.target as HTMLImageElement).src = `https://placehold.co/400x300/ccc/000?text=Image+${i+2}`;
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+
+                {/* 4. CONTACT & INFO - 最終CTAと基本情報 */}
+                <section className="py-16 bg-blue-900 text-white">
+                    <div className="max-w-4xl mx-auto px-4 text-center">
+                        <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-yellow-400">
+                            **成果に繋がる第一歩を踏み出しましょう**
                         </h2>
-                        <p className="text-xl mb-8 font-light">
-                            {store.name}が、あなたの課題を解決する最適なプランを提案します。
+                        <p className="text-xl mb-8 font-light opacity-90">
+                            専門コンサルタントが、最短1分で現状をヒアリング。今すぐ無料相談を！
                         </p>
                         <LineCTAButton 
                             store={store}
-                            text="LINEで無料相談・予約する (最短1分)" 
-                            className="bg-yellow-400 text-gray-900 hover:bg-yellow-500 shadow-yellow-400/50"
+                            text="LINEで無料相談・予約する" 
+                            subText="今すぐ相談して、利益率向上へのロードマップを手に入れる" 
+                            className="w-full sm:w-2/3 mx-auto max-w-md animate-pulse-slow"
+                            isPrimary={true}
                         />
-                    </section>
 
-                    {/* 5. Store Info - 基本情報 */}
-                    <section className="bg-white py-12 border-t px-6">
-                        <h2 className="text-2xl font-bold mb-6 border-b pb-2 text-gray-800">基本情報・アクセス</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                            <InfoItem icon={RiMapPinLine} title="所在地" content={store.address} />
-                            <InfoItem icon={RiTimeLine} title="営業時間" content={store.hours} />
-                            <InfoItem icon={RiPhoneLine} title="電話番号" content={store.phoneNumber} isLink={`tel:${store.phoneNumber}`} />
-                            <InfoItem icon={RiMailLine} title="メールアドレス" content={store.email} isLink={`mailto:${store.email}`} />
-                            <InfoItem icon={RiGlobalLine} title="公式Webサイト" content={store.url} isLink={store.url} isExternal={true} />
-                            
-                            {store.lineLiffUrl && (
-                                <InfoItem icon={FaLine} title="LINE相談" content="LINEで直接相談・予約が可能です" isLink={store.lineLiffUrl} isExternal={true} />
-                            )}
+                        {/* 基本情報ブロック */}
+                        <div className="mt-12 pt-8 border-t border-blue-700 text-left">
+                            <h3 className="text-xl font-bold mb-4">連絡先・基本情報 </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                
+                                <div className="flex items-start">
+                                    <RiPhoneLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />
+                                    <div>
+                                        <h4 className="font-bold">電話番号:</h4>
+                                        <p className="text-gray-300">
+                                            {cleanString(store.phoneNumber) ? (
+                                                <a href={`tel:${store.phoneNumber}`} className="hover:underline">{store.phoneNumber}</a>
+                                            ) : '未設定'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start">
+                                    <RiMapPinLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />
+                                    <div>
+                                        <h4 className="font-bold">所在地 (住所):</h4>
+                                        <p className="text-gray-300">{cleanString(store.address) || '未設定'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start">
+                                    <RiTimeLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />
+                                    <div>
+                                        <h4 className="font-bold">営業時間:</h4>
+                                        <p className="text-gray-300">{cleanString(store.hours) || '店舗紹介文をご確認ください'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start">
+                                    <RiGlobalLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />
+                                    <div>
+                                        <h4 className="font-bold">Webサイト:</h4>
+                                        <p className="text-gray-300">
+                                            {cleanString(store.url) ? (
+                                                <a 
+                                                    href={store.url!} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer" 
+                                                    className="hover:underline break-all"
+                                                >
+                                                    {store.url}
+                                                </a>
+                                            ) : '未設定'}
+                                        </p>
+                                    </div>
+                                </div>
+                                {/* emailも一応表示できるようにする（データがあれば） */}
+                                {cleanString(store.email) && (
+                                    <div className="flex items-start">
+                                        <RiMailLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />
+                                        <div>
+                                            <h4 className="font-bold">メールアドレス:</h4>
+                                            <p className="text-gray-300">
+                                                <a href={`mailto:${store.email}`} className="hover:underline break-all">{store.email}</a>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </section>
-                </div>
-
-                {/* 6. Dashboard Return */}
-                <div className="mt-8 text-center">
-                    <button
-                        onClick={() => router.push('/partner/dashboard')}
-                        className="text-indigo-600 font-semibold hover:underline"
-                    >
-                        ← パートナーダッシュボードに戻る
-                    </button>
-                </div>
+                    </div>
+                </section>
             </main>
+
+            {/* フッター */}
+            <footer className="bg-gray-800 text-gray-400 p-4 text-center text-sm">
+                <div className="max-w-4xl mx-auto">
+                    <p>
+                        © {new Date().getFullYear()} {store.name}. All rights reserved. | 
+                        <Link href="/partner/dashboard" legacyBehavior>
+                           <a className="text-blue-400 hover:underline ml-2">パートナーダッシュボードへ</a>
+                        </Link>
+                    </p>
+                </div>
+            </footer>
         </div>
     );
 };
