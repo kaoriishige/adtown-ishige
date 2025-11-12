@@ -1,5 +1,3 @@
-// pages/stores/view/[storeId].tsx - 最終安定版
-
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -7,9 +5,11 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Error from 'next/error';
 // Ri Icons
-import { RiMapPinLine, RiGlobalLine, RiTimeLine, RiPhoneLine, RiMailLine, RiStarFill, RiCheckboxCircleFill } from 'react-icons/ri';
+import { RiMapPinLine, RiGlobalLine, RiTimeLine, RiPhoneLine, RiMailLine, RiStarFill, RiCheckboxCircleFill, RiCheckLine, RiFocus2Line } from 'react-icons/ri'; 
 import { FaLine, FaAngleRight } from 'react-icons/fa'; // LINE, アイコン用
 import { adminDb } from '@/lib/firebase-admin'; // Firestore Admin SDK (サーバーサイド用)
+import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore'; 
+
 
 // =========================================================================
 // 1. CONSTANTS AND DUMMY DATA
@@ -27,13 +27,16 @@ const DUMMY_STORE_DATA: StoreData = {
     address: null, phoneNumber: null, email: null, url: null, lineLiffUrl: null, hours: null,
     ownerId: 'dummy-owner-uid', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     isPublished: false, specialtyPoints: [], averageRating: 0, reviewCount: 0,
+    matchingValues: [], // LPに表示するために型を追加
 };
 
-// **実行時エラー回避のためのダミー実装**
+// **実行時エラー回避のためのダミー実装 (TypeScriptエラー回避のため残します)**
 const createFirestoreDummyReference = (isDoc = false): any => {
     const ref: any = {
-        collection: (name: string) => createFirestoreDummyReference(false),
+        collection: (name: string) => createFirestoreDummyReference(false), 
+        collectionGroup: (name: string) => ref,
         doc: (id: string) => createFirestoreDummyReference(true),
+        where: (field: string, op: string, value: any) => ref,
         limit: (l: number) => ref,
         get: async () => {
             if (isDoc) {
@@ -45,6 +48,7 @@ const createFirestoreDummyReference = (isDoc = false): any => {
             }
             return { empty: true, docs: [] }; 
         },
+        path: 'dummy/path' 
     };
     return ref;
 };
@@ -58,6 +62,7 @@ interface StoreData {
     url: string | null; lineLiffUrl?: string | null; hours: string | null; ownerId: string;
     createdAt: string; updatedAt: string; isPublished: boolean; specialtyPoints: string[];
     averageRating: number; reviewCount: number;
+    matchingValues: string[]; // LPに表示するために型を追加
 }
 interface StoreViewProps { store: StoreData | null; error: string | null; }
 
@@ -74,9 +79,54 @@ const safeToISOString = (timestamp: any, fallback: string): string => {
     return fallback;
 };
 
+// ★★★ 編集画面のカテゴリ定義を忠実に再現 (LP表示用) ★★★
+// 選択項目と自由入力項目のフィルタリングにのみ使用します。
+interface MatchingCategory {
+    title: string;
+    options: string[];
+}
+const ALL_MATCHING_VALUES: MatchingCategory[] = [
+    { title: "専門性・実績", options: [
+        '特定の分野（経営、Web、人事）に特化', 
+        '豊富な実績・具体的な成功事例', 
+        '業界・業種への深い理解', 
+        '最新の知識・情報に精通',
+        '的確な課題分析・診断力',
+    ]},
+    { title: "提案力・解決力", options: [
+        '机上の空論でなく実行可能な提案',
+        '企業の課題・本質を的確に把握',
+        '複数の解決策・選択肢を提示',
+        '期待を超えるアイデア・付加価値の提供',
+        '成果（売上・コスト削減）にコミット',
+    ]},
+    { title: "ヒアリング力・伴走力", options: [
+        '経営者の悩み・ビジョンを深くヒアリング',
+        '親身になって相談に乗ってくれる',
+        '専門用語を使わず分かりやすく説明',
+        '実行まで伴走・サポート',
+        '社内スタッフへの研修・指導',
+    ]},
+    { title: "価格の透明性・適正さ", options: [
+        '料金体系（顧問、プロジェクト）が明確',
+        '事前に詳細な見積もりを提示',
+        '価格以上の価値・成果',
+        '予算に応じたプランを提案',
+        '各種補助金・助成金の活用を提案',
+    ]},
+    { title: "人物・信頼感", options: [
+        '話しやすく相談しやすい人柄',
+        '長期的なパートナーとして信頼できる',
+        'レスポンスが早く丁寧',
+        '秘密厳守・誠実な対応',
+        '地元（那須）の経済・事情に精通',
+    ]}
+];
+// ★★★ 編集画面のカテゴリ定義ここまで ★★★
+
 
 // ===============================
-// 3. SERVER SIDE LOGIC (getServerSideProps) - ★正確なデータ取得★
+// 3. SERVER SIDE LOGIC (getServerSideProps) - 404エラー対策適用済み
 // ===================================
 
 export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ query }) => {
@@ -86,33 +136,67 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
         return { props: { store: null, error: 'Invalid Store ID' } };
     }
 
-    // ★★★ 修正: 正しいユーザーIDを使用 (Firestoreパスに基づく) ★★★
-    const userId = 'Gzn6XWR0qhU14SkvNNnWZtUE0wr2'; 
-
     try {
-        const dbInstance = (adminDb && (adminDb as any).collection) ? adminDb : { collection: createFirestoreDummyReference };
-        
-        const storeRef = (dbInstance as any)
-            .collection("artifacts").doc(APP_ID).collection("users").doc(userId).collection("stores").doc(storeId);
+        const dbInstance = (adminDb && (adminDb as any).collection) ? (adminDb as Firestore) : (createFirestoreDummyReference() as Firestore);
+        const dbRef: Firestore = dbInstance; 
 
-        const storeDoc = await storeRef.get();
+        let storeDoc: QueryDocumentSnapshot | undefined = undefined;
 
-        // データが存在しない場合は即座に 404 
-        if (!(storeDoc as any).exists) {
-            return { notFound: true };
+        // ログから取得したユーザーID (vsypdKIA8PTPZMuAJMVX4lnBeM63) を使って最初に直接参照を試みる
+        const knownUserId = 'vsypdKIA8PTPZMuAJMVX4lnBeM63'; 
+        try {
+             // ★ FIX: APP_ID を使用してパスを構築
+             const directStoreRef = dbRef.doc(`artifacts/${APP_ID}/users/${knownUserId}/stores/${storeId}`);
+             const docSnap = await directStoreRef.get();
+             if (docSnap.exists) {
+                 storeDoc = docSnap as QueryDocumentSnapshot;
+             }
+        } catch (e) {
+            // 直接参照が失敗しても続行
+            console.log("Direct path lookup failed, trying Collection Group.");
+        }
+
+
+        // 直接参照で見つからない場合、全ユーザーの stores コレクションを横断検索
+        if (!storeDoc) {
+             const entireQuerySnapshot = await dbRef
+                .collectionGroup("stores")
+                .get(); 
+             
+             // メモリ内でドキュメントID (doc.id) が storeId と一致し、かつ APP_ID 配下にあるドキュメントを探す
+             const prefix = `artifacts/${APP_ID}/users/`;
+             storeDoc = entireQuerySnapshot.docs.find(doc => 
+                 doc.id === storeId && doc.ref.path.includes(prefix)
+             );
+
+             if (!storeDoc) {
+                 // 検索しても見つからない場合
+                 console.log(`Store ID ${storeId} not found across all users. (No match found)`);
+                 return { notFound: true };
+             }
         }
         
-        const rawData = (storeDoc as any).data();
+        // ★ storeDoc はここで必ず存在する
+
+        const rawData = storeDoc.data();
+        
+        // ドキュメントIDとオーナーIDを正しく取得
+        const foundStoreId = storeDoc.id;
+        const foundOwnerId = rawData.ownerId || DUMMY_STORE_DATA.ownerId; // ownerIdの取得は必須
 
         // ★★★ 登録情報からのデータマッピングを厳密に実行 ★★★
+        const descriptionText = cleanString(rawData.description) || '';
+        // 's' フラグの代わりに [^] を使用し、改行にマッチさせる
+        const hoursMatch = descriptionText.match(/【営業時間】\n([^]+?)(?:\n\n|\n【|$)/); 
+        
         const mergedData: StoreData = {
-            id: storeDoc.id,
+            id: foundStoreId,
             name: cleanString(rawData.storeName) || cleanString(rawData.name) || DUMMY_STORE_DATA.name, 
             address: cleanString(rawData.address), 
             phoneNumber: cleanString(rawData.phoneNumber),
             mainCategory: cleanString(rawData.mainCategory) || DUMMY_STORE_DATA.mainCategory,
             tagline: cleanString(rawData.tagline),
-            description: cleanString(rawData.description),
+            description: descriptionText,
             specialtyPoints: rawData.specialtyPoints || [], 
             url: cleanString(rawData.websiteUrl || rawData.url), 
             lineLiffUrl: cleanString(rawData.lineLiffUrl),
@@ -120,13 +204,14 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
                 ? [cleanString(rawData.mainImageUrl)!, ...rawData.galleryImageUrls || []].filter((url: string) => url) 
                 : [],
             email: cleanString(rawData.email), 
-            hours: cleanString(rawData.hours), 
-            ownerId: rawData.ownerId || DUMMY_STORE_DATA.ownerId,
+            hours: hoursMatch ? hoursMatch[1].trim() : cleanString(rawData.hours), // descriptionから営業時間抽出を試みる
+            ownerId: foundOwnerId,
             isPublished: rawData.isPublished ?? DUMMY_STORE_DATA.isPublished, 
             averageRating: rawData.averageRating || 0,
             reviewCount: rawData.reviewCount || 0,
             createdAt: safeToISOString(rawData.createdAt, DUMMY_STORE_DATA.createdAt),
             updatedAt: safeToISOString(rawData.updatedAt, DUMMY_STORE_DATA.updatedAt),
+            matchingValues: rawData.matchingValues || [], // ★ 価値観データをマッピング
         };
         
         // 警告は店舗名や画像が空の場合のみ
@@ -150,7 +235,7 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
 // 4. HELPER COMPONENTS (LPデザイン用)
 // ===================================
 
-// LINE CTAボタンコンポーネント
+// LINE CTAボタンコンポーネント (変更なし)
 const LineCTAButton: React.FC<{ store: StoreData, text: string, subText: string, className?: string, isPrimary?: boolean }> = ({ store, text, subText, className = '', isPrimary = true }) => (
     cleanString(store.lineLiffUrl) ? (
         <a
@@ -171,7 +256,7 @@ const LineCTAButton: React.FC<{ store: StoreData, text: string, subText: string,
     )
 );
 
-// 店舗紹介文をブロックに分割するヘルパー
+// 店舗紹介文をブロックに分割するヘルパー (変更なし)
 const parseDescription = (description: string) => {
     if (!description) return [];
 
@@ -196,6 +281,90 @@ const parseDescription = (description: string) => {
 // ===============================
 // 5. MAIN COMPONENT (StoreView)
 // ===================================
+
+// ★★★ renderMatchingValues - 選択項目のみを抽出して表示 ★★★
+const renderMatchingValues = (matchingValues: string[]) => {
+    const selectedSet = new Set(matchingValues);
+    const totalCount = selectedSet.size;
+    
+    // 全ての選択肢をフラットな配列として取得
+    const allOptions = ALL_MATCHING_VALUES.flatMap(group => group.options);
+    
+    // 自由入力の項目を特定 (カスタムで入力された項目)
+    const customValues = matchingValues.filter(v => !allOptions.includes(v));
+    
+    // 選択された既定の項目をカテゴリごとにグルーピング
+    const groupedSelectedValues: { title: string, options: string[] }[] = [];
+    
+    ALL_MATCHING_VALUES.forEach(group => {
+        const selectedOptions = group.options.filter(value => selectedSet.has(value));
+        if (selectedOptions.length > 0) {
+            groupedSelectedValues.push({
+                title: group.title,
+                options: selectedOptions
+            });
+        }
+    });
+
+    if (totalCount === 0) return null; // 選択肢がない場合はセクション全体を非表示
+
+    // UI要素をコンポーネント化して再利用
+    const MatchingValueItem = ({ value }: { value: string }) => (
+        <span className="bg-indigo-600 text-white shadow-md font-medium border-indigo-600 p-2 rounded-md flex items-center">
+            <RiCheckLine className="w-4 h-4 mr-2" />
+            {value}
+        </span>
+    );
+
+    return (
+        <div className="border-4 border-indigo-500 p-6 rounded-xl bg-indigo-50 shadow-xl mt-8">
+            <h2 className="text-xl md:text-2xl font-black text-indigo-800 mb-4 flex items-center">
+                <RiFocus2Line className="w-6 h-6 mr-2" />
+                AIマッチング用 サービス（目的）別価値観登録
+            </h2>
+            <p className="text-sm text-gray-700 mb-6 border-b pb-3">
+                小分類「<span className="font-semibold text-indigo-700">コンサルティング</span>」に基づき、貴店で**選択された強み**を表示しています。 
+                <span className="font-bold text-red-600 ml-1">({totalCount} 個選択済み)</span>
+            </p>
+
+            {groupedSelectedValues.map((group, groupIndex) => (
+                <div key={groupIndex} className="mb-6 p-4 bg-white rounded-lg shadow-sm">
+                    <h3 className="font-bold text-indigo-700 mb-2">{group.title}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {group.options.map((value, optionIndex) => (
+                            <MatchingValueItem 
+                                key={optionIndex}
+                                value={value}
+                            />
+                        ))}
+                    </div>
+                </div>
+            ))}
+            
+            {/* その他（自由入力）部分の表示 */}
+            {customValues.length > 0 && (
+                <div className="mt-8 border-t pt-4">
+                    <label className="block font-semibold mb-3 text-gray-800 text-base">
+                        その他（自由入力）
+                    </label>
+                    <p className="text-sm text-gray-600 mb-2">
+                        カスタムで登録された強み:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                         {customValues.map((v, i) => (
+                              <span key={`custom-tag-${i}`} className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm font-medium flex items-center">
+                                 <RiCheckLine className="inline mr-1 w-4 h-4" />{v}
+                              </span>
+                         ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+// ★★★ renderMatchingValues 定義ここまで ★★★
+
+
 const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
     const router = useRouter(); 
 
@@ -234,7 +403,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
 
             {/* ヘッダー - CTA固定表示 */}
             <header className="bg-white shadow-sm sticky top-0 z-20">
-                <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
                     <span className="text-xl font-extrabold text-gray-900 tracking-tight truncate">
                         {displayStoreName}
                     </span>
@@ -308,14 +477,15 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 {/* 2. THREE PROMISES - 3つの強みを柔軟に強調 (データがある場合のみ表示) */}
                 {displaySpecialtyPoints.length > 0 && (
                     <section className="py-16 bg-gray-50">
-                        <div className="max-w-6xl mx-auto px-4">
+                        <div className="max-w-4xl mx-auto px-4">
                             <h2 className="text-3xl font-extrabold text-center mb-12 text-gray-900">
                                 {displayStoreName}の<span className="text-blue-600">強み・こだわり</span>
                             </h2>
                             <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 justify-center`}>
                                 {displaySpecialtyPoints.slice(0, 3).map((point, i) => (
                                     <div key={i} className="text-center p-6 bg-white rounded-xl shadow-lg border-t-4 border-blue-600">
-                                        {/* アイコンは RiCheckboxCircleFill がインポートされていないため、ここではテキストに置き換えるか、または RiStarFill などの既存アイコンを使用 */}
+                                        {/* RiCheckboxCircleFill はインポートされているためそのまま使用 */}
+                                        <RiCheckboxCircleFill className="w-8 h-8 mx-auto text-blue-500 mb-3" />
                                         <h3 className="text-xl font-bold mb-3 text-gray-900">{point}</h3>
                                         <p className="text-sm text-gray-600">
                                             プロフィールで設定された貴店の最も重要な強みです。
@@ -326,9 +496,19 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         </div>
                     </section>
                 )}
+                
+                {/* 3. AIマッチング用 サービス（目的）別価値観登録 セクションの追加 */}
+                {/* store.matchingValues があれば、編集画面の UI を再現して表示 */}
+                {store.matchingValues && (
+                    <section className="py-16 bg-indigo-50 border-t-4 border-indigo-200">
+                         <div className="max-w-4xl mx-auto px-4">
+                            {renderMatchingValues(store.matchingValues)}
+                        </div>
+                    </section>
+                )}
 
 
-                {/* 3. CORE SERVICE DESCRIPTION - サービス詳細/店舗紹介 */}
+                {/* 4. CORE SERVICE DESCRIPTION - サービス詳細/店舗紹介 */}
                 {/* descriptionがある場合のみ表示 */}
                 {store.description && contentBlocks.length > 0 && (
                     <section className="py-20 bg-white">
@@ -377,9 +557,9 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 
                 {/* descriptionがない場合の警告 */}
                 {!store.description && (
-                    <section className="py-20 bg-white">
+                    <section className="py-20 bg-gray-50">
                         <div className="max-w-4xl mx-auto px-4">
-                            <div className="text-center text-gray-600 italic p-8 border rounded-lg bg-gray-50">
+                            <div className="text-center text-gray-600 italic p-8 border rounded-lg bg-white">
                                 <p className="font-semibold">【重要】詳細な店舗・サービス紹介文が未登録です。</p>
                                 <p className="text-sm mt-2">プロフィール編集画面で、お客様に伝えたい情報（営業時間、特徴、こだわりなど）を記入してください。</p>
                             </div>
@@ -388,7 +568,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 )}
 
 
-                {/* 4. CONTACT & INFO - 最終CTAと基本情報 */}
+                {/* 5. CONTACT & INFO - 最終CTAと基本情報 */}
                 <section className="py-16 bg-blue-900 text-white">
                     <div className="max-w-4xl mx-auto px-4 text-center">
                         <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-yellow-400">
@@ -400,7 +580,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         <LineCTAButton 
                             store={store}
                             text="LINEで無料相談・予約する" 
-                            subText="最短1分で完了" 
+                            subText={cleanString(store.lineLiffUrl) ? "無料で簡単に予約・問合せが可能です" : "LINE連携URLが未登録です"} 
                             className="w-full sm:w-2/3 mx-auto max-w-md animate-pulse-slow"
                             isPrimary={true}
                         />

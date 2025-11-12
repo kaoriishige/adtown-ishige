@@ -377,7 +377,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                             💡 現在、無料の基本機能をご利用中です
                         </h2>
                         <p className="mt-2 text-lg">
-                            **集客AI、紹介料収入プログラム、LINEでお客様とAIマッチング**を利用して、売上と収益を最大化しましょう！
+                            有料プランで集客AI、紹介料収入プログラム、LINEでお客様とAIマッチングを利用して、売上と収益を最大化しましょう！
                         </p>
                         <Link href="/partner/subscribe_plan" legacyBehavior>
                             <a className="inline-block mt-4 bg-orange-600 text-white font-extrabold py-3 px-8 rounded-full shadow-lg hover:bg-orange-700 transition duration-150">

@@ -19,7 +19,8 @@ const auth = getAuth(app);
 
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
-const [loginType, setLoginType] = useState('recruit'); // 'recruit' (求人) または 'adver' (広告)
+// ★★★ 修正箇所: 初期値を 'adver' に変更 ★★★
+const [loginType, setLoginType] = useState('adver'); // 'recruit' (求人) または 'adver' (広告)
 const [loading, setLoading] = useState(false);
 const [error, setError] = useState<MessageContent | null>(null); 
 const [successMessage, setSuccessMessage] = useState<MessageContent | null>(null); 
@@ -185,11 +186,25 @@ return (
 {/* ログインタイプ選択 */}
 <div className="flex justify-center space-x-6">
 <label className="flex items-center space-x-2">
-<input type="radio" name="loginType" value="adver" checked={loginType === 'adver'} onChange={() => { setLoginType('adver'); setError(null); setSuccessMessage(null); setIsPasswordResetMode(false); }} className="text-indigo-600 focus:ring-indigo-500" />
+<input 
+type="radio" 
+name="loginType" 
+value="adver" 
+checked={loginType === 'adver'} // 'adver' が初期状態でチェックされる
+onChange={() => { setLoginType('adver'); setError(null); setSuccessMessage(null); setIsPasswordResetMode(false); }} 
+className="text-indigo-600 focus:ring-indigo-500" 
+/>
 <span className="text-gray-700">広告パートナー</span>
 </label>
 <label className="flex items-center space-x-2">
-<input type="radio" name="loginType" value="recruit" checked={loginType === 'recruit'} onChange={() => { setLoginType('recruit'); setError(null); setSuccessMessage(null); setIsPasswordResetMode(false); }} className="text-indigo-600 focus:ring-indigo-500" />
+<input 
+type="radio" 
+name="loginType" 
+value="recruit" 
+checked={loginType === 'recruit'} 
+onChange={() => { setLoginType('recruit'); setError(null); setSuccessMessage(null); setIsPasswordResetMode(false); }} 
+className="text-indigo-600 focus:ring-indigo-500" 
+/>
 <span className="text-gray-700">求人パートナー</span>
 </label>
 </div>
