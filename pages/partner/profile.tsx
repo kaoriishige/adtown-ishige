@@ -28,9 +28,6 @@ import { RiFocus2Line, RiCheckLine } from 'react-icons/ri';
 interface QuestionSet {
     [title: string]: string[];
 }
-// ★★★ エラー対策のための最小修正 ★★★
-// VALUE_QUESTIONS['その他']?.['その他'] が配列を返すと TypeError になるため、
-// フォールバック用の 'その他' キーの中身を QuestionSet (オブジェクト) に変更しました。
 const VALUE_QUESTIONS: { [key: string]: QuestionSet | undefined } = {
     'その他': { '汎用的な価値観': ['その他強み1', 'その他強み2'] },
     'レストラン・食堂': { '料理の特徴': ['地元産食材', 'オーガニック', 'ベジタリアン対応'], '雰囲気': ['高級感', 'カジュアル', '個室あり'] },
@@ -44,7 +41,6 @@ const VALUE_QUESTIONS: { [key: string]: QuestionSet | undefined } = {
         '人物・信頼感': ['話しやすく相談しやすい人柄', 'レスポンスが早く丁寧', '長期的なパートナーとして信頼できる', '秘密厳守・誠実な対応', '地元（那須）の経済・事情に精通'],
     }
 };
-// ★★★ エラー対策のための最小修正ここまで ★★★
 
 const mainCategories: string[] = ['飲食関連', '美容・健康関連', '宿泊関連', 'その他', 'コンサルティング'];
 const categoryData: { [key: string]: string[] } = {
@@ -99,9 +95,6 @@ interface IndustrySpecificData {
 
 // ==========================================================
 // ★ AIマッチングフォーム (価値観選択)
-// 
-// 指示: このコードブロックは絶対に変えないで、エラーを解決する。
-// 以下のコードはそのまま維持します。
 // ==========================================================
 interface MatchingValuesFormProps {
     mainCategory: string;
