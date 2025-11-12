@@ -42,14 +42,69 @@ const VALUE_QUESTIONS: { [key: string]: QuestionSet | undefined } = {
     }
 };
 
-const mainCategories: string[] = ['飲食関連', '美容・健康関連', '宿泊関連', 'その他', 'コンサルティング'];
+// ★★★ FIX: 大分類リストを画像に合わせて変更 ★★★
+const mainCategories: string[] = [
+    '飲食関連',
+    '買い物関連',
+    '美容・健康関連',
+    '住まい・暮らし関連',
+    '教育・習い事関連',
+    'スポーツ関連',
+    '車・バイク関連',
+    '観光・レジャー関連',
+    'ペット関連',
+    '専門サービス関連',
+    'その他'
+];
 const categoryData: { [key: string]: string[] } = {
-    '飲食関連': ['レストラン・食堂', 'カフェ・喫茶店', 'その他'],
-    '美容・健康関連': ['美容室・理容室', '整体・整骨院・鍼灸院', 'その他'],
-    '宿泊関連': ['ホテル・旅館', '貸し別荘・コテージ', 'その他'],
-    'コンサルティング': ['経営戦略', 'Webマーケティング', 'その他'],
+    '飲食関連': [
+        'レストラン・食堂', 'カフェ・喫茶店', '居酒屋', 'バー', 'パン屋（ベーカリー）', 
+        '和菓子・洋菓子店', 'ラーメン店', 'そば・うどん店', '寿司屋', 
+        '惣菜・仕出し・ケータリング', 'テイクアウト専門店', 'その他'
+    ],
+    '買い物関連': [
+        '農産物直売所', '鮮魚店', '雑貨店・民芸品店', '花屋', 'お土産店', 
+        'リサイクルショップ', '道の駅・特産品店', 'その他'
+    ],
+    '美容・健康関連': [
+        '美容室', 'ネイルサロン', 'エステサロン', 'リラクゼーション', 'マッサージ', 
+        '整体・整骨院・鍼灸院', 'カイロプラクティック', 'クリニック・歯科医院', 
+        '薬局・ドラッグストア', 'その他'
+    ],
+    '住まい・暮らし関連': [
+        '工務店・建築・リフォーム', 'リフォーム専門店', '水道・電気工事', '不動産会社', 
+        '造園・植木屋', 'ハウスクリーニング', '家電修理・メンテナンス', '便利屋', 'その他'
+    ],
+    '教育・習い事関連': [
+        '学習塾・家庭教師', 'ピアノ・音楽教室', '英会話教室', '書道・そろばん教室', 
+        'ダンス教室', 'スポーツクラブ・道場', 'パソコン教室', '料理教室', '学童保育', 'その他'
+    ],
+    'スポーツ関連': [
+        'スポーツ施設・ジム', 'ゴルフ練習場', 'フィットネス・ヨガ', 'スポーツ用品店', 
+        '武道・格闘技道場', 'その他'
+    ],
+    '車・バイク関連': [
+        '自動車販売（新車・中古）', '自動車整備・修理工場', 'ガソリンスタンド', 
+        'カー用品店', 'バイクショップ', 'その他'
+    ],
+    '観光・レジャー関連': [
+        'ホテル・旅館・ペンション', '日帰り温泉施設', '観光施設・美術館・博物館', 
+        '体験工房（陶芸・ガラスなど）', '牧場・農園', 'キャンプ場・グランピング施設', 
+        'ゴルフ場', '貸別荘', '乗馬・アクティビティ体験', '釣り堀・アウトドア体験', 
+        '観光ガイド・地域案内', 'その他'
+    ],
+    'ペット関連': [
+        '動物病院', 'トリミングサロン', 'ペットホテル・ドッグラン', 'ブリーダー', 
+        '動物カフェ', 'その他'
+    ],
+    '専門サービス関連': [
+        '弁護士・税理士・行政書士などの士業', 'デザイン・印刷会社', '写真館', 
+        'Web制作・動画制作', '翻訳・通訳サービス', '保険代理店', 'カウンセリング', 
+        'コンサルティング', 'その他'
+    ],
     'その他': ['その他'],
 }; 
+// ★★★ FIX: ここまで ★★★
 
 
 // グローバル変数の型を宣言
@@ -589,6 +644,7 @@ const StoreProfilePage: FC = () => {
         setIsSaving(true);
         setError(null);
 
+        // ★★★ フリーズ対策のために外側の try...catch を使用 ★★★
         try {
             const firestore = db as Firestore;
             const storageInstance = storage as FirebaseStorage;
@@ -599,18 +655,17 @@ const StoreProfilePage: FC = () => {
             const normalizedIndustryKey = getNormalizedIndustryKey(mainCategory, subCategory);
             const filteredSpecialtyPoints = specialtyPoints.filter(p => p.trim() !== '');
 
-            // ★★★ FIX: allStoreDataの定義を、より明確に、そして安全にする ★★★
+            // ★★★ 1. Firestoreデータ保存 (AIマッチングデータを含む) ★★★
             const allStoreData = {
                 storeName, address, phoneNumber, mainCategory, subCategory,
                 otherMainCategory: mainCategory === 'その他' ? otherMainCategory : '',
                 otherSubCategory: subCategory === 'その他' ? otherSubCategory : '',
                 description, targetUserInterests, specialtyPoints: filteredSpecialtyPoints,
-                matchingValues: matchingValues, // ★ 配列を直接渡す
+                matchingValues: matchingValues, // ★ AIマッチング価値観データを含める
                 lineOfficialId: lineOfficialId, lineLiffUrl: lineLiffUrl, websiteUrl,
                 snsUrls: snsUrls.filter(url => url.trim() !== ''), ownerId: user.uid, updatedAt: serverTimestamp(),
                 normalizedIndustryKey: normalizedIndustryKey, ...industryData,
             };
-            // ★★★ FIX: ここまで ★★★
 
             if (!currentStoreId) {
                 const docRef = await addDoc(userStoresCollectionRef, { ...allStoreData, status: 'pending', createdAt: serverTimestamp(), mainImageUrl: '', galleryImageUrls: [] });
@@ -618,54 +673,82 @@ const StoreProfilePage: FC = () => {
                 setStoreId(currentStoreId);
             } else {
                 const storeDocRefForUpdate = doc(userStoresCollectionRef, currentStoreId);
+                // AIマッチング価値観を含めたデータを更新
                 await updateDoc(storeDocRefForUpdate, allStoreData);
             }
 
-            // 画像のアップロードと更新 (storageが存在する場合のみ実行)
-            if (storage) {
-                const storeDocRef = doc(userStoresCollectionRef, currentStoreId!);
+            // ★★★ 2. 画像のアップロードとFirestore更新 (フリーズ対策済) ★★★
+            let imageUploadFailed = false;
+            let uploadErrorMessage = '';
 
+            if (storage && currentStoreId) {
+                const storeDocRef = doc(userStoresCollectionRef, currentStoreId);
+
+                // メイン画像処理
                 if (mainImageFile) {
-                    const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
-                    const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
-                    const fileRef = ref(storageInstance, storagePath);
-                    const uploadTask = await uploadBytesResumable(fileRef, mainImageFile);
-                    const updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
-                    await updateDoc(storeDocRef, { mainImageUrl: updatedMainImageUrl });
-                    setMainImageUrl(updatedMainImageUrl);
+                    try {
+                        const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
+                        const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
+                        const fileRef = ref(storageInstance, storagePath);
+                        // Storageのタイムアウトエラーを捕捉するために、個別にtry/catch
+                        const uploadTask = await uploadBytesResumable(fileRef, mainImageFile);
+                        const updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
+                        await updateDoc(storeDocRef, { mainImageUrl: updatedMainImageUrl });
+                        setMainImageUrl(updatedMainImageUrl);
+                    } catch (err: any) {
+                        imageUploadFailed = true;
+                        uploadErrorMessage += `メイン画像のアップロードに失敗: ${err.message}\n`;
+                        console.error("Main Image Upload Failed:", err);
+                    }
                 }
 
+                // ギャラリー画像処理
                 if (galleryImageFiles.length > 0) {
                     const newGalleryImageUrls: string[] = [];
                     for (const file of galleryImageFiles) {
-                        const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
-                        const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
-                        const fileRef = ref(storageInstance, storagePath);
-                        const uploadTask = await uploadBytesResumable(fileRef, file);
-                        const downloadURL = await getDownloadURL(uploadTask.ref);
-                        newGalleryImageUrls.push(downloadURL);
+                        try {
+                            const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
+                            const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
+                            const fileRef = ref(storageInstance, storagePath);
+                            const uploadTask = await uploadBytesResumable(fileRef, file);
+                            const downloadURL = await getDownloadURL(uploadTask.ref);
+                            newGalleryImageUrls.push(downloadURL);
+                        } catch (err: any) {
+                            imageUploadFailed = true;
+                            uploadErrorMessage += `ギャラリー画像 (${file.name}) のアップロードに失敗: ${err.message}\n`;
+                            console.error(`Gallery Image Upload Failed (${file.name}):`, err);
+                        }
                     }
-                    await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(...newGalleryImageUrls) });
-                    setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
+                    if (newGalleryImageUrls.length > 0) {
+                        await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(...newGalleryImageUrls) });
+                        setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
+                    }
                 }
             }
 
             setMainImageFile(null);
             setGalleryImageFiles([]);
 
-            setError('店舗情報を保存しました。');
+            // エラーが発生した場合でも、UIにメッセージを表示し、フリーズを防ぐ
+            if (imageUploadFailed) {
+                 setError(`店舗情報は保存されましたが、画像アップロード中にエラーが発生しました:\n\n${uploadErrorMessage}\n\n原因: Storageのルール、タイムアウト、またはネットワークの問題を確認してください。`);
+            } else {
+                 setError('店舗情報を保存しました。');
+            }
             
-            // ★★★ FIX: 保存成功時に、画面全体をリロードし、最新情報を強制的に取得させる ★★★
+            // サーバー処理が成功したため、画面をリロード
             router.reload();
 
         } catch (err: any) {
+            // Firestoreの書き込み自体が失敗した場合（稀）
             console.error("!!! SAVE FAILED !!! An error occurred in handleSaveProfile:", err);
             let errorMessage = `保存に失敗しました: ${err.message}`;
             if (err.code === 'permission-denied' || (err.code && err.code.includes('storage/unauthorized'))) {
-                errorMessage += "\n\n【重要】Firebaseの権限エラーです。ルールを確認してください。";
+                errorMessage += "\n\n【重要】Firebase Storage の権限エラーです。ルールを確認してください。";
             }
             setError(errorMessage);
         } finally {
+            // フリーズを解消するために必ず実行
             setIsSaving(false);
         }
     };
