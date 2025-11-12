@@ -200,7 +200,7 @@ const CompanyProfilePage = () => {
     };
 
 
-    // --- 画像アップロード (変更なし) ---
+    // --- 画像アップロード (フリーズ対策修正) ---
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || !user) {
             setError("画像ファイルを選択してください。");
@@ -214,25 +214,43 @@ const CompanyProfilePage = () => {
         const uploadPromises = files.map(file => {
             const storageRef = ref(storage, `recruiters/${user.uid}/images/${Date.now()}_${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
+            
+            // ★ FIX: ここで個別の Promise 内に try/catch を追加し、失敗しても Promise.all がハングしないようにする
             return new Promise<string>((resolve, reject) => {
                 uploadTask.on('state_changed',
                     (snapshot: any) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
                     (error: any) => { 
                         console.error("Upload failed:", error);
-                        setError(`画像アップロード中にエラーが発生しました: ${error.message}`);
+                        // エラーを捕捉し、Promise を reject する
                         reject(error);
                     },
-                    () => getDownloadURL(uploadTask.snapshot.ref).then(resolve)
+                    () => getDownloadURL(uploadTask.snapshot.ref).then(resolve).catch(reject)
                 );
             });
         });
 
-        Promise.all(uploadPromises)
-            .then(urls => setFormData(prev => ({
-                ...prev,
-                galleryImageUrls: [...prev.galleryImageUrls, ...urls]
-            })))
-            .catch(() => setError("画像のアップロードに失敗しました。"))
+        Promise.allSettled(uploadPromises) // ★ FIX: allSettled を使用し、一つでも失敗しても全体がハングしないようにする
+            .then(results => {
+                const successfulUrls = results
+                    .filter((res): res is PromiseFulfilledResult<string> => res.status === 'fulfilled')
+                    .map(res => res.value);
+                
+                const failedCount = results.length - successfulUrls.length;
+
+                setFormData(prev => ({
+                    ...prev,
+                    galleryImageUrls: [...prev.galleryImageUrls, ...successfulUrls]
+                }));
+
+                if (failedCount > 0) {
+                     setError(`一部の画像（${failedCount}ファイル）のアップロードに失敗しました。ファイルサイズやStorageルールをご確認ください。`);
+                } else if (successfulUrls.length > 0) {
+                     // 成功メッセージは表示しない（保存ボタン押下時まで待つ）
+                }
+            })
+            .catch(() => {
+                // Promise.allSettled は catch に入らないため、実質 unused
+            })
             .finally(() => {
                 setIsUploading(false);
                 setUploadProgress(0);
@@ -257,7 +275,7 @@ const CompanyProfilePage = () => {
     };
 
 
-    // --- ★★★ 保存＆AI審査申請 (isPaid undefined エラーを解消) ★★★ ---
+    // --- ★★★ 保存＆AI審査申請 (フリーズ対策済み) ★★★ ---
     const handleSaveAndSubmitForReview = async (e: React.FormEvent, isManualReset: boolean = false) => {
         e.preventDefault();
         if (!user) return;
@@ -267,16 +285,16 @@ const CompanyProfilePage = () => {
 
         const appealPointsToSave: { [key: string]: string[] | undefined } = { ...formData.appealPoints };
         
+        // 空の配列を Firestore に送るのを防ぐ (オプショナルなフィールド)
         if (appealPointsToSave.growth && appealPointsToSave.growth.length === 0) delete appealPointsToSave.growth;
         if (appealPointsToSave.wlb && appealPointsToSave.wlb.length === 0) delete appealPointsToSave.wlb;
         if (appealPointsToSave.benefits && appealPointsToSave.benefits.length === 0) delete appealPointsToSave.benefits;
 
         try {
-            // 'users' ドキュメントを更新
+            // 1. 'users' ドキュメントを更新
             const userRef = doc(db, 'users', user.uid);
             
-            // ★★★ 修正ポイント: isPaidフィールドを分解代入で安全に除外する ★★★
-            // Firestoreに送信すべきでないisPaidフィールドを、undefinedとして送るのを防ぐ。
+            // isPaid を分解代入で安全に除外
             const { isPaid, ...formDataWithoutIsPaid } = formData; 
 
             const dataToSave = {
