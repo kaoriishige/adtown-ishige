@@ -200,22 +200,48 @@ const CompanyProfilePage = () => {
     };
 
 
-    // --- 画像アップロード (フリーズ対策修正) ---
+    // --- 画像アップロード (フリーズ対策修正 & サイズチェック追加) ---
+    const MAX_FILE_SIZE_MB = 3; // 3MBに制限を設定
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || !user) {
             setError("画像ファイルを選択してください。");
             return;
         }
+        
         const files = Array.from(e.target.files);
+        const validFiles: File[] = [];
+        let sizeError = false;
+        
+        for (const file of files) {
+            if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+                sizeError = true;
+                continue;
+            }
+            validFiles.push(file);
+        }
+
+        if (sizeError) {
+            setError(`一部のファイルサイズが大きすぎます。${MAX_FILE_SIZE_MB}MB以下のファイルを選択してください。`);
+            e.target.value = ''; // ファイル入力をリセット
+            return;
+        }
+        
+        if (validFiles.length === 0) {
+            setError("アップロードできる有効なファイルがありません。");
+            e.target.value = '';
+            return;
+        }
+
+
         setIsUploading(true);
         setError(null);
         setUploadProgress(0);
 
-        const uploadPromises = files.map(file => {
+        const uploadPromises = validFiles.map(file => {
             const storageRef = ref(storage, `recruiters/${user.uid}/images/${Date.now()}_${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
             
-            // ★ FIX: ここで個別の Promise 内に try/catch を追加し、失敗しても Promise.all がハングしないようにする
+            // ★ FIX: Promise.allSettled を使用し、一つでも失敗しても全体がハングしないようにする
             return new Promise<string>((resolve, reject) => {
                 uploadTask.on('state_changed',
                     (snapshot: any) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
@@ -224,6 +250,7 @@ const CompanyProfilePage = () => {
                         // エラーを捕捉し、Promise を reject する
                         reject(error);
                     },
+                    // 完了時にURLを取得
                     () => getDownloadURL(uploadTask.snapshot.ref).then(resolve).catch(reject)
                 );
             });
@@ -243,9 +270,11 @@ const CompanyProfilePage = () => {
                 }));
 
                 if (failedCount > 0) {
-                     setError(`一部の画像（${failedCount}ファイル）のアップロードに失敗しました。ファイルサイズやStorageルールをご確認ください。`);
+                     // 失敗したファイルがある場合はエラー通知
+                     setError(`一部の画像（${failedCount}ファイル）のアップロードに失敗しました。Storageのルールやネットワークの問題を確認してください。`);
                 } else if (successfulUrls.length > 0) {
-                     // 成功メッセージは表示しない（保存ボタン押下時まで待つ）
+                     // 成功した場合はエラーをリセット
+                     setError(null);
                 }
             })
             .catch(() => {
@@ -254,6 +283,8 @@ const CompanyProfilePage = () => {
             .finally(() => {
                 setIsUploading(false);
                 setUploadProgress(0);
+                // ファイル入力欄をリセット
+                if (e.target) e.target.value = '';
             });
     };
 
@@ -268,6 +299,7 @@ const CompanyProfilePage = () => {
                 ...prev,
                 galleryImageUrls: prev.galleryImageUrls.filter(url => url !== imageUrl)
             }));
+            setError(null);
         } catch (error) {
             setError("画像の削除に失敗しました。時間をおいて再試行してください。");
             console.error("削除エラー:", error);

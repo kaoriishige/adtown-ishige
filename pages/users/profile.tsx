@@ -1,4 +1,4 @@
-// pages/users/profile.tsx (最終版 - 3ステップ構成と堅牢な保存ロジック)
+// pages/users/profile.tsx (完全なコード - 読み込みエラー非表示)
 
 import Head from 'next/head';
 import { useState, useEffect, useCallback } from 'react';
@@ -128,6 +128,10 @@ const UserProfilePage = () => {
 
     const loadUserProfile = async (uid: string) => {
         setLoading(true);
+        // ★ 修正点: 
+        // 読み込み試行のたびにエラーをクリア（表示したままにしない）
+        setError(null); 
+        
         try {
             const userRef = doc(db, 'userProfiles', uid);
             const snap = await getDoc(userRef);
@@ -147,7 +151,17 @@ const UserProfilePage = () => {
                     }
                 }));
             }
-        } catch (e) { console.error('Firestore読み込みエラー:', e); setError('データの読み込みに失敗しました。'); }
+            // 💡 snap.exists() が false (新規ユーザー) の場合は、
+            //    何もしない（catchにも行かない）。
+            //    デフォルトの空のformDataが使われる。
+        } catch (e) { 
+            console.error('Firestore読み込みエラー:', e); 
+            // ★ 修正点:
+            // 読み込みが失敗（権限エラーなど）しても、画面にエラーを表示しない。
+            // これにより、新規ユーザーは（コンソールにはエラーが出るが）
+            // 邪魔されずに空のフォームに入力を開始できる。
+            // setError('データの読み込みに失敗しました。'); // <-- この行をコメントアウト（または無効化）
+        }
         setLoading(false);
     };
 
@@ -189,7 +203,7 @@ const UserProfilePage = () => {
     const handleSave = async () => {
         if (!user) return false;
         setSaving(true);
-        setError(null);
+        setError(null); // ★ 保存前にエラーをクリア
         
         try {
             const userRef = doc(db, 'userProfiles', user.uid);
@@ -197,6 +211,7 @@ const UserProfilePage = () => {
             setSaving(false);
             return true; // 成功を返す
         } catch (err: any) {
+            // ★ 保存時のエラーはユーザーに通知する
             setError(`保存中にエラーが発生しました: ${err.message}`);
             setSaving(false);
             return false; // 失敗を返す
@@ -207,6 +222,7 @@ const UserProfilePage = () => {
     const handleApplyFromReview = async () => {
         // 1. プロフィールを保存
         const saveSuccess = await handleSave();
+        // ★ 保存に失敗したら、(setErrorがhandleSave内でセットされるので)ここで処理を中断
         if (!saveSuccess) return; 
 
         // 2. 応募処理を実行 (ダッシュボードの応募ボタン機能に任せる)
@@ -355,6 +371,7 @@ const UserProfilePage = () => {
                     以下の{step === 3 ? '内容を確認' : '3ステップで情報を入力'}してください。
                 </p>
 
+                {/* ★ 修正: このエラーは、主に「保存」に失敗した時に表示されるようになります */}
                 {error && (<div className="p-4 mb-4 bg-red-100 text-red-700 rounded-md">{error}</div>)}
                 
                 {/* フォーム/レビューコンテナ */}

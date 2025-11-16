@@ -15,8 +15,9 @@ import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 // 1. CONSTANTS AND DUMMY DATA
 // =========================================================================
 
-declare const __app_id: string;
-const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// (APP_ID の定義はサーバーサイドでは機能しないため、コメントアウトまたは削除)
+// declare const __app_id: string;
+// const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // ******************************************************
 // DUMMY DATA FOR FALLBACK (データが存在しない場合に備えて、最低限の情報を持つ)
@@ -56,11 +57,19 @@ const createFirestoreDummyReference = (isDoc = false): any => {
 // ===============================
 // 2. TYPE DEFINITIONS
 // ===================================
+
+// ★★★ 修正点1: 「3つの強み」の型をオブジェクトに変更 ★★★
+interface SpecialtyPoint {
+  title: string;
+  description: string;
+}
+
 interface StoreData {
     id: string; name: string; mainCategory: string; tagline: string | null; description: string | null;
     images: string[]; address: string | null; phoneNumber: string | null; email: string | null;
     url: string | null; lineLiffUrl?: string | null; hours: string | null; ownerId: string;
-    createdAt: string; updatedAt: string; isPublished: boolean; specialtyPoints: string[];
+    createdAt: string; updatedAt: string; isPublished: boolean; 
+    specialtyPoints: SpecialtyPoint[]; // ★ 型を string[] から SpecialtyPoint[] に変更
     averageRating: number; reviewCount: number;
     matchingValues: string[]; // LPに表示するために型を追加
 }
@@ -80,7 +89,7 @@ const safeToISOString = (timestamp: any, fallback: string): string => {
 };
 
 // ★★★ 編集画面のカテゴリ定義を忠実に再現 (LP表示用) ★★★
-// 選択項目と自由入力項目のフィルタリングにのみ使用します。
+// (変更なし)
 interface MatchingCategory {
     title: string;
     options: string[];
@@ -110,7 +119,7 @@ const ALL_MATCHING_VALUES: MatchingCategory[] = [
     { title: "価格の透明性・適正さ", options: [
         '料金体系（顧問、プロジェクト）が明確',
         '事前に詳細な見積もりを提示',
-        '価格以上の価値・成果',
+        '価格以上の価値がある',
         '予算に応じたプランを提案',
         '各種補助金・助成金の活用を提案',
     ]},
@@ -142,79 +151,67 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
 
         let storeDoc: QueryDocumentSnapshot | undefined = undefined;
 
-        // ログから取得したユーザーID (vsypdKIA8PTPZMuAJMVX4lnBeM63) を使って最初に直接参照を試みる
-        const knownUserId = 'vsypdKIA8PTPZMuAJMVX4lnBeM63'; 
-        try {
-             // ★ FIX: APP_ID を使用してパスを構築
-             const directStoreRef = dbRef.doc(`artifacts/${APP_ID}/users/${knownUserId}/stores/${storeId}`);
-             const docSnap = await directStoreRef.get();
-             if (docSnap.exists) {
-                 storeDoc = docSnap as QueryDocumentSnapshot;
-             }
-        } catch (e) {
-            // 直接参照が失敗しても続行
-            console.log("Direct path lookup failed, trying Collection Group.");
-        }
+        console.log(`[getServerSideProps] Searching collectionGroup("stores") for storeId: ${storeId}`);
 
+        const storesQuery = dbRef.collectionGroup("stores");
+        const querySnapshot = await storesQuery.get();
 
-        // 直接参照で見つからない場合、全ユーザーの stores コレクションを横断検索
+        storeDoc = querySnapshot.docs.find(doc => doc.id === storeId);
+
         if (!storeDoc) {
-             const entireQuerySnapshot = await dbRef
-                .collectionGroup("stores")
-                .get(); 
-             
-             // メモリ内でドキュメントID (doc.id) が storeId と一致し、かつ APP_ID 配下にあるドキュメントを探す
-             const prefix = `artifacts/${APP_ID}/users/`;
-             storeDoc = entireQuerySnapshot.docs.find(doc => 
-                 doc.id === storeId && doc.ref.path.includes(prefix)
-             );
-
-             if (!storeDoc) {
-                 // 検索しても見つからない場合
-                 console.log(`Store ID ${storeId} not found across all users. (No match found)`);
-                 return { notFound: true };
-             }
+            console.log(`[CollectionGroup Search] Store ID ${storeId} not found across all users. (No match found)`);
+            return { notFound: true };
         }
         
-        // ★ storeDoc はここで必ず存在する
-
         const rawData = storeDoc.data();
         
-        // ドキュメントIDとオーナーIDを正しく取得
         const foundStoreId = storeDoc.id;
-        const foundOwnerId = rawData.ownerId || DUMMY_STORE_DATA.ownerId; // ownerIdの取得は必須
-
-        // ★★★ 登録情報からのデータマッピングを厳密に実行 ★★★
+        const foundOwnerId = rawData.ownerId || DUMMY_STORE_DATA.ownerId; 
         const descriptionText = cleanString(rawData.description) || '';
-        // 's' フラグの代わりに [^] を使用し、改行にマッチさせる
-        const hoursMatch = descriptionText.match(/【営業時間】\n([^]+?)(?:\n\n|\n【|$)/); 
         
+        const hoursMatch = descriptionText.match(/【営業時間】([\s\S]+?)(?=【|\s*$)/); 
+        
+        // ★★★ 修正点2: 読み込みロジックを変更 (古いstring[]にも対応) ★★★
+        const loadedSpecialtyPoints = rawData.specialtyPoints || [];
+        let formattedSpecialtyPoints: SpecialtyPoint[];
+
+        if (loadedSpecialtyPoints.length > 0 && typeof loadedSpecialtyPoints[0] === 'string') {
+            // 古い形式 (string[]) から新しい形式 (SpecialtyPoint[]) に変換
+            formattedSpecialtyPoints = (loadedSpecialtyPoints as string[]).map((title: string) => ({
+                title: title,
+                description: '', // 古いデータには説明がないため空にする
+            }));
+        } else {
+            // 新しい形式 (SpecialtyPoint[])
+            formattedSpecialtyPoints = loadedSpecialtyPoints;
+        }
+        // ★★★ 修正ここまで ★★★
+
         const mergedData: StoreData = {
             id: foundStoreId,
             name: cleanString(rawData.storeName) || cleanString(rawData.name) || DUMMY_STORE_DATA.name, 
             address: cleanString(rawData.address), 
-            phoneNumber: cleanString(rawData.phoneNumber),
+            phoneNumber: cleanString(rawData.phoneNumber) || cleanString(rawData.tel), 
             mainCategory: cleanString(rawData.mainCategory) || DUMMY_STORE_DATA.mainCategory,
             tagline: cleanString(rawData.tagline),
             description: descriptionText,
-            specialtyPoints: rawData.specialtyPoints || [], 
+            specialtyPoints: formattedSpecialtyPoints, // ★ 修正したデータをセット
             url: cleanString(rawData.websiteUrl || rawData.url), 
             lineLiffUrl: cleanString(rawData.lineLiffUrl),
             images: cleanString(rawData.mainImageUrl) 
                 ? [cleanString(rawData.mainImageUrl)!, ...rawData.galleryImageUrls || []].filter((url: string) => url) 
                 : [],
             email: cleanString(rawData.email), 
-            hours: hoursMatch ? hoursMatch[1].trim() : cleanString(rawData.hours), // descriptionから営業時間抽出を試みる
+            hours: hoursMatch ? hoursMatch[1].trim() : cleanString(rawData.hours), 
             ownerId: foundOwnerId,
             isPublished: rawData.isPublished ?? DUMMY_STORE_DATA.isPublished, 
             averageRating: rawData.averageRating || 0,
             reviewCount: rawData.reviewCount || 0,
             createdAt: safeToISOString(rawData.createdAt, DUMMY_STORE_DATA.createdAt),
             updatedAt: safeToISOString(rawData.updatedAt, DUMMY_STORE_DATA.updatedAt),
-            matchingValues: rawData.matchingValues || [], // ★ 価値観データをマッピング
+            matchingValues: rawData.matchingValues || [], 
         };
         
-        // 警告は店舗名や画像が空の場合のみ
         let warning = null;
         if (!cleanString(mergedData.name)) {
             warning = `【警告】店舗名が未登録です。`;
@@ -226,7 +223,6 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
 
     } catch (err) {
         console.error('Data fetching critical error:', err);
-        // サーバーサイドでの接続失敗は、404を返す
         return { notFound: true };
     }
 };
@@ -234,6 +230,49 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
 // ===============================
 // 4. HELPER COMPONENTS (LPデザイン用)
 // ===================================
+
+/**
+ * ★★★ 修正点（追加）: テキスト整形関数 ★★★
+ * (変更なし)
+ */
+const formatLongText = (text: string | null | undefined): JSX.Element => {
+    if (!text) return <></>;
+
+    const lines = text.split('\n').filter(line => line.trim() !== ''); 
+    let listItems: string[] = [];
+    const elements: JSX.Element[] = [];
+    let currentKey = 0;
+
+    const pushList = () => {
+        if (listItems.length > 0) {
+            elements.push(
+                <ul key={`list-${currentKey++}`} className="list-disc list-inside pl-4 my-4 space-y-2">
+                    {listItems.map((item, itemIndex) => (
+                        <li key={itemIndex} className="text-lg text-gray-700 leading-relaxed">{item}</li>
+                    ))}
+                </ul>
+            );
+            listItems = []; // リストをリセット
+        }
+    };
+
+    lines.forEach(line => {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('■') || trimmedLine.startsWith('●')) {
+            listItems.push(trimmedLine.substring(1).trim()); 
+        } else {
+            pushList(); // もし直前までリストが続いていたら、ここでリストを出力
+            elements.push(
+                <p key={`p-${currentKey++}`} className="mb-4 text-lg text-gray-700 leading-relaxed">{trimmedLine}</p>
+            );
+        }
+    });
+
+    pushList();
+
+    return <>{elements}</>;
+};
+
 
 // LINE CTAボタンコンポーネント (変更なし)
 const LineCTAButton: React.FC<{ store: StoreData, text: string, subText: string, className?: string, isPrimary?: boolean }> = ({ store, text, subText, className = '', isPrimary = true }) => (
@@ -251,7 +290,6 @@ const LineCTAButton: React.FC<{ store: StoreData, text: string, subText: string,
             <span className="text-sm mt-1 font-semibold opacity-90">{subText}</span>
         </a>
     ) : (
-        // CTAがない場合は、場所を取らずにシンプルに表示
         <span className="text-sm text-gray-500 italic text-center p-4">LINE連携URLが未登録です。</span>
     )
 );
@@ -263,13 +301,15 @@ const parseDescription = (description: string) => {
     const blocks: { title: string; content: string }[] = []; 
     let parts = description.split(/【(.+?)】/g).filter(p => p.trim());
     
-    if (parts.length > 0 && !parts[0].includes('【') && parts[0].trim()) {
+    if (parts.length > 0 && !description.trim().startsWith('【')) {
         blocks.push({ title: "店舗の紹介", content: parts[0].trim() }); 
         parts = parts.slice(1);
     }
     
     for (let i = 0; i < parts.length; i += 2) {
         const title = parts[i].trim();
+        if (title === '営業時間') continue; 
+
         const content = (parts[i + 1] || '').trim();
         if (title && content) { blocks.push({ title, content }); }
     }
@@ -282,18 +322,14 @@ const parseDescription = (description: string) => {
 // 5. MAIN COMPONENT (StoreView)
 // ===================================
 
-// ★★★ renderMatchingValues - 選択項目のみを抽出して表示 ★★★
+// ★★★ renderMatchingValues (変更なし) ★★★
+// (このコンポーネントは、元から文字列の配列 "matchingValues" を扱うため、変更不要です)
 const renderMatchingValues = (matchingValues: string[]) => {
+    if (!matchingValues || matchingValues.length === 0) return null; 
+
     const selectedSet = new Set(matchingValues);
-    const totalCount = selectedSet.size;
-    
-    // 全ての選択肢をフラットな配列として取得
-    const allOptions = ALL_MATCHING_VALUES.flatMap(group => group.options);
-    
-    // 自由入力の項目を特定 (カスタムで入力された項目)
-    const customValues = matchingValues.filter(v => !allOptions.includes(v));
-    
-    // 選択された既定の項目をカテゴリごとにグルーピング
+    const allOptionsSet = new Set(ALL_MATCHING_VALUES.flatMap(group => group.options));
+    const customValues = matchingValues.filter(v => !allOptionsSet.has(v));
     const groupedSelectedValues: { title: string, options: string[] }[] = [];
     
     ALL_MATCHING_VALUES.forEach(group => {
@@ -306,30 +342,29 @@ const renderMatchingValues = (matchingValues: string[]) => {
         }
     });
 
-    if (totalCount === 0) return null; // 選択肢がない場合はセクション全体を非表示
+    if (groupedSelectedValues.length === 0 && customValues.length === 0) return null;
 
-    // UI要素をコンポーネント化して再利用
     const MatchingValueItem = ({ value }: { value: string }) => (
-        <span className="bg-indigo-600 text-white shadow-md font-medium border-indigo-600 p-2 rounded-md flex items-center">
-            <RiCheckLine className="w-4 h-4 mr-2" />
+        <span className="bg-indigo-600 text-white shadow-md font-medium border-indigo-600 p-2 rounded-md flex items-center text-sm sm:text-base">
+            <RiCheckLine className="w-4 h-4 mr-2 flex-shrink-0" />
             {value}
         </span>
     );
 
     return (
-        <div className="border-4 border-indigo-500 p-6 rounded-xl bg-indigo-50 shadow-xl mt-8">
+        <div className="border-4 border-indigo-500 p-4 md:p-6 rounded-xl bg-indigo-50 shadow-xl mt-8">
             <h2 className="text-xl md:text-2xl font-black text-indigo-800 mb-4 flex items-center">
                 <RiFocus2Line className="w-6 h-6 mr-2" />
                 AIマッチング用 サービス（目的）別価値観登録
             </h2>
             <p className="text-sm text-gray-700 mb-6 border-b pb-3">
                 小分類「<span className="font-semibold text-indigo-700">コンサルティング</span>」に基づき、貴店で**選択された強み**を表示しています。 
-                <span className="font-bold text-red-600 ml-1">({totalCount} 個選択済み)</span>
+                <span className="font-bold text-red-600 ml-1">({matchingValues.length} 個選択済み)</span>
             </p>
 
             {groupedSelectedValues.map((group, groupIndex) => (
                 <div key={groupIndex} className="mb-6 p-4 bg-white rounded-lg shadow-sm">
-                    <h3 className="font-bold text-indigo-700 mb-2">{group.title}</h3>
+                    <h3 className="font-bold text-indigo-700 mb-3">{group.title}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {group.options.map((value, optionIndex) => (
                             <MatchingValueItem 
@@ -341,20 +376,20 @@ const renderMatchingValues = (matchingValues: string[]) => {
                 </div>
             ))}
             
-            {/* その他（自由入力）部分の表示 */}
             {customValues.length > 0 && (
-                <div className="mt-8 border-t pt-4">
-                    <label className="block font-semibold mb-3 text-gray-800 text-base">
+                <div className="mt-6 pt-4 border-t border-indigo-200">
+                    <h3 className="font-bold text-indigo-700 mb-3">
                         その他（自由入力）
-                    </label>
-                    <p className="text-sm text-gray-600 mb-2">
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">
                         カスタムで登録された強み:
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                          {customValues.map((v, i) => (
-                              <span key={`custom-tag-${i}`} className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm font-medium flex items-center">
-                                 <RiCheckLine className="inline mr-1 w-4 h-4" />{v}
-                              </span>
+                             <MatchingValueItem 
+                                 key={`custom-${i}`}
+                                 value={v}
+                             />
                          ))}
                     </div>
                 </div>
@@ -384,7 +419,10 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
     const galleryImages = store.images.slice(1);
     const contentBlocks = parseDescription(store.description || ''); 
     const starRating = Math.max(0, Math.min(5, Math.round(store.averageRating * 2) / 2)); 
-    const displaySpecialtyPoints = store.specialtyPoints.filter(p => cleanString(p));
+    
+    // ★★★ 修正点3: 「3つの強み」のフィルターロジックを修正 ★★★
+    // p (オブジェクト) の title (文字列) が空でないことを確認する
+    const displaySpecialtyPoints = store.specialtyPoints.filter(p => p && p.title && p.title.trim() !== '');
 
     const displayStoreName = cleanString(store.name) || DUMMY_STORE_DATA.name;
     const displayMainCategory = cleanString(store.mainCategory) || DUMMY_STORE_DATA.mainCategory;
@@ -421,7 +459,6 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 {/* 1. HERO SECTION - 画像がなければ NO IMAGE 表示 */}
                 <section 
                     className="relative bg-gray-900 text-white pt-16 pb-20 overflow-hidden" 
-                    // ★ 画像がない場合は、シンプルな背景とNO IMAGEテキストのみを表示
                     style={{ 
                         backgroundImage: mainImage ? `linear-gradient(rgba(16, 32, 72, 0.9), rgba(16, 32, 72, 0.9)), url(${mainImage})` : 'none', 
                         backgroundColor: '#102048', // ネイビー固定
@@ -438,7 +475,6 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                             {displayStoreName}
                         </h2>
                         
-                        {/* 画像がない場合のプレースホルダーテキスト */}
                         {!mainImage && (
                             <p className="text-4xl font-black text-gray-400/50 mb-10">NO IMAGE</p>
                         )}
@@ -475,6 +511,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 </section>
                 
                 {/* 2. THREE PROMISES - 3つの強みを柔軟に強調 (データがある場合のみ表示) */}
+                {/* ★★★ 修正点4: JSXの表示ロジックを変更 ★★★ */}
                 {displaySpecialtyPoints.length > 0 && (
                     <section className="py-16 bg-gray-50">
                         <div className="max-w-4xl mx-auto px-4">
@@ -484,11 +521,14 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                             <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 justify-center`}>
                                 {displaySpecialtyPoints.slice(0, 3).map((point, i) => (
                                     <div key={i} className="text-center p-6 bg-white rounded-xl shadow-lg border-t-4 border-blue-600">
-                                        {/* RiCheckboxCircleFill はインポートされているためそのまま使用 */}
                                         <RiCheckboxCircleFill className="w-8 h-8 mx-auto text-blue-500 mb-3" />
-                                        <h3 className="text-xl font-bold mb-3 text-gray-900">{point}</h3>
+                                        
+                                        {/* ★ ここを修正: {point} -> {point.title} */}
+                                        <h3 className="text-xl font-bold mb-3 text-gray-900">{point.title}</h3>
+                                        
+                                        {/* ★ ここを修正: ハードコードされたPタグ -> {point.description} を表示 */}
                                         <p className="text-sm text-gray-600">
-                                            プロフィールで設定された貴店の最も重要な強みです。
+                                            {point.description || 'プロフィールで設定された貴店の最も重要な強みです。'}
                                         </p>
                                     </div>
                                 ))}
@@ -498,19 +538,17 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 )}
                 
                 {/* 3. AIマッチング用 サービス（目的）別価値観登録 セクションの追加 */}
-                {/* store.matchingValues があれば、編集画面の UI を再現して表示 */}
-                {store.matchingValues && (
+                {(store.matchingValues && store.matchingValues.length > 0) && (
                     <section className="py-16 bg-indigo-50 border-t-4 border-indigo-200">
                          <div className="max-w-4xl mx-auto px-4">
-                            {renderMatchingValues(store.matchingValues)}
-                        </div>
+                             {renderMatchingValues(store.matchingValues)}
+                         </div>
                     </section>
                 )}
 
 
                 {/* 4. CORE SERVICE DESCRIPTION - サービス詳細/店舗紹介 */}
-                {/* descriptionがある場合のみ表示 */}
-                {store.description && contentBlocks.length > 0 && (
+                {contentBlocks.length > 0 ? (
                     <section className="py-20 bg-white">
                         <div className="max-w-4xl mx-auto px-4">
                             <h2 className="text-3xl font-extrabold text-center mb-12 text-gray-900">
@@ -520,18 +558,19 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                             <div className="space-y-10">
                                 {contentBlocks.map(({ title, content }, i) => (
                                     <div key={i} className="border-b pb-8">
-                                        <h3 className="text-2xl font-extrabold text-blue-800 mb-4 flex items-center">
+                                        <h3 className="text-2xl font-extrabold text-blue-800 mb-6 flex items-center">
                                             <FaAngleRight className="w-5 h-5 mr-3 flex-shrink-0 text-yellow-500" />
                                             {title}
                                         </h3>
-                                        <p className="text-lg text-gray-700 leading-relaxed whitespace-pre-wrap pl-8 border-l-4 border-gray-200">
-                                            {content}
-                                        </p>
+                                        <div className="pl-8 border-l-4 border-gray-200">
+                                            {/* (変更なし) formatLongTextが自動で整形 */}
+                                            {formatLongText(content)}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* ギャラリー */}
+                            {/* ギャラリー (変更なし) */}
                             {galleryImages.length > 0 && (
                                 <div className="mt-16 pt-8 border-t border-gray-200">
                                     <h3 className="text-2xl font-bold mb-6 text-gray-800">実績・オフィス風景</h3>
@@ -553,10 +592,8 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                             )}
                         </div>
                     </section>
-                )}
-                
-                {/* descriptionがない場合の警告 */}
-                {!store.description && (
+                ) : (
+                    // descriptionが空か、parseDescriptionでブロックが0個だった場合の警告
                     <section className="py-20 bg-gray-50">
                         <div className="max-w-4xl mx-auto px-4">
                             <div className="text-center text-gray-600 italic p-8 border rounded-lg bg-white">
@@ -568,7 +605,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 )}
 
 
-                {/* 5. CONTACT & INFO - 最終CTAと基本情報 */}
+                {/* 5. CONTACT & INFO - 最終CTAと基本情報 (変更なし) */}
                 <section className="py-16 bg-blue-900 text-white">
                     <div className="max-w-4xl mx-auto px-4 text-center">
                         <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-yellow-400">
@@ -588,7 +625,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         {/* 基本情報ブロック */}
                         <div className="mt-12 pt-8 border-t border-blue-700 text-left">
                             <h3 className="text-xl font-bold mb-4">連絡先・基本情報</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 
                                 <div className="flex items-start">
                                     <RiPhoneLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />
@@ -612,7 +649,9 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                                     <RiTimeLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />
                                     <div>
                                         <h4 className="font-bold">営業時間:</h4>
-                                        <p className="text-gray-300">{cleanString(store.hours) || '未設定'}</p>
+                                        <p className="text-gray-300 whitespace-pre-wrap break-words">
+                                            {cleanString(store.hours) || '未設定'}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex items-start">
@@ -633,7 +672,6 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                                         </p>
                                     </div>
                                 </div>
-                                {/* emailも一応表示できるようにする（データがあれば） */}
                                 {cleanString(store.email) && (
                                     <div className="flex items-start">
                                         <RiMailLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />

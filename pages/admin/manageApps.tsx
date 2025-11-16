@@ -1,281 +1,408 @@
-import { NextPage, GetServerSideProps } from 'next';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
-// import { useRouter } from 'next/router'; // ★ 修正: 未使用のため削除
-import { adminDb } from '@/lib/firebase-admin';
-import React, { useState } from 'react'; // Reactのインポート
-import { firestore } from 'firebase-admin'; // firestoreのインポート
 
-// --- 型定義の更新 ---
-interface Store {
-    id: string; // ユーザー UID (Firestore Document ID)
-    companyName: string;
-    address: string;
-    phoneNumber: string;
-    email: string;
-    roles: string[];
-    stripeCustomerId?: string;
-    createdAt?: string; // 登録年月日
-    // 各サービスタイプ固有のステータスと支払い方法を追加
-    adverSubscriptionStatus?: 'active' | 'trialing' | 'pending_invoice' | 'canceled' | 'past_due' | null;
-    recruitSubscriptionStatus?: 'active' | 'trialing' | 'pending_invoice' | 'canceled' | 'past_due' | 'pending_card' | null; // ★ 'pending_card' を追加
-    
-    // 🚨 修正: PaymentMethod ではなく billingCycle を読み込む
-    adverBillingCycle?: 'monthly' | 'annual' | null;
-    recruitBillingCycle?: 'monthly' | 'annual' | null;
+// Firebase SDKからのインポート
+import { 
+  db, 
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc,
+  QueryDocumentSnapshot,
+  DocumentData // DocumentData型をインポート
+} from '@/lib/firebase'; 
+
+// --- 型定義 ---
+interface AppData {
+  id: string; // FirestoreのドキュメントID
+  name: string; // アプリ名
+  genre: string; // ✅ 追加: ジャンル
+  createdAt: string; // ✅ 登録日 (文字列で受け取る)
+  area: string; // 地域 (アプリ独自の管理フィールド)
+  url: string; // studio.firebaseのアプリURL（特売情報URL）
+  isActive: boolean; // 公開ステータス (アプリ独自の管理フィールド)
 }
 
-interface ManageStoresPageProps {
-    initialStores: Store[];
-}
+// エリアの選択肢 (新規作成・編集用として維持)
+const areas = ['那須塩原市・那須町', '大田原市', 'その他エリアA', 'その他エリアB'];
+const APPS_COLLECTION = 'apps'; // Firestoreのコレクション名
 
-// --- 日付フォーマット関数 ---
-const formatDate = (timestamp: firestore.Timestamp | undefined): string => {
-    if (!timestamp) return '未設定';
-    // Firestore TimestampオブジェクトをJavaScript Dateオブジェクトに変換し、YYYY/MM/DD形式にフォーマット
-    const date = timestamp.toDate();
-    return date.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
-};
-
-// --- サーバーサイド処理の更新 ---
-export const getServerSideProps: GetServerSideProps = async (context) => {
+// 日付フォーマットヘルパー関数
+const formatDate = (timestamp: string): string => {
     try {
-        // ★修正: 認証チェックは省略し、データ取得に集中
-        const usersSnapshot = await adminDb.collection('users')
-            .where('roles', 'array-contains-any', ['adver', 'recruit'])
-            .get();
-
-        const stores: Store[] = usersSnapshot.docs.map((doc: firestore.QueryDocumentSnapshot) => {
-            const data = doc.data();
-            return {
-                id: doc.id, // ユーザー UID を取得
-                companyName: data.companyName || '名称未設定',
-                address: data.address || '住所未設定',
-                phoneNumber: data.phoneNumber || '電話番号未設定',
-                email: data.email || 'メールアドレス未設定',
-                roles: data.roles || [],
-                stripeCustomerId: data.stripeCustomerId || null,
-                createdAt: data.createdAt ? formatDate(data.createdAt as firestore.Timestamp) : '未設定', // 日付をフォーマット
-                // 各サービスタイプ固有のステータスと支払い方法を取得
-                adverSubscriptionStatus: data.adverSubscriptionStatus || null,
-                recruitSubscriptionStatus: data.recruitSubscriptionStatus || null,
-                
-                // 🚨 修正: サービス固有のbillingCycleがない場合、共有のbillingCycleを参照
-                adverBillingCycle: data.adverBillingCycle || data.billingCycle || null,
-                recruitBillingCycle: data.recruitBillingCycle || data.billingCycle || null,
-            };
+        // Firestoreのタイムスタンプ文字列をDateオブジェクトに変換
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) {
+            return '日付エラー';
+        }
+        // 年/月/日 (時間) 形式で表示
+        return date.toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Tokyo'
         });
-
-        return { props: { initialStores: stores } };
-    } catch (error) {
-        console.error("Error fetching stores for admin:", error);
-        return { props: { initialStores: [] } };
+    } catch {
+        return '日付なし';
     }
 };
 
-// --- コンポーネント本体 ---
-const ManageStoresPage: NextPage<ManageStoresPageProps> = ({ initialStores }) => {
-    const [stores, setStores] = useState<Store[]>(initialStores);
-    const [error, setError] = useState<string | null>(null);
-    const [isDeleting, setIsDeleting] = useState<string | null>(null);
-    // const router = useRouter(); // ★ 修正: 未使用のため削除
-    
-    // 代替の alert/confirm 実装 (Next.js環境でブラウザ機能に依存しないように)
-    const showModal = (message: string) => { console.log(message); };
+const ManageAppsPage: React.FC = () => {
+  const [apps, setApps] = useState<AppData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentApp, setCurrentApp] = useState<AppData | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null); // ✅ 追加: エラー状態を管理
 
-    const handleDeleteStore = async (storeId: string) => {
-        // ⚠ 本番環境ではブラウザの alert/confirm は避けるべきですが、デバッグ用に一時的に利用
-        if (window.confirm("この店舗を本当に削除しますか？関連データも削除され、この操作は元に戻せません。")) {
-            setIsDeleting(storeId);
-            setError(null);
-            try {
-                const response = await fetch('/api/admin/deleteStore', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ storeId }),
-                });
+  // 新規作成用の初期値
+  const emptyApp: AppData = {
+    id: '', 
+    name: '',
+    genre: '', // 新規時は空
+    createdAt: new Date().toISOString(), // 新規時は現在日時
+    area: areas[0],
+    url: '',
+    isActive: true,
+  };
 
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.error || '削除に失敗しました。');
-                }
+  // データの取得 (R: Read)
+  const fetchApps = async () => {
+    setIsLoading(true);
+    setFetchError(null); // エラーをリセット
+    try {
+      const appsCol = collection(db, APPS_COLLECTION);
+      const appSnapshot = await getDocs(appsCol);
+      
+      const appList = appSnapshot.docs.map((doc: QueryDocumentSnapshot) => {
+        // rawDataをDocumentDataとして取得
+        const rawData = doc.data() as DocumentData; 
 
-                setStores(prevStores => prevStores.filter(store => store.id !== storeId));
-                showModal('店舗情報を削除しました。'); // カスタムモーダルなどに置き換え
-            } catch (e: any) {
-                console.error("Error deleting store: ", e);
-                setError(e.message || "店舗の削除中にエラーが発生しました。");
-            } finally {
-                setIsDeleting(null);
-            }
+        let processedCreatedAt: string;
+        
+        const rawCreatedAt = rawData.createdAt;
+
+        // Timestamp型または文字列型に対応する処理
+        if (rawCreatedAt && typeof rawCreatedAt === 'object' && 'toDate' in rawCreatedAt && typeof rawCreatedAt.toDate === 'function') {
+            // Timestampオブジェクトの場合
+            processedCreatedAt = rawCreatedAt.toDate().toISOString();
+        } else if (typeof rawCreatedAt === 'string') {
+            // 文字列の場合
+            processedCreatedAt = rawCreatedAt;
+        } else {
+            // 該当するデータがない場合
+            processedCreatedAt = new Date().toISOString();
         }
-    };
 
-    const getServiceType = (roles: string[]) => {
-        const hasAd = roles.includes('adver');
-        const hasRecruit = roles.includes('recruit');
-        if (hasAd && hasRecruit) {
-            return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">両方</span>;
-        }
-        if (hasAd) {
-            return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">広告＆紹介料</span>;
-        }
-        if (hasRecruit) {
-            return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">求人</span>;
-        }
-        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">未分類</span>;
-    };
-
-    /**
-     * 購読ロールに基づいて支払い状況を決定し、バッジを返します。
-     * 複数のロールを持つ場合、すべてのステータスを表示します。
-     */
-    const getPaymentStatus = (store: Store) => {
-        const statuses: { role: string, method: string | null, status: string | null }[] = [];
-
-        // 🚨 修正: 支払い方法の判定ロジックを billingCycle に変更
-        const getMethodDisplay = (cycle: string | null | undefined) => {
-            if (cycle === 'monthly') return <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-1.5 rounded-full">クレカ (月額)</span>;
-            if (cycle === 'annual') return <span className="bg-teal-100 text-teal-800 text-xs font-medium px-1.5 rounded-full">請求書 (年額)</span>;
-            return <span className="bg-gray-200 text-gray-700 text-xs font-medium px-1.5 rounded-full">---</span>;
+        // 必要なプロパティのみを抽出し、createdAtを上書きする問題を解消
+        const dataWithoutCreatedAt: Omit<AppData, 'id' | 'createdAt'> = {
+            name: rawData.name || '',
+            genre: rawData.genre || '',
+            area: rawData.area || areas[0],
+            url: rawData.url || '',
+            isActive: rawData.isActive === undefined ? false : rawData.isActive,
         };
 
-        // 広告サービスの状態を取得
-        if (store.roles.includes('adver')) {
-            statuses.push({
-                role: '広告',
-                method: store.adverBillingCycle || null, // 修正
-                status: store.adverSubscriptionStatus || null
-            });
-        }
+        return {
+            id: doc.id,
+            createdAt: processedCreatedAt, // 処理済みの createdAt を設定
+            ...dataWithoutCreatedAt // その他のフィールドを展開
+        } as AppData;
+      });
+      
+      setApps(appList); 
 
-        // 求人サービスの状態を取得
-        if (store.roles.includes('recruit')) {
-            statuses.push({
-                role: '求人',
-                method: store.recruitBillingCycle || null, // 修正
-                status: store.recruitSubscriptionStatus || null
-            });
-        }
+    } catch (error: any) { // ✅ エラー型をanyにキャスト
+      console.error("データの取得中にエラーが発生しました:", error);
+      // ✅ 権限エラーの場合、具体的なメッセージをセット
+      if (error.code === 'permission-denied' || error.message.includes('permission')) {
+          setFetchError("Firestoreのセキュリティルールにより、データの読み込みが拒否されました。ルール設定を確認してください。");
+      } else {
+          setFetchError("データの読み込み中に不明なエラーが発生しました。コンソールを確認してください。");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        if (statuses.length === 0) {
-            return <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full">未登録</span>;
-        }
-        
-        // 複数のサービスを持つ場合、すべてのステータスを表示
-        return (
-            <div className="flex flex-col space-y-1">
-                {statuses.map(s => {
-                    const methodBadge = getMethodDisplay(s.method); 
-                    let statusBadge;
+  useEffect(() => {
+    fetchApps();
+  }, []);
 
-                    // 購読ステータスバッジ
-                    switch (s.status) {
-                        case 'active': statusBadge = <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 rounded-full">有効</span>; break;
-                        case 'trialing': statusBadge = <span className="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 rounded-full">トライアル</span>; break;
-                        case 'pending_invoice': statusBadge = <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-1.5 rounded-full">請求書待ち</span>; break;
-                        case 'canceled': statusBadge = <span className="bg-red-100 text-red-800 text-xs font-medium px-1.5 rounded-full">解約済</span>; break;
-                        case 'past_due': statusBadge = <span className="bg-red-500 text-white text-xs font-medium px-1.5 rounded-full">支払遅延</span>; break;
-                        // 🚨 修正: 決済実行中のステータスを追加 (pending_card ステータスに対応)
-                        case 'pending_card':
-                        case 'pending_checkout': 
-                            statusBadge = <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-1.5 rounded-full">決済実行中</span>; break;
-                        default: statusBadge = <span className="bg-gray-100 text-gray-800 text-xs font-medium px-1.5 rounded-full">未設定</span>; 
-                    }
+  // 編集/新規作成モーダルを開く
+  const openModal = (app: AppData | null = null) => {
+    // 編集時は既存のデータを、新規作成時はemptyAppをセット
+    setCurrentApp(app ? app : emptyApp);
+    setIsModalOpen(true);
+  };
 
-                    return (
-                        <div key={s.role} className="flex items-center space-x-1 text-xs leading-4">
-                            <span className="font-bold w-12 text-gray-600">{s.role}:</span>
-                            {methodBadge}
-                            {statusBadge}
-                        </div>
-                    );
-                })}
-            </div>
-        );
+  // モーダルを閉じる
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setCurrentApp(null);
+  };
+
+  // 保存処理 (C: Create / U: Update)
+  const handleSave = async (app: AppData) => {
+    try {
+      // データの保存時には createdAt, genre は自動更新・自動生成を前提とするため、
+      // ユーザーが編集可能な name, area, url, isActive, genre のみを更新対象とする
+      const updatePayload = {
+        name: app.name,
+        area: app.area,
+        url: app.url,
+        isActive: app.isActive,
+        genre: app.genre, // 編集可能に設定
+        // 新規作成時のみ createdAt に新しい Date() オブジェクトを追加（FirestoreがTimestampとして保存）
+        ...(app.id === '' && { createdAt: new Date() }), 
+      };
+
+      if (app.id === '') {
+        // 新規作成 (C: Create)
+        await addDoc(collection(db, APPS_COLLECTION), updatePayload);
+        alert(`アプリ「${app.name}」を新規追加しました。`);
+      } else {
+        // 更新 (U: Update)
+        const appDocRef = doc(db, APPS_COLLECTION, app.id);
+        await updateDoc(appDocRef, updatePayload);
+        alert(`アプリ「${app.name}」の情報を更新しました。`);
+      }
+      
+      closeModal();
+      await fetchApps(); // データを再取得してリストを更新
+
+    } catch (error) {
+      console.error("データの保存中にエラーが発生しました:", error);
+      alert("データの保存に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  // 削除処理 (D: Delete)
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`本当にアプリ「${name}」を削除しますか？`)) {
+      return;
+    }
+    try {
+      const appDocRef = doc(db, APPS_COLLECTION, id);
+      await deleteDoc(appDocRef);
+      alert(`アプリ「${name}」を削除しました。`);
+      await fetchApps(); 
+    } catch (error) {
+      console.error("データの削除中にエラーが発生しました:", error);
+      alert("データの削除に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <Head>
+        <title>アプリ管理 (CRUD) | Admin</title>
+      </Head>
+
+      <h1 style={styles.h1}>アプリ管理 (CRUD)</h1>
+      
+      <button 
+        style={styles.addButton} 
+        onClick={() => openModal()}
+        disabled={isLoading}
+      >
+        + 新しいアプリを追加
+      </button>
+      
+      {isLoading ? (
+        <p style={styles.loading}>データ読み込み中...</p>
+      ) : fetchError ? ( // ✅ 修正: エラーメッセージの表示
+        <div style={styles.errorBox}>
+            <p style={{ fontWeight: 'bold' }}>エラーが発生しました:</p>
+            <p>{fetchError}</p>
+            <p style={{ marginTop: '10px', fontSize: '14px' }}>
+                **確認事項:** 1. Firebaseの**セキュリティルール**で `apps` コレクションへの読み込みが許可されていますか？ 
+                2. 認証が必要な場合、管理者は正しくログインしていますか？
+            </p>
+            <button style={{...styles.addButton, backgroundColor: '#f44336'}} onClick={fetchApps}>
+                再試行
+            </button>
+        </div>
+      ) : (
+        // アプリリスト（R: Read）
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>番号 (ID)</th>
+                <th style={styles.th}>アプリ名</th>
+                <th style={styles.th}>ジャンル</th> 
+                <th style={styles.th}>登録日</th> 
+                <th style={styles.th}>編集</th>
+                <th style={styles.th}>削除</th>
+              </tr>
+            </thead>
+            <tbody>
+              {apps.length === 0 ? (
+                <tr style={styles.tr}>
+                    <td colSpan={6} style={{...styles.td, textAlign: 'center'}}>登録されているアプリがありません。</td>
+                </tr>
+              ) : (
+                apps.map((app, index) => (
+                    <tr key={app.id} style={styles.tr}>
+                      {/* 番号 (ID) はインデックス + 1 で表示 */}
+                      <td style={styles.td}>{index + 1}</td> 
+                      <td style={styles.td}>{app.name}</td>
+                      <td style={styles.td}>{app.genre || '未設定'}</td> 
+                      <td style={styles.td}>{formatDate(app.createdAt)}</td> 
+                      <td style={styles.td}>
+                        <button style={styles.editButton} onClick={() => openModal(app)}>
+                          編集 (URL登録)
+                        </button>
+                      </td>
+                      <td style={styles.td}>
+                        <button style={styles.deleteButton} onClick={() => handleDelete(app.id, app.name)}>
+                          削除
+                        </button>
+                      </td>
+                    </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 編集/新規作成モーダル (C: Create, U: Update) */}
+      {isModalOpen && currentApp && (
+        <AppModal 
+          app={currentApp} 
+          onSave={handleSave} 
+          onClose={closeModal} 
+          areas={areas}
+        />
+      )}
+    </div>
+  );
+};
+
+// 編集/新規作成モーダルのコンポーネント (省略)
+interface ModalProps {
+    app: AppData;
+    onSave: (app: AppData) => Promise<void>; 
+    onClose: () => void;
+    areas: string[];
+}
+
+const AppModal: React.FC<ModalProps> = ({ app, onSave, onClose, areas }) => {
+    const [data, setData] = useState<AppData>(app);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        const newValue: string | boolean = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+        setData({ ...data, [name]: newValue });
     };
-    
-    return (
-        <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
-            <Head>
-                <title>{"店舗管理 - 管理者ページ"}</title>
-            </Head>
-            <div className="max-w-7xl mx-auto">
-                <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                    <h1 className="text-3xl font-bold text-gray-800">店舗管理</h1>
-                    <Link href="/admin" className="text-sm text-blue-600 hover:underline mt-2 sm:mt-0">
-                        ← 管理メニューに戻る
-                    </Link>
-                </div>
-                <div className="mb-6">
-                    <p className="text-red-600 bg-red-100 p-4 rounded-md text-center">
-                        <strong>注意：</strong> 現在、このページの認証は一時的に解除されています。
-                    </p>
-                </div>
-                {error && <p className="text-red-600 bg-red-100 p-4 rounded-md mb-6">{error}</p>}
 
-                <div className="bg-white rounded-lg shadow overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">企業/店舗名</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">登録サービス</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー ID</th> {/* ★修正: UID列をシンプルに */}
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">支払い状況</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">登録年月日</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">連絡先</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">住所</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">アクション</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {stores.length > 0 ? stores.map(store => (
-                                <tr key={store.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="font-medium text-gray-900">{store.companyName}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {getServiceType(store.roles)}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 font-mono text-ellipsis overflow-hidden max-w-xs">
-                                        {store.id} {/* ★修正: UIDのみを表示 */}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {getPaymentStatus(store)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {store.createdAt}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <div>{store.email}</div>
-                                        <div>{store.phoneNumber}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{store.address}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                                        {/* 🚨 修正箇所: 「編集」ボタンを削除 */}
-                                        {/* <button onClick={() => router.push(`/admin/edit-store/${store.id}`)} className="text-indigo-600 hover:text-indigo-900">編集</button> */}
-                                        <button onClick={() => handleDeleteStore(store.id)} disabled={isDeleting === store.id} className="text-red-600 hover:text-red-900 disabled:opacity-50">
-                                            {isDeleting === store.id ? '削除中...' : '削除'}
-                                        </button>
-                                        {store.roles.includes('adver') && ( // 広告&紹介料サービスの場合
-                                            <Link href={`/admin/referral-rewards?storeId=${store.id}`} className="text-green-600 hover:text-green-900">
-                                                報酬管理
-                                            </Link>
-                                        )}
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={8} className="p-4 text-center text-gray-500">登録されている店舗はありません。</td> {/* ★修正: colSpanを8に */}
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            await onSave(data);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div style={modalStyles.overlay}>
+            <div style={modalStyles.modal}>
+                <h3 style={modalStyles.h3}>{data.id === '' ? '新規アプリ 追加' : 'アプリ情報 編集 (URL登録)'}</h3>
+                <form onSubmit={handleSubmit}>
+                    <div style={modalStyles.formGroup}>
+                        <label style={modalStyles.label}>登録日:</label>
+                        <input type="text" value={formatDate(data.createdAt)} style={{...modalStyles.input, backgroundColor: '#eee'}} disabled />
+                    </div>
+                    <div style={modalStyles.formGroup}>
+                        <label style={modalStyles.label}>アプリ名:</label>
+                        <input type="text" name="name" value={data.name} onChange={handleChange} style={modalStyles.input} required />
+                    </div>
+                    <div style={modalStyles.formGroup}>
+                        <label style={modalStyles.label}>ジャンル:</label>
+                        <input type="text" name="genre" value={data.genre} onChange={handleChange} style={modalStyles.input} required />
+                    </div>
+                    <div style={modalStyles.formGroup}>
+                        <label style={modalStyles.label}>エリア:</label>
+                        <select name="area" value={data.area} onChange={handleChange} style={modalStyles.input} required>
+                            {areas.map(area => <option key={area} value={area}>{area}</option>)}
+                        </select>
+                    </div>
+                    {/* studio.firebaseのアプリURLに対応するフィールド */}
+                    <div style={modalStyles.formGroup}>
+                        <label style={modalStyles.label}>アプリURL (studio.firebase/特売情報):</label>
+                        <input type="url" name="url" value={data.url} onChange={handleChange} style={modalStyles.input} required />
+                    </div>
+                    <div style={modalStyles.formGroup}>
+                        <label style={modalStyles.label}>
+                            <input 
+                                type="checkbox" 
+                                name="isActive" 
+                                checked={data.isActive} 
+                                onChange={handleChange} 
+                                style={{marginRight: '10px'}}
+                            />
+                            公開する
+                        </label>
+                    </div>
+                    <div style={modalStyles.buttonGroup}>
+                        <button type="submit" style={modalStyles.saveButton} disabled={isSaving}>
+                          {isSaving ? '保存中...' : '保存'}
+                        </button>
+                        <button type="button" onClick={onClose} style={modalStyles.cancelButton} disabled={isSaving}>キャンセル</button>
+                    </div>
+                </form>
             </div>
         </div>
     );
 };
 
-export default ManageStoresPage;
+
+// --- スタイル定義 (エラーボックスを追加) ---
+const styles: { [key: string]: React.CSSProperties } = {
+  container: { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'sans-serif' },
+  h1: { color: '#333', borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '20px' },
+  addButton: {
+    backgroundColor: '#0070f3', color: 'white', padding: '10px 15px', border: 'none', 
+    borderRadius: '4px', cursor: 'pointer', marginBottom: '20px', fontSize: '16px'
+  },
+  loading: { textAlign: 'center', fontSize: '18px', color: '#0070f3', padding: '50px' },
+  errorBox: {
+    padding: '20px',
+    backgroundColor: '#ffe0e0',
+    border: '1px solid #ff0000',
+    borderRadius: '8px',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: '20px'
+  },
+  tableContainer: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', boxShadow: '0 0 10px rgba(0,0,0,0.1)' },
+  th: { backgroundColor: '#f4f4f4', padding: '12px', textAlign: 'left', border: '1px solid #ddd' },
+  td: { padding: '12px', border: '1px solid #ddd', verticalAlign: 'middle' },
+  tr: {}, 
+  editButton: { backgroundColor: '#ffc107', color: 'black', padding: '5px 10px', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' },
+  deleteButton: { backgroundColor: '#dc3545', color: 'white', padding: '5px 10px', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+};
+
+const modalStyles: { [key: string]: React.CSSProperties } = {
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+  modal: { backgroundColor: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '500px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' },
+  h3: { marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' },
+  formGroup: { marginBottom: '15px' },
+  label: { display: 'block', marginBottom: '5px', fontWeight: 'bold' },
+  input: { width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box' },
+  buttonGroup: { display: 'flex', justifyContent: 'flex-end', marginTop: '20px' },
+  saveButton: { backgroundColor: '#28a745', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '10px' },
+  cancelButton: { backgroundColor: '#6c757d', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+};
+
+export default ManageAppsPage;
 

@@ -1,8 +1,20 @@
-// lib/firebase.ts
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { 
+  getFirestore, 
+  Firestore,
+  // 必要なFirestore関数をインポート
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  // 必要な型をインポート
+  QueryDocumentSnapshot, 
+  DocumentData 
+} from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 // Firebase クライアント設定
 const firebaseConfig = {
@@ -15,12 +27,25 @@ const firebaseConfig = {
 };
 
 // 初期化（既に存在する場合は再利用）
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export { app };
+export const auth: Auth = getAuth(app);
+export const db: Firestore = getFirestore(app);
+export const storage: FirebaseStorage = getStorage(app);
+
+// ✅ 修正: 必要な Firestore の関数をすべてエクスポートに追加
+export { 
+  app, 
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc 
+};
+
+// ✅ 修正: 必要な型定義もエクスポート
+export type { QueryDocumentSnapshot, DocumentData };
 
 
 

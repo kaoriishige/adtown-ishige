@@ -11,12 +11,12 @@ interface AppData {
     name: string;
     url: string;
     isActive: boolean;
-    genre: string; // Firestoreのカテゴリ名（機能カテゴリの場合は 'functionCategory' または 'genre' フィールドを使用）
+    genre: string; // Firestoreのカテゴリ名（感情カテゴリの場合は 'emotionCategory' フィールドを想定）
 }
 
-export default function FunctionCategoryPage() {
+export default function EmotionCategoryPage() {
     const router = useRouter();
-    // slugはURLから取得したカテゴリ名（例: 生活情報）
+    // slugはURLから取得したカテゴリ名（例: trouble）
     const slug = Array.isArray(router.query.slug) ? router.query.slug[0] : router.query.slug;
 
     // ✅ 修正: useStateに型情報を渡し、エラー2345を解消
@@ -29,10 +29,11 @@ export default function FunctionCategoryPage() {
         const fetchApps = async () => {
             setIsLoading(true);
             try {
-                // データベースの 'genre' フィールドと slug が一致するものを検索
+                // データベースの 'emotionCategory' フィールドと slug が一致するものを検索
+                // 注: 実際のFirestoreフィールド名に合わせて 'emotionCategory' は調整してください。
                 const q = query(
                     collection(db, "apps"),
-                    where("genre", "==", slug), 
+                    where("emotionCategory", "==", slug), 
                     where("isActive", "==", true) // 公開中のもののみ
                 );
 
@@ -51,7 +52,7 @@ export default function FunctionCategoryPage() {
                 
                 setApps(list);
             } catch (e) {
-                console.error(`機能カテゴリ [${slug}] のアプリ取得に失敗しました:`, e);
+                console.error(`感情カテゴリ [${slug}] のアプリ取得に失敗しました:`, e);
             } finally {
                 setIsLoading(false);
             }
@@ -70,7 +71,7 @@ export default function FunctionCategoryPage() {
                         <RiArrowLeftLine size={24} />
                     </button>
                     <h1 className="text-xl font-bold text-gray-900 ml-3 flex-grow truncate">
-                        🧩 機能カテゴリ：{title}
+                        🎭 感情カテゴリ：{title}
                     </h1>
                 </header>
 
@@ -86,9 +87,9 @@ export default function FunctionCategoryPage() {
                                     href={app.url}
                                     target={app.url.startsWith('http') ? '_blank' : '_self'}
                                     rel={app.url.startsWith('http') ? 'noopener noreferrer' : undefined}
-                                    className="block p-4 border border-green-200 rounded-lg shadow-sm hover:bg-green-50 transition-colors"
+                                    className="block p-4 border border-blue-200 rounded-lg shadow-sm hover:bg-blue-50 transition-colors"
                                 >
-                                    <h2 className="font-bold text-lg text-green-700">{app.name}</h2>
+                                    <h2 className="font-bold text-lg text-blue-700">{app.name}</h2>
                                     <p className="text-xs text-gray-500 mt-1">
                                         URL: <span className="truncate inline-block max-w-xs">{app.url}</span>
                                     </p>
@@ -107,9 +108,3 @@ export default function FunctionCategoryPage() {
         </div>
     );
 }
-
-
-
-
-
-

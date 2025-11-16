@@ -32,7 +32,7 @@ interface Deal {
   title: string;
   description: string;
   imageUrl?: string;
-  createdAt: string;
+  createdAt: string; // ISO 8601 string
 }
 
 // 説明文のプレースホルダー
@@ -113,28 +113,55 @@ const PartnerDealsPage: NextPage = () => {
       setStore(fetchedStore);
 
       const dealsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'stores', fetchedStore.id, 'deals');
+      
+      // ★★★ 解決策 (B) : インデックス作成後に `orderBy` を元に戻す ★★★
       const dealsQuery = query(dealsRef, orderBy("createdAt", "desc"));
+      // ※ もしインデックス作成がまだなら、上の行をコメントアウトし、下の行を有効にしてください。
+      // const dealsQuery = query(dealsRef); 
+
       const dealsSnapshot = await getDocs(dealsQuery);
 
       const dealsData = dealsSnapshot.docs.map(doc => {
         const data = doc.data();
+        
+        let isoDate = new Date().toISOString(); 
+        const createdAtTimestamp = data.createdAt as Timestamp;
+
+        if (createdAtTimestamp && typeof createdAtTimestamp.toDate === 'function') {
+            isoDate = createdAtTimestamp.toDate().toISOString();
+        } else if (data.createdAt) {
+            try {
+                isoDate = new Date(data.createdAt).toISOString();
+            } catch (e) {
+                console.warn("Invalid date format in deal:", doc.id, data.createdAt);
+            }
+        }
+
         return {
           id: doc.id,
           type: data.type,
           title: data.title,
           description: data.description,
           imageUrl: data.imageUrl,
-          createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+          createdAt: isoDate,
         };
       });
       setDeals(dealsData);
-    } catch (err) {
+
+    } catch (err: any) { 
       console.error("データ取得エラー:", err);
-      setError("データの読み込みに失敗しました。");
+      let userMessage = "データの読み込みに失敗しました。";
+      
+      if (err.code === 'failed-precondition' || (err.message && err.message.toLowerCase().includes('index'))) {
+          userMessage = "データベース設定エラー: この機能に必要なインデックスがありません。Firebaseコンソールで「deals」コレクション（コレクション グループ）に「createdAt (降順)」のインデックスを作成してください。";
+      } else if (err.code === 'permission-denied') {
+          userMessage = "データの読み込み権限がありません。Firebaseのルール設定を確認してください。";
+      }
+      setError(userMessage);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // appId は定数なので依存配列から削除
 
   useEffect(() => {
     if (user) {
@@ -187,7 +214,7 @@ const PartnerDealsPage: NextPage = () => {
       setNewDealDescription('');
       setSelectedFile(null);
       setUploadProgress(null);
-      if (user) fetchStoreAndDeals(user);
+      if (user) fetchStoreAndDeals(user); // データを再読み込み
 
     } catch (err: any) {
       console.error("登録エラー:", err);
@@ -260,7 +287,9 @@ const PartnerDealsPage: NextPage = () => {
       </form>
       
       <h2 className="text-xl font-semibold">登録済みリスト</h2>
-      {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded">エラー: {error}</p>}
+      
+      {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded text-sm font-semibold whitespace-pre-wrap">エラー: {error}</p>}
+      
       <div className="space-y-4 mt-4">
         {deals.length > 0 ? (
           deals.map(deal => (
@@ -280,7 +309,7 @@ const PartnerDealsPage: NextPage = () => {
             </div>
           ))
         ) : (
-          <p>まだ情報が登録されていません。</p>
+          !error && <p>まだ情報が登録されていません。</p>
         )}
       </div>
 

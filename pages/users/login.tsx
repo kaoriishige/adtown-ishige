@@ -3,177 +3,233 @@ import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
-import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    GoogleAuthProvider, 
+    signInWithPopup 
+} from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { FcGoogle } from 'react-icons/fc';
 import { RiLoginBoxLine } from 'react-icons/ri';
 
+// --- SVGアイコン (パートナーログインから流用) ---
+const EyeIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg> );
+const EyeOffIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a1.89 1.89 0 0 1 0-.66M22 12s-3 7-10 7a9.75 9.75 0 0 1-4.24-1.16"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9.9 9.9a3 3 0 1 0 4.2 4.2"></path></svg> );
+
+/**
+ * Firebase Authのエラーコードを日本語に変換します。
+ */
+const translateFirebaseError = (err: any): string => {
+    if (err.message && (err.message.includes('サーバー') || err.message.includes('失敗'))) {
+         return err.message;
+    }
+    
+    switch (err.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            return 'メールアドレスまたはパスワードが正しくありません。';
+        case 'auth/invalid-email':
+            return 'メールアドレスの形式が正しくありません。';
+        case 'auth/user-disabled':
+            return 'このアカウントは無効になっています。運営にお問い合わせください。';
+        case 'auth/too-many-requests':
+            return '試行回数が多すぎます。時間をおいて再度お試しください。';
+        case 'auth/popup-closed-by-user':
+            return 'ログインウィンドウが閉じられました。もう一度お試しください。';
+        case 'auth/popup-blocked':
+            return 'ブラウザによってポップアップがブロックされました。ポップアップを許可してください。';
+        default:
+            console.error('Unhandled Auth Error:', err);
+            return 'ログインに失敗しました。不明なエラーが発生しました。';
+    }
+};
+
 const LoginPage: NextPage = () => {
     const router = useRouter();
+    const auth = getAuth(app);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const auth = getAuth(app);
+    const [passwordVisible, setPasswordVisible] = useState(false); 
 
+    // ✅ 通常ログイン処理
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
+
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-            const idToken = await user.getIdToken(true); // トークンを強制的に更新
+            const idToken = await user.getIdToken(true);
 
-            const response = await fetch('/api/auth/sessionLogin', {
+            const res = await fetch('/api/auth/sessionLogin', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}` 
+                    'Authorization': `Bearer ${idToken}`,
                 },
-                body: JSON.stringify({ loginType: 'user' }),
-                credentials: 'include', // Cookieを送受信するために必要
+                body: JSON.stringify({ loginType: 'user' }), 
+                credentials: 'include',
             });
 
-            if (response.ok) {
-                // Cookieがブラウザに反映されるのを少し待つ
-                await new Promise((resolve) => setTimeout(resolve, 300));
-                // ページを完全にリロードしてホームページへ
-                window.location.href = '/home';
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'セッションの作成に失敗しました。');
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'サーバーでエラーが発生しました。');
             }
+
+            await new Promise((r) => setTimeout(r, 500));
+            window.location.href = '/home'; 
         } catch (err: any) {
             console.error(err);
-            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                setError('メールアドレスまたはパスワードが正しくありません。');
-            } else {
-                setError(err.message || 'ログインに失敗しました。時間をおいて再度お試しください。');
-            }
-            setIsLoading(false); // エラー時にローディングを解除
+            setError(translateFirebaseError(err)); 
+            setIsLoading(false);
         }
     };
 
+    // ✅ Googleログイン処理
     const handleGoogleLogin = async () => {
         setIsLoading(true);
         setError(null);
         const provider = new GoogleAuthProvider();
+        
         try {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
-            const idToken = await user.getIdToken(true); // トークンを強制的に更新
+            const idToken = await user.getIdToken(true);
 
-            const response = await fetch('/api/auth/sessionLogin', {
+            const res = await fetch('/api/auth/sessionLogin', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}` 
+                    'Authorization': `Bearer ${idToken}`,
                 },
-                 body: JSON.stringify({ loginType: 'user' }),
-                 credentials: 'include', // Cookieを送受信するために必要
+                body: JSON.stringify({ loginType: 'user' }), 
+                credentials: 'include',
             });
 
-            if (response.ok) {
-                // Cookieがブラウザに反映されるのを少し待つ
-                await new Promise((resolve) => setTimeout(resolve, 300));
-                // ページを完全にリロードしてホームページへ
-                window.location.href = '/home';
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'サーバー側でセッションの作成に失敗しました。');
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'サーバーでセッション作成に失敗しました。');
             }
+
+            await new Promise((r) => setTimeout(r, 500));
+            window.location.href = '/home'; 
         } catch (err: any) {
-            console.error("Google Login Error:", err);
-            switch (err.code) {
-                case 'auth/popup-closed-by-user':
-                    setError('ログインウィンドウが閉じられました。もう一度お試しください。');
-                    break;
-                case 'auth/popup-blocked':
-                    setError('ブラウザによってポップアップがブロックされました。ポップアップを許可してから再度お試しください。');
-                    break;
-                default:
-                    setError(err.message || 'Googleログインに失敗しました。時間をおいて再度お試しください。');
-                    break;
-            }
-            setIsLoading(false); // エラー時にローディングを解除
+            console.error('Google Login Error:', err);
+            setError(translateFirebaseError(err)); 
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <Head>
-                <title>{"ログイン - みんなの那須アプリ"}</title>
+                <title>ログイン - みんなの那須アプリ</title>
             </Head>
+
             <div className="w-full max-w-md">
-                <div className="bg-white p-8 rounded-lg shadow-md">
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-center">地域お守りプランにログイン</h1>
-                        <p className="text-center text-gray-600 mt-2">登録したメールアドレスとパスワードでログインしてください。</p>
-                    </div>
+                <div className="bg-white p-8 rounded-xl shadow-2xl space-y-6">
+                    <h1 className="text-3xl font-bold text-gray-900 text-center">
+                        おかえりなさい
+                    </h1>
 
                     {error && (
-                        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md">
-                            <p>{error}</p>
+                        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center">
+                            {error}
                         </div>
                     )}
 
-                    <form onSubmit={handleLogin} className="space-y-6">
+                    <form onSubmit={handleLogin} className="space-y-4">
                         <div>
-                            <label className="block mb-1 text-sm font-medium">メールアドレス</label>
-                            <input 
-                                type="email" 
-                                value={email} 
-                                onChange={(e) => setEmail(e.target.value)} 
-                                className="w-full px-3 py-2 border rounded-md" 
-                                required 
+                            <label className="block text-sm font-medium text-gray-700">メールアドレス</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                             />
                         </div>
+
                         <div>
-                            <label className="block mb-1 text-sm font-medium">パスワード</label>
-                            <input 
-                                type="password" 
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)} 
-                                className="w-full px-3 py-2 border rounded-md" 
-                                required 
-                            />
+                            <label className="block text-sm font-medium text-gray-700">パスワード</label>
+                            <div className="relative mt-1">
+                                <input
+                                    type={passwordVisible ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    className="block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setPasswordVisible(!passwordVisible)}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                                >
+                                    {passwordVisible ? <EyeOffIcon /> : <EyeIcon />}
+                                </button>
+                            </div>
                         </div>
-                        
-                        <button 
-                            type="submit" 
+
+                        <button
+                            type="submit"
                             disabled={isLoading}
-                            className="w-full py-3 px-4 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 font-bold flex items-center justify-center"
+                            className="w-full py-3 bg-orange-500 text-white font-bold rounded-md hover:bg-orange-600 disabled:bg-gray-400 flex items-center justify-center"
                         >
-                            {isLoading ? '処理中...' : (
-                                <>
-                                    <RiLoginBoxLine className="mr-2"/>
-                                    ログインする
-                                </>
-                            )}
+                            {isLoading ? '処理中...' : (<><RiLoginBoxLine className="mr-2" />ログインする</>)}
                         </button>
                     </form>
 
-                    <div className="mt-6">
-                        <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300" /></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">または</span></div></div>
-                        <div className="mt-6">
-                            <button
-                                onClick={handleGoogleLogin}
-                                disabled={isLoading}
-                                className="w-full flex items-center justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:bg-gray-100"
-                            >
-                                <FcGoogle className="text-2xl mr-3" />
-                                Googleでログイン
-                            </button>
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300" />
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500">または</span>
                         </div>
                     </div>
-                </div>
 
-                <div className="mt-6 text-center text-sm">
-                    <p className="text-gray-600">
-                        アカウントをお持ちでないですか？{' '}
-                        <Link href="/users/signup" className="text-blue-600 hover:underline">新規登録はこちら</Link>
-                    </p>
+                    <button
+                        onClick={handleGoogleLogin}
+                        disabled={isLoading}
+                        className="w-full flex items-center justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:bg-gray-100"
+                    >
+                        <FcGoogle className="text-2xl mr-3" />
+                        Googleでログイン
+                    </button>
+
+                    {/* 新規登録 / ヘルプリンク */}
+                    <div className="text-sm text-center space-y-2 border-t pt-6 mt-6">
+                        <p className="text-gray-600">
+                            アカウントをお持ちでないですか？{' '}
+                            <Link href="/users/signup" className="text-blue-600 hover:underline">
+                                新規登録はこちら
+                            </Link>
+                        </p>
+                        
+                        {/* ★ 修正: 専用ページへのリンクに変更 */}
+                        <p className="text-gray-600">
+                            <Link href="/users/reset-password" className="text-blue-600 hover:underline">
+                                パスワードを忘れた方
+                            </Link>
+                        </p>
+                        
+                        {/* ★ 修正: 文言変更 + mailto: リンク */}
+                        <p className="text-gray-600">
+                            メールアドレスを忘れた方は、通常お使いのメールで{' '}
+                            <a 
+                                href="mailto:adtown001@gmail.com" 
+                                className="text-blue-600 hover:underline"
+                            >
+                                adtown001@gmail.com
+                            </a>
+                            {' '}までご連絡ください。
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

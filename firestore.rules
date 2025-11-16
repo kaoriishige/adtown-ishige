@@ -1,37 +1,58 @@
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // --- 求人パートナー (recruiters) のルール ---
-    // ログインしているユーザーが自分のIDと一致するドキュメントのみ読み書き可能
-    match /recruiters/{recruiterId} {
-      allow read, write: if request.auth != null && request.auth.uid == recruiterId;
-    }
-    
-    // --- 求人情報 (recruitments) のルール ---
-    match /recruitments/{recruitmentId} {
-      // 求人登録時、ドキュメントのuidが自分のUIDと一致することを許可
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
-      
-      // 読み取りは認証済みユーザー、または 'verified' ステータスなら一般ユーザーも許可
-      allow read: if true; 
-      
-      // 更新はオーナーのみ許可
-      allow update: if request.auth != null && request.auth.uid == resource.data.uid;
-    }
-    
-    // --- 応募情報 (applicants) のルール ---
-    match /applicants/{applicantId} {
-        // 応募は全認証済みユーザーが作成可能
-        allow create: if request.auth != null;
-        // 企業 (partnerId) と求職者 (userId) のみが読み取り可能
-        allow read: if request.auth != null && (resource.data.partnerId == request.auth.uid || resource.data.userId == request.auth.uid);
-    }
-    
-    // --- 求職者プロフィール (userProfiles) のルール ---
-    match /userProfiles/{userId} {
-        // 自身のプロフィールのみ読み書き可能
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
+  match /databases/{database}/documents {
+    
+    // --- 求人パートナー (recruiters) のルール ---
+    // (既存のルールはそのまま)
+    match /recruiters/{recruiterId} {
+      allow read, write: if request.auth != null && request.auth.uid == recruiterId;
+    }
+    
+    // --- 求人情報 (recruitments) のルール ---
+    // (既存のルールはそのまま)
+    match /recruitments/{recruitmentId} {
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+      allow read: if true; 
+      allow update: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+    
+    // --- 応募情報 (applicants) のルール ---
+    // (既存のルールはそのまま)
+    match /applicants/{applicantId} {
+        allow create: if request.auth != null;
+        allow read: if request.auth != null && (resource.data.partnerId == request.auth.uid || resource.data.userId == request.auth.uid);
+    }
+    
+    // --- 求職者プロフィール (userProfiles) のルール ---
+    // (既存のルールはそのまま)
+    match /userProfiles/{userId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ★★★★★★★【以下を追記】★★★★★★★
+    // --- 店舗アプリ (artifacts) のルール ---
+    // {userId} と自分のID (request.auth.uid) が一致する場合に許可
+    match /artifacts/{appId}/users/{userId} {
+    
+      // ユーザー本人のドキュメント（通常は空か、ユーザ情報）
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // "stores" サブコレクション (プロフィール)
+      match /stores/{storeId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // "deals" サブコレクション (お得情報・クーポン)
+        match /deals/{dealId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+
+        // (将来的に "events" などが追加された場合もここに記述)
+        // match /events/{eventId} {
+        //   allow read, write: if request.auth.uid == userId;
+        // }
+      }
+    }
+    // ★★★★★★★【追記ここまで】★★★★★★★
+
+  }
 }
