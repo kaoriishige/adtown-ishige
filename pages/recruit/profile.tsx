@@ -179,6 +179,7 @@ const CompanyProfilePage = () => {
         const { name, value } = e.target;
         if (name === 'minMatchScore') {
             const numValue = Number(value);
+            // 60未満または99より大きい入力を制御
             const controlledValue = Math.max(60, Math.min(99, numValue));
             setFormData(prev => ({ ...prev, [name]: controlledValue }));
         } else {
@@ -448,8 +449,8 @@ const CompanyProfilePage = () => {
 
             <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 
-                {/* 課金ステータス通知 */}
-                {isPaid && (
+                {/* ★★★ 修正点1: 課金ステータス通知バナーを削除 ★★★ */}
+                {/* {isPaid && (
                     <div className="p-4 mb-6 bg-indigo-100 text-indigo-800 rounded-lg font-bold">
                         ⭐︎ AIマッチング許容スコアを自由に設定できます。
                     </div>
@@ -459,6 +460,7 @@ const CompanyProfilePage = () => {
                         AIマッチング許容スコアは**デフォルトの60点に固定**されています。自由に設定することができます。
                     </div>
                 )}
+                */}
 
 
                 <form onSubmit={handleSaveAndSubmitForReview} className="bg-white p-8 rounded-lg shadow-md space-y-12">
@@ -498,7 +500,7 @@ const CompanyProfilePage = () => {
                     )}
 
 
-                    {/* ★★★ マッチングスコア (★ 常にフォームを表示するように変更) ★★★ */}
+                    {/* ★★★ 修正点2: マッチングスコアセクションの制限を解除 ★★★ */}
                     <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
                             <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
@@ -507,7 +509,9 @@ const CompanyProfilePage = () => {
                             応募者リストに表示されるための最低スコアです。60〜99点の範囲で設定できます。
                             高く設定するほど、マッチ度の高い候補者のみが表示されます。
                         </p>
-                        <div className={`mt-4 ${!isPaid ? 'opacity-60 pointer-events-none' : ''}`}>
+                        
+                        {/* ★ 修正: isPaidのチェックをdivから削除 */}
+                        <div className="mt-4">
                             <label htmlFor="minMatchScore" className="block text-sm font-bold text-gray-700">
                                 最低許容スコア (60〜99点)
                             </label>
@@ -520,13 +524,15 @@ const CompanyProfilePage = () => {
                                 min="60"
                                 max="99"
                                 required
-                                disabled={!isPaid} // 有料時のみ編集可能
+                                // ★ 修正: disabled={!isPaid} を削除
+                                // disabled={!isPaid} 
                                 className="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold text-center"
                             />
-                            <p className="text-xs text-gray-500 mt-1">※ 無料プランでは60点に固定されます。</p>
+                            {/* ★ 修正: 固定されている旨のテキストを削除 */}
+                            {/* <p className="text-xs text-gray-500 mt-1">※ 無料プランでは60点に固定されます。</p> */}
                         </div>
                     </section>
-                    {/* ★★★ 変更ここまで ★★★ */}
+                    {/* ★★★ 修正ここまで ★★★ */}
 
 
                     {/* 基本情報 */}
