@@ -3,10 +3,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-// NOTE: onAuthStateChanged, Userは未使用のため削除
-import { getAuth, signOut } from 'firebase/auth'; 
-import { app, db } from '../../lib/firebase';
-import { collection, query, limit, getDocs } from 'firebase/firestore';
+// ★ 修正: onAuthStateChanged と User をインポート
+import { getAuth, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { app } from '../../lib/firebase';
+// ★ 修正: 'db' と 'firestore' 関連のインポートを削除 (クライアントサイドで未使用のため)
+// import { collection, query, limit, getDocs } from 'firebase/firestore'; 
 import { adminDb, adminAuth } from '@/lib/firebase-admin'; // Admin SDK
 import nookies from 'nookies';
 import {
@@ -18,12 +19,12 @@ import {
     RiCloseCircleLine, // 解約モーダル用
     RiAlertFill, // 解約モーダル用
     RiEyeLine, // プレビューボタン用のアイコン
+    RiLoader4Line, // ★ ローディングアイコン
 } from 'react-icons/ri';
-// ★★★ 画像/外部コンポーネント参照を削除しました ★★★
 
 
 // =========================================================================
-// 1. DUMMY/PLACEHOLDER DEFINITIONS (ビルド用ダミーをローカルに再定義)
+// 1. DUMMY/PLACEHOLDER DEFINITIONS
 // =========================================================================
 
 // グローバル変数定義 (Firestoreパス用)
@@ -42,14 +43,14 @@ const StoreIcon = (props: React.SVGProps<SVGSVGElement>) => (
 // 2. TYPE DEFINITIONS
 // ===================================
 interface DashboardProps {
-    partnerData: {
-        uid: string;
-        companyName: string;
-        email: string;
-        roles: string[];
-        isPaid: boolean;
-    };
-    initialLeadCount: number; // 削除されたが型定義は残す
+    companyName: string;
+    isPaid: boolean;
+    subscriptionStatus: string | null;
+    // roles: string[]; // 未使用
+    // uid: string; // 未使用
+    // email: string; // 未使用
+    hasRecruitRole: boolean; // 求人ロールも持っているか
+    storeId: string | null; // 店舗ID
 }
 
 interface ActionButtonProps {
@@ -65,7 +66,7 @@ interface ActionButtonProps {
 
 
 // ===============================
-// 3. HELPER COMPONENTS (ActionButton)
+// 3. HELPER COMPONENTS (ActionButton) (変更なし)
 // ===================================
 const ActionButton: React.FC<ActionButtonProps> = ({
     href,
@@ -110,12 +111,10 @@ const ActionButton: React.FC<ActionButtonProps> = ({
         </a>
     );
 
-    // onClick が指定されている場合は Link を使わない
     if (onClick) {
         return linkContent;
     }
 
-    // Link コンポーネントは onClick を子要素に渡せないため、この方法でラップします。
     return (
         <Link href={finalHref} legacyBehavior>
             {linkContent}
@@ -125,21 +124,19 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 
 
 // ===============================
-// 4. SERVER SIDE LOGIC (getServerSideProps)
+// 4. SERVER SIDE LOGIC (getServerSideProps) (変更なし)
 // ===================================
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
-        // TypeScriptのエラーを回避するため、adminAuthの型をanyとして扱う
-        const token = await (adminAuth as any).verifySessionCookie(cookies.session || '', true);
+        const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
         const { uid } = token;
 
         if (!uid) {
             return { redirect: { destination: '/partner/login', permanent: false } };
         }
 
-        // TypeScriptのエラーを回避するため、adminDbの型をanyとして扱う
-        const userDoc = await (adminDb as any).collection('users').doc(uid).get();
+        const userDoc = await adminDb.collection('users').doc(uid).get();
 
         if (!userDoc.exists) {
             return {
@@ -148,38 +145,41 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }
 
         const userData = userDoc.data() || {};
+        const roles = userData.roles || [];
 
-        // ★★★ 修正箇所: isPaidの判断ロジックを厳格化 ★★★
-        const adverStatus = (userData as any).adverSubscriptionStatus; // 型安全のためas any
+        // 'adver' ロールを持っていない場合、アクセスを拒否
+        if (!roles.includes('adver')) {
+             console.warn(`[Auth] Access Denied: User ${uid} does not have 'adver' role. Redirecting to login.`);
+             return { redirect: { destination: '/partner/login', permanent: false } };
+        }
+
+        const adverStatus = userData.adverSubscriptionStatus || null;
         
-        // 広告パートナーの有料判定: adverStatusが 'Paid' または 'active' であればTrue
-        // userData.isPaid も互換性のためにチェック (型安全のためas any)
-        const isPaid = (adverStatus === 'Paid' || adverStatus === 'active' || (userData as any).isPaid === true);
-        // ★★★ FIX: ここまで ★★★
+        // 広告パートナーの有料判定
+        const isPaid = (adverStatus === 'active' || adverStatus === 'trialing');
 
-
-        // ログインユーザーに紐づく店舗IDを取得 (ストアIDがなければリードカウントは0)
-        // TypeScriptのエラーを回避するため、adminDbの型をanyとして扱う
-        const storesSnapshot = await (adminDb as any).collection('artifacts').doc(appId).collection('users').doc(uid).collection('stores').limit(1).get();
+        // ログインユーザーに紐づく店舗IDを取得
+        const storesSnapshot = await adminDb
+            .collection('artifacts')
+            .doc(appId)
+            .collection('users')
+            .doc(uid)
+            .collection('stores')
+            .limit(1)
+            .get();
 
         const storeId = storesSnapshot.empty ? null : storesSnapshot.docs[0].id;
 
-        // 見込み客カウントを本番初期値の 0 に設定 
-        // 外部関数 getPartnerLeadCount が削除されたため、ここでは固定値 0 を設定
-        const initialLeadCount = 0; 
-
-
         return {
             props: {
-                partnerData: {
-                    uid: userDoc.id,
-                    email: userData.email || '',
-                    // 会社名優先のロジック
-                    companyName: userData.companyName || (userData as any).storeName || 'パートナー',
-                    roles: userData.roles || [],
-                    isPaid: isPaid,
-                },
-                initialLeadCount: initialLeadCount, 
+                uid: userDoc.id,
+                email: userData.email || '',
+                companyName: userData.companyName || (userData as any).storeName || 'パートナー',
+                roles: roles,
+                isPaid: isPaid,
+                subscriptionStatus: adverStatus, 
+                hasRecruitRole: roles.includes('recruit'), 
+                storeId: storeId, 
             }
         };
     } catch (err) {
@@ -192,60 +192,50 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 // ===============================
 // 5. MAIN COMPONENT (PartnerDashboard)
 // ===================================
-const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCount }) => {
+const PartnerDashboard: NextPage<DashboardProps> = (props) => {
+    // ★ 修正: 未使用のprops (uid, email, roles, subscriptionStatus) を削除
+    const { 
+        companyName, isPaid, hasRecruitRole, storeId 
+    } = props;
+    
     const router = useRouter();
     const { payment_status } = router.query;
     const auth = getAuth(app); // Firebase client auth
-
-    const isPaid = partnerData.isPaid;
-    const hasRecruitRole = partnerData.roles.includes('recruit');
-
-    // ★ FIX: storeDataの初期値に id: null を確実に含める
-    const [storeData, setStoreData] = useState<any>({ mainCategory: '未登録', id: null });
+    
+    const [authLoading, setAuthLoading] = useState(true);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    
+    // ★ 修正: storeDataのフェッチロジックを削除 (propsのstoreIdを直接利用)
+    // const [storeData, setStoreData] = useState<any>({ mainCategory: '未登録', id: null });
+    // useEffect(() => { ... fetchStoreStatus ... }, [props.uid]);
 
-    // 店舗プロファイルの簡易フェッチ 
+    // ★ 認証状態の監視 (クライアントサイド)
     useEffect(() => {
-        const fetchStoreStatus = async () => {
-            if (!partnerData.uid) return;
-            try {
-                const storesRef = collection(db, 'artifacts', appId, 'users', partnerData.uid, 'stores');
-                const storeQuery = query(storesRef, limit(1));
-                const storeSnapshot = await getDocs(storeQuery);
-
-                if (!storeSnapshot.empty) {
-                    const storeDoc = storeSnapshot.docs[0];
-                    const data = storeDoc.data();
-                    setStoreData({ ...data, id: storeDoc.id });
-                } else {
-                    // ★ FIX: 店舗情報がない場合も id: null を維持
-                    setStoreData({ mainCategory: '未登録', id: null });
-                }
-            } catch (error) {
-                console.error("Store status fetch error:", error);
-                setStoreData({ mainCategory: '未登録', id: null });
+        // ★ 修正: user に User | null 型を明示
+        const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+            if (!user) {
+                router.replace('/partner/login');
+            } else {
+                setAuthLoading(false); // ユーザーがいることを確認
             }
-        };
-        fetchStoreStatus();
-    }, [partnerData.uid]);
+        });
+        return () => unsubscribe();
+    }, [auth, router]); // ★ 修正: auth, router を依存配列に追加
 
-    // ★★★ FIX: 決済後のトークンリフレッシュと強制リロード（確実な切り替え） ★★★
+    // ★ 決済後のトークンリフレッシュと強制リロード
     useEffect(() => {
         const refreshAndRedirect = async () => {
-            // 1. クライアント側のセッショントークンを最新情報に強制リフレッシュ
             await auth.currentUser?.getIdToken(true).catch(e => console.error("Token refresh failed:", e));
-
-            // 2. ブラウザ全体を強制リロード
             window.location.href = '/partner/dashboard';
         };
 
         if (payment_status === 'success') {
             refreshAndRedirect();
         }
-    }, [auth, payment_status, router]);
+    }, [auth, payment_status]); // ★ 修正: auth, payment_status を依存配列に追加
 
 
-    // ログアウト処理 
+    // ログアウト処理
     const handleLogout = async () => {
         try {
             await fetch('/api/auth/sessionLogout', { method: 'POST' });
@@ -257,15 +247,23 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
         }
     };
 
-    // 解約モーダルを開く 
+    // 解約モーダルを開く
     const handleOpenCancelModal = (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
         setShowCancelModal(true);
     };
 
-    // ★ 仮の storeId を使用 (見込み客カウンター用)
-    const currentStoreId = storeData.id || partnerData.uid || 'dummy_store_id';
-
+    // ★ 認証ローディング中の表示
+    if (authLoading || (payment_status === 'success')) {
+         return (
+            <div className="flex justify-center items-center h-screen bg-gray-50">
+                <RiLoader4Line className="animate-spin text-4xl text-indigo-600" />
+                <span className="ml-4 text-lg font-semibold text-gray-700">
+                    {payment_status === 'success' ? '決済情報を更新中...' : '認証情報を確認中...'}
+                </span>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -294,7 +292,6 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                                 「解約手続きに進む」ボタンを押すと、サブスクリプションの解約ページに移動します。
                             </p>
 
-                            {/* アクションボタン */}
                             <div className="flex flex-col sm:flex-row gap-3">
                                 <button
                                     onClick={() => setShowCancelModal(false)}
@@ -319,7 +316,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">広告パートナー ダッシュボード</h1>
                         <p className="text-sm text-gray-600 mt-1">
-                            ようこそ、<span className="font-bold">{partnerData.companyName}</span> 様
+                            ようこそ、<span className="font-bold">{companyName}</span> 様
                             <span className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white ${isPaid ? 'bg-indigo-600' : 'bg-gray-500'}`}>
                                 {isPaid ? '有料パートナー' : '無料パートナー'}
                             </span>
@@ -344,12 +341,8 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
             {/* メイン */}
             <main className="max-w-4xl mx-auto px-6 py-8">
 
-                {/* ★★★ 見込み客カウンターの組み込み（削除済みのため、何も表示しない） ★★★ */}
-                {/* 以前 MatchingLeadsCounter があった場所ですが、削除要望に基づき空欄にします */}
-
-
-                {/* 店舗プロフィール未登録の通知 (変更なし) */}
-                {(!storeData || storeData.mainCategory === '未登録') && (
+                {/* ★ 修正: storeId (propsから) が null の場合に警告を表示 */}
+                {!storeId && (
                     <div className="mb-8 p-6 bg-red-100 border-4 border-red-300 text-red-700 rounded-lg shadow-lg text-center">
                         <h2 className="text-2xl font-extrabold text-red-900 mb-2">
                             ⚠️ 【重要】店舗プロフィールが未登録です
@@ -369,8 +362,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                     </div>
                 )}
 
-
-                {/* 無料プラン誘導 (変更なし) */}
+                {/* 無料プラン誘導 */}
                 {!isPaid && (
                     <div className="mb-8 p-6 bg-yellow-100 border-4 border-yellow-400 text-yellow-800 rounded-lg shadow-lg text-center">
                         <h2 className="text-2xl font-extrabold text-yellow-900">
@@ -387,7 +379,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                     </div>
                 )}
 
-                {/* 決済完了通知 (変更なし) */}
+                {/* 決済完了通知 */}
                 {payment_status === 'success' && isPaid && (
                     <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md mb-8">
                         <p className="font-bold">有料プランのご登録ありがとうございます！</p>
@@ -395,7 +387,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                     </div>
                 )}
 
-                {/* セクション1: 無料・有料共通機能 (変更なし) */}
+                {/* セクション1: 無料・有料共通機能 */}
                 <section>
                     <h2 className="text-xl font-bold text-gray-700 mb-3">１．集客ツールとお店の基本情報を設定する（無料）</h2>
 
@@ -410,10 +402,10 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                             isPaid={isPaid}
                         />
 
-                        {/* 店舗情報プレビューボタン (変更なし) */}
-                        {storeData && storeData.id && (
+                        {/* ★ 修正: storeId が存在する場合のみ表示 */}
+                        {storeId && (
                             <ActionButton
-                                href={`/stores/view/${storeData.id}`}
+                                href={`/stores/view/${storeId}`}
                                 icon={<RiEyeLine className="h-8 w-8 text-white" />}
                                 title="店舗情報プレビュー（公開画面）"
                                 description="アプリ上でどのように見えているかを確認します"
@@ -422,7 +414,6 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                                 isPaid={isPaid}
                             />
                         )}
-
                     </div>
                     <ActionButton
                         href="/partner/deals"
@@ -452,7 +443,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                     </div>
                 </section>
 
-                {/* セクション3: その他の有料機能 (変更なし) */}
+                {/* セクション3: その他の有料機能 */}
                 <section className="mt-8">
                     <h2 className="text-xl font-bold text-gray-700 mb-3">３．その他の有料機能（報酬受取）</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -476,7 +467,6 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                             isPaid={isPaid}
                         />
 
-                        {/* 解約ボタン (有料会員のみ表示) */}
                         {isPaid && (
                             <ActionButton
                                 href="/cancel-subscription"
@@ -492,8 +482,8 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
                     </div>
                 </section>
 
-
-                {/* AI求人案内 (変更なし) */}
+                {/* AI求人案内 */}
+                {/* ★ 修正: hasRecruitRole を使用 */}
                 {!hasRecruitRole && (
                     <section className="mt-12 p-6 bg-white rounded-lg shadow-md border border-blue-200">
                         <h2 className="text-xl font-bold text-blue-600">求人広告掲載サービス</h2>
@@ -510,7 +500,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
 
                 <hr className="my-8" />
 
-                {/* LINEお問い合わせセクション (変更なし) */}
+                {/* LINEお問い合わせセクション */}
                 <div className="pb-6">
                     <section className="mt-6">
                         <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
@@ -530,7 +520,7 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
 
             </main>
 
-            {/* フッター操作 (変更なし) */}
+            {/* フッター操作 */}
             <footer className="max-w-4xl mx-auto px-6 pt-0 pb-8">
                 <section className="mt-6 grid grid-cols-1 gap-4">
                     <button
@@ -549,5 +539,4 @@ const PartnerDashboard: NextPage<DashboardProps> = ({ partnerData, initialLeadCo
 };
 
 export default PartnerDashboard;
-
 

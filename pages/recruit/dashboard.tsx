@@ -1,7 +1,6 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Link from 'next/link';
 import Head from 'next/head';
-// 🚨 必要に応じてプロジェクトのパスへ調整してください
 import { adminDb, adminAuth } from '@/lib/firebase-admin'; 
 import nookies from 'nookies';
 import {
@@ -9,16 +8,16 @@ import {
     RiLayout2Line, RiContactsLine, 
     RiAdvertisementLine, RiErrorWarningLine, RiArrowRightLine, 
     RiAwardLine, RiPencilRuler2Line, RiCheckLine, RiHourglassLine, RiEditCircleLine, 
-    RiBrainLine, RiLightbulbFlashLine, // ★ 有料機能用アイコン
-    RiCloseCircleLine, RiAlertFill, RiPauseCircleLine, RiPlayCircleLine, RiLoader4Line // ★ 停止/再開用アイコン
+    RiBrainLine, RiLightbulbFlashLine, 
+    RiCloseCircleLine, RiAlertFill, RiPauseCircleLine, RiPlayCircleLine, RiLoader4Line 
 } from 'react-icons/ri';
 import { useRouter } from 'next/router';
-import { signOut, getAuth, onAuthStateChanged } from "firebase/auth"; // ★ 修正: onAuthStateChanged の使用を再追加
-import { app } from "@/lib/firebase"; // 🚨 必要に応じてプロジェクトのパスへ調整
+import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
+import { app } from "@/lib/firebase"; 
 import { useState, useEffect } from 'react';
 import React from 'react';
 
-// --- 型定義 ---
+// --- 型定義 (変更なし) ---
 interface Candidate {
     id: string;
     name: string;
@@ -31,7 +30,7 @@ interface Candidate {
     recruitmentId?: string;
 }
 
-export type RecruitmentStatus = 'pending_review' | 'verified' | 'rejected' | 'draft' | 'active' | 'paused' | 'paused_by_user'; // paused_by_userも追加
+export type RecruitmentStatus = 'pending_review' | 'verified' | 'rejected' | 'draft' | 'active' | 'paused' | 'paused_by_user'; 
 
 interface Recruitment {
     id: string;
@@ -57,10 +56,9 @@ interface DashboardProps {
     billingCycle: string | null;
 }
 
-// --- AIMatchingGuide コンポーネント (省略 - 変更なし) ---
+// --- AIMatchingGuide (変更なし) ---
 const AIMatchingGuide = ({ show, onClose }: { show: boolean, onClose: () => void }) => {
     if (!show) return null;
-    // ... (AIMatchingGuide implementation remains the same)
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
             <div className="bg-white p-6 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -92,21 +90,19 @@ const AIMatchingGuide = ({ show, onClose }: { show: boolean, onClose: () => void
 };
 
 
-// --- DashboardCard コンポーネント (省略 - 変更なし) ---
+// --- DashboardCard (変更なし) ---
 interface DashboardCardProps {
     href: string;
     icon: React.ReactNode;
     title: string;
     description: string;
     color: 'indigo' | 'green' | 'red' | 'yellow' | 'purple' | 'blue';
-    isPro: boolean; // 有料機能か
-    isPaid: boolean; // 支払済みか
-    onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void; // モーダル用
+    isPro: boolean; 
+    isPaid: boolean; 
+    onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void; 
 }
-
 const DashboardCard = ({ href, icon, title, description, color, isPro, isPaid, onClick }: DashboardCardProps) => {
     const router = useRouter(); 
-
     const colorMap: any = {
         indigo: 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200',
         green: 'bg-green-100 text-green-600 group-hover:bg-green-200',
@@ -115,14 +111,11 @@ const DashboardCard = ({ href, icon, title, description, color, isPro, isPaid, o
         purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-200',
         blue: 'bg-blue-100 text-blue-600 group-hover:bg-blue-200',
     };
-    
     const isDisabled = isPro && !isPaid;
     const finalHref = isDisabled ? "/recruit/subscribe_plan" : href; 
-
     const cardContent = (
         <a 
             onClick={onClick}
-            // 有料かつ無料会員の場合、opacity-50, cursor-not-allowed を適用
             className={`group block bg-white p-6 rounded-xl shadow-lg border border-gray-100 transition-all ${
                 isDisabled
                 ? 'opacity-50 cursor-not-allowed bg-gray-50' 
@@ -145,11 +138,7 @@ const DashboardCard = ({ href, icon, title, description, color, isPro, isPaid, o
             </div>
         </a>
     );
-    
-    if (onClick) {
-        return cardContent; // モーダル用
-    }
-
+    if (onClick) { return cardContent; }
     return (
         <Link 
             href={finalHref} 
@@ -162,7 +151,7 @@ const DashboardCard = ({ href, icon, title, description, color, isPro, isPaid, o
 };
 
 
-// --- RecruitmentCard (省略 - 変更なし) ---
+// --- RecruitmentCard (変更なし) ---
 const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
     const getStatusDisplay = (status: RecruitmentStatus) => {
         switch (status) {
@@ -172,17 +161,11 @@ const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
                 return { text: '許可', color: 'bg-green-100 text-green-700 border-green-300' };
             case 'rejected':
                 return { text: '編集要請', color: 'bg-red-100 text-red-700 border-red-300' };
-            case 'draft':
-            case 'active':
-            case 'paused':
-            case 'paused_by_user': // ユーザー停止中も表示
             default:
                 return { text: '下書き', color: 'bg-gray-100 text-gray-500 border-gray-300' };
         }
     };
-
     const statusDisplay = getStatusDisplay(recruitment.verificationStatus || recruitment.status);
-
     return (
         <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100 flex justify-between items-start hover:shadow-lg transition-shadow">
             <div>
@@ -197,7 +180,6 @@ const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
                 )}
                 <p className="text-sm text-gray-600 mt-2">応募者数: {recruitment.applicantsCount} 件</p>
             </div>
-            
             <Link
                 href={`/recruit/jobs/edit?id=${recruitment.id}`}
                 className="text-sm font-bold text-indigo-600 hover:text-indigo-800 flex items-center mt-1"
@@ -208,7 +190,7 @@ const RecruitmentCard = ({ recruitment }: { recruitment: Recruitment }) => {
     );
 };
 
-// --- ReviewSummaryCard コンポーネントの再定義 ---
+// --- ReviewSummaryCard (変更なし) ---
 const ReviewSummaryCard = ({ icon, title, count, color, description }: { icon: JSX.Element, title: string, count: number, color: string, description: string }) => (
     <div className={`p-4 rounded-xl shadow-md border ${color}`}>
         <div className="flex items-center space-x-3">
@@ -221,7 +203,7 @@ const ReviewSummaryCard = ({ icon, title, count, color, description }: { icon: J
 );
 
 
-// --- getServerSideProps (★ 修正: ロール（権限）チェックの追加) ---
+// --- getServerSideProps (★ isPaid の判定ロジックが修正済み) ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
     const queryFailed = false; 
     const candidates: Candidate[] = [];
@@ -230,7 +212,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     
     let subscriptionStatus: string | null = null;
     let billingCycle: string | null = null;
-    let isPaid = false;
+    let isPaid = false; 
 
     try {
         const cookies = nookies.get(context);
@@ -241,35 +223,29 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const userSnap = await adminDb.collection('users').doc(uid).get();
         
         if (!userSnap.exists) {
-             console.warn(`[Auth] User document not found for UID: ${uid}. Redirecting to login.`);
-             // ユーザーデータ自体が存在しない場合は、catchブロックに移行させる
              throw new Error("Company user not found.");
         }
 
         const userData = userSnap.data()!;
-
-        // ★★★★★★★【重要】ロール（権限）の確認 ★★★★★★★
-        // 'users' ドキュメントに 'roles' が存在し、'recruit' が含まれているか確認
         const roles = userData.roles || [];
+        
         if (!roles.includes('recruit')) {
-            // 'recruit' ロールを持っていない場合、ダッシュボードへのアクセスを拒否し、
-            // ご要望の通り /partner/login にリダイレクトします。
             console.warn(`[Auth] Access Denied: User ${uid} does not have 'recruit' role. Redirecting to login.`);
-            
-            // 'adver' ロールを持っていても、'/partner/login' にリダイレクト
             return { redirect: { destination: '/partner/login', permanent: false } };
         }
-        // ★★★★★★★【ここまで】★★★★★★★
-
-        // --- この下は、'recruit' ロールを持っているユーザーのみ実行される ---
 
         let companyName = userData.companyName || userData.email || "未設定の会社名";
-        const minMatchScore = 60; 
-        const isUserAdPartner = userData.roles?.includes('adver') || false;
-        const profileExists = recruiterSnap.exists; 
+        const minMatchScore = 60;
+        const isUserAdPartner = userData.roles?.includes('adver') || false; 
+        const profileExists = recruiterSnap.exists;
 
-        isPaid = !!userData.isPaid; 
+        // ★★★★★★★【重要】isPaid の判定ロジック修正 ★★★★★★★
         subscriptionStatus = userData.recruitSubscriptionStatus || userData.subscriptionStatus || null;
+        
+        // 'active' または 'trialing' の場合に 'isPaid' (有料会員) とみなす
+        isPaid = (subscriptionStatus === 'active' || subscriptionStatus === 'trialing');
+        // ★★★★★★★【ここまで】★★★★★★★
+
         billingCycle = userData.recruitBillingCycle || userData.billingCycle || null;
 
         if (profileExists) {
@@ -277,10 +253,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             companyName = recruiterData.companyName || companyName;
         }
 
-        // --- recruitments 取得とサマリー計算 ---
+        // --- recruitments 取得 (変更なし) ---
         const recruitmentsQuery = await adminDb
             .collection('recruitments')
-            .where('uid', '==', uid) // ログインユーザーの求人のみ取得
+            .where('uid', '==', uid) 
             .orderBy('createdAt', 'desc')
             .get();
         
@@ -323,9 +299,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             applicantsCount: applicantsCountMap.get(job.id) || 0,
         }));
 
-        // --- candidates and contacts acquisition (omitted for brevity) ---
-        // (中略)
-
         return {
             props: { 
                 companyName, 
@@ -337,19 +310,18 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 profileExists, 
                 queryFailed, 
                 reviewSummary,
-                isPaid, 
+                isPaid, // ★ 修正された isPaid が渡される
                 subscriptionStatus, 
                 billingCycle, 
             },
         };
     } catch (error) {
-        // 認証失敗（クッキー無効、'users' doc無しなど）
         console.error("Error in recruit/dashboard (getServerSideProps catch):", error);
         return { redirect: { destination: '/partner/login', permanent: false } };
     }
 };
 
-// --- ページ本体 (修正: 決済成功時のロジックを分離) ---
+// --- ページ本体 (変更なし) ---
 const RecruitDashboard: NextPage<DashboardProps> = (props) => {
     const { 
         companyName, contacts, recruitments, isUserAdPartner, 
@@ -365,48 +337,36 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
     const [isTogglingSub, setIsTogglingSub] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-    // ★★★ クライアントサイドでの認証監視 ★★★
-    const [authLoading, setAuthLoading] = useState(true); // SSRで認証済みだが、クライアントでも確認
+    const [authLoading, setAuthLoading] = useState(true); 
     
     useEffect(() => {
         const auth = getAuth(app);
-        // ページがクライアントで読み込まれるたびに、現在のログイン状態を監視
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (!user) {
-                // セッションが切れた場合（例：別タブでログアウト）
                 router.replace('/partner/login');
             } else {
-                setAuthLoading(false); // ユーザーがいることを確認
+                setAuthLoading(false); 
             }
         });
-
         return () => unsubscribe();
     }, [router]);
 
-    // ★★★ 決済成功時のトークンリフレッシュとリダイレクト (ロジックを分離) ★★★
     useEffect(() => {
         const refreshAndRedirect = async () => {
             const auth = getAuth(app);
-            // トークンを強制リフレッシュして最新のisPaid状態を取得
             await auth.currentUser?.getIdToken(true).catch(e => console.error("Token refresh failed:", e)); 
-            
-            // クエリパラメータを削除してページをリロード（SSRを再実行させる）
             router.replace('/recruit/dashboard', undefined, { shallow: false }); 
         };
-
         if (payment_status === 'success') {
             refreshAndRedirect();
         }
     }, [payment_status, router]);
 
-
-    // ★ 解約モーダルを開く (変更なし)
     const handleOpenCancelModal = (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
         setShowCancelModal(true);
     };
 
-    // ★ handleLogout 関数の再定義 (変更なし)
     const handleLogout = async () => {
         const auth = getAuth(app);
         await signOut(auth);
@@ -414,7 +374,6 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
         router.push('/partner/login');
     };
 
-    // ★ サブスクリプション停止/再開ロジック (省略 - 変更なし)
     const handleToggleSubscription = async (action: 'pause' | 'resume') => {
         if (billingCycle === 'annual') {
             alert('年間契約プランは一時停止できません。');
@@ -446,12 +405,10 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
         }
     };
 
-    // 購読状態の判定 (変更なし)
     const isPaused = currentSubscriptionStatus === 'paused_by_user';
     const isAnnual = billingCycle === 'annual';
     const isReady = isPaid && (currentSubscriptionStatus === 'active' || currentSubscriptionStatus === 'paused_by_user');
 
-    // ★★★ 認証ローディング中の表示 ★★★
     if (authLoading) {
         return (
             <div className="flex justify-center items-center h-screen bg-gray-50">
@@ -461,12 +418,11 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
         );
     }
 
-    // --- 権限があるユーザーにのみ表示される内容 ---
     return (
         <div className="min-h-screen bg-gray-50 font-sans">
+            {/* isPaid が true になるため、タイトルも正しく表示される */}
             <Head><title>AI求人パートナー ダッシュボード ({isPaid ? '有料会員' : '無料会員'})</title></Head>
 
-            {/* ★★★ 解約確認モーダル (省略 - 変更なし) ★★★ */}
             {showCancelModal && (
                 <div 
                     className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
@@ -504,19 +460,18 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                 </div>
             )}
 
-            {/* ★★★ ヘッダー (変更なし) ★★★ */}
             <header className="bg-white shadow-sm sticky top-0 z-10">
                 <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-start">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">AI求人パートナー ダッシュボード</h1>
                         <p className="text-sm text-gray-600 mt-1">
                             ようこそ、<span className="font-bold">{companyName}</span> 様 
+                            {/* isPaid が true になるため、正しく「有料AIプラン」と表示される */}
                             <span className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white ${isPaid ? 'bg-indigo-600' : 'bg-gray-500'}`}>
                                 {isPaid ? '有料AIプラン' : '無料プラン'}
                             </span>
                         </p>
                     </div>
-                    {/* ★ サービス状態表示と操作ボタン ★ */}
                     {isPaid && isReady && (
                         <div className="flex flex-col items-end text-right border-l pl-4">
                             <p className="text-sm font-semibold mb-2">
@@ -549,7 +504,6 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                             )}
                         </div>
                     )}
-                    {/* ログアウトボタンなど */}
                     <div className="flex flex-col items-end text-right">
                         <button
                             onClick={handleLogout}
@@ -578,7 +532,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                     </div>
                 )}
 
-                {/* ★★★ 有料プラン誘導バナー (変更なし) ★★★ */}
+                {/* isPaid が true になるため、このバナーは表示されなくなる */}
                 {!isPaid && (
                     <div className="mb-8 p-6 bg-yellow-100 border-4 border-yellow-400 text-yellow-800 rounded-lg shadow-lg text-center">
                         <h2 className="text-2xl font-extrabold text-yellow-900">
@@ -595,7 +549,6 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                     </div>
                 )}
                 
-                {/* ★★★ 決済ステータス表示 (変更なし) ★★★ */}
                 {payment_status === 'success' && (
                     <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md mb-8">
                         <p className="font-bold">決済処理が完了しました。Webhookからのステータス更新をお待ちください。</p>
@@ -603,11 +556,8 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                     </div>
                 )}
 
-                {/* ★★★ 1. 応募・審査状況 (変更なし) ★★★ */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">1. 応募・審査状況</h2>
-                    
-                    {/* サマリー */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                         <ReviewSummaryCard
                             icon={<RiCheckLine size={30} className="text-green-600" />}
@@ -637,7 +587,6 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                         </div>
                     </div>
 
-                    {/* 個別求人ステータス */}
                     <h3 className="text-xl font-bold mb-4">個別求人ステータス（最新の審査状況）</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {recruitments.length === 0 && props.queryFailed ? (
@@ -657,10 +606,8 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
 
                 <hr className="my-8" />
 
-                {/* ★★★ 2. 求人管理（複数の求人掲載無料） (変更なし) ★★★ */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. 求人管理（複数の求人掲載無料・待ちの無料プラン）</h2>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <DashboardCard
                             href="/recruit/profile"
@@ -697,42 +644,36 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
 
                 <hr className="my-8" />
 
-                {/* ★★★ 3. 応募者管理・マッチング (基本機能) (無料機能) (変更なし) ★★★ */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">
                         3. 応募者管理・マッチング (基本機能・待ちの無料プラン)
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* 3-1. 応募者リスト（AIマッチ度確認） */}
                         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                            <h3 className="text-xl font-bold mb-4 flex items-center">
                                 <RiUserSearchLine className="mr-2 text-yellow-600" size={24} />
                                 応募者リスト (AIマッチ度付き)
                            </h3>
-                           {/* ... (candidates list) ... */}
                            <Link href="/recruit/applicants" className="mt-4 block text-center text-indigo-600 hover:underline text-sm font-bold">
                                 全応募者リスト（詳細）を見る
                             </Link>
                         </div>
-                        
-                        {/* 3-2. 連絡先交換済みリスト (無料の基本機能として表示) */}
                         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
                             <h3 className="text-xl font-bold mb-4 flex items-center">
                                 <RiContactsLine className="mr-2 text-blue-600" size={24} />
                                 マッチング済みの連絡先 ({contacts.length}件)
                             </h3>
-                            {/* ... (contacts list) ... */}
                         </div>
                     </div>
                 </section>
 
                 <hr className="my-8" />
                 
-                {/* ★★★ 4. AI採用：攻める【有料AIプラン】 (変更なし) ★★★ */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">
                         4. 高度機能：攻めの採用 (有料AIプラン)
                     </h2>
+                    {/* isPaid が true になるため、このバナーは表示されなくなる */}
                     {!isPaid && (
                         <div className="mb-6 p-4 bg-gray-100 border-l-4 border-red-600 text-gray-800 rounded-md">
                             <p className="font-extrabold mb-1 text-red-700">【有料AIプラン限定】</p>
@@ -745,24 +686,22 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                         </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* 攻めの採用 - AIスカウト候補者リスト */}
                         <DashboardCard 
                             href="/recruit/scout-candidates"
                             icon={<RiBrainLine size={28} />} 
                             title="AIスカウト候補者リスト"
                             description="無料では出会えないAI厳選の潜在候補者リストを閲覧し、ヘッドハンティングを開始します" 
                             color="red"
-                            isPro={true} // 有料機能
+                            isPro={true} 
                             isPaid={isPaid}
                         />
-                        {/* 高度なAI機能 - AI求人アドバイス */}
                         <DashboardCard 
                             href="/recruit/advice"
                             icon={<RiLightbulbFlashLine size={28} />} 
                             title="AI求人アドバイス (改善提案)" 
                             description="AIが求人票を詳細分析し、**応募数を増やすための具体的改善点**を提案します" 
                             color="purple"
-                            isPro={true} // 有料
+                            isPro={true} 
                             isPaid={isPaid}
                         />
                     </div>
@@ -770,30 +709,29 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                 
                 <hr className="my-8" />
 
-                {/* ★★★ 5. アカウント管理 (変更なし) ★★★ */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">5. アカウント管理</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {isPaid && (
                                 <DashboardCard
-                                    href="/cancel-subscription" // hrefはダミー
+                                    href="/cancel-subscription" 
                                     icon={<RiCloseCircleLine size={28} />}
                                     title="サブスクリプションの解約"
                                     description="有料AIプランの自動更新を停止（解約）します"
                                     color="red"
-                                    isPro={true} // 有料会員専用
+                                    isPro={true} 
                                     isPaid={isPaid}
-                                    onClick={handleOpenCancelModal} // モーダルを開く
+                                    onClick={handleOpenCancelModal} 
                                 />
                         )}
                         {!isUserAdPartner && (
                             <DashboardCard 
-                                href="/partner/ad-subscribe" // 広告パートナー登録LPへ
+                                href="/partner/ad-subscribe" 
                                 icon={<RiAdvertisementLine size={28} />} 
                                 title="広告掲載パートナーになる" 
                                 description="集客AIやクーポン機能も利用する" 
                                 color="purple"
-                                isPro={false} // これは別サービスへの誘導
+                                isPro={false} 
                                 isPaid={isPaid}
                             />
                         )}
@@ -801,7 +739,6 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                 </section>
             </main>
             
-            {/* ★★★ フッター (変更なし) ★★★ */}
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
                 <section className="mt-6">
                     <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
