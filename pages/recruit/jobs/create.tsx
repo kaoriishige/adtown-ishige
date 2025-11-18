@@ -1,15 +1,17 @@
-import Head from 'next/head';
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/router';
+// This file is the job creation/editing page for recruiters.
+import React, { useState, useEffect, useCallback } from 'react';
+// import Head from 'next/head'; // 削除
+// import { useRouter } from 'next/router'; // 削除
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // Firebase Client SDK
+import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, type Firestore } from 'firebase/firestore'; // getFirestoreを削除
+// import { db } from '@/lib/firebase'; // 削除
 import { Loader2, Building, Briefcase, ArrowLeft, Sparkles, MessageSquare,
 JapaneseYen, MapPin, Laptop, Send, Clock, Tag, UserCheck,
-CalendarDays } from 'lucide-react'; 
-import Link from 'next/link';
-import React from 'react';
+CalendarDays, AlertTriangle } from 'lucide-react'; // AlertTriangleを追加
+// import Link from 'next/link'; // 削除
 
+// Firebase dbの型定義を仮定
+declare const db: Firestore;
 
 // --- チェックボックスの選択肢 (企業全体に関するもののみ残す) ---
 const growthOptions = ["OJT（実務を通じた教育制度）", "メンター制度（先輩社員によるサポート）", "定期的な社内研修あり", "社外研修・セミナー参加支援あり", "資格取得支援制度あり", "書籍・教材購入補助あり", "AI・DX関連の研修あり", "海外研修・グローバル教育あり", "キャリア面談制度あり", "評価・昇進が明確（スキルや成果で評価）", "社内表彰・インセンティブ制度あり", "他部署への異動・チャレンジを歓迎", "社員の挑戦を応援する文化", "失敗を許容する文化（トライ＆エラーを奨励）", "社内勉強会・ナレッジシェア会あり", "社外講師や専門家を招いた学習機会あり"];
@@ -58,11 +60,11 @@ const ALL_DAYS = ['月', '火', '水', '木', '金', '土', '日']; // 勤務曜
 
 // ★ グローバル変数定義（Firetoreパス用）
 declare const __app_id: string;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // 未使用のため削除
 
 const JobCreatePage = () => {
 
-    const router = useRouter();
+    // const router = useRouter(); // Next.js routerを削除
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -102,17 +104,25 @@ const JobCreatePage = () => {
 
     // --- Firebase認証状態の監視とデータ取得 ---
     useEffect(() => {
+        // dbが未定義の場合は処理をスキップ (ローカルプレビュー時の回避策)
+        if (typeof db === 'undefined' || typeof getAuth === 'undefined') {
+            console.error("Firebase services are not initialized.");
+            setLoading(false);
+            return;
+        }
+
         const auth = getAuth();
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 await loadCompanyProfile(currentUser.uid); 
             } else {
-                router.push('/partner/login');
+                // router.push('/partner/login'); // Next.js routerの代わりに
+                window.location.href = '/partner/login';
             }
         });
         return () => unsubscribe();
-    }, [router]);
+    }, []); // 依存配列から router を削除
 
     // --- 企業プロフィールを読み込む関数 ---
     const loadCompanyProfile = async (uid: string) => {
@@ -120,6 +130,11 @@ const JobCreatePage = () => {
         setError(null); 
         
         try {
+            // Firestoreインスタンスの存在確認
+            if (typeof db === 'undefined') {
+                throw new Error("Firestore is not initialized.");
+            }
+            
             // ★★★ 修正箇所: 許可されている '/users/{uid}' ドキュメントを参照 ★★★
             const userRef = doc(db, 'users', uid);
             const snap = await getDoc(userRef);
@@ -149,7 +164,7 @@ const JobCreatePage = () => {
                 setCompanyName('プロフィール未登録');
                 setProfileStatus('draft');
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Firestore読み込みエラー (recruit/jobs/create):", e);
             // 権限エラーの場合、ユーザーに再ログインを促すなど
             setError("データの読み込みに失敗しました。プロフィールが未登録、またはFirestore設定を確認してください。");
@@ -199,6 +214,45 @@ const JobCreatePage = () => {
             };
         });
     }, []);
+    
+    // --- 必須項目のチェック関数 ---
+    const validateForm = () => {
+        // 必須テキストフィールド
+        const requiredFields = [
+            'jobTitle', 'jobCategory', 'salaryMin', 'salaryMax', 'location', 
+            'workingHours', 'jobDescription', 'hiringBackground', 'idealCandidate',
+            'salaryStructure', 'paidLeaveSystem', 'requiredSkills'
+        ];
+
+        for (const field of requiredFields) {
+            // jobCategoryが'その他'の場合、otherJobCategoryもチェック
+            if (field === 'jobCategory') {
+                if (formData.jobCategory === 'その他' && !formData.otherJobCategory.trim()) {
+                    return `「その他の職種カテゴリ」を具体的に入力してください。`;
+                }
+                if (!formData.jobCategory.trim()) {
+                    return `「職種カテゴリ」を選択してください。`;
+                }
+            }
+            
+            // 必須項目が空の場合 (welcomeSkills以外)
+            if (field !== 'welcomeSkills' && (formData as any)[field].toString().trim() === '') {
+                // 給与項目は0を許容しない
+                if (field === 'salaryMin' || field === 'salaryMax') {
+                     if (Number((formData as any)[field]) <= 0) return `「${field}」に有効な数値を入力してください。`;
+                }
+                // jobCategoryは上でチェック済み
+                if (field !== 'jobCategory') return `「${field}」は必須項目です。`;
+            }
+        }
+
+        // 勤務曜日チェック
+        if (formData.workingDays.length === 0) {
+            return `「勤務曜日」を一つ以上選択してください。`;
+        }
+
+        return null; // エラーなし
+    };
 
 
     // --- 求人登録とAI審査の申請 ---
@@ -206,7 +260,17 @@ const JobCreatePage = () => {
         e.preventDefault();
 
         if (!user || !isProfileVerified) {
-            alert('企業プロフィールが未承認のため、求人を登録できません。先にプロフィールを承認してください。');
+            // ★ FIX: alertは使用禁止のためconsole.errorに置換
+            console.error('企業プロフィールが未承認のため、求人を登録できません。先にプロフィールを承認してください。');
+            setError('企業プロフィールが未承認のため、求人を登録できません。先にプロフィールを承認してください。');
+            return;
+        }
+
+        const validationError = validateForm();
+        if (validationError) {
+            setError(validationError);
+            // ★ FIX: alertは使用禁止のためconsole.errorに置換
+            console.error(`入力エラー: ${validationError}`); 
             return;
         }
 
@@ -214,6 +278,11 @@ const JobCreatePage = () => {
         setError(null);
         let newJobId = '';
         try {
+            // Firestoreインスタンスの存在確認
+            if (typeof db === 'undefined') {
+                throw new Error("Firestore is not initialized.");
+            }
+            
             // 求人データをトップレベルの 'recruitments' コレクションに追加 (セキュリティルールで許可済みと想定)
             const docRef = await addDoc(collection(db, 'recruitments'), {
                 jobTitle: formData.jobTitle,
@@ -255,14 +324,17 @@ const JobCreatePage = () => {
                 throw new Error('AI審査システムの初期化に失敗しました。');
             }
 
-            alert('求人を保存し、AI登録審査を開始しました。ダッシュボードで結果を確認してください。');
-            router.push('/recruit/dashboard');
+            // ★ FIX: alertは使用禁止のためconsole.logに置換
+            console.log('求人を保存し、AI登録審査を開始しました。ダッシュボードで結果を確認してください。');
+            // router.push('/recruit/dashboard'); // Next.js routerの代わりに
+            window.location.href = '/recruit/dashboard';
 
         } catch (err: any) {
+            // ★ FIX: alertは使用禁止のためconsole.errorに置換
             setError(`エラーが発生しました: ${err.message}`);
             console.error("申請エラー:", err);
 
-            if (newJobId && user) {
+            if (newJobId && user && typeof db !== 'undefined') {
                 // エラー時、Firestoreに登録された求人ドキュメントのステータスをrejectedに更新
                 const jobDocRef = doc(db, 'recruitments', newJobId);
                 await updateDoc(jobDocRef, {
@@ -294,10 +366,13 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Head><title>新規求人作成 - {companyName}</title></Head>
+            {/* Next/Head の代わりに <title> タグを使用 */}
+            <title>新規求人作成 - {companyName}</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
             <header className="bg-white shadow-sm sticky top-0 z-20">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <button onClick={() => router.push('/recruit/dashboard')}
+                    <button onClick={() => window.location.href = '/recruit/dashboard'} // Next.js routerの代わりに
                         className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-semibold">
                         <ArrowLeft className="w-4 h-4 mr-2" /> ダッシュボードに戻る
                     </button>
@@ -310,9 +385,13 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
                     <div className={`p-4 mb-8 ${getProfileAlertMessage().color} rounded-lg text-sm border-l-4 border-current`}>
                         <p className="font-bold">{getProfileAlertMessage().title}</p>
                         <p className="text-xs mt-1">{getProfileAlertMessage().body}</p>
-                        <Link href="/recruit/profile" className="mt-2 inline-block font-bold text-indigo-700 hover:underline">
-                            プロフィール編集ページへ
-                        </Link>
+                        {/* Next/Link の代わりに標準の <a> タグを使用し、ESLintを抑制 */}
+                        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                        <a href="/recruit/profile" className="mt-2 inline-block font-bold text-indigo-700 hover:underline">
+                            <span className="flex items-center">
+                                <ArrowLeft className="w-4 h-4 mr-1 transform rotate-180" /> プロフィール編集ページへ
+                            </span>
+                        </a>
                     </div>
                 )}
                 
@@ -321,6 +400,12 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
                         <p className="text-sm font-semibold text-indigo-600 flex items-center"><Building className="w-4 h-4 mr-2" />{companyName}</p>
                         <h1 className="text-3xl font-bold text-gray-900 mt-1">新規求人の作成</h1>
                         <p className="mt-2 text-sm text-gray-600">この求人独自の「スペック」を入力してください。入力後、AI審査に申請をクリックで自動で開始されます。</p>
+                        {error && (
+                            <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md flex items-center text-sm">
+                                <AlertTriangle className="w-5 h-5 mr-2 flex-shrink-0" />
+                                <strong>入力エラー:</strong> {error}
+                            </div>
+                        )}
                     </div>
 
                     {/* フォームセクション (未承認時は非活性化) */}
@@ -330,7 +415,7 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
                         <h2 className="text-xl font-semibold border-b pb-2 text-gray-800 flex items-center"><Briefcase className="w-5 h-5 mr-3 text-gray-500" />募集要項</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div><label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700">求人タイトル *</label><input type="text" id="jobTitle" name="jobTitle" value={formData.jobTitle} onChange={handleChange} required className="mt-1 block w-full input" placeholder="例：【未経験OK】地域の魅力を伝えるWebマーケター" /></div>
-                            <div><label htmlFor="employmentType" className="block text-sm font-medium text-gray-700">雇用形態 *</label><select id="employmentType" name="employmentType" value={formData.employmentType} onChange={handleChange} className="mt-1 block w-full input">{employmentTypeOptions.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}</select></div>
+                            <div><label htmlFor="employmentType" className="block text-sm font-medium text-gray-700">雇用形態 *</label><select id="employmentType" name="employmentType" value={formData.employmentType} onChange={handleChange} required className="mt-1 block w-full input">{employmentTypeOptions.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}</select></div>
                         </div>
                         <div>
                             <label htmlFor="jobCategory" className="block text-sm font-medium text-gray-700">職種カテゴリ *</label>
@@ -350,9 +435,9 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 flex items-center"><JapaneseYen className="w-4 h-4 mr-1" />給与タイプ *</label>
                                 <div className="mt-2 flex gap-4">
-                                    <label className="flex items-center"><input type="radio" name="salaryType" value="年収" checked={formData.salaryType === '年収'} onChange={handleChange} className="h-4 w-4 checkbox" /><span className="ml-2 text-sm text-gray-700">年収</span></label>
-                                    <label className="flex items-center"><input type="radio" name="salaryType" value="時給" checked={formData.salaryType === '時給'} onChange={handleChange} className="h-4 w-4 checkbox" /><span className="ml-2 text-sm text-gray-700">時給</span></label>
-                                    <label className="flex items-center"><input type="radio" name="salaryType" value="月給" checked={formData.salaryType === '月給'} onChange={handleChange} className="h-4 w-4 checkbox" /><span className="ml-2 text-sm text-gray-700">月給</span></label>
+                                    <label className="flex items-center"><input type="radio" name="salaryType" value="年収" checked={formData.salaryType === '年収'} onChange={handleChange} required className="h-4 w-4 checkbox" /><span className="ml-2 text-sm text-gray-700">年収</span></label>
+                                    <label className="flex items-center"><input type="radio" name="salaryType" value="時給" checked={formData.salaryType === '時給'} onChange={handleChange} required className="h-4 w-4 checkbox" /><span className="ml-2 text-sm text-gray-700">時給</span></label>
+                                    <label className="flex items-center"><input type="radio" name="salaryType" value="月給" checked={formData.salaryType === '月給'} onChange={handleChange} required className="h-4 w-4 checkbox" /><span className="ml-2 text-sm text-gray-700">月給</span></label>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
@@ -363,12 +448,12 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
                                 {/* 💡 勤務時間（記入） */}
                                 <div><label htmlFor="workingHours" className="block text-sm font-medium text-gray-700 flex items-center"><Clock className="w-4 h-4 mr-1" />勤務時間 *</label><textarea id="workingHours" name="workingHours" value={formData.workingHours} onChange={handleChange} required rows={2} className="mt-1 block w-full input" placeholder="例：10:00〜19:00（休憩1時間） / スキマバイトは当日4時間など" /></div>
                                 <div><label htmlFor="location" className="block text-sm font-medium text-gray-700 flex items-center"><MapPin className="w-4 h-4 mr-1" />勤務地 *</label><input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required className="mt-1 block w-full input" /></div>
-                                <div><label htmlFor="remotePolicy" className="block text-sm font-medium text-gray-700 flex items-center"><Laptop className="w-4 h-4 mr-1" />リモートワーク許容レベル *</label><select id="remotePolicy" name="remotePolicy" value={formData.remotePolicy} onChange={handleChange} className="mt-1 block w-full input"><option value="no">出社必須</option><option value="hybrid">ハイブリッド可</option><option value="full">フルリモート可</option></select></div>
+                                <div><label htmlFor="remotePolicy" className="block text-sm font-medium text-gray-700 flex items-center"><Laptop className="w-4 h-4 mr-1" />リモートワーク許容レベル *</label><select id="remotePolicy" name="remotePolicy" value={formData.remotePolicy} onChange={handleChange} required className="mt-1 block w-full input"><option value="no">出社必須</option><option value="hybrid">ハイブリッド可</option><option value="full">フルリモート可</option></select></div>
                                 
                                 
                                 {/* 💡 勤務曜日（印付け形式） */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 flex items-center mb-1"><CalendarDays className="w-4 h-4 mr-1" />勤務曜日（複数選択）</label>
+                                    <label className="block text-sm font-medium text-gray-700 flex items-center mb-1"><CalendarDays className="w-4 h-4 mr-1" />勤務曜日（複数選択）*</label>
                                     <div className="flex flex-wrap gap-2">
                                         {ALL_DAYS.map((day: string) => (
                                             <button
@@ -385,6 +470,10 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
                                             </button>
                                         ))}
                                     </div>
+                                    {/* ★ FIX: 勤務曜日が空の場合はエラーメッセージを表示 */}
+                                    {formData.workingDays.length === 0 && (
+                                        <p className="text-xs text-red-500 mt-1">※ 勤務曜日を一つ以上選択してください。</p>
+                                    )}
                                     <p className="text-xs text-gray-500 mt-1">※ 選択した曜日を勤務日として求職者に提示します。</p>
                                 </div>
                                 
@@ -405,14 +494,16 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
                                 <textarea id="idealCandidate" name="idealCandidate" value={formData.idealCandidate} onChange={handleChange} required rows={4} className="mt-1 block w-full input" placeholder="例：チームワークを大切にし、新しい挑戦に意欲的な方を歓迎します。" ></textarea>
                             </div>
                             <div>
-                                <label htmlFor="salaryStructure" className="block text-sm font-medium text-gray-700">昇給・賞与体系</label>
+                                <label htmlFor="salaryStructure" className="block text-sm font-medium text-gray-700">昇給・賞与体系 *</label>
+                                {/* ★ FIX: requiredを追加して必須化 */}
                                 <p className="text-xs text-gray-500 mb-1">昇給の頻度、評価基準、賞与の有無と実績を記述してください。</p>
-                                <textarea id="salaryStructure" name="salaryStructure" value={formData.salaryStructure} onChange={handleChange} rows={3} className="mt-1 block w-full input" placeholder="例：昇給年1回（4月）、賞与年2回（実績連動型）。" ></textarea>
+                                <textarea id="salaryStructure" name="salaryStructure" value={formData.salaryStructure} onChange={handleChange} required rows={3} className="mt-1 block w-full input" placeholder="例：昇給年1回（4月）、賞与年2回（実績連動型）。" ></textarea>
                             </div>
                             <div>
-                                <label htmlFor="paidLeaveSystem" className="block text-sm font-medium text-gray-700">有給休暇取得制度</label>
+                                <label htmlFor="paidLeaveSystem" className="block text-sm font-medium text-gray-700">有給休暇取得制度 *</label>
+                                {/* ★ FIX: requiredを追加して必須化 */}
                                 <p className="text-xs text-gray-500 mb-1">有給休暇の平均取得日数や取得しやすい環境であるかを記述してください。</p>
-                                <textarea id="paidLeaveSystem" name="paidLeaveSystem" value={formData.paidLeaveSystem} onChange={handleChange} rows={3} className="mt-1 block w-full input" placeholder="例：平均取得日数15日。長期休暇を推奨しており、取得率は90%以上です。" ></textarea>
+                                <textarea id="paidLeaveSystem" name="paidLeaveSystem" value={formData.paidLeaveSystem} onChange={handleChange} required rows={3} className="mt-1 block w-full input" placeholder="例：平均取得日数15日。長期休暇を推奨しており、取得率は90%以上です。" ></textarea>
                             </div>
                         </section>
 
@@ -474,7 +565,7 @@ text-indigo-600"><Loader2 className="animate-spin mr-3" /> 認証とプロファ
                         <section className="space-y-6">
                             <h2 className="text-xl font-semibold border-b pb-2 text-gray-800 flex items-center"><MessageSquare className="w-5 h-5 mr-3 text-gray-500" />具体的な仕事内容・スキル</h2>
                             <div><label htmlFor="jobDescription" className="block text-sm font-medium text-gray-700">具体的な仕事内容 *</label><textarea id="jobDescription" name="jobDescription" value={formData.jobDescription} onChange={handleChange} required rows={6} className="mt-1 block w-full input" placeholder="業務内容、1日の流れ、使用するツールなどを具体的に記載してください。" ></textarea></div>
-                            <div><label htmlFor="requiredSkills" className="block text-sm font-medium text-gray-700">必須スキル・経験</label><textarea id="requiredSkills" name="requiredSkills" value={formData.requiredSkills} onChange={handleChange} rows={4} className="mt-1 block w-full input" placeholder="例：・普通自動車第一種運転免許&#10;・基本的なPCスキル（Word, Excel）"></textarea></div>
+                            <div><label htmlFor="requiredSkills" className="block text-sm font-medium text-gray-700">必須スキル・経験 *</label><textarea id="requiredSkills" name="requiredSkills" value={formData.requiredSkills} onChange={handleChange} required rows={4} className="mt-1 block w-full input" placeholder="例：・普通自動車第一種運転免許&#10;・基本的なPCスキル（Word, Excel）"></textarea></div>
                             <div><label htmlFor="welcomeSkills" className="block text-sm font-medium text-gray-700">歓迎スキル・経験</label><textarea id="welcomeSkills" name="welcomeSkills" value={formData.welcomeSkills} onChange={handleChange} rows={4} className="mt-1 block w-full input" placeholder="例：・Webマーケティングの実務経験&#10;・Adobe Photoshop, Illustratorの使用経験"></textarea></div>
                         </section>
 

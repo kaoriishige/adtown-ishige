@@ -554,7 +554,7 @@ const CompanyProfilePage = () => {
                     )}
 
 
-                    {/* ★★★ 修正箇所: マッチングスコアセクションの操作性改善（制限解除済み） ★★★ */}
+                    {/* ★★★ マッチングスコアセクション ★★★ */}
                     <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
                             <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
@@ -573,7 +573,7 @@ const CompanyProfilePage = () => {
                             <button 
                                 type="button" 
                                 onClick={() => handleScoreChange(-1)}
-                                disabled={formData.minMatchScore <= 60} // ★ FIX: isPaidのチェックを削除
+                                disabled={formData.minMatchScore <= 60} 
                                 className="p-3 bg-gray-200 hover:bg-gray-300 rounded-full disabled:opacity-50 transition duration-150"
                             >
                                 <Minus className="w-5 h-5" />
@@ -594,7 +594,6 @@ const CompanyProfilePage = () => {
                                     if (numValue > 99) handleScoreChange(99 - formData.minMatchScore);
                                 }}
                                 required
-                                // disabled={!formData.isPaid} // ★ FIX: isPaidのチェックを削除
                                 className="block w-20 h-12 px-2 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-2xl font-extrabold text-center transition duration-150"
                             />
 
@@ -602,16 +601,12 @@ const CompanyProfilePage = () => {
                             <button 
                                 type="button" 
                                 onClick={() => handleScoreChange(1)}
-                                disabled={formData.minMatchScore >= 99} // ★ FIX: isPaidのチェックを削除
+                                disabled={formData.minMatchScore >= 99} 
                                 className="p-3 bg-gray-200 hover:bg-gray-300 rounded-full disabled:opacity-50 transition duration-150"
                             >
                                 <Plus className="w-5 h-5" />
                             </button>
                         </div>
-                        {/* ★ FIX: 無料プラン時の固定メッセージを削除 */}
-                        {/* {!formData.isPaid && (
-                            <p className="text-sm text-red-600 mt-2">※ 無料プランではスコア設定を変更できません。有料プランをご利用ください。</p>
-                        )} */}
                     </section>
                     {/* ★★★ 修正ここまで ★★★ */}
 
@@ -631,11 +626,13 @@ const CompanyProfilePage = () => {
                                 <input type="text" id="address" name="address" value={formData.address} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                             </div>
                             <div>
-                                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">電話番号</label>
-                                <input type="tel" id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
+                                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">電話番号 *</label>
+                                {/* ★ FIX: requiredを追加して必須化 */}
+                                <input type="tel" id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                             </div>
                             <div>
                                 <label htmlFor="website" className="block text-sm font-medium text-gray-700">ウェブサイトURL</label>
+                                {/* ★ FIX: requiredを削除して必須ではない項目にする */}
                                 <input type="url" id="website" name="website" value={formData.website} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                             </div>
                         </div>
@@ -658,14 +655,16 @@ const CompanyProfilePage = () => {
                             <textarea id="whatWeDo" name="whatWeDo" value={formData.whatWeDo} onChange={handleChange} required rows={4} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                         </div>
                         <div>
-                            <label htmlFor="ourCulture" className="block text-sm font-medium text-gray-700">Our Culture (文化・風土)</label>
+                            <label htmlFor="ourCulture" className="block text-sm font-medium text-gray-700">Our Culture (文化・風土) *</label>
+                            {/* ★ FIX: requiredを追加して必須化 */}
                             <p className="text-xs text-gray-500 mb-1">職場の雰囲気、社員の働き方、コミュニケーションの取り方など、会社の文化を教えてください。</p>
-                            <textarea id="ourCulture" name="ourCulture" value={formData.ourCulture} onChange={handleChange} rows={4} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
+                            <textarea id="ourCulture" name="ourCulture" value={formData.ourCulture} onChange={handleChange} required rows={4} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                         </div>
                         <div>
-                            <label htmlFor="messageToCandidates" className="block text-sm font-medium text-gray-700">未来の仲間へのメッセージ</label>
+                            <label htmlFor="messageToCandidates" className="block text-sm font-medium text-gray-700">未来の仲間へのメッセージ *</label>
+                            {/* ★ FIX: requiredを追加して必須化 */}
                             <p className="text-xs text-gray-500 mb-1">どのような人に仲間になってほしいか、候補者への期待を込めたメッセージをどうぞ。</p>
-                            <textarea id="messageToCandidates" name="messageToCandidates" value={formData.messageToCandidates} onChange={handleChange} rows={4} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
+                            <textarea id="messageToCandidates" name="messageToCandidates" value={formData.messageToCandidates} onChange={handleChange} required rows={4} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                         </div>
                     </section>
 
@@ -724,8 +723,9 @@ const CompanyProfilePage = () => {
                         </h2>
                         <div>
                             <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-700 flex items-center">
-                                <Video className="w-4 h-4 mr-2" />紹介動画URL (YouTube, Vimeoなど)
+                                <Video className="w-4 h-4 mr-2" />紹介動画URL
                             </label>
+                            {/* ★ FIX: requiredを削除して必須ではない項目にする */}
                             <input type="url" id="videoUrl" name="videoUrl" value={formData.videoUrl} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="https://www.youtube.com/watch?v=..." />
                         </div>
                         <div>
@@ -734,7 +734,7 @@ const CompanyProfilePage = () => {
                             </label>
                             <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                                 <div className="space-y-1 text-center">
-                                    <Camera className="mx-auto h-12 w-12 text-gray-400" />
+                                    <RiImageEditLine className="mx-auto h-12 w-12 text-gray-400" />
                                     <div className="flex text-sm text-gray-600">
                                         <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
                                             <span>ファイルを選択</span>
