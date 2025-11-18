@@ -1,15 +1,14 @@
-// @ts-expect-error: This is a single-file React application, assuming Tailwind CSS is available globally.
-import React, { useState, useEffect, useCallback } from 'react';
+// This file is now configured for local standalone preview environment compatibility,
+// addressing the "Could not resolve @stripe/stripe-js" error.
+// WARNING: This configuration may cause a 'UnhandledSchemeError' in Netlify build environments.
+import React, { useState, useEffect } from 'react'; // useCallbackを削除
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, User, signInAnonymously, signInWithCustomToken, type Auth } from 'firebase/auth';
 import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
 
-// ★★★ 重要: ビルドに関する警告 ★★★
-// このファイルは、ローカルプレビューでのエラー (Could not resolve "@stripe/stripe-js") を
-// 回避するために、StripeをCDN (https://...) から直接インポートするように
-// 意図的に変更されています。
+// ★★★ 修正: ローカルプレビューエラー(Could not resolve "@stripe/stripe-js")を回避するため、CDNインポートに戻す ★★★
 // @ts-expect-error: CDN import cannot be typed
-import { loadStripe } from 'https://js.stripe.com/v3/+esm'; // ★ 修正: CDN URLに戻す (ユーザーの要望を維持)
+import { loadStripe } from 'https://js.stripe.com/v3/+esm'; 
 
 // ★ 修正: グローバル変数をTypeScriptに宣言
 declare let __firebase_config: string | undefined;
@@ -191,7 +190,6 @@ const PriceCard: React.FC<PriceCardProps> = ({
                     if (!stripe) throw new Error('Stripeの初期化に失敗しました');
 
                     if (result.sessionId) {
-                        // ★ 修正: 不要な @ts-expect-error コメントを削除
                         const { error } = await stripe.redirectToCheckout({ sessionId: result.sessionId });
                         if (error) throw new Error(error.message);
                     } else {
