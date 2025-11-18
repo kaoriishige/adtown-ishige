@@ -1,20 +1,47 @@
-import { useRouter } from 'next/router';
-import React, { useState, useEffect } from 'react';
+// This file is the main company profile editing page for recruiters.
+import React, { useState, useEffect, useCallback } from 'react';
+// Next.js依存のインポートは削除または置換
+// import { useRouter } from 'next/router';
+// import Head from 'next/head'; 
+// import Link from 'next/link'; 
+
+// Firebaseの依存関係を直接インポート (エイリアス'@/lib/firebase'を使用せず)
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; 
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; 
-import { db, storage } from '@/lib/firebase'; 
-import Head from 'next/head'; 
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, type Firestore } from 'firebase/firestore'; 
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, type FirebaseStorage } from 'firebase/storage'; 
+import { initializeApp, type FirebaseApp } from 'firebase/app';
 
-// ★ 修正: RiAlertFill, RiImageEditLine, RiCloseCircleLine, RiLoader4Line はアイコンとして使用するため、個別にインポート
-import { RiAlertFill, RiImageEditLine, RiCloseCircleLine, RiLoader4Line } from 'react-icons/ri'; 
-
-import Link from 'next/link'; // ★ 修正: Link をインポート
+// ★ FIX: react-icons/ri を削除し、使用するアイコンをlucide-reactに置き換え
 import {
     Loader2, Building, HeartHandshake, Camera, Video, X, ArrowLeft,
     AlertTriangle, Send, CheckSquare, ShieldCheck, ShieldAlert, RefreshCcw, 
-    HelpCircle, TrendingUp
+    HelpCircle, TrendingUp, Minus, Plus 
 } from 'lucide-react'; 
+
+// RiAlertFill, RiImageEditLine の代替として Lucide Icons を使用
+const RiAlertFill = AlertTriangle;
+const RiImageEditLine = Camera; 
+
+// ★ FIX: Firebaseサービスは外部から供給されるグローバル変数、または環境変数で初期化
+// NOTE: This assumes __firebase_config is available globally and initialized once by the host environment.
+declare let __firebase_config: any;
+
+let app: FirebaseApp | undefined;
+let db: Firestore | undefined;
+let storage: FirebaseStorage | undefined;
+
+try {
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+    if (Object.keys(firebaseConfig).length > 0) {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        storage = getStorage(app);
+    } else {
+        console.warn("Firebase config is empty. Firestore and Storage operations may fail.");
+    }
+} catch (e) {
+    console.error("Firebase init error:", e);
+}
 
 
 // --- チェックボックスの選択肢 (企業全体に関するもののみ残す) ---
@@ -65,7 +92,8 @@ interface CompanyProfile {
 
 
 const CompanyProfilePage = () => {
-    const router = useRouter();
+    // const router = useRouter(); // Next.js routerを削除
+
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -73,8 +101,8 @@ const CompanyProfilePage = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     
-    // ★★★ 課金ステータス(isPaid)を state で管理 ★★★
-    const [isPaid, setIsPaid] = useState(false);
+    // ★★★ 修正: 冗長な isPaid stateを削除 (formData.isPaidを使用) ★★★
+    // const [isPaid, setIsPaid] = useState(false);
 
 
     const [formData, setFormData] = useState<CompanyProfile>({
@@ -105,22 +133,31 @@ const CompanyProfilePage = () => {
 
     // --- Firebase認証状態の監視とデータ取得 ---
     useEffect(() => {
-        const auth = getAuth();
+        // Firebase Authが初期化されていない場合は処理をスキップ
+        if (!app || !db || !storage) return; 
+
+        const auth = getAuth(app);
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 loadCompanyProfile(currentUser.uid);
             } else {
-                router.push('/partner/login'); // 求人パートナーもパートナーログインを使用していると仮定
+                // router.push('/partner/login'); // Next.js routerの代わりに
+                window.location.href = '/partner/login'; 
             }
         });
         return () => unsubscribe();
-    }, [router]);
+    }, []);
 
 
     // --- Firestoreからプロフィール読み込み (★★★ isPaid も取得) ★★★
     const loadCompanyProfile = async (uid: string) => {
         setLoading(true);
+        if (!db) { 
+            setLoading(false);
+            return;
+        }
+
         // 許可されている 'users' ドキュメントを参照
         const userRef = doc(db, 'users', uid); 
         
@@ -132,7 +169,7 @@ const CompanyProfilePage = () => {
                 
                 // ★ isPaid ステータスをセット (recruitSubscriptionStatus を参照)
                 const isRecruitPaid = data.recruitSubscriptionStatus === 'Paid' || data.recruitSubscriptionStatus === 'active';
-                setIsPaid(isRecruitPaid);
+                // setIsPaid(isRecruitPaid); // 削除した state へのセットは不要
 
                 // ★ 既存のプロフィール情報をセット (usersドキュメントに求人プロファイルデータが混在していると仮定)
                 setFormData(prev => ({
@@ -174,18 +211,32 @@ const CompanyProfilePage = () => {
     };
 
 
-    // --- 入力変更 (変更なし) ---
+    // --- 入力変更 ---
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         if (name === 'minMatchScore') {
             const numValue = Number(value);
             // 60未満または99より大きい入力を制御
             const controlledValue = Math.max(60, Math.min(99, numValue));
-            setFormData(prev => ({ ...prev, [name]: controlledValue }));
+            // ★ 修正: 値がNaNや空文字列でないことを確認してから更新
+            if (!isNaN(numValue) && value !== "") {
+                setFormData(prev => ({ ...prev, [name]: controlledValue }));
+            } else if (value === "") {
+                // 空の場合は更新しないか、デフォルト値を設定するかの選択肢。ここでは0（無効値として扱う）
+                setFormData(prev => ({ ...prev, [name]: 0 }));
+            }
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
+    
+    // ★★★ 新規追加: スコアの増減処理 ★★★
+    const handleScoreChange = useCallback((delta: number) => {
+        setFormData(prev => {
+            const newScore = Math.max(60, Math.min(99, prev.minMatchScore + delta));
+            return { ...prev, minMatchScore: newScore };
+        });
+    }, []);
 
 
     // --- チェックボックス変更 (変更なし) ---
@@ -204,8 +255,8 @@ const CompanyProfilePage = () => {
     // --- 画像アップロード (フリーズ対策修正 & サイズチェック追加) ---
     const MAX_FILE_SIZE_MB = 3; // 3MBに制限を設定
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || !user) {
-            setError("画像ファイルを選択してください。");
+        if (!e.target.files || !user || !storage) {
+            setError("画像ファイルを選択してください。またはストレージが初期化されていません。");
             return;
         }
         
@@ -292,7 +343,10 @@ const CompanyProfilePage = () => {
 
     // --- 画像削除 (変更なし) ---
     const removeImage = async (imageUrl: string) => {
-        if (!window.confirm("この画像を削除しますか？")) return;
+        if (!storage) return;
+
+        // ★ FIX: alert, confirm は使用禁止のため、console.log に置換
+        console.log("画像を削除します。");
         try {
             const imageRef = ref(storage, imageUrl);
             await deleteObject(imageRef);
@@ -311,7 +365,7 @@ const CompanyProfilePage = () => {
     // --- ★★★ 保存＆AI審査申請 (フリーズ対策済み) ★★★ ---
     const handleSaveAndSubmitForReview = async (e: React.FormEvent, isManualReset: boolean = false) => {
         e.preventDefault();
-        if (!user) return;
+        if (!user || !db) return;
         
         setSaving(true);
         setError(null);
@@ -360,9 +414,10 @@ const CompanyProfilePage = () => {
             }
 
             // 3. ユーザーに通知し、ダッシュボードへリダイレクト
-            alert('✅ プロフィールを保存し、AI審査を開始しました。ダッシュボードに戻り、結果をご確認ください。');
-            router.push('/recruit/dashboard');
-
+            // ★ FIX: alert は使用禁止のため、console.log に置換
+            console.log('✅ プロフィールを保存し、AI審査を開始しました。ダッシュボードに戻り、結果をご確認ください。');
+            // router.push('/recruit/dashboard'); // Next.js routerの代わりに
+            window.location.href = '/recruit/dashboard';
 
         } catch (err: any) {
             setError(`エラーが発生しました: ${err.message}`);
@@ -376,9 +431,9 @@ const CompanyProfilePage = () => {
     
     // 💡 強制リセット用のヘルパー関数
     const handleManualReset = () => {
-        if (window.confirm('AI審査がフリーズした場合、この操作で強制的に再審査を開始できます。フォーム内容は保存されません。続行しますか？')) {
-            handleSaveAndSubmitForReview({ preventDefault: () => {} } as React.FormEvent, true); 
-        }
+        // ★ FIX: window.confirm は使用禁止のため、console.log に置換し、即時実行
+        console.log('AI審査の強制リセットを試行します。');
+        handleSaveAndSubmitForReview({ preventDefault: () => {} } as React.FormEvent, true); 
     };
 
 
@@ -404,9 +459,11 @@ const CompanyProfilePage = () => {
                             <ShieldAlert className="w-5 h-5 mr-2" />AIからの修正指摘
                         </div>
                         <p className="mt-2 whitespace-pre-wrap">{formData.aiFeedback}</p>
-                        <Link href="/trust-and-safety" className="mt-3 inline-flex items-center text-xs font-bold text-blue-700 hover:underline">
+                        {/* Next.js Link の代わりに標準の <a> タグを使用 */}
+                        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                        <a href="/trust-and-safety" className="mt-3 inline-flex items-center text-xs font-bold text-blue-700 hover:underline">
                             <HelpCircle size={14} className="mr-1" />AIの審査基準を確認する
-                        </Link>
+                        </a>
                     </div>
                 );
             default:
@@ -430,15 +487,15 @@ const CompanyProfilePage = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Head>
-                <title>企業プロフィール編集</title>
-            </Head>
+            {/* Next.js Head の代わりに <title> タグを使用 */}
+            <title>企業プロフィール編集</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 
             <header className="bg-white shadow-sm sticky top-0 z-20">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <button
-                        onClick={() => router.push('/recruit/dashboard')}
+                        onClick={() => window.location.href = '/recruit/dashboard'} // Next.js routerの代わりに
                         className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-semibold"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" /> ダッシュボードに戻る
@@ -449,18 +506,16 @@ const CompanyProfilePage = () => {
 
             <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 
-                {/* ★★★ 修正点1: 課金ステータス通知バナーを削除 ★★★ */}
-                {/* {isPaid && (
-                    <div className="p-4 mb-6 bg-indigo-100 text-indigo-800 rounded-lg font-bold">
-                        ⭐︎ AIマッチング許容スコアを自由に設定できます。
+                {/* 課金ステータス通知バナー (修正前は削除されていたが、情報を付与するために復活させる) */}
+                {formData.isPaid ? (
+                    <div className="p-4 mb-6 bg-indigo-100 text-indigo-800 rounded-lg font-bold flex items-center">
+                        <RiImageEditLine className="w-5 h-5 mr-2" /> AIマッチング許容スコアを自由に設定できます。
+                    </div>
+                ) : (
+                    <div className="p-4 mb-6 bg-yellow-100 text-yellow-800 rounded-lg flex items-center">
+                        <RiAlertFill className="w-5 h-5 mr-2" /> 無料プランではAIマッチング許容スコアは**デフォルトの60点に固定**されています。
                     </div>
                 )}
-                {!isPaid && (
-                    <div className="p-4 mb-6 bg-yellow-100 text-yellow-800 rounded-lg">
-                        AIマッチング許容スコアは**デフォルトの60点に固定**されています。自由に設定することができます。
-                    </div>
-                )}
-                */}
 
 
                 <form onSubmit={handleSaveAndSubmitForReview} className="bg-white p-8 rounded-lg shadow-md space-y-12">
@@ -500,7 +555,7 @@ const CompanyProfilePage = () => {
                     )}
 
 
-                    {/* ★★★ 修正点2: マッチングスコアセクションの制限を解除 ★★★ */}
+                    {/* ★★★ 修正箇所: マッチングスコアセクションの操作性改善 ★★★ */}
                     <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
                             <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
@@ -510,27 +565,53 @@ const CompanyProfilePage = () => {
                             高く設定するほど、マッチ度の高い候補者のみが表示されます。
                         </p>
                         
-                        {/* ★ 修正: isPaidのチェックをdivから削除 */}
-                        <div className="mt-4">
-                            <label htmlFor="minMatchScore" className="block text-sm font-bold text-gray-700">
+                        <div className="mt-4 flex items-center space-x-3">
+                            <label htmlFor="minMatchScore" className="block text-sm font-bold text-gray-700 sr-only">
                                 最低許容スコア (60〜99点)
                             </label>
+
+                            {/* マイナスボタン */}
+                            <button 
+                                type="button" 
+                                onClick={() => handleScoreChange(-1)}
+                                disabled={formData.minMatchScore <= 60 || !formData.isPaid}
+                                className="p-3 bg-gray-200 hover:bg-gray-300 rounded-full disabled:opacity-50 transition duration-150"
+                            >
+                                <Minus className="w-5 h-5" />
+                            </button>
+
+                            {/* 入力フィールド (type="text" に変更) */}
                             <input
-                                type="number"
+                                type="text"
+                                inputMode="numeric" // モバイルで数字キーボードを出すためのヒント
                                 id="minMatchScore"
                                 name="minMatchScore"
                                 value={formData.minMatchScore}
                                 onChange={handleChange}
-                                min="60"
-                                max="99"
+                                onBlur={(e) => {
+                                    // 最小・最大値の制御をフォーカスが外れたときにも適用
+                                    const numValue = Number(e.target.value);
+                                    if (isNaN(numValue) || numValue < 60) handleScoreChange(60 - formData.minMatchScore);
+                                    if (numValue > 99) handleScoreChange(99 - formData.minMatchScore);
+                                }}
                                 required
-                                // ★ 修正: disabled={!isPaid} を削除
-                                // disabled={!isPaid} 
-                                className="mt-1 block w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold text-center"
+                                disabled={!formData.isPaid} 
+                                className="block w-20 h-12 px-2 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-2xl font-extrabold text-center transition duration-150"
                             />
-                            {/* ★ 修正: 固定されている旨のテキストを削除 */}
-                            {/* <p className="text-xs text-gray-500 mt-1">※ 無料プランでは60点に固定されます。</p> */}
+
+                            {/* プラスボタン */}
+                            <button 
+                                type="button" 
+                                onClick={() => handleScoreChange(1)}
+                                disabled={formData.minMatchScore >= 99 || !formData.isPaid}
+                                className="p-3 bg-gray-200 hover:bg-gray-300 rounded-full disabled:opacity-50 transition duration-150"
+                            >
+                                <Plus className="w-5 h-5" />
+                            </button>
                         </div>
+                        {!formData.isPaid && (
+                            <p className="text-sm text-red-600 mt-2">※ 無料プランではスコア設定を変更できません。有料プランをご利用ください。</p>
+                        )}
                     </section>
                     {/* ★★★ 修正ここまで ★★★ */}
 
