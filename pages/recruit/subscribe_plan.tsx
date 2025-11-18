@@ -552,7 +552,7 @@ const RecruitSubscribePage: React.FC = () => {
                 <div className="mt-16 text-center text-gray-600">
                     {/* Next.js ESLint 警告抑制 */}
                     {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                    <p>無料プランのまま利用を続ける場合は <a href="/recruit/dashboard" className="text-blue-600 underline hover:text-blue-700 transition duration-150">ダッシュボード</a> へ戻る</p>
+                    <p>無料プランの利用を続ける場合は <a href="/recruit/dashboard" className="text-blue-600 underline hover:text-blue-700 transition duration-150">ダッシュボード</a> へ戻る</p>
                 </div>
             </div>
         </div>
