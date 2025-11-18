@@ -1,14 +1,14 @@
-// This file is now configured for local standalone preview environment compatibility,
-// addressing the "Could not resolve @stripe/stripe-js" error.
-// WARNING: This configuration may cause a 'UnhandledSchemeError' in Netlify build environments.
+// This file is now configured for Netlify/Next.js build success.
+// It uses the standard '@stripe/stripe-js' npm package import.
+// WARNING: This configuration may cause a 'Could not resolve "@stripe/stripe-js"' error
+// in certain standalone local preview environments.
 import React, { useState, useEffect } from 'react'; 
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, User, signInAnonymously, signInWithCustomToken, type Auth } from 'firebase/auth';
 import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
 
-// ★★★ 修正: ローカルプレビューエラー(Could not resolve "@stripe/stripe-js")を回避するため、CDNインポートに戻す ★★★
-// @ts-expect-error: CDN import cannot be typed
-import { loadStripe } from 'https://js.stripe.com/v3/+esm'; 
+// ★★★ 修正: Netlifyビルドエラー(UnhandledSchemeError)を回避するため、npmパッケージインポートに戻す ★★★
+import { loadStripe } from '@stripe/stripe-js'; 
 
 // ★ 修正: グローバル変数をTypeScriptに宣言
 declare let __firebase_config: string | undefined;
