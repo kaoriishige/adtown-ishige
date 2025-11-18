@@ -1,9 +1,5 @@
 // This file is the main company profile editing page for recruiters.
 import React, { useState, useEffect, useCallback } from 'react';
-// Next.js依存のインポートは削除または置換
-// import { useRouter } from 'next/router';
-// import Head from 'next/head'; 
-// import Link from 'next/link'; 
 
 // Firebaseの依存関係を直接インポート (エイリアス'@/lib/firebase'を使用せず)
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
@@ -11,7 +7,7 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp, type Firestore } fr
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, type FirebaseStorage } from 'firebase/storage'; 
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 
-// ★ FIX: react-icons/ri を削除し、使用するアイコンをlucide-reactに置き換え
+// FIX: react-icons/ri を削除し、使用するアイコンをlucide-reactに置き換え
 import {
     Loader2, Building, HeartHandshake, Camera, Video, X, ArrowLeft,
     AlertTriangle, Send, CheckSquare, ShieldCheck, ShieldAlert, RefreshCcw, 
@@ -22,14 +18,14 @@ import {
 const RiAlertFill = AlertTriangle;
 const RiImageEditLine = Camera; 
 
-// ★ FIX: Firebaseサービスは外部から供給されるグローバル変数、または環境変数で初期化
-// NOTE: This assumes __firebase_config is available globally and initialized once by the host environment.
+// ★★★ FIX: Firebase初期化ロジックを堅牢化 ★★★
 declare let __firebase_config: any;
 
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 
+// グローバルスコープでFirebaseサービスを初期化
 try {
     const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
     if (Object.keys(firebaseConfig).length > 0) {
@@ -92,8 +88,6 @@ interface CompanyProfile {
 
 
 const CompanyProfilePage = () => {
-    // const router = useRouter(); // Next.js routerを削除
-
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -101,10 +95,6 @@ const CompanyProfilePage = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     
-    // ★★★ 修正: 冗長な isPaid stateを削除 (formData.isPaidを使用) ★★★
-    // const [isPaid, setIsPaid] = useState(false);
-
-
     const [formData, setFormData] = useState<CompanyProfile>({
         companyName: '',
         address: '',
@@ -122,7 +112,6 @@ const CompanyProfilePage = () => {
         appealPoints: {
             atmosphere: [],
             organization: [],
-            // 初期値は空配列で設定するが、型定義はオプショナル
             growth: [], 
             wlb: [],
             benefits: []
@@ -133,16 +122,22 @@ const CompanyProfilePage = () => {
 
     // --- Firebase認証状態の監視とデータ取得 ---
     useEffect(() => {
-        // Firebase Authが初期化されていない場合は処理をスキップ
-        if (!app || !db || !storage) return; 
-
+        // ★★★ FIX: appが初期化されていない場合は処理をスキップ ★★★
+        if (!app) {
+             console.error("Firebase App is not initialized.");
+             setLoading(false);
+             return;
+        }
+        
         const auth = getAuth(app);
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
+                // db/storageの初期化はグローバルで行っているため、ここでは認証完了後にロードを呼ぶ
+                // ただし loadCompanyProfile内でdbの存在確認を再実施する
                 loadCompanyProfile(currentUser.uid);
             } else {
-                // router.push('/partner/login'); // Next.js routerの代わりに
+                // 認証がない場合はログインページへリダイレクト
                 window.location.href = '/partner/login'; 
             }
         });
@@ -153,7 +148,10 @@ const CompanyProfilePage = () => {
     // --- Firestoreからプロフィール読み込み (★★★ isPaid も取得) ★★★
     const loadCompanyProfile = async (uid: string) => {
         setLoading(true);
+        // ★★★ FIX: dbが存在しない場合はエラーを設定して終了 ★★★
         if (!db) { 
+            console.error("Firestore is not initialized.");
+            setError("データの読み込みに失敗しました。アプリケーションの設定をご確認ください。");
             setLoading(false);
             return;
         }
@@ -169,7 +167,6 @@ const CompanyProfilePage = () => {
                 
                 // ★ isPaid ステータスをセット (recruitSubscriptionStatus を参照)
                 const isRecruitPaid = data.recruitSubscriptionStatus === 'Paid' || data.recruitSubscriptionStatus === 'active';
-                // setIsPaid(isRecruitPaid); // 削除した state へのセットは不要
 
                 // ★ 既存のプロフィール情報をセット (usersドキュメントに求人プロファイルデータが混在していると仮定)
                 setFormData(prev => ({
@@ -200,7 +197,8 @@ const CompanyProfilePage = () => {
                 }));
             } else {
                 // userドキュメントが存在しない場合
-                setError("ユーザー情報が見つかりません。");
+                // 新規ユーザーの場合、空のプロフィールで続行 (フリーズ解消のため、エラーではなく警告とする)
+                console.warn("User document does not exist, initializing with default profile.");
             }
 
         } catch (e) {
@@ -222,7 +220,7 @@ const CompanyProfilePage = () => {
             if (!isNaN(numValue) && value !== "") {
                 setFormData(prev => ({ ...prev, [name]: controlledValue }));
             } else if (value === "") {
-                // 空の場合は更新しないか、デフォルト値を設定するかの選択肢。ここでは0（無効値として扱う）
+                // 空の場合は0（無効値として扱う）
                 setFormData(prev => ({ ...prev, [name]: 0 }));
             }
         } else {
@@ -506,14 +504,15 @@ const CompanyProfilePage = () => {
 
             <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 
-                {/* 課金ステータス通知バナー (修正前は削除されていたが、情報を付与するために復活させる) */}
+                {/* 課金ステータス通知バナー (無料プランでもスコア変更可能になったため、文言を修正) */}
                 {formData.isPaid ? (
                     <div className="p-4 mb-6 bg-indigo-100 text-indigo-800 rounded-lg font-bold flex items-center">
                         <RiImageEditLine className="w-5 h-5 mr-2" /> AIマッチング許容スコアを自由に設定できます。
                     </div>
                 ) : (
+                    // ★ FIX: 無料プランでも操作可能になったため、固定されている旨のメッセージを削除
                     <div className="p-4 mb-6 bg-yellow-100 text-yellow-800 rounded-lg flex items-center">
-                        <RiAlertFill className="w-5 h-5 mr-2" /> 無料プランではAIマッチング許容スコアは**デフォルトの60点に固定**されています。
+                        <RiAlertFill className="w-5 h-5 mr-2" /> 現在無料プランをご利用中です。
                     </div>
                 )}
 
@@ -555,7 +554,7 @@ const CompanyProfilePage = () => {
                     )}
 
 
-                    {/* ★★★ 修正箇所: マッチングスコアセクションの操作性改善 ★★★ */}
+                    {/* ★★★ 修正箇所: マッチングスコアセクションの操作性改善（制限解除済み） ★★★ */}
                     <section className="space-y-4 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <h2 className="text-xl font-semibold text-yellow-800 flex items-center">
                             <TrendingUp className="w-5 h-5 mr-2" />AIマッチング許容スコア設定
@@ -574,7 +573,7 @@ const CompanyProfilePage = () => {
                             <button 
                                 type="button" 
                                 onClick={() => handleScoreChange(-1)}
-                                disabled={formData.minMatchScore <= 60 || !formData.isPaid}
+                                disabled={formData.minMatchScore <= 60} // ★ FIX: isPaidのチェックを削除
                                 className="p-3 bg-gray-200 hover:bg-gray-300 rounded-full disabled:opacity-50 transition duration-150"
                             >
                                 <Minus className="w-5 h-5" />
@@ -595,7 +594,7 @@ const CompanyProfilePage = () => {
                                     if (numValue > 99) handleScoreChange(99 - formData.minMatchScore);
                                 }}
                                 required
-                                disabled={!formData.isPaid} 
+                                // disabled={!formData.isPaid} // ★ FIX: isPaidのチェックを削除
                                 className="block w-20 h-12 px-2 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-2xl font-extrabold text-center transition duration-150"
                             />
 
@@ -603,15 +602,16 @@ const CompanyProfilePage = () => {
                             <button 
                                 type="button" 
                                 onClick={() => handleScoreChange(1)}
-                                disabled={formData.minMatchScore >= 99 || !formData.isPaid}
+                                disabled={formData.minMatchScore >= 99} // ★ FIX: isPaidのチェックを削除
                                 className="p-3 bg-gray-200 hover:bg-gray-300 rounded-full disabled:opacity-50 transition duration-150"
                             >
                                 <Plus className="w-5 h-5" />
                             </button>
                         </div>
-                        {!formData.isPaid && (
+                        {/* ★ FIX: 無料プラン時の固定メッセージを削除 */}
+                        {/* {!formData.isPaid && (
                             <p className="text-sm text-red-600 mt-2">※ 無料プランではスコア設定を変更できません。有料プランをご利用ください。</p>
-                        )}
+                        )} */}
                     </section>
                     {/* ★★★ 修正ここまで ★★★ */}
 
