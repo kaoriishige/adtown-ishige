@@ -1,10 +1,12 @@
+// This file is the main landing page for the recruit signup.
+// NOTE: Next.js specific imports (Link, Image, Head, useRouter) are replaced with standard React/HTML to fix compilation errors in the standalone environment.
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import Head from 'next/head';
-import { useRouter } from 'next/router'; 
-import { NextPage } from 'next';
-import { User } from 'firebase/auth'; // User型は setCurrentAuthUser で使用するため残す
+// import Link from 'next/link'; // 削除
+// import Image from 'next/image'; // 削除
+// import Head from 'next/head'; // 削除
+// import { useRouter } from 'next/router'; // 削除
+import { NextPage } from 'next'; // NextPageのインポートは残しますが、実際には使用されません
+import { User } from 'firebase/auth'; 
 
 // --- 画像パスの定義（public/images/に配置されていることを前提とする） ---
 const PARTNER_LOGOS = [
@@ -66,7 +68,7 @@ const usePersistentState = (key: string, defaultValue: any) => {
 
 
 const RecruitSignupPage: NextPage = () => { 
-    const router = useRouter(); 
+    // const router = useRouter(); // Next.js routerを削除
 
     // Form state management
     const [companyName, setCompanyName] = usePersistentState('recruitForm_companyName', '');
@@ -177,7 +179,7 @@ const RecruitSignupPage: NextPage = () => {
             });
 
             // 登録成功後、ログインページへリダイレクト
-            router.push('/partner/login?signup_success=true');
+            window.location.href = '/partner/login?signup_success=true';
 
         } catch (err: any) {
             console.error('Free signup error:', err);
@@ -204,9 +206,11 @@ const RecruitSignupPage: NextPage = () => {
 
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
-            <Head>
-                <title>{"AI求人パートナー無料登録（みんなの那須アプリ）"}</title>
-            </Head>
+            {/* Next/Head の代わりに <title> タグと <meta> タグを直接使用 */}
+            <title>{"AI求人パートナー無料登録（みんなの那須アプリ）"}</title>
+            {/* **モバイルでのデザイン崩壊対策**：viewportが正しいか再確認 */}
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+            
             <header className="bg-white shadow-md sticky top-0 z-50">
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-800">AIマッチング求人</h1>
@@ -293,7 +297,7 @@ const RecruitSignupPage: NextPage = () => {
                     </div>
                 </section>
 
-                {/* ★★★ 修正箇所: 以前削除された「社会的証明」セクションを復元 ★★★ */}
+                {/* ★★★ 社会的証明セクション ★★★ */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
@@ -305,9 +309,9 @@ const RecruitSignupPage: NextPage = () => {
                         </p>
                     </div>
                 </section>
-                {/* ★★★ 復元ここまで ★★★ */}
 
-                {/* ★★★ 新規追加セクション: 1.【無料プラン】 (画像の内容) ★★★ */}
+
+                {/* ★★★ 新規追加セクション: 1.【無料プラン】 ★★★ */}
                 <section className="mt-20">
                     <div className="max-w-4xl mx-auto p-6 bg-green-700 text-white rounded-xl shadow-lg">
                         <h3 className="text-2xl font-extrabold mb-4 border-b border-green-500 pb-2">
@@ -371,14 +375,13 @@ const RecruitSignupPage: NextPage = () => {
                     <h3 className="text-2xl font-bold text-gray-700">すでに那須地域の多くの企業様がこのチャンスに気づいています</h3>
                     <div className="mt-8 flex flex-wrap justify-center items-center gap-x-8 gap-y-6 opacity-80">
                         {PARTNER_LOGOS.map((logoPath, index) => (
-                            <Image
+                            <img // Next/Image を標準の <img> タグに置換
                                 key={index}
                                 src={logoPath}
                                 alt={`パートナーロゴ ${index + 1}`}
                                 width={150}
                                 height={50}
-                                className="object-contain"
-                                unoptimized={true}
+                                style={{ objectFit: 'contain' }} // className="object-contain" の代わり
                             />
                         ))}
                     </div>
@@ -460,7 +463,9 @@ const RecruitSignupPage: NextPage = () => {
                             <p className="text-sm text-center -mt-2 text-gray-500">ご登録後、ログインして管理ページより有料AI機能をお申込みいただけます。</p>
                         </form>
                         <p className="text-sm text-center mt-6">
-                            すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
+                            すでにご担当者アカウントをお持ちですか？ 
+                            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                            <a href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</a>
                         </p>
                     </div>
                 </section>
@@ -470,8 +475,9 @@ const RecruitSignupPage: NextPage = () => {
                 <div className="container mx-auto px-6 py-8 text-center text-gray-600">
                     <p>&copy; {new Date().getFullYear()} 株式会社adtown. All Rights Reserved.</p>
                     <div className="mt-4">
-                        <Link href="/legal/" className="text-sm text-gray-500 hover:underline mx-2">特定商取引法に基づく表記</Link>
-                        <Link href="/privacy" className="text-sm text-gray-500 hover:underline mx-2">プライバシーポリシー</Link>
+                         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                        <a href="/legal/" className="text-sm text-gray-500 hover:underline mx-2">特定商取引法に基づく表記</a>
+                        <a href="/privacy" className="text-sm text-gray-500 hover:underline mx-2">プライバシーポリシー</a>
                     </div>
                 </div>
             </footer>
