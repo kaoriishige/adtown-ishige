@@ -1,7 +1,7 @@
 // This file is now configured for local standalone preview environment compatibility,
 // addressing the "Could not resolve @stripe/stripe-js" error.
 // WARNING: This configuration may cause a 'UnhandledSchemeError' in Netlify build environments.
-import React, { useState, useEffect } from 'react'; // useCallbackを削除
+import React, { useState, useEffect } from 'react'; 
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, User, signInAnonymously, signInWithCustomToken, type Auth } from 'firebase/auth';
 import { getFirestore, doc, getDoc, type Firestore } from 'firebase/firestore';
@@ -552,7 +552,7 @@ const RecruitSubscribePage: React.FC = () => {
                 <div className="mt-16 text-center text-gray-600">
                     {/* Next.js ESLint 警告抑制 */}
                     {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                    <p>無料プランの利用を続ける場合は <a href="/recruit/dashboard" className="text-blue-600 underline hover:text-blue-700 transition duration-150">ダッシュボード</a> へ戻る</p>
+                    <p>無料プランのまま利用を続ける場合は <a href="/recruit/dashboard" className="text-blue-600 underline hover:text-blue-700 transition duration-150">ダッシュボード</a> へ戻る</p>
                 </div>
             </div>
         </div>
