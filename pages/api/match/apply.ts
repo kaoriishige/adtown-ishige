@@ -1,6 +1,6 @@
 /**
  * pages/api/match.ts: APIエンドポイントハンドラー
- * 🚨 注意: このファイルはpages/apiフォルダに配置してください。
+ * (修正版：'applicants'書き込み ＋ companyNameの型エラー修正)
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -31,8 +31,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(404).json({ error: 'Company profile not found in recruiters collection.' });
         }
 
+        // ★★★ 修正箇所 ★★★
+        // companySnap.data() を生のデータとして保持します
+        const companyData = companySnap.data();
+        if (!companyData) {
+             return res.status(404).json({ error: 'Company data is empty.' });
+        }
+
         // 💡 calculateMatchScoreが期待する型にキャスト
-        const companyProfile = companySnap.data() as CompanyProfile; 
+        const companyProfile = companyData as CompanyProfile; 
 
         // マッチングスコア算出
         const { score, reasons } = calculateMatchScore(userProfile, job, companyProfile);
@@ -47,6 +54,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             reasons,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+
+        // 'applicants' コレクションへの書き込み
+        const applicantData = {
+            userUid: userProfile.uid,
+            recruitmentId: job.id,
+            companyUid: companyUid,
+            
+            // 'status' と 'matchStatus' の両方を 'applied' に設定
+            status: 'applied',
+            matchStatus: 'applied',
+
+            // 補足情報
+            jobTitle: job.jobTitle || 'タイトル不明', 
+            
+            // ★★★ 修正箇所 ★★★
+            // 型キャストされた 'companyProfile' ではなく、
+            // 生データの 'companyData' から 'companyName' を取得します
+            companyName: companyData.companyName || '企業名不明',
+            
+            matchScore: score,
+            companyFeedback: null, 
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        // 'applicants' コレクションに新しい応募ドキュメントを作成
+        await adminDb.collection('applicants').add(applicantData);
 
 
         return res.status(200).json({

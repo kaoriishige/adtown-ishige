@@ -1,18 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head'; 
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // 🚨 Firebase Client SDK
 import { GetServerSideProps, NextPage } from 'next';
 import nookies from 'nookies';
 import { adminAuth, adminDb } from '@/lib/firebase-admin'; // 🚨 Firebase Admin SDK
-import * as admin from 'firebase-admin';
 
 // Lucide Icons
 import { 
     Loader2, Building, Briefcase, ArrowLeft, Sparkles, MessageSquare, JapaneseYen, MapPin, 
-    Laptop, Send, CheckSquare, Clock, Trash2, RotateCcw, TrendingUp, AlertTriangle // AlertTriangle をインポート
+    Laptop, Send, CheckSquare, Clock, Trash2, RotateCcw, TrendingUp, AlertTriangle, HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
@@ -43,10 +42,10 @@ interface JobData {
     requiredSkills: string;
     welcomeSkills: string;
     jobDescription: string;
-    status: 'draft' | 'pending_review' | 'verified' | 'rejected';
+    status: 'draft' | 'pending_review' | 'verified' | 'rejected' | 'active' | 'paused'; // status を明確に
     aiFeedback: string;
     companyName: string;
-    isProfileVerified: boolean;
+    isProfileVerified: boolean; // ★ 修正後の拡張判定結果
     appealPoints: {
         atmosphere: string[];
         organization: string[];
@@ -61,8 +60,29 @@ interface EditPageProps {
     error?: string;
 }
 
+/**
+ * 企業プロフィールの承認状態を拡張ロジックで判定するヘルパー関数 (SSRとクライアント側で利用)
+ * @param status recruiters/users ドキュメントの verificationStatus
+ * @param aiFeedback users ドキュメントの aiFeedback
+ * @returns 承認済みであれば true
+ */
+const isProfileApproved = (status: string | undefined, aiFeedback: string | undefined): boolean => {
+    // 1. verificationStatus が直接 'verified' の場合
+    if (status === 'verified') {
+        return true;
+    }
+    
+    // 2. aiFeedback が承認済みメッセージを含んでいる場合 (AI審査を通過したが status が未更新の場合のクイックフィックス)
+    if (aiFeedback && (aiFeedback.includes('優秀であると評価') || aiFeedback.includes('審査を通過') || aiFeedback.includes('公開可能状態'))) {
+        return true;
+    }
+    
+    return false;
+};
+
+
 // --- SSR: データ読み込みと権限チェック ---
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getServerSideProps: GetServerSideProps<EditPageProps> = async (context) => {
     const jobId = context.query.id as string;
 
     if (!jobId) {
@@ -90,13 +110,16 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }
 
         // 3. 企業情報（プロフィール認証状態と会社名）の取得
-        const recruiterSnap = await adminDb.collection('recruiters').doc(uid).get();
+        // 企業プロフィール情報は users ドキュメントに集中していると仮定
         const userSnap = await adminDb.collection('users').doc(uid).get();
         
-        // 🚨 修正箇所: let を const に変更 (96行目)
-        const companyName = userSnap.data()?.companyName || "未設定の会社名";
-        // 🚨 修正箇所: let を const に変更 (97行目)
-        const isProfileVerified = recruiterSnap.data()?.verificationStatus === 'verified' || false;
+        const companyName = userSnap.data()?.companyName || userSnap.data()?.storeName || "未設定の会社名";
+        const profileStatus = userSnap.data()?.verificationStatus as string | undefined;
+        const profileAiFeedback = userSnap.data()?.aiFeedback as string | undefined;
+        
+        // ★ 修正: 拡張ヘルパー関数を使って承認状態を判定
+        const isProfileVerified = isProfileApproved(profileStatus, profileAiFeedback);
+
 
         const jobData: JobData = {
             jobId,
@@ -113,7 +136,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             requiredSkills: jobDataRaw.requiredSkills || '',
             welcomeSkills: jobDataRaw.welcomeSkills || '',
             jobDescription: jobDataRaw.jobDescription || '',
-            status: jobDataRaw.status || 'draft',
+            status: (jobDataRaw.status || 'draft') as JobData['status'],
             aiFeedback: jobDataRaw.aiFeedback || '',
             companyName: companyName,
             isProfileVerified: isProfileVerified,
@@ -124,7 +147,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     } catch (error) {
         console.error("EditPage SSR Error:", error);
-        // 認証失敗時はログインへリダイレクト
         return { redirect: { destination: '/partner/login', permanent: false } };
     }
 };
@@ -140,9 +162,8 @@ const JobEditPage: NextPage<EditPageProps> = ({ jobData, error }) => {
     
     // SSRから渡されたプロパティは不変なので、直接参照
     const isProfileVerified = jobData?.isProfileVerified || false;
-    const isJobVerified = currentJobStatus === 'verified';
+    const isJobVerified = currentJobStatus === 'verified' || currentJobStatus === 'active';
     const isJobRejected = currentJobStatus === 'rejected';
-    // 💡 審査中か、審査がリジェクトされた状態を判定
     const isJobPendingOrRejected = currentJobStatus === 'pending_review' || currentJobStatus === 'rejected';
 
     useEffect(() => {
@@ -151,8 +172,8 @@ const JobEditPage: NextPage<EditPageProps> = ({ jobData, error }) => {
             router.push('/recruit/jobs');
         }
         if(jobData) {
-              // フォームの初期値を設定する際は、SSRで取得した全データを使用
-             setFormData(jobData);
+             // フォームの初期値を設定する際は、SSRで取得した全データを使用
+             setFormData(jobData as any); 
         }
     }, [error, jobData, router]);
 
@@ -180,10 +201,11 @@ const JobEditPage: NextPage<EditPageProps> = ({ jobData, error }) => {
         });
     };
 
-    // --- AI審査の再申請/リセット処理 (handleSubmitとロジックを共有) ---
+    // --- AI審査の再申請/リセット処理 ---
     const initiateReview = async (isManualReset: boolean = false) => {
         if (!isProfileVerified) { 
-            alert('企業プロフィールが未承認のため、求人を更新できません。');
+            alert('企業プロフィールが未承認のため、求人を更新できません。先にプロフィール編集ページで承認を完了させてください。');
+            router.push('/recruit/profile');
             return;
         }
 
@@ -209,7 +231,8 @@ const JobEditPage: NextPage<EditPageProps> = ({ jobData, error }) => {
                     jobDescription: formData.jobDescription,
                     appealPoints: formData.appealPoints,
                 }),
-                status: 'pending_review', // AI審査のためステータスを戻す
+                // AI審査のためステータスを戻す
+                status: 'pending_review', 
                 aiFeedback: isManualReset ? 'AI審査を強制的に再実行します...' : 'AIが求人内容を再審査中です...',
                 updatedAt: serverTimestamp(),
             });
@@ -224,20 +247,17 @@ const JobEditPage: NextPage<EditPageProps> = ({ jobData, error }) => {
                 body: JSON.stringify({ jobId: jobData.jobId, uid: jobData.uid }),
             });
             
-            // サーバーエラー時に強制却下ロジックが走るため、ここで500エラーをキャッチ
             if (!response.ok) {
                  const errorData = await response.json().catch(() => ({ error: `HTTP Error: ${response.status}` }));
                  throw new Error(errorData.error || `AI審査APIの呼び出しに失敗しました: ${response.status}`);
             }
 
-            // 成功レスポンスを受け取った後、審査完了を待たずにリダイレクト
             alert('求人の再審査を申請しました。ダッシュボードで結果を確認してください。');
-            router.replace('/recruit/dashboard'); // ダッシュボードにリダイレクト
+            router.replace('/recruit/dashboard'); 
 
         } catch (err: any) {
             alert(`エラーが発生しました: ${err.message}`);
             
-            // エラーが発生した場合、サーバー側で status: 'rejected' に設定されているはずだが、
             // クライアント側でもすぐに UI を更新
             setCurrentJobStatus('rejected');
             setAiMessage('更新処理中にエラーが発生しました。内容を確認し、再申請してください。');
@@ -279,13 +299,14 @@ const JobEditPage: NextPage<EditPageProps> = ({ jobData, error }) => {
     };
 
 
-    // UI要素: 求人ステータスバッジ (変更なし)
+    // UI要素: 求人ステータスバッジ 
     const JobStatusBadge = () => {
         let text = '下書き';
         let color = 'bg-gray-100 text-gray-700';
         let icon = <Briefcase className="w-4 h-4 mr-1" />;
 
         switch (currentJobStatus) {
+            case 'active':
             case 'verified':
                 text = 'AI承認済み（公開中）';
                 color = 'bg-green-100 text-green-700';

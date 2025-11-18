@@ -1,8 +1,8 @@
-// pages/recruit/applicants.tsx (見送り機能追加版)
+// pages/recruit/applicants.tsx (最低許容スコア 動的反映版)
 
 import { useEffect, useState, useCallback } from 'react';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; 
+import { getAuth, onAuthStateChanged, User, Auth } from 'firebase/auth'; 
+import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp, Firestore } from 'firebase/firestore'; 
 import { app } from '../../lib/firebase';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -11,27 +11,28 @@ import {
     RiUserSearchLine,
     RiCheckFill,
     RiCloseCircleLine,
-    RiSendPlaneFill,
     RiContactsLine,
     RiArrowLeftLine,
 } from 'react-icons/ri';
-import { Loader2, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react'; 
 
-// 💡 修正点 1: AIマッチングエンジンから JobとCompanyProfileのみをインポート
-import { calculateMatchScore, Job, CompanyProfile } from '@/lib/ai-matching-engine'; 
+import { calculateMatchScore, Job, CompanyProfile, UserProfile as AIMatchingUserProfile } from '@/lib/ai-matching-engine'; 
 
-// --- 修正された型定義 ---
-interface UserProfile {
+// --- ローカルの型定義 (外部型と一致させることを目的とする) ---
+interface LocalUserProfile {
     uid?: string;
-    // Firestoreデータから直接取得するフィールド
     name: string; 
+    
+    desiredSalaryMin: number;
+    desiredSalaryMax: number;
+    desiredEmploymentType: string;
+    preferredWorkingHours: string;
+    
     topPriorities: string[];
-    desiredAnnualSalary: number;
     desiredLocation: string;
     desiredJobTypes: string[];
     skills: string;
     
-    // AIエンジンの appealPoints 構造に渡すためのデータ
     appealPoints: {
         atmosphere: string[];
         growth: string[];
@@ -40,7 +41,6 @@ interface UserProfile {
         organization: string[];
     };
     
-    // Firestoreに保存されているトップレベルの 'desired...' フィールド (データの読み込み用)
     desiredAtmosphere: string[];
     desiredGrowthOpportunities: string[];
     desiredWLBFeatures: string[];
@@ -55,12 +55,12 @@ interface ApplicantData {
     userId: string;
     recruitmentId: string;
     appliedAt: { toDate: () => Date };
-    status: 'applied' | 'accepted' | 'rejected' | 'scouted'; // 'rejected' ステータスを追加
+    status: 'applied' | 'accepted' | 'rejected' | 'scouted'; 
     score?: number;
     reasons?: string[];
-    name?: string; // 表示用 (UserProfileから取得)
-    desiredJob?: string; // 表示用
-    skills?: string; // 表示用
+    name?: string; 
+    desiredJob?: string; 
+    skills?: string; 
 }
 
 // 企業プロフィールのAIマッチングエンジン型を拡張
@@ -76,7 +76,7 @@ interface CompanyMeta {
 
 export default function ApplicantsPage() {
     const router = useRouter();
-    const { recruitmentId } = router.query; 
+    const recruitmentId = router.query.recruitmentId as string; 
     
     const [applicants, setApplicants] = useState<ApplicantData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -84,11 +84,15 @@ export default function ApplicantsPage() {
     const [jobData, setJobData] = useState<Job | null>(null);
     const [companyMeta, setCompanyMeta] = useState<CompanyMeta | null>(null);
     const [error, setError] = useState<string | null>(null);
+    
+    // ★ 修正点: minMatchScore の初期値を 60 に設定（設定可能な最低値に近い値）
+    // 実際に表示される値は Firestore から取得されます。
+    const [minMatchScore, setMinMatchScore] = useState<number>(60);
 
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    const db: Firestore = getFirestore(app);
+    const auth: Auth = getAuth(app);
 
-    // データフェッチのロジック (変更なし)
+    // データフェッチのロジック
     const fetchMatchingData = useCallback(async (currentUser: User, jobId: string) => {
         if (!currentUser || !jobId) return;
 
@@ -104,13 +108,21 @@ export default function ApplicantsPage() {
             }
 
             const jobDataRaw = jobSnap.data();
+            
             const job: Job = {
                 id: jobId,
-                jobTitle: jobDataRaw.jobTitle,
+                jobTitle: jobDataRaw.jobTitle || '',
                 salaryMin: jobDataRaw.salaryMin || 0,
                 salaryMax: jobDataRaw.salaryMax || 0,
-                location: jobDataRaw.location,
-                jobCategory: jobDataRaw.jobCategory,
+                location: jobDataRaw.location || '',
+                jobCategory: jobDataRaw.jobCategory || '',
+                employmentType: jobDataRaw.employmentType || '正社員',
+                workingHours: jobDataRaw.workingHours || '',
+                workingDays: jobDataRaw.workingDays || [],
+                requiredSkills: jobDataRaw.requiredSkills || '',
+                welcomeSkills: jobDataRaw.welcomeSkills || '',
+                remotePolicy: jobDataRaw.remotePolicy || 'no',
+                appealPoints: jobDataRaw.appealPoints || { growth: [], wlb: [], benefits: [], atmosphere: [], organization: [] },
             };
             setJobData(job);
 
@@ -124,11 +136,17 @@ export default function ApplicantsPage() {
                  return;
             }
             const companyDataRaw = companySnap.data();
-            const minMatchScore = companyDataRaw.minMatchScore || 60; // 最低スコアを設定
             
+            // ★ 修正点: Firestoreから取得した minMatchScore を変数に格納し、stateも更新
+            // データが存在しない、または無効な場合は、設定可能な最小値60を使用（設定範囲が60〜99のため）
+            const fetchedMinMatchScore = (typeof companyDataRaw.minMatchScore === 'number' && companyDataRaw.minMatchScore >= 60 && companyDataRaw.minMatchScore <= 99) 
+                                           ? companyDataRaw.minMatchScore : 60; 
+            
+            setMinMatchScore(fetchedMinMatchScore); // state を更新して画面表示に反映
+
             const companyProfile: ExtendedCompanyProfile = {
                 companyName: companyDataRaw.companyName || '', 
-                minMatchScore: minMatchScore,
+                minMatchScore: fetchedMinMatchScore,
                 appealPoints: {
                     atmosphere: companyDataRaw.appealPoints?.atmosphere || [],
                     growth: companyDataRaw.appealPoints?.growth || [],
@@ -137,7 +155,7 @@ export default function ApplicantsPage() {
                     organization: companyDataRaw.appealPoints?.organization || [],
                 }
             };
-            setCompanyMeta({ minMatchScore, companyProfile });
+            setCompanyMeta({ minMatchScore: fetchedMinMatchScore, companyProfile });
 
             // 3. 応募者データ (applicants) の取得
             const applicantsRef = collection(db, 'applicants'); 
@@ -158,12 +176,16 @@ export default function ApplicantsPage() {
                 if (userProfileSnap.exists()) {
                     const userProfileRaw = userProfileSnap.data() as any;
                     
-                    // 4.2. AIマッチングエンジン用のデータ構造に変換
-                    const userProfile: UserProfile = { 
+                    const userProfile: LocalUserProfile = { 
                          uid: userId,
                          name: userProfileRaw.name || '匿名', 
                          topPriorities: userProfileRaw.topPriorities || [],
-                         desiredAnnualSalary: userProfileRaw.desiredAnnualSalary || 0,
+                         
+                         desiredSalaryMin: userProfileRaw.desiredAnnualSalaryMin || userProfileRaw.desiredAnnualSalary || 0,
+                         desiredSalaryMax: userProfileRaw.desiredAnnualSalaryMax || userProfileRaw.desiredAnnualSalary || 0,
+                         desiredEmploymentType: userProfileRaw.desiredEmploymentType || userProfileRaw.desiredJobTypes?.[0] || '',
+                         preferredWorkingHours: userProfileRaw.preferredWorkingHours || '',
+
                          desiredLocation: userProfileRaw.desiredLocation || '',
                          desiredJobTypes: userProfileRaw.desiredJobTypes || [],
                          skills: userProfileRaw.skills || '',
@@ -182,10 +204,10 @@ export default function ApplicantsPage() {
                     };
 
                     // 4.3. スコア計算
-                    const { score, reasons } = calculateMatchScore(userProfile, job, companyProfile);
+                    const { score, reasons } = calculateMatchScore(userProfile as unknown as AIMatchingUserProfile, job, companyProfile);
 
                     // 4.4. フィルタリング: 企業が設定した最低スコア以上の場合のみリストに追加
-                    if (score >= minMatchScore) {
+                    if (score >= fetchedMinMatchScore) {
                         scoredApplicants.push({
                             ...applicantData,
                             id: applicantDoc.id,
@@ -205,7 +227,11 @@ export default function ApplicantsPage() {
 
         } catch (e: any) {
             console.error("応募者データの取得またはスコアリングに失敗:", e);
-            setError(`データの読み込み中にエラーが発生しました: ${e.message}`);
+            if (e.message.includes('permission')) {
+                setError("データの読み込み中にエラーが発生しました: Firestoreのセキュリティルールにより、応募者プロフィールへのアクセスが拒否されました。ルールを確認してください。");
+            } else {
+                setError(`データの読み込み中にエラーが発生しました: ${e.message}`);
+            }
         } finally {
             setLoading(false);
         }
@@ -213,20 +239,24 @@ export default function ApplicantsPage() {
 
 
     useEffect(() => {
+        if (!router.isReady) return;
+
         onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                if (recruitmentId && typeof recruitmentId === 'string') {
+                
+                if (recruitmentId) {
                     fetchMatchingData(currentUser, recruitmentId);
                 } else {
-                    setError("URLから有効な求人IDが取得できませんでした。");
+                    alert("求人IDが指定されていません。ダッシュボードに戻ります。");
+                    router.push('/recruit/dashboard');
                     setLoading(false);
                 }
             } else {
                  router.push('/partner/login');
             }
         });
-    }, [auth, recruitmentId, router, fetchMatchingData]);
+    }, [auth, recruitmentId, router, fetchMatchingData, router.isReady]);
 
 
     // --- 連絡先交換（承諾）処理 ---
@@ -242,11 +272,11 @@ export default function ApplicantsPage() {
                 userUid: applicant.userId,
                 recruitmentId: applicant.recruitmentId,
                 jobTitle: jobData?.jobTitle || '求人情報なし', 
-                status: 'contact_exchange_complete', // 💡 ステータスをより具体的に修正
+                status: 'contact_exchange_complete', 
                 createdAt: serverTimestamp(), 
                 updatedAt: serverTimestamp(),
-                companyContactExchanged: true, // 企業側が承諾
-                userContactExchanged: false, // 応募者側の承諾待ち（この実装では、企業側が最終決定権を持つ前提で両方trueにする）
+                companyContactExchanged: true, 
+                userContactExchanged: true, 
             });
 
             // 2. 応募ステータスを更新（'accepted'）
@@ -255,7 +285,6 @@ export default function ApplicantsPage() {
 
             alert(`承諾し、連絡先交換を完了しました。求職者には通知されます。マッチングID: ${newMatchRef.id}`);
             
-            // UIを更新
             setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, status: 'accepted' } : a));
 
         } catch (e) {
@@ -275,11 +304,8 @@ export default function ApplicantsPage() {
             const applicantDocRef = doc(db, 'applicants', applicant.id); 
             await updateDoc(applicantDocRef, { status: 'rejected' });
 
-            // 2. 企業側の rejectedUsers リストに追加する処理があれば、ここに追加する
-
             alert(`${applicant.name || '応募者'}さんを見送りました。`);
 
-            // UIを更新 (リストから削除、またはステータスをrejectedに変更)
             setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, status: 'rejected' } : a));
         } catch (e) {
             console.error("見送り処理に失敗:", e);
@@ -289,6 +315,9 @@ export default function ApplicantsPage() {
 
 
     if (loading) return <div className="flex justify-center items-center h-screen text-lg text-indigo-600"><Loader2 className="animate-spin mr-2" /> データ読み込み中...</div>;
+
+    // 表示用の最低スコアは state (minMatchScore) から取得
+    const displayMinScore = minMatchScore;
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans">
@@ -306,7 +335,7 @@ export default function ApplicantsPage() {
                         {jobData ? jobData.jobTitle : '求人'}の応募者一覧
                     </h1>
                     <p className="text-sm text-gray-600 mt-1">
-                        最低許容スコア: <span className="font-bold text-red-500">{companyMeta?.minMatchScore || 60}点</span> 以上の候補者のみ表示
+                        最低許容スコア: <span className="font-bold text-red-500">{displayMinScore}点</span> 以上の候補者のみ表示
                     </p>
                 </div>
             </header>
@@ -314,14 +343,14 @@ export default function ApplicantsPage() {
             <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                  {error && (
                      <div className="p-4 mb-6 bg-red-100 text-red-700 rounded-lg flex items-center">
-                         <AlertTriangle className="w-5 h-5 mr-2" /> {error}
+                          <AlertTriangle className="w-5 h-5 mr-2" /> {error}
                      </div>
                  )}
 
                 {applicants.length === 0 ? (
                     <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl bg-white">
                         <RiUserSearchLine size={60} className="text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 text-lg">現在、最低許容スコア({companyMeta?.minMatchScore || 60}点)以上の応募者はいません。</p>
+                        <p className="text-gray-600 text-lg">現在、最低許容スコア({displayMinScore}点)以上の応募者はいません。</p>
                         <p className="text-sm text-gray-500 mt-2">求人情報を編集してAIスコアを改善しましょう。</p>
                     </div>
                 ) : (
@@ -371,27 +400,27 @@ export default function ApplicantsPage() {
                                             </div>
                                         ) : a.status === 'rejected' ? (
                                              <div className="text-center p-2 bg-red-100 text-red-700 rounded-lg font-bold flex items-center justify-center gap-1">
-                                                <RiCloseCircleLine /> 見送り済み
-                                            </div>
+                                                 <RiCloseCircleLine /> 見送り済み
+                                             </div>
                                         ) : (
                                             <>
                                                 <button
-                                                    onClick={() => handleContactExchange(a)}
-                                                    className="px-4 py-2 bg-green-600 text-white rounded-lg flex items-center justify-center gap-1 text-sm shadow hover:bg-green-700 font-semibold"
+                                                     onClick={() => handleContactExchange(a)}
+                                                     className="px-4 py-2 bg-green-600 text-white rounded-lg flex items-center justify-center gap-1 text-sm shadow hover:bg-green-700 font-semibold"
                                                 >
-                                                    <RiCheckFill /> 承諾 & 連絡先交換
+                                                     <RiCheckFill /> 承諾 & 連絡先交換
                                                 </button>
                                                 <Link
-                                                    href={`/recruit/jobs/applicants/${a.userId}?recruitmentId=${a.recruitmentId}`} 
-                                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center justify-center gap-1 text-sm shadow hover:bg-indigo-700 font-semibold"
+                                                     href={`/recruit/jobs/applicants/${a.userId}?recruitmentId=${a.recruitmentId}`} 
+                                                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center justify-center gap-1 text-sm shadow hover:bg-indigo-700 font-semibold"
                                                 >
-                                                    <RiUserSearchLine /> 詳細プロフィール
+                                                     <RiUserSearchLine /> 詳細プロフィール
                                                 </Link>
                                                 <button
-                                                    onClick={() => handleRejectApplicant(a)}
-                                                    className="px-4 py-2 bg-gray-500 text-white rounded-lg flex items-center justify-center gap-1 text-sm shadow hover:bg-gray-600 font-semibold"
+                                                     onClick={() => handleRejectApplicant(a)}
+                                                     className="px-4 py-2 bg-gray-500 text-white rounded-lg flex items-center justify-center gap-1 text-sm shadow hover:bg-gray-600 font-semibold"
                                                 >
-                                                    <RiCloseCircleLine /> 見送り
+                                                     <RiCloseCircleLine /> 見送り
                                                 </button>
                                             </>
                                         )}
@@ -405,7 +434,6 @@ export default function ApplicantsPage() {
                                         <span className="text-sm text-gray-700 font-semibold">
                                             連絡先開示済み。求職者に連絡を取ってください。
                                         </span>
-                                        {/* 💡 連絡先開示のAPIがあればここに表示 */}
                                     </div>
                                 )}
                             </li>
