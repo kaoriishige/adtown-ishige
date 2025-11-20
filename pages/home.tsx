@@ -3,24 +3,23 @@ import { NextPage, GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import nookies from 'nookies';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin'; 
 import Head from 'next/head';
-import Image from 'next/image';
+
 import {
   RiLayoutGridFill,
   RiAlarmWarningLine,
-  RiCoupon3Line,
-  RiRestaurantLine,
   RiShoppingBagLine,
   RiBriefcase4Line, 
   RiHealthBookLine, 
-  RiLogoutBoxRLine, // ★ ログアウトアイコン追加
+  RiLogoutBoxRLine,
+  RiCloudLine, // 天気アイコン
 } from 'react-icons/ri';
 import { IoSparklesSharp } from 'react-icons/io5'; 
 
-// ★ Firebaseクライアントのインポート追加
+// Firebaseクライアント側のインポート (エラー解消済み前提)
 import { getAuth, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase'; // クライアントFirebaseのパス
+import { app } from '@/lib/firebase-client'; // ★ lib/firebase-client に修正済み
 
 interface HomePageProps {
   user: {
@@ -39,26 +38,17 @@ interface EmergencyContact {
 const HomePage: NextPage<HomePageProps> = ({ user }) => {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false); // ★ ログアウト処理中ステート
+  const [isLoggingOut, setIsLoggingOut] = useState(false); 
 
-  // ★ ログアウト処理
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    const auth = getAuth(app); // クライアントAuthインスタンス取得
+    const auth = getAuth(app); 
     try {
-      // 1. サーバーサイドのセッション(Cookie)を破棄
-      //    このAPIルートはセッションをクリアするだけのものです
       await fetch('/api/auth/sessionLogout', { method: 'POST' });
-      
-      // 2. クライアントサイドのFirebase認証をサインアウト
       await signOut(auth);
-      
-      // 3. ログインページにリダイレクト
-      // window.location.href を使うと、ページが完全にリロードされ安全です
       window.location.href = '/users/login';
     } catch (error) {
       console.error('ログアウトに失敗しました:', error);
-      // エラーが発生しても、とりあえずログインページに強制遷移
       window.location.href = '/users/login';
     }
   };
@@ -68,48 +58,46 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
     { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/', },
     { name: '救急安心センター', number: '#7119', description: '急な病気やケガで救急車を呼ぶか迷った時', url: 'https://www.fdma.go.jp/publication/portal/post2.html', },
     { name: '休日夜間急患診療所', description: '那須塩原市の休日・夜間の急病', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/kyukyu_kyumei/1/3340.html', },
-    // ★ ここから追加
     { name: '大田原市の休日・夜間の急病', description: '大田原市の休日・夜間の急病', url: 'https://www.city.ohtawara.tochigi.jp/docs/2013082771612/', },
     { name: '那須町の休日・夜間の急病', description: '那須町の休日・夜間の急病', url: 'https://www.town.nasu.lg.jp/0130/info-0000003505-1.html', },
     { name: '水道のトラブル 緊急対応 (有)クリプトン', number: '090-2463-6638', description: '地元で40年 有限会社クリプトン', url: 'https://xn--bbkyao7065bpyck41as89d.com/emergency/', },
-    // ★ ここまで追加
   ];
 
-  // ▼▼▼ ナビゲーションボタンのリンク先(href)を修正 ▼▼▼
+  // ▼▼▼ ナビゲーションボタンリスト (天気ボタンは削除) ▼▼▼
   const mainNavButtons = [
     {
       title: '店舗マッチングAI',
       description: 'あなたの興味のあるお店を探します!!',
-      href: '/search-dashboard', // 既存の「お店マッチングAI」のリンク先
-      Icon: IoSparklesSharp, // 既存のアイコン
+      href: '/search-dashboard', 
+      Icon: IoSparklesSharp, 
       gradient: 'bg-gradient-to-r from-blue-500 to-cyan-600',
     },
     {
       title: '求人マッチングAI',
       description: 'あなたの働きたい会社を探します!!',
-      href: '/users/dashboard', // ★ 修正 (ファイル構成に基づき /recruit を指定)
-      Icon: RiBriefcase4Line, // 新しいアイコン
+      href: '/users/dashboard', 
+      Icon: RiBriefcase4Line, 
       gradient: 'bg-gradient-to-r from-green-500 to-teal-600',
     },
     {
       title: 'スーパー特売価格.com',
       description: '特売チラシの価格比較で節約!!',
-      href: '/nasu/kondate', // ★ 修正 (nasu/kondate.jsx へ)
-      Icon: RiShoppingBagLine, // アイコン
+      href: '/nasu/kondate', 
+      Icon: RiShoppingBagLine, 
       gradient: 'bg-gradient-to-r from-yellow-400 to-orange-500',
     },
     {
       title: 'ドラッグストア特売価格.com',
       description: '特売チラシの価格比較で節約!!',
-      href: '/nasu', // ★ 修正 (nasu/index.js へ)
-      Icon: RiHealthBookLine, // 新しいアイコン
+      href: '/nasu', 
+      Icon: RiHealthBookLine, 
       gradient: 'bg-gradient-to-r from-purple-500 to-pink-600',
     },
     {
       title: 'アプリのカテゴリからチェック!!',
-      description: 'すべてのアプリ・機能を見る', // 説明を補足
-      href: '/apps/categories', // 既存の「すべてのアプリ」のリンク先
-      Icon: RiLayoutGridFill, // 既存のアイコン
+      description: 'すべてのアプリ・機能を見る', 
+      href: '/apps/categories', 
+      Icon: RiLayoutGridFill, 
       gradient: 'bg-gradient-to-r from-cyan-500 to-blue-500',
     }
   ];
@@ -136,7 +124,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               <p className="text-xs text-center text-gray-500 mt-2">商品やサービスのトラブル、休日・夜間の急病、水道のトラブルなどはこちら</p>
             </section>
 
-            {/* ▼▼▼ 依頼内容に基づき、セクションを差し替え ▼▼▼ */}
+            {/* ▼▼▼ メインナビゲーションボタンセクション ▼▼▼ */}
             <section className="space-y-4">
               {mainNavButtons.map((item) => (
                 <Link key={item.title} href={item.href} legacyBehavior>
@@ -154,7 +142,27 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 </Link>
               ))}
             </section>
-            {/* ▲▲▲ ここまで ▲▲▲ */}
+            {/* ▲▲▲ カテゴリセクションここまで ▲▲▲ */}
+            
+            {/* ★★★ 天気予報・警報ボタンをカテゴリの下に追加 ★★★ */}
+            <section>
+                <Link href="/weather" legacyBehavior>
+                    <a className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 text-white bg-gradient-to-r from-indigo-500 to-sky-600">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                                <RiCloudLine className="text-4xl mr-4 flex-shrink-0" />
+                                <div>
+                                    <h2 className="font-bold text-lg">天気予報・警報</h2>
+                                    <p className="text-sm mt-1 opacity-90">那須地域の最新の気象情報と防災情報</p>
+                                </div>
+                            </div>
+                            <RiAlarmWarningLine className="text-2xl" />
+                        </div>
+                    </a>
+                </Link>
+            </section>
+            {/* ★★★ ここまで ★★★ */}
+
 
             <section className="bg-white p-6 rounded-xl shadow-md border-2 border-yellow-400">
               <h2 className="text-xl font-bold text-gray-800 text-center mb-2">
@@ -171,8 +179,6 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               </button>
             </section>
 
-            {/* ★ 削除 (便利ツールセクション) */}
-
             <footer className="text-center mt-8 pb-4 space-y-8">
               
               <section>
@@ -181,7 +187,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 </Link>
               </section>
 
-              {/* ★ ログアウトボタンを「お問い合わせ」の下に移動 ★ */}
+              {/* ログアウトボタン */}
               <section>
                 <button
                   onClick={handleLogout}
@@ -198,7 +204,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
           </main>
         </div>
 
-        {/* モーダル表示ロジック (変更なし) */}
+        {/* モーダル表示ロジック (緊急連絡先) */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md">

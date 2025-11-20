@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head'; 
 import { getAuth } from 'firebase/auth';
 import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // 🚨 Firebase Client SDK
+import { db } from "@/lib/firebase-client";
 import { GetServerSideProps, NextPage } from 'next';
 import nookies from 'nookies';
 import { adminAuth, adminDb } from '@/lib/firebase-admin'; // 🚨 Firebase Admin SDK

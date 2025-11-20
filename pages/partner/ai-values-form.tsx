@@ -1,6 +1,6 @@
 // pages/partner/ai-values-form.tsx
 import React, { useState } from "react";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-client";
 import { collection, getDocs, addDoc, query, where } from "firebase/firestore";
 
 // -------------------------

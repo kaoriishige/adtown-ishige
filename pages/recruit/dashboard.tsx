@@ -13,7 +13,7 @@ import {
 } from 'react-icons/ri';
 import { useRouter } from 'next/router';
 import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { app } from "@/lib/firebase-client";
 import { useState, useEffect } from 'react';
 import React from 'react';
 

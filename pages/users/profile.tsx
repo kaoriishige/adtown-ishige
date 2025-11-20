@@ -1,13 +1,18 @@
-// pages/users/profile.tsx (完全なコード - 読み込みエラー非表示)
-
-import Head from 'next/head';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, FormEvent, ChangeEvent, useMemo } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
+import Link from 'next/link';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase'; // 🚨 パスを確認
 import {
-    RiSaveLine,
+    doc,
+    getDoc,
+    setDoc,
+    serverTimestamp,
+    Timestamp 
+} from 'firebase/firestore';
+import { db } from '../../lib/firebase-client'; 
+import {
+    RiSave3Line,
     RiUserLine,
     RiHeartPulseLine,
     RiArrowRightLine,
@@ -19,10 +24,11 @@ import {
     RiComputerLine,
     RiTimeLine,
     RiCalendarLine,
-    RiSendPlane2Line
+    RiSendPlane2Line,
+    RiPencilRuler2Line, 
+    RiErrorWarningLine
 } from 'react-icons/ri';
 import { Loader2 } from 'lucide-react';
-import React from 'react';
 
 // --- 定数 ---
 const growthOptions = ['OJT（実務を通じた教育制度）', 'メンター制度（先輩社員によるサポート）', '定期的な社内研修あり', '社外研修・セミナー参加支援あり', '資格取得支援制度あり', '書籍・教材購入補助あり', 'AI・DX関連の研修あり', '海外研修・グローバル教育あり', 'キャリア面談制度あり', '評価・昇進が明確（スキルや成果で評価）', '社内表彰・インセンティブ制度あり', '他部署への異動・チャレンジを歓迎', '社員の挑戦を応援する文化', '失敗を許容する文化（トライ＆エラーを奨励）', '社内勉強会・ナレッジシェア会あり', '社外講師や専門家を招いた学習機会あり'];
@@ -128,8 +134,6 @@ const UserProfilePage = () => {
 
     const loadUserProfile = async (uid: string) => {
         setLoading(true);
-        // ★ 修正点: 
-        // 読み込み試行のたびにエラーをクリア（表示したままにしない）
         setError(null); 
         
         try {
@@ -139,6 +143,7 @@ const UserProfilePage = () => {
                 const data = snap.data();
                 setFormData((prev) => ({
                     ...prev, ...data,
+                    // null/undefinedを''に変換
                     age: data.age || '', desiredSalaryMin: data.desiredSalaryMin || '', desiredSalaryMax: data.desiredSalaryMax || '',
                     skills: data.skills || '', desiredEmploymentType: data.desiredEmploymentType || '正社員',
                     desiredSalaryType: data.desiredSalaryType || '年収', desiredRemotePolicy: data.desiredRemotePolicy || 'no',
@@ -151,16 +156,9 @@ const UserProfilePage = () => {
                     }
                 }));
             }
-            // 💡 snap.exists() が false (新規ユーザー) の場合は、
-            //    何もしない（catchにも行かない）。
-            //    デフォルトの空のformDataが使われる。
         } catch (e) { 
             console.error('Firestore読み込みエラー:', e); 
-            // ★ 修正点:
-            // 読み込みが失敗（権限エラーなど）しても、画面にエラーを表示しない。
-            // これにより、新規ユーザーは（コンソールにはエラーが出るが）
-            // 邪魔されずに空のフォームに入力を開始できる。
-            // setError('データの読み込みに失敗しました。'); // <-- この行をコメントアウト（または無効化）
+            // 読み込みエラーが発生しても、フォームは初期値で表示を続ける
         }
         setLoading(false);
     };
@@ -169,24 +167,25 @@ const UserProfilePage = () => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         if (['age', 'desiredSalaryMin', 'desiredSalaryMax'].includes(name)) {
+            // 入力が数値フィールドの場合は数値型を維持し、空文字の場合はそのまま維持
             setFormData((prev) => ({ ...prev, [name]: value === '' ? '' : Number(value) }));
         } else {
             setFormData((prev) => ({ ...prev, [name]: value }));
         }
     };
 
-    const handleValueCheckboxChange = (category: keyof UserProfile['matchingValues'], value: string) => {
+    const handleValueCheckboxChange = useCallback((category: keyof UserProfile['matchingValues'], value: string) => {
         setFormData((prev) => {
             const currentValues = prev.matchingValues[category] || []; 
             const newValues = currentValues.includes(value) ? currentValues.filter((v) => v !== value) : [...currentValues, value];
             return { ...prev, matchingValues: { ...prev.matchingValues, [category]: newValues } };
         });
-    };
+    }, []);
 
-    const handleJobTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleJobTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedOptions = Array.from(e.target.selectedOptions).map((o) => o.value);
         setFormData((prev) => ({ ...prev, desiredJobTypes: selectedOptions }));
-    };
+    }, []);
     
     const toggleDay = useCallback((day: string) => {
         setFormData(prev => {
@@ -199,66 +198,72 @@ const UserProfilePage = () => {
         });
     }, []);
 
-    // 💡 プロフィール保存処理 (ステップ3から呼び出し)
-    const handleSave = async () => {
+    // 💡 プロフィール保存処理
+    const handleSave = useCallback(async () => {
         if (!user) return false;
         setSaving(true);
-        setError(null); // ★ 保存前にエラーをクリア
+        setError(null); 
         
         try {
             const userRef = doc(db, 'userProfiles', user.uid);
-            await setDoc(userRef, { ...formData, updatedAt: serverTimestamp() }, { merge: true });
+            
+            // ★★★ 修正ロジック: 数値型が空文字のとき、確実に0として保存 ★★★
+            const dataToSave = {
+                ...formData, 
+                // 空文字をNumber型として保存する前に0に変換
+                desiredSalaryMin: formData.desiredSalaryMin === '' ? 0 : Number(formData.desiredSalaryMin),
+                desiredSalaryMax: formData.desiredSalaryMax === '' ? 0 : Number(formData.desiredSalaryMax),
+                age: formData.age === '' ? 0 : Number(formData.age),
+                updatedAt: serverTimestamp() 
+            };
+
+            // setDocはawaitで待機し、確実にFirestoreに反映されるようにする
+            await setDoc(userRef, dataToSave, { merge: true });
             setSaving(false);
-            return true; // 成功を返す
+            return true; 
         } catch (err: any) {
-            // ★ 保存時のエラーはユーザーに通知する
             setError(`保存中にエラーが発生しました: ${err.message}`);
             setSaving(false);
-            return false; // 失敗を返す
+            return false; 
         }
-    };
-    
-    // 💡 応募処理 (ステップ3から呼び出し - プロフィール保存後にダッシュボードへリダイレクト)
+    }, [user, formData]); // userとformDataが変更されたときのみ再生成
+
+    // 💡 応募処理 (ステップ3から呼び出し - APIコールを削除し、リダイレクトのみ残す)
     const handleApplyFromReview = async () => {
         // 1. プロフィールを保存
         const saveSuccess = await handleSave();
-        // ★ 保存に失敗したら、(setErrorがhandleSave内でセットされるので)ここで処理を中断
         if (!saveSuccess) return; 
 
-        // 2. 応募処理を実行 (ダッシュボードの応募ボタン機能に任せる)
+        // 2. 応募処理を実行 (リダイレクトのみ)
         setIsApplying(true);
         setApplyMessage(null);
         
         try {
-            // 🚨 APIコールシミュレーション: APIが成功を返すと、応募履歴が作成されます。
-            const response = await fetch('/api/users/initiateApply', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    userId: user?.uid,
-                    userProfileData: formData, // プロフィールデータを送信
-                }),
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok || data.error) {
-                 throw new Error(data.error || '一括応募処理が失敗しました。'); 
-            }
-            
-            alert(`✅ プロフィールを保存し、未応募のAI推薦求人 ${data.count} 件に応募しました！`);
+            alert(`✅ プロフィールを保存しました。AI推薦求人を確認するため、ダッシュボードに移動します。`);
             router.push('/users/dashboard');
-
+             
         } catch (e: any) {
-            setApplyMessage(`❌ 処理中にエラーが発生しました: ${e.message}`);
+             // エラーハンドリング (通常は到達しない)
+             setApplyMessage(`❌ 処理中にエラーが発生しました: ${e.message}`);
         } finally {
-            setIsApplying(false);
+             setIsApplying(false);
         }
     };
 
-    // 必須項目チェック
-    const isStep1Complete = formData.name && formData.age && formData.skills;
-    const isStep2Complete = formData.desiredJobTypes.length > 0 && !!formData.desiredSalaryMax;
+
+    // --- 必須項目チェック (useMemoで最適化) ---
+    const isStep1Complete = useMemo(() => (
+        !!formData.name && 
+        // ageが空文字でなく、かつ0以上であること (0は許容)
+        (formData.age !== '' && Number(formData.age) >= 0) && 
+        String(formData.skills).trim().length > 0
+    ), [formData.name, formData.age, formData.skills]);
+    
+    const isStep2Complete = useMemo(() => (
+        formData.desiredJobTypes.length > 0 && 
+        // desiredSalaryMax が空文字でなく、かつ0以上であること
+        (formData.desiredSalaryMax !== '' && Number(formData.desiredSalaryMax) >= 0)
+    ), [formData.desiredJobTypes, formData.desiredSalaryMax]);
 
     // --- ローディング中 ---
     if (loading) { return (<div className="flex justify-center items-center h-screen text-gray-600"><Loader2 className="animate-spin w-6 h-6 mr-2" /> 読み込み中...</div>); }

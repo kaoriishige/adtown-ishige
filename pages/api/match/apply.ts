@@ -1,20 +1,36 @@
 /**
- * pages/api/match.ts: APIエンドポイントハンドラー
- * (修正版：'applicants'書き込み ＋ companyNameの型エラー修正)
+ * pages/api/match/apply.ts: APIエンドポイントハンドラー (単一求人への応募とマッチング結果の保存)
+ * - 応募とマッチング結果の両方をFirestoreにバッチ保存
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { adminDb } from '@/lib/firebase-admin'; // 🚨 プロジェクトのパスに合わせてください
-import admin from 'firebase-admin';
-// 💡 ロジック本体をインポート
+import { adminDb, adminAuth } from '@/lib/firebase-admin'; // Firestore Admin SDK
+import { FieldValue } from 'firebase-admin/firestore'; // FieldValueを直接インポート
+// 💡 ロジック本体をインポート (プロジェクトのパスに合わせてください)
 import { calculateMatchScore, UserProfile, Job, CompanyProfile } from '@/lib/ai-matching-engine'; 
+import nookies from 'nookies';
 
+// Note: UserProfile, Job, CompanyProfile の型定義は '@/lib/ai-matching-engine' に依存
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {
+        res.setHeader('Allow', 'POST');
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    let currentUserUid: string;
+    const db = adminDb;
+
+    try {
+        // 1. 認証チェック
+        const cookies = nookies.get({ req });
+        const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
+        currentUserUid = token.uid;
+    } catch (err) {
+        console.error('Authentication Error:', err);
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
     try {
         // req.bodyからデータを受信
         const { userProfile, job, companyUid } = req.body as { userProfile: UserProfile, job: Job, companyUid: string }; 
@@ -23,67 +39,84 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: 'Missing required fields (userProfile, job, or companyUid).' });
         }
 
-        // Firestoreから企業プロフィールを取得
-        const companyRef = adminDb.collection('recruiters').doc(companyUid); 
+        // 2. Firestoreから企業プロフィールを取得
+        const companyRef = db.collection('recruiters').doc(companyUid); 
         const companySnap = await companyRef.get();
 
         if (!companySnap.exists) {
             return res.status(404).json({ error: 'Company profile not found in recruiters collection.' });
         }
 
-        // ★★★ 修正箇所 ★★★
-        // companySnap.data() を生のデータとして保持します
         const companyData = companySnap.data();
         if (!companyData) {
-             return res.status(404).json({ error: 'Company data is empty.' });
+            return res.status(404).json({ error: 'Company data is empty.' });
         }
 
         // 💡 calculateMatchScoreが期待する型にキャスト
         const companyProfile = companyData as CompanyProfile; 
-
-        // マッチングスコア算出
+        
+        // 3. マッチングスコア算出
         const { score, reasons } = calculateMatchScore(userProfile, job, companyProfile);
 
-        // 応募データ保存 (matchResults に結果を保存)
-        const matchResultRef = adminDb.collection('matchResults').doc();
-        await matchResultRef.set({
-            userUid: userProfile.uid,
+        // 4. バッチ処理の準備
+        const batch = db.batch();
+        const timestamp = FieldValue.serverTimestamp();
+
+        // 5. 'matchResults' コレクションの更新/保存 (ユーザーが求人を見た証拠として保存)
+        const matchResultId = `${currentUserUid}_${job.id}`;
+        const matchResultRef = db.collection('matchResults').doc(matchResultId);
+        
+        batch.set(matchResultRef, {
+            userUid: currentUserUid,
             companyUid,
             jobId: job.id,
             score,
             reasons,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+            updatedAt: timestamp,
+            // 既存のCreatedAtを保持
+        }, { merge: true });
+        
+        // 6. 'applicants' コレクションへの書き込み（応募履歴の作成）
+        
+        // 既に応募済みでないかチェック (必須)
+        const existingAppSnap = await db.collection('applicants')
+            .where('userUid', '==', currentUserUid)
+            .where('recruitmentId', '==', job.id)
+            .limit(1).get();
 
-        // 'applicants' コレクションへの書き込み
-        const applicantData = {
-            userUid: userProfile.uid,
-            recruitmentId: job.id,
-            companyUid: companyUid,
-            
-            // 'status' と 'matchStatus' の両方を 'applied' に設定
-            status: 'applied',
-            matchStatus: 'applied',
+        if (existingAppSnap.empty) {
+            const applicantData = {
+                userUid: currentUserUid,
+                recruitmentId: job.id,
+                companyUid: companyUid,
+                
+                status: 'applied', // 初期ステータス
+                matchStatus: 'applied',
+                
+                jobTitle: job.jobTitle || 'タイトル不明', 
+                companyName: companyData.companyName || '企業名不明',
+                
+                matchScore: score,
+                companyFeedback: null, 
+                createdAt: timestamp,
+                updatedAt: timestamp,
+            };
 
-            // 補足情報
-            jobTitle: job.jobTitle || 'タイトル不明', 
-            
-            // ★★★ 修正箇所 ★★★
-            // 型キャストされた 'companyProfile' ではなく、
-            // 生データの 'companyData' から 'companyName' を取得します
-            companyName: companyData.companyName || '企業名不明',
-            
-            matchScore: score,
-            companyFeedback: null, 
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        // 'applicants' コレクションに新しい応募ドキュメントを作成
-        await adminDb.collection('applicants').add(applicantData);
-
+            // 'applicants' コレクションに新しい応募ドキュメントを作成 (IDは自動生成)
+            batch.set(db.collection('applicants').doc(), applicantData);
+        } else {
+            // 既に応募済みであれば、応募履歴を更新（updatedAtのみ）
+            batch.update(existingAppSnap.docs[0].ref, {
+                updatedAt: timestamp,
+            });
+            console.log(`User ${currentUserUid} already applied to job ${job.id}. Updating timestamp.`);
+        }
+        
+        // 7. バッチをコミット
+        await batch.commit();
 
         return res.status(200).json({
-            message: 'Matching completed successfully.',
+            message: 'Matching and Application completed successfully.',
             matchScore: score,
             matchReasons: reasons,
         });

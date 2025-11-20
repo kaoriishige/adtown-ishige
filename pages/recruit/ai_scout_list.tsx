@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
-// import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-// import { getAuth } from 'firebase/auth';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+} from 'firebase/firestore';
+import { db, auth } from "@/lib/firebase-client"; 
+import { User } from 'firebase/auth';
+import Head from 'next/head';
+import Link from 'next/link'; // 👈 Linkコンポーネントをインポート
+import { RiArrowLeftLine } from 'react-icons/ri'; // 👈 アイコンをインポート
 
-// 実際のFirebaseインスタンスをインポート/取得する必要があります
-// import { db, auth } from '../../lib/firebase';
+// --- 型定義 ---
 
-// 候補者のデータ型（サンプル）
 interface Candidate {
-  id: string;
+  id: string; // candidateUid
   name: string;
-  matchScore: number; // AIによるマッチ度
-  profileSummary: string;
-  lastLogin: string;
-  tags: string[];
+  matchScore: number; // AIによるマッチ度 (scoutsコレクションから)
+  profileSummary: string; // userProfilesコレクションから
+  lastLogin: string; // userProfilesコレクションから (表示用に文字列化)
+  tags: string[]; // userProfilesコレクションから (skillsを想定)
 }
 
 // 候補者カード コンポーネント
@@ -52,69 +60,129 @@ const CandidateCard: React.FC<{ candidate: Candidate }> = ({ candidate }) => (
   </div>
 );
 
-// モックデータ（実際はFirestoreなどから取得）
-const MOCK_SCOUT_CANDIDATES: Candidate[] = [
-  { id: 'c001', name: '候補者A (スカウト)', matchScore: 92, profileSummary: 'React, TypeScriptでのフロントエンド開発経験5年。UI/UXデザインにも関心があります。貴社の〇〇プロジェクトに即戦力として貢献できると確信しております。', lastLogin: '3日前', tags: ['React', 'TypeScript', '即戦力'] },
-  { id: 'c002', name: '候補者B (スカウト)', matchScore: 88, profileSummary: 'Ruby on Railsを用いたバックエンド開発が専門。インフラ構築 (AWS) も一任ください。', lastLogin: '1日前', tags: ['Rails', 'AWS', 'Go'] },
-];
-
-const MOCK_POTENTIAL_CANDIDATES: Candidate[] = [
-  { id: 'c003', name: '候補者C (潜在)', matchScore: 85, profileSummary: '未経験からWebデザイナーに転職希望。ポートフォリオを意欲的に作成中。ポテンシャル採用を希望します。', lastLogin: '5時間前', tags: ['Webデザイン', 'Figma', 'ポテンシャル'] },
-  { id: 'c004', name: '候補者D (潜在)', matchScore: 81, profileSummary: '現職は営業ですが、独学でPython (Django) を学習中。データ分析業務に関心があります。', lastLogin: '1週間前', tags: ['Python', 'Django', 'データ分析'] },
-  { id: 'c005', name: '候補者E (潜在)', matchScore: 79, profileSummary: 'Java (Spring) でのSIer経験3年。自社サービス開発企業への転職を検討しています。', lastLogin: '2日前', tags: ['Java', 'Spring', 'SaaS'] },
-];
-
 // タブ切り替えコンポーネント
 const AiScoutListPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'scout' | 'potential'>('scout');
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [recruiterUid, setRecruiterUid] = useState<string | null>(null); // 企業UIDを管理
 
-  // 実際はここで Firestore からデータをフェッチします
+  // 1. 認証状態の監視 (CSRなので必要)
   useEffect(() => {
-    setLoading(true);
-    // 
-    // const fetchCandidates = async () => {
-    //   try {
-    //     // ここで 'scout' か 'potential' に応じて
-    //     // Firestoreへのクエリ (getDocs) を実行します
-    //     // const q = query(collection(db, 'candidates'), where('type', '==', activeTab));
-    //     // const snapshot = await getDocs(q);
-    //     // const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Candidate));
-    //
-    //     // ↓↓↓ モックデータの使用 (2秒待機をシミュレート) ↓↓↓
-    //     await new Promise(resolve => setTimeout(resolve, 500));
-    //     if (activeTab === 'scout') {
-    //       setCandidates(MOCK_SCOUT_CANDIDATES);
-    //     } else {
-    //       setCandidates(MOCK_POTENTIAL_CANDIDATES);
-    //     }
-    //
-    //   } catch (err) {
-    //     console.error("候補者リストの取得に失敗:", err);
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // };
-    // fetchCandidates();
+    const unsubscribe = auth.onAuthStateChanged((user: User | null) => {
+      if (user) {
+        setRecruiterUid(user.uid);
+      } else {
+        setRecruiterUid(null);
+        setLoading(false);
+        setError("認証が必要です。企業アカウントでログインしてください。");
+        // 実際はログインページへのリダイレクト router.push('/recruit/login'); が必要
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-    // モックデータ用の簡易版
-    if (activeTab === 'scout') {
-      setCandidates(MOCK_SCOUT_CANDIDATES);
-    } else {
-      setCandidates(MOCK_POTENTIAL_CANDIDATES);
+  // 2. データフェッチロジック
+  useEffect(() => {
+    // 認証待ちまたは認証失敗時はスキップ
+    if (!recruiterUid) {
+        if (auth.currentUser) setLoading(true); // 認証が完了していない可能性があればローディングを維持
+        return;
     }
-    setLoading(false);
 
-  }, [activeTab]); // activeTab が切り替わるたびにデータを再取得
+    const fetchCandidates = async () => {
+      setLoading(true);
+      setError(null);
+      setCandidates([]);
+
+      try {
+        // --- ステップ1: scouts コレクションからマッチング情報を取得 ---
+        const scoutsQuery = query(
+          collection(db, 'scouts'),
+          where('recruiterUid', '==', recruiterUid),
+          where('type', '==', activeTab) 
+          // 必要に応じて where('status', 'in', ['new', 'viewed']) などを追加
+        );
+        const scoutsSnapshot = await getDocs(scoutsQuery);
+
+        if (scoutsSnapshot.empty) {
+          setCandidates([]);
+          setLoading(false);
+          return;
+        }
+
+        const candidateUids = scoutsSnapshot.docs.map(doc => doc.data().candidateUid as string);
+        
+        // --- ステップ2: userProfiles コレクションから候補者の詳細プロフィールを取得 ---
+        
+        // Firestoreの IN クエリは最大10個の要素に制限されるため、ここでは最初の10件のみ取得
+        // 実運用では、APIルートから一括取得するか、制限を回避するバッチ処理が必要です。
+        const limitedUids = candidateUids.slice(0, 10);
+        
+        const profilesQuery = query(
+          collection(db, 'userProfiles'),
+          where('userId', 'in', limitedUids)
+        );
+        const profilesSnapshot = await getDocs(profilesQuery);
+
+        const profilesMap = new Map<string, any>();
+        profilesSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            profilesMap.set(doc.id, {
+                name: data.name || '名前なし',
+                profileSummary: data.profileSummary || '概要なし',
+                // FirestoreのTimestamp型を文字列に変換 (toLocaleDateStringは簡易版)
+                lastLogin: data.lastLogin instanceof Timestamp 
+                           ? data.lastLogin.toDate().toLocaleDateString('ja-JP') 
+                           : '不明',
+                tags: Array.isArray(data.skills) ? data.skills : [], // Firestoreのフィールド名を 'skills' と仮定
+            });
+        });
+
+        // --- ステップ3: データを結合して Candidates リストを作成 ---
+        const mergedCandidates: Candidate[] = scoutsSnapshot.docs
+            .filter(doc => profilesMap.has(doc.data().candidateUid)) // プロファイルが存在するもののみ
+            .map(doc => {
+                const scoutData = doc.data();
+                const profileData = profilesMap.get(scoutData.candidateUid);
+
+                return {
+                    id: scoutData.candidateUid,
+                    name: profileData.name,
+                    matchScore: scoutData.matchScore || 0, // スカウト情報から取得
+                    profileSummary: profileData.profileSummary,
+                    lastLogin: profileData.lastLogin,
+                    tags: profileData.tags,
+                } as Candidate;
+            });
+        
+        setCandidates(mergedCandidates);
+
+      } catch (err) {
+        console.error("候補者リストの取得に失敗:", err);
+        setError("データの読み込み中にエラーが発生しました。詳細はコンソールを確認してください。");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCandidates();
+
+  }, [activeTab, recruiterUid]); // activeTab または認証済みUIDが変更されるたびにデータを再取得
+
 
   const renderContent = () => {
+    if (error) {
+        return <div className="text-center py-10 text-red-600 font-semibold">エラー: {error}</div>;
+    }
+
     if (loading) {
       return <div className="text-center py-10 text-gray-600">候補者リストを読み込み中...</div>;
     }
 
     if (candidates.length === 0) {
-      return <div className="text-center py-10 text-gray-600">該当する候補者が見つかりません。</div>;
+      return <div className="text-center py-10 text-gray-600">現在、{activeTab === 'scout' ? 'スカウト済み' : '潜在'}候補者はいません。</div>;
     }
 
     return (
@@ -128,7 +196,19 @@ const AiScoutListPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-6">AIマッチング 候補者リスト</h1>
+        <Head>
+            <title>AIマッチング 候補者リスト</title>
+        </Head>
+        
+        {/* ★★★ 追加された「ダッシュボードに戻る」リンク ★★★ */}
+        <Link
+          href="/recruit/dashboard"
+          className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-semibold mb-6"
+        >
+          <RiArrowLeftLine className="w-4 h-4 mr-2" /> ダッシュボードに戻る
+        </Link>
+
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-6">AIマッチング 候補者リスト</h1>
 
       {/* タブ */}
       <div className="mb-6">
@@ -142,7 +222,7 @@ const AiScoutListPage: React.FC = () => {
                   : 'hover:text-gray-600 hover:border-gray-300'
               }`}
             >
-              AIスカウト候補者 ( {MOCK_SCOUT_CANDIDATES.length} )
+              AIスカウト候補者 ({candidates.length})
             </button>
           </li>
           <li>
@@ -154,7 +234,7 @@ const AiScoutListPage: React.FC = () => {
                   : 'hover:text-gray-600 hover:border-gray-300'
               }`}
             >
-              AI厳選の潜在候補者 ( {MOCK_POTENTIAL_CANDIDATES.length} )
+              AI厳選の潜在候補者 ({candidates.length})
             </button>
           </li>
         </ul>

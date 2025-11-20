@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 // Firebaseのインポート
 // パスの修正が必要な場合は、環境に合わせて調整してください
-import { db, auth } from '../../../lib/firebase'; 
+import { db, auth } from "@/lib/firebase-client";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import {
     collection, query, where, getDocs, DocumentData, Firestore

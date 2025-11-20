@@ -2,13 +2,13 @@ import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { useState, useEffect } from 'react';
-import {
+import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { // RiSendPlaneLine が以前のコードにインポートされていなかったので追加
   RiLightbulbFlashLine,
   RiArrowLeftLine,
   RiLoader4Line,
   RiErrorWarningLine,
-  RiSendPlaneLine
+  RiSendPlaneLine, // 👈 追加
 } from 'react-icons/ri';
 import nookies from 'nookies';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
@@ -61,13 +61,26 @@ interface AdvicePageProps {
   error?: string;
 }
 
+// 👈 新しいチャットメッセージの型定義を追加
+interface ChatMessage {
+  id: number;
+  role: 'user' | 'ai';
+  content: string;
+}
+
 // ----------------------------------------------------------------
 // --- サーバーサイド認証とデータ取得 ---
 // ----------------------------------------------------------------
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getServerSideProps: GetServerSideProps<AdvicePageProps> = async (context) => {
   try {
     const cookies = nookies.get(context);
-    const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
+    // セッションクッキーがない場合を考慮
+    const sessionCookie = cookies.session || '';
+    if (!sessionCookie) {
+         return { redirect: { destination: '/recruit/subscribe_plan', permanent: false } };
+    }
+    
+    const token = await adminAuth.verifySessionCookie(sessionCookie, true);
     const { uid } = token;
 
     const userSnap = await adminDb.collection('users').doc(uid).get();
@@ -115,6 +128,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   } catch (error) {
     console.error('Error in getServerSideProps (advice):', error);
+    // エラー発生時は購読プランページにリダイレクト
     return { redirect: { destination: '/recruit/subscribe_plan', permanent: false } };
   }
 };
@@ -140,12 +154,19 @@ const fetchAdvice = async (recruitmentData: Recruitment): Promise<AdviceData> =>
 // ----------------------------------------------------------------
 // --- ページコンポーネント ---
 // ----------------------------------------------------------------
+// NextPage と Props の型指定を修正
 const AdvicePage: NextPage<AdvicePageProps> = ({ isPaid, companyName, recruitments, error }) => {
+  // useRouter, useState, useEffect をインポートしたのでエラー解消
   const router = useRouter();
   const [selectedRecruitment, setSelectedRecruitment] = useState<Recruitment | null>(null);
   const [advice, setAdvice] = useState<AdviceData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [requestError, setRequestError] = useState<string | null>(error || null);
+
+  // AIコンサルティング用 State
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isPaid) {
@@ -166,12 +187,72 @@ const AdvicePage: NextPage<AdvicePageProps> = ({ isPaid, companyName, recruitmen
     try {
       const result = await fetchAdvice(selectedRecruitment);
       setAdvice(result);
+      // 分析完了時にチャット履歴をリセット
+      setChatMessages([]); 
     } catch (e: any) {
       setRequestError(e.message || 'AIとの通信中にエラーが発生しました。');
     } finally {
       setLoading(false);
     }
   };
+
+  // ----------------------------------------------------------------
+  // --- AIチャットアドバイス API呼び出し ---
+  // ----------------------------------------------------------------
+  const sendChatMessage = async (message: string) => {
+    if (!selectedRecruitment) {
+      setRequestError('分析対象の求人を選択してからチャットを開始してください。');
+      return;
+    }
+
+    const newMessage: ChatMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: message,
+    };
+
+    setChatMessages((prev) => [...prev, newMessage]); // 👈 'prev' の型推論は ChatMessage[]
+    setChatLoading(true);
+
+    try {
+      // /api/recruit/ai-chat は Next.js の API Route として別途実装が必要です
+      const response = await fetch('/api/recruit/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentRecruitment: selectedRecruitment,
+          // 履歴は直前のユーザーメッセージを含めて送信
+          history: [...chatMessages, newMessage], 
+          prompt: message,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('AIチャット応答の取得に失敗しました。サーバー側のログを確認してください。');
+      }
+
+      const data = await response.json();
+      const aiResponseContent = data.response as string;
+
+      setChatMessages((prev) => [ // 👈 'prev' の型推論は ChatMessage[]
+        ...prev,
+        { id: Date.now() + 1, role: 'ai', content: aiResponseContent },
+      ]);
+    } catch (e: any) {
+      setRequestError(e.message || 'AIチャットとの通信中にエラーが発生しました。');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleChatSubmit = (e: FormEvent) => { // FormEvent の型指定を修正
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+    sendChatMessage(chatInput.trim());
+    setChatInput('');
+  };
+  // ----------------------------------------------------------------
+
 
   if (error) {
     return (
@@ -193,7 +274,7 @@ const AdvicePage: NextPage<AdvicePageProps> = ({ isPaid, companyName, recruitmen
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      <Head>
+      <Head> {/* 👈 Head をインポートしたのでエラー解消 */}
         <title>AI求人アドバイス ({companyName})</title>
       </Head>
 
@@ -230,12 +311,13 @@ const AdvicePage: NextPage<AdvicePageProps> = ({ isPaid, companyName, recruitmen
               <select
                 className="p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                 value={selectedRecruitment?.id || ''}
-                onChange={(e) => {
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => { // ChangeEvent の型指定を修正
                   const id = e.target.value;
                   const rec = recruitments.find((r) => r.id === id);
                   setSelectedRecruitment(rec || null);
                   setAdvice(null);
                   setRequestError(null);
+                  setChatMessages([]); // 求人変更時もチャットリセット
                 }}
               >
                 <option value="" disabled>
@@ -289,7 +371,7 @@ const AdvicePage: NextPage<AdvicePageProps> = ({ isPaid, companyName, recruitmen
               <h3 className="text-xl font-bold text-indigo-700 mb-3">スコア情報</h3>
               <p className="text-gray-800 text-lg font-semibold">
                 総合評価：<span className="text-indigo-600">{advice.scoreLevel}</span>
-                （リスクスコア：{advice.riskScore}/100
+                （リスクスコア：{advice.riskScore}/100）
               </p>
               <p className="mt-2 text-gray-700">{advice.scoreMeaning}</p>
 
@@ -342,6 +424,77 @@ const AdvicePage: NextPage<AdvicePageProps> = ({ isPaid, companyName, recruitmen
                 </p>
               </div>
             )}
+            
+            {/* ---------------------------------------------------------------- */}
+            {/* ★★★ AIコンサルティングチャットセクション ★★★ */}
+            {/* ---------------------------------------------------------------- */}
+            <div className="bg-white p-6 rounded-xl shadow-2xl border-2 border-indigo-500 mt-10">
+              <h2 className="text-2xl font-extrabold text-indigo-700 mb-4 flex items-center">
+                <RiSendPlaneLine className="mr-2 w-6 h-6" /> AIチャットコンサルティング
+              </h2>
+              <p className="text-sm text-gray-600 mb-4">
+                特定の項目に関する質問や、さらに踏み込んだ改善アイデアをAIに尋ねることができます。
+              </p>
+
+              {/* チャット履歴表示 */}
+              <div className="h-64 overflow-y-auto border border-gray-200 p-3 rounded-lg bg-gray-50 mb-4 space-y-3">
+                {chatMessages.length === 0 ? (
+                  <div className="text-center text-gray-500 py-4">
+                    まずは下の入力欄から質問を送信してください。
+                  </div>
+                ) : (
+                  chatMessages.map((msg) => ( // 👈 'msg' の型推論は ChatMessage
+                    <div
+                      key={msg.id}
+                      className={`flex ${
+                        msg.role === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      <div
+                        className={`max-w-3/4 p-3 rounded-xl shadow-sm ${
+                          msg.role === 'user'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-200 text-gray-800'
+                        } whitespace-pre-wrap text-sm`}
+                      >
+                        <strong className="font-bold">
+                          {msg.role === 'user' ? 'あなた' : 'AIコンサルタント'}
+                        </strong>
+                        <div className="mt-1">{msg.content}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="p-3 bg-gray-200 text-gray-800 rounded-xl shadow-sm flex items-center">
+                      <RiLoader4Line className="animate-spin mr-2" /> AIが考え中...
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* チャット入力フォーム */}
+              <form onSubmit={handleChatSubmit} className="flex space-x-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setChatInput(e.target.value)} // ChangeEvent の型指定を修正
+                  placeholder="AIに質問を入力してください..."
+                  className="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                  disabled={chatLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={!chatInput.trim() || chatLoading}
+                  className="px-4 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
+                >
+                  <RiSendPlaneLine size={20} />
+                </button>
+              </form>
+            </div>
+            {/* ---------------------------------------------------------------- */}
+
           </div>
         )}
       </main>

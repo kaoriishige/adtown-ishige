@@ -31,7 +31,7 @@ export default async function deleteApplication(req: NextApiRequest, res: NextAp
 
         const applicantData = applicantSnap.data();
 
-        // 4. セキュリティチェック
+        // 4. セキュリティチェック: 応募の持ち主であることを確認
         if (applicantData?.userUid !== currentUserUid) {
             return res.status(403).json({ error: 'Forbidden: You do not own this application.' });
         }
@@ -45,9 +45,9 @@ export default async function deleteApplication(req: NextApiRequest, res: NextAp
         // (A) 'applicants' ドキュメントを削除
         batch.delete(applicantRef);
 
-        // (B) 'matchResults' ドキュメントも削除
+        // (B) 対応する 'matchResults' ドキュメントを削除
         if (recruitmentId) {
-            // 'initiateApply.ts' で設定した複合ID
+            // 'matchResults' ドキュメントは通常、複合ID (userUid_recruitmentId) を使用
             const matchResultId = `${currentUserUid}_${recruitmentId}`;
             const matchResultRef = adminDb.collection('matchResults').doc(matchResultId);
             batch.delete(matchResultRef);
