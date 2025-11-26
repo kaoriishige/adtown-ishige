@@ -13,13 +13,12 @@ import {
   RiBriefcase4Line, 
   RiHealthBookLine, 
   RiLogoutBoxRLine,
-  RiCloudLine, // 天気アイコン
 } from 'react-icons/ri';
 import { IoSparklesSharp } from 'react-icons/io5'; 
 
-// Firebaseクライアント側のインポート (エラー解消済み前提)
+// Firebaseクライアント側のインポート
 import { getAuth, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase-client'; // ★ lib/firebase-client に修正済み
+import { app } from '@/lib/firebase-client'; 
 
 interface HomePageProps {
   user: {
@@ -40,6 +39,10 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false); 
 
+  // ★ 変更: 2026年1月1日を基準日として設定
+  const FUTURE_ACCESS_DATE = new Date('2026-01-01T00:00:00');
+  const isFutureAccessEnabled = new Date() >= FUTURE_ACCESS_DATE;
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     const auth = getAuth(app); 
@@ -53,52 +56,66 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
     }
   };
 
-
   const emergencyContacts: EmergencyContact[] = [
     { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/', },
     { name: '救急安心センター', number: '#7119', description: '急な病気やケガで救急車を呼ぶか迷った時', url: 'https://www.fdma.go.jp/publication/portal/post2.html', },
-    { name: '休日夜間急患診療所', description: '那須塩原市の休日・夜間の急病', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/kyukyu_kyumei/1/3340.html', },
-    { name: '大田原市の休日・夜間の急病', description: '大田原市の休日・夜間の急病', url: 'https://www.city.ohtawara.tochigi.jp/docs/2013082771612/', },
-    { name: '那須町の休日・夜間の急病', description: '那須町の休日・夜間の急病', url: 'https://www.town.nasu.lg.jp/0130/info-0000003505-1.html', },
+    { name: '那須塩原市の休日当番医', description: '那須塩原市の休日・夜間の急病', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/kyukyu_kyumei/1/3340.html', },
+    { name: '大田原市の休日当番医', description: '大田原市の休日・夜間の急病', url: 'https://www.city.ohtawara.tochigi.jp/docs/2013082771612/', },
+    { name: '那須町の休日当番医', description: '那須町の休日・夜間の急病', url: 'https://www.town.nasu.lg.jp/0130/info-0000003505-1.html', },
     { name: '水道のトラブル 緊急対応 (有)クリプトン', number: '090-2463-6638', description: '地元で40年 有限会社クリプトン', url: 'https://xn--bbkyao7065bpyck41as89d.com/emergency/', },
   ];
 
-  // ▼▼▼ ナビゲーションボタンリスト (天気ボタンは削除) ▼▼▼
+  // ▼▼▼ メインナビゲーションボタンリスト (地域活動掲示板を削除) ▼▼▼
   const mainNavButtons = [
+    // {
+    //   title: '地域活動掲示板',
+    //   description: 'ボランティア・イベント・互助の仲間募集',
+    //   href: '/projects',
+    //   Icon: RiHandHeartFill,
+    //   gradient: 'bg-gradient-to-r from-amber-500 to-yellow-600',
+    //   status: 'free',
+    // },
     {
       title: '店舗マッチングAI',
-      description: 'あなたの興味のあるお店を探します!!',
-      href: '/search-dashboard', 
-      Icon: IoSparklesSharp, 
+      description: 'あなたの興味のあるお店を探します!! (2026.1～ 利用開始)', // ★ 変更
+      href: '/search-dashboard',
+      Icon: IoSparklesSharp,
       gradient: 'bg-gradient-to-r from-blue-500 to-cyan-600',
+      status: isFutureAccessEnabled ? 'free' : 'coming_soon', // 2026.1以降は利用可
+      disabled: !isFutureAccessEnabled,
     },
     {
       title: '求人マッチングAI',
-      description: 'あなたの働きたい会社を探します!!',
-      href: '/users/dashboard', 
-      Icon: RiBriefcase4Line, 
+      description: 'あなたの働きたい会社を探します!! (2026.1～ 利用開始)', // ★ 変更
+      href: '/users/dashboard',
+      Icon: RiBriefcase4Line,
       gradient: 'bg-gradient-to-r from-green-500 to-teal-600',
+      status: isFutureAccessEnabled ? 'free' : 'coming_soon', // 2026.1以降は利用可
+      disabled: !isFutureAccessEnabled,
     },
     {
       title: 'スーパー特売価格.com',
       description: '特売チラシの価格比較で節約!!',
-      href: '/nasu/kondate', 
-      Icon: RiShoppingBagLine, 
+      href: '/nasu/kondate',
+      Icon: RiShoppingBagLine,
       gradient: 'bg-gradient-to-r from-yellow-400 to-orange-500',
+      status: 'free',
     },
     {
       title: 'ドラッグストア特売価格.com',
       description: '特売チラシの価格比較で節約!!',
-      href: '/nasu', 
-      Icon: RiHealthBookLine, 
+      href: '/nasu',
+      Icon: RiHealthBookLine,
       gradient: 'bg-gradient-to-r from-purple-500 to-pink-600',
+      status: 'free',
     },
     {
       title: 'アプリのカテゴリからチェック!!',
       description: 'すべてのアプリ・機能を見る', 
-      href: '/apps/categories', 
-      Icon: RiLayoutGridFill, 
+      href: '/apps/categories',
+      Icon: RiLayoutGridFill,
       gradient: 'bg-gradient-to-r from-cyan-500 to-blue-500',
+      status: 'free',
     }
   ];
   // ▲▲▲ ここまで ▲▲▲
@@ -127,43 +144,33 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             {/* ▼▼▼ メインナビゲーションボタンセクション ▼▼▼ */}
             <section className="space-y-4">
               {mainNavButtons.map((item) => (
-                <Link key={item.title} href={item.href} legacyBehavior>
-                  <a className={`block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 text-white ${item.gradient}`}>
-                    <div className="flex items-center">
-                      <item.Icon className="text-4xl mr-4 flex-shrink-0" />
-                      <div>
-                        <h2 className="font-bold text-lg">{item.title}</h2>
-                        {item.description && (
-                          <p className="text-sm mt-1 opacity-90">{item.description}</p>
-                        )}
+                <div key={item.title}>
+                  <Link 
+                    href={item.disabled ? '#' : item.href} 
+                    legacyBehavior
+                  >
+                    <a className={`block p-5 rounded-xl shadow-md transition transform text-white ${item.gradient} 
+                      ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'}`}
+                      onClick={(e) => { if (item.disabled) e.preventDefault(); }}
+                    >
+                      <div className="flex items-center">
+                        <item.Icon className="text-4xl mr-4 flex-shrink-0" />
+                        <div>
+                          <h2 className="font-bold text-lg">{item.title}</h2>
+                          {item.description && (
+                            <p className="text-sm mt-1 opacity-90">{item.description}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </a>
-                </Link>
+                    </a>
+                  </Link>
+                </div>
               ))}
             </section>
             {/* ▲▲▲ カテゴリセクションここまで ▲▲▲ */}
             
-            {/* ★★★ 天気予報・警報ボタンをカテゴリの下に追加 ★★★ */}
-            <section>
-                <Link href="/weather" legacyBehavior>
-                    <a className="block p-5 rounded-xl shadow-md transition transform hover:-translate-y-1 text-white bg-gradient-to-r from-indigo-500 to-sky-600">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                <RiCloudLine className="text-4xl mr-4 flex-shrink-0" />
-                                <div>
-                                    <h2 className="font-bold text-lg">天気予報・警報</h2>
-                                    <p className="text-sm mt-1 opacity-90">那須地域の最新の気象情報と防災情報</p>
-                                </div>
-                            </div>
-                            <RiAlarmWarningLine className="text-2xl" />
-                        </div>
-                    </a>
-                </Link>
-            </section>
-            {/* ★★★ ここまで ★★★ */}
-
-
+            {/* ▼▼▼ 天気予報・警報ボタンは既に削除済み ▼▼▼ */}
+            
             <section className="bg-white p-6 rounded-xl shadow-md border-2 border-yellow-400">
               <h2 className="text-xl font-bold text-gray-800 text-center mb-2">
                 限定機能で、年間<span className="text-red-600">9.3万円</span>以上がお得に！
@@ -172,10 +179,11 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 プレミアムプランにアップグレードして、全ての節約機能を利用しましょう。
               </p>
               <button
-                onClick={() => router.push('/subscribe')}
-                className="w-full text-center p-4 rounded-xl shadow-md transition transform hover:-translate-y-1 bg-gradient-to-r from-red-500 to-orange-500 text-white"
+                // 有料ボタンを準備中でクリック不可にする
+                disabled={true} 
+                className="w-full text-center p-4 rounded-xl shadow-md transition transform bg-gray-300 text-gray-600 cursor-not-allowed"
               >
-                <span className="font-bold text-lg">月額480円で全ての機能を見る</span>
+                <span className="font-bold text-lg">月額480円プラン (準備中)</span>
               </button>
             </section>
 

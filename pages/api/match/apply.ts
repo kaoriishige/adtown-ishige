@@ -1,18 +1,31 @@
 /**
  * pages/api/match/apply.ts: APIエンドポイントハンドラー (単一求人への応募とマッチング結果の保存)
- * - 応募とマッチング結果の両方をFirestoreにバッチ保存
+ * * - 応募ボタン押下時に呼び出される。
+ * - matchResults と applicants の両方にデータを保存（バッチ処理）。
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { adminDb, adminAuth } from '@/lib/firebase-admin'; // Firestore Admin SDK
 import { FieldValue } from 'firebase-admin/firestore'; // FieldValueを直接インポート
 // 💡 ロジック本体をインポート (プロジェクトのパスに合わせてください)
+// calculateMatchScoreが定義されているファイルパスを使用
 import { calculateMatchScore, UserProfile, Job, CompanyProfile } from '@/lib/ai-matching-engine'; 
 import nookies from 'nookies';
 
 // Note: UserProfile, Job, CompanyProfile の型定義は '@/lib/ai-matching-engine' に依存
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+// 応答の型定義
+type ApplyResponse = {
+    message: string;
+    matchScore: number;
+    matchReasons: string[];
+    error?: string;
+};
+
+export default async function handler(
+    req: NextApiRequest, 
+    res: NextApiResponse<ApplyResponse | { error: string }>
+) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ error: 'Method not allowed' });
@@ -62,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const batch = db.batch();
         const timestamp = FieldValue.serverTimestamp();
 
-        // 5. 'matchResults' コレクションの更新/保存 (ユーザーが求人を見た証拠として保存)
+        // 5. 'matchResults' コレクションの更新/保存
         const matchResultId = `${currentUserUid}_${job.id}`;
         const matchResultRef = db.collection('matchResults').doc(matchResultId);
         
@@ -73,7 +86,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             score,
             reasons,
             updatedAt: timestamp,
-            // 既存のCreatedAtを保持
         }, { merge: true });
         
         // 6. 'applicants' コレクションへの書き込み（応募履歴の作成）
@@ -90,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 recruitmentId: job.id,
                 companyUid: companyUid,
                 
-                status: 'applied', // 初期ステータス
+                status: 'applied', // 企業審査中
                 matchStatus: 'applied',
                 
                 jobTitle: job.jobTitle || 'タイトル不明', 

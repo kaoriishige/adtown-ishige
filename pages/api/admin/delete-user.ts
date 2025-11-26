@@ -1,44 +1,63 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import nookies from 'nookies';
 
-// NOTE: このAPIは、adminユーザーの認証チェックを別途行う必要があります。
-
-export default async function handler(
-    req: NextApiRequest,
-    res: NextApiResponse
-) {
+/**
+ * ユーザーの認証情報とFirestoreデータを削除するAPIハンドラ
+ * * @param req リクエスト (POSTメソッド, bodyに { uid: string } を含む)
+ * @param res レスポンス
+ */
+export default async function handler(req: NextApiRequest, res: NextApiResponse<{ success: boolean; error?: string }>) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
-        return res.status(405).end('Method Not Allowed');
+        return res.status(405).json({ success: false, error: 'Method Not Allowed' });
     }
 
-    // 💡 認証ガードを省略 (開発モード) 💡
-    // 本番環境では、ここで管理者の認証を確認する処理が必要です。
-
-    const { uid } = req.body;
-
-    if (!uid) {
-        return res.status(400).json({ error: 'UID is required.' });
-    }
+    // 🚨 注意: 本番環境では、ここで管理者の認証とロールチェックが必要です。
+    // 例:
+    // try {
+    //     const cookies = nookies.get({ req });
+    //     const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
+    //     const userDoc = await adminDb.collection('users').doc(token.uid).get();
+    //     if (userDoc.data()?.role !== 'admin') throw new Error('Forbidden: Not an admin');
+    // } catch (error) {
+    //     return res.status(403).json({ success: false, error: 'Forbidden: Authentication required.' });
+    // }
 
     try {
-        // 1. Firestore のユーザーデータを削除 (またはソフト削除)
-        // ここでは、関連データのクリーンアップまたはソフト削除を行うべきです。
-        // 例: 完全に削除する場合
-        await adminDb.collection('users').doc(uid).delete();
-        
-        // 2. Firebase Auth からユーザーを削除
-        await adminAuth.deleteUser(uid);
-
-        console.log(`Successfully deleted user: ${uid} and their Firestore data.`);
-        
-        return res.status(200).json({ success: true, message: `User ${uid} deleted successfully.` });
-
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        if (error instanceof Error && 'code' in error && error.code === 'auth/user-not-found') {
-            return res.status(404).json({ error: 'User not found in Firebase Auth.' });
+        const { uid } = req.body;
+        if (!uid) {
+            return res.status(400).json({ success: false, error: 'User UID is required.' });
         }
-        return res.status(500).json({ error: 'Failed to delete user account.' });
+
+        const db = adminDb;
+        const batch = db.batch();
+
+        // 1. Firebase Authentication からユーザーを削除
+        await adminAuth.deleteUser(uid);
+        
+        // 2. Firestore から関連データを削除 (バッチ処理)
+        
+        // userProfiles ドキュメントをバッチに追加
+        const profileRef = db.collection('userProfiles').doc(uid);
+        batch.delete(profileRef);
+
+        // users コレクションのユーザーロール情報 (もしあれば)
+        const userRef = db.collection('users').doc(uid);
+        batch.delete(userRef);
+
+        // ※ 応募履歴 (applicants), マッチング結果 (matchResults) など、
+        // 他の関連コレクションのドキュメントもここで削除することが推奨されます。
+        // ただし、コレクション全体をバッチで削除できないため、
+        // クエリで検索し、ループで参照を追加する必要があります。
+
+        // 3. バッチコミット
+        await batch.commit();
+
+        return res.status(200).json({ success: true });
+    } catch (e: any) {
+        console.error('Admin user deletion error:', e);
+        // Firebase Auth のエラー (例: ユーザーが見つからないなど) もここで処理
+        return res.status(500).json({ success: false, error: e.message || 'Internal server error during deletion.' });
     }
 }

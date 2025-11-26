@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth'; // signOut を Auth から直接インポート
-import { app } from '@/lib/firebase-client'; // 👈 app を client ファイルからインポートするように修正
+import { app } from '@/lib/firebase-client'; // Firebaseクライアントアプリインスタンスをインポート
 import Link from 'next/link';
 import Head from 'next/head';
 import {
@@ -8,7 +8,7 @@ import {
     RiArrowRightLine, RiHandHeartLine,
     RiUser6Line, RiBriefcase4Line, RiMoneyDollarCircleLine, RiMapPinLine,
     RiTimerLine, RiCheckLine, RiCloseLine, RiSparkling2Line, RiEditBoxLine,
-    RiDeleteBinLine // 削除アイコン
+    RiDeleteBinLine 
 } from 'react-icons/ri';
 import { GetServerSideProps, NextPage } from 'next';
 import { adminDb, adminAuth } from '@/lib/firebase-admin';
@@ -18,7 +18,7 @@ import { useRouter } from 'next/router';
 import React from 'react';
 import { Loader2 } from 'lucide-react'; 
 
-// --- 型定義 (変更なし) ---
+// --- 型定義 ---
 interface DetailedMatchJob {
     matchId: string; 
     recruitmentId: string;
@@ -57,7 +57,7 @@ interface UserDashboardProps {
     userProfileData: any; 
 }
 
-// --- UIコンポーネント (変更なし) ---
+// --- UIコンポーネント ---
 const DashboardCard = ({ href, icon, title, description, color }: { href: string; icon: React.ReactNode; title: string; description: string; color: 'indigo' | 'green' | 'red' | 'yellow' | 'purple' | 'blue'; }) => {
     const colorMap: any = {
         indigo: 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200',
@@ -179,8 +179,7 @@ const MatchingGuideModal = ({ onClose }: { onClose: () => void }) => {
 };
 
 
-// --- getServerSideProps (変更なし) ---
-// 応募履歴(history)に 'id' (応募ドキュメントID) を含めるよう修正済み
+// --- getServerSideProps ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
     
     const db = adminDb; 
@@ -218,6 +217,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         defaultProps.userName = profileData?.name || 'ゲスト';
         defaultProps.userProfileData = cleanedProfileData;
 
+        // プロフィール必須項目のチェック
         const hasDesiredJobTypes = Array.isArray(profileData?.desiredJobTypes) && profileData.desiredJobTypes.length > 0;
         const hasSkills = !!profileData?.skills && String(profileData.skills).trim() !== '';
         const salaryMax = profileData?.desiredSalaryMax;
@@ -231,41 +231,52 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             return { props: defaultProps };
         }
 
+        // --- ステップ 1: 応募履歴の取得と応募済みIDの特定 ---
+        const historyQuerySnap = await db.collection('applicants')
+            .where('userUid', '==', currentUserUid) 
+            .get(); 
+
+        const historyList: ApplicationHistory[] = [];
+        const summary = { applied: 0, accepted: 0, rejected: 0, agreed: 0 };
+        const uniqueRecruitmentIds = new Set<string>(); 
+        const appliedJobIds = new Set<string>(); // 応募済みのJobIdのみを格納
+
+        historyQuerySnap.docs.forEach(doc => {
+            const data = doc.data();
+            const recruitmentId = data.recruitmentId;
+            if (recruitmentId) {
+                uniqueRecruitmentIds.add(recruitmentId);
+                appliedJobIds.add(recruitmentId); // 応募済みとして記録
+            }
+        });
+        
+        // --- ステップ 2: AIマッチング結果の取得と応募済み除外 ---
+        
         const rawMatchQuery = db.collection('matchResults')
             .where('userUid', '==', currentUserUid)
             .orderBy('score', 'desc')
             .limit(5); 
         
         const matchSnap = await rawMatchQuery.get();
-        const rawMatches = matchSnap.docs.map((d) => ({
-            ...d.data(),
-            matchId: d.id,
-            recruitmentId: d.data().jobId, 
-            score: d.data().score,
-            reasons: d.data().matchReasons || [],
-            companyUid: d.data().companyUid, 
-        }));
-
-        const uniqueRecruitmentIds = new Set<string>();
+        
+        // ★★★ 修正箇所 ★★★: 応募済み求人IDをmatchesリストから除外
+        const rawMatches = matchSnap.docs
+            .map((d) => ({
+                ...d.data(),
+                matchId: d.id,
+                recruitmentId: d.data().jobId, 
+                score: d.data().score,
+                reasons: d.data().matchReasons || [],
+                companyUid: d.data().companyUid, 
+            }))
+            .filter(m => !appliedJobIds.has(m.recruitmentId)); // 応募済みIDを除外
+            
         rawMatches.forEach(m => {
             if (m.recruitmentId) {
                 uniqueRecruitmentIds.add(m.recruitmentId);
             }
         });
 
-        // 応募履歴の取得 ('applicants' と 'userUid' に修正済み)
-        const historyQuerySnap = await db.collection('applicants')
-            .where('userUid', '==', currentUserUid) 
-            .get(); 
-        
-        const historyList: ApplicationHistory[] = [];
-        const summary = { applied: 0, accepted: 0, rejected: 0, agreed: 0 };
-        
-        historyQuerySnap.docs.forEach(doc => {
-            if (doc.data().recruitmentId) {
-                uniqueRecruitmentIds.add(doc.data().recruitmentId);
-            }
-        });
         const recruitmentIds = Array.from(uniqueRecruitmentIds);
 
         // 関連する求人情報と企業情報を結合
@@ -296,13 +307,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                    companySnap.docs.forEach(doc => {
                        if (doc.exists && doc.data()) {
                            companyMap.set(doc.id, doc.data());
-                           companyMap.set(doc.id, doc.data());
                        }
                    });
               }
             }
         
-        // マッチングデータの構築
+        // マッチングデータの構築 (応募済み除外後のリストを使用)
         const detailedMatches: DetailedMatchJob[] = rawMatches.reduce((acc: DetailedMatchJob[], raw) => {
             const job = recruitmentMap.get(raw.recruitmentId);
             if (!job) return acc; 
@@ -325,7 +335,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             return acc;
         }, []); 
         
-        defaultProps.matches = detailedMatches;
+        defaultProps.matches = detailedMatches; // 応募済みを除外したマッチングリスト
 
         // 応募履歴データの構築
         for (const doc of historyQuerySnap.docs) {
@@ -398,7 +408,8 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
     } = props;
 
     const router = useRouter();
-    const auth = getAuth(app);
+    // 💡 app がないため getAuth() の引数を削除
+    const auth = getAuth();
     const [loading, setLoading] = useState(true);
     
     // 応募/削除のローディング状態を管理
@@ -442,6 +453,7 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
         }
 
         try {
+            // /api/match は単一応募API
             const response = await fetch('/api/match', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -459,7 +471,6 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
             }
             
             // 応募が成功したら、マッチング結果からその求人を削除（見送り）する
-            // ユーザーは応募した求人をマッチリストから除外したいはず
             const matchToDelete = matches.find(m => m.recruitmentId === jobId)?.matchId;
             if (matchToDelete) {
                 // 応募成功後の削除は非同期で実行し、待機しない (UXのため)
@@ -473,6 +484,8 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
 
             const score = data.matchScore || 'N/A';
             setApplyMessage(`✅ 応募完了！スコア: ${score}点。応募履歴を確認してください。`);
+            
+            // 強制的にサーバーサイドレンダリングを再実行し、最新のデータを取得
             router.replace(router.asPath); 
         } catch (error: any) {
             setApplyMessage(`❌ 応募処理エラー: ${error.message}`); 
@@ -622,7 +635,7 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
 
             <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
                 
-                {/* 1. 応募状況サマリーとアクション (変更なし) */}
+                {/* 1. 応募状況サマリーとアクション */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">1. 応募状況サマリーとアクション</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
@@ -695,7 +708,7 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
                 
                 <hr className="my-8" />
                 
-                {/* 2. AIによるマッチング求人 (削除ボタン追加) */}
+                {/* 2. AIによるマッチング求人 (応募済みが除外されたリスト) */}
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. AIによるマッチング求人 ({matches.length}件)</h2>
                     {/* ★★★ 応募/削除メッセージはここに統合 ★★★ */}

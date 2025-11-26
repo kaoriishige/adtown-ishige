@@ -239,8 +239,12 @@ const UserProfilePage = () => {
         setApplyMessage(null);
         
         try {
+            // プロフィール保存後のリダイレクト処理のみを行う
+            // alert() は非推奨だが、以前のコードを踏襲して利用
             alert(`✅ プロフィールを保存しました。AI推薦求人を確認するため、ダッシュボードに移動します。`);
-            router.push('/users/dashboard');
+            
+            // router.replaceを使用して、ダッシュボードのgetServerSidePropsを強制的に再実行させる
+            router.replace('/users/dashboard', undefined, { shallow: false }); 
              
         } catch (e: any) {
              // エラーハンドリング (通常は到達しない)

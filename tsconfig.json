@@ -32,7 +32,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "pages/nasu/kondate.tsx", "pages/nasu/index.tsx"  ],
   "exclude": [
     "node_modules"
   ]

@@ -1,53 +1,37 @@
-// This file is the main company profile editing page for recruiters.
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, FormEvent, ChangeEvent, useMemo, FC } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
 
-// Firebaseの依存関係を直接インポート (エイリアス'@/lib/firebase'を使用せず)
+// Firebaseのインポート
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp, type Firestore } from 'firebase/firestore'; 
+import {
+    getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, 
+    DocumentData, type Firestore 
+} from 'firebase/firestore'; 
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject, type FirebaseStorage } from 'firebase/storage'; 
-import { initializeApp, type FirebaseApp } from 'firebase/app';
 
-// FIX: react-icons/ri を削除し、使用するアイコンをlucide-reactに置き換え
+// 🚨 クライアントサイドのFirebaseインスタンスをインポート
+import { db, storage } from '@/lib/firebase-client'; 
+
+// Lucide Icons (React Iconsの代わり)
 import {
     Loader2, Building, HeartHandshake, Camera, Video, X, ArrowLeft,
     AlertTriangle, Send, CheckSquare, ShieldCheck, ShieldAlert, RefreshCcw, 
     HelpCircle, TrendingUp, Minus, Plus 
 } from 'lucide-react'; 
 
-// RiAlertFill, RiImageEditLine の代替として Lucide Icons を使用
-const RiAlertFill = AlertTriangle;
-const RiImageEditLine = Camera; 
+import { v4 as uuidv4 } from 'uuid'; // UUID generation
 
-// ★★★ FIX: Firebase初期化ロジックを堅牢化 ★★★
-declare let __firebase_config: any;
+// --- 定数 ---
+declare const __app_id: string;
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-let app: FirebaseApp | undefined;
-let db: Firestore | undefined;
-let storage: FirebaseStorage | undefined;
-
-// グローバルスコープでFirebaseサービスを初期化
-try {
-    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-    if (Object.keys(firebaseConfig).length > 0) {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        storage = getStorage(app);
-    } else {
-        console.warn("Firebase config is empty. Firestore and Storage operations may fail.");
-    }
-} catch (e) {
-    console.error("Firebase init error:", e);
-}
-
-
-// --- チェックボックスの選択肢 (企業全体に関するもののみ残す) ---
 const atmosphereOptions = [
     "フラットな社風", "チームワーク重視", "個人主義", "成果主義", "挑戦を歓迎する",
     "落ち着いた雰囲気", "スピード感がある", "オープンなコミュニケーション", "若手が活躍",
     "ベテランが活躍", "男女問わず活躍", "多国籍チーム", "リモート中心", "オフィス出社中心",
     "カジュアルな雰囲気", "フォーマルな雰囲気"
 ];
-
 
 const organizationOptions = [
     "サステナビリティ・社会貢献を重視", "地域密着型の事業を展開",
@@ -57,9 +41,16 @@ const organizationOptions = [
     "社長・経営層と距離が近い", "オープンで透明性のある経営"
 ];
 
-
 // --- 型定義 ---
 type VerificationStatus = 'unverified' | 'pending_review' | 'verified' | 'rejected';
+
+interface AppealPoints {
+    atmosphere: string[];
+    organization: string[];
+    growth?: string[]; 
+    wlb?: string[];
+    benefits?: string[];
+}
 
 interface CompanyProfile {
     companyName: string;
@@ -75,19 +66,43 @@ interface CompanyProfile {
     verificationStatus: VerificationStatus;
     aiFeedback: string;
     minMatchScore: number;
-    appealPoints: {
-        atmosphere: string[];
-        organization: string[];
-        growth?: string[]; 
-        wlb?: string[];
-        benefits?: string[];
-    };
-    // ★ isPaidは状態管理用として必要
+    appealPoints: AppealPoints;
     isPaid: boolean;
 }
 
+// フォームの初期状態を定義
+const DEFAULT_FORM_DATA: CompanyProfile = {
+    companyName: '',
+    address: '',
+    phoneNumber: '',
+    website: '',
+    ourMission: '',
+    whatWeDo: '',
+    ourCulture: '',
+    messageToCandidates: '',
+    galleryImageUrls: [],
+    videoUrl: '',
+    verificationStatus: 'unverified',
+    aiFeedback: '',
+    minMatchScore: 60,
+    appealPoints: {
+        atmosphere: [],
+        organization: [],
+        growth: [], 
+        wlb: [],
+        benefits: []
+    },
+    isPaid: false, 
+};
 
-const CompanyProfilePage = () => {
+
+// ----------------------------------------------------------------------
+// 💡 メインコンポーネント
+// ----------------------------------------------------------------------
+const CompanyProfilePage: FC = () => {
+    const router = useRouter();
+    
+    // Stateの初期化
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -95,110 +110,57 @@ const CompanyProfilePage = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     
-    const [formData, setFormData] = useState<CompanyProfile>({
-        companyName: '',
-        address: '',
-        phoneNumber: '',
-        website: '',
-        ourMission: '',
-        whatWeDo: '',
-        ourCulture: '',
-        messageToCandidates: '',
-        galleryImageUrls: [],
-        videoUrl: '',
-        verificationStatus: 'unverified',
-        aiFeedback: '',
-        minMatchScore: 60,
-        appealPoints: {
-            atmosphere: [],
-            organization: [],
-            growth: [], 
-            wlb: [],
-            benefits: []
-        },
-        isPaid: false, // 初期値
-    });
+    const [formData, setFormData] = useState<CompanyProfile>(DEFAULT_FORM_DATA);
+    
+    // 画像アップロード用 State
+    const [galleryImageFiles, setGalleryImageFiles] = useState<File[]>([]);
+    
+    const isReadyToSubmit = useMemo(() => {
+        // 必須項目チェック
+        return formData.companyName && formData.address && formData.phoneNumber &&
+               formData.ourMission && formData.whatWeDo && formData.ourCulture &&
+               formData.messageToCandidates;
+    }, [formData]);
 
 
-    // --- Firebase認証状態の監視とデータ取得 ---
-    useEffect(() => {
-        // ★★★ FIX: appが初期化されていない場合は処理をスキップ ★★★
-        if (!app) {
-             console.error("Firebase App is not initialized.");
-             setLoading(false);
-             return;
-        }
-        
-        const auth = getAuth(app);
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-                // db/storageの初期化はグローバルで行っているため、ここでは認証完了後にロードを呼ぶ
-                // ただし loadCompanyProfile内でdbの存在確認を再実施する
-                loadCompanyProfile(currentUser.uid);
-            } else {
-                // 認証がない場合はログインページへリダイレクト
-                window.location.href = '/partner/login'; 
-            }
-        });
-        return () => unsubscribe();
-    }, []);
-
-
-    // --- Firestoreからプロフィール読み込み (★★★ isPaid も取得) ★★★
-    const loadCompanyProfile = async (uid: string) => {
+    // --- Firestoreからプロフィール読み込み ---
+    const loadCompanyProfile = useCallback(async (uid: string) => {
         setLoading(true);
-        // ★★★ FIX: dbが存在しない場合はエラーを設定して終了 ★★★
+        setError(null); 
+        
         if (!db) { 
-            console.error("Firestore is not initialized.");
             setError("データの読み込みに失敗しました。アプリケーションの設定をご確認ください。");
             setLoading(false);
             return;
         }
 
-        // 許可されている 'users' ドキュメントを参照
         const userRef = doc(db, 'users', uid); 
         
         try {
             const userSnap = await getDoc(userRef);
 
             if (userSnap.exists()) {
-                const data = userSnap.data();
+                const data = userSnap.data() as DocumentData;
                 
-                // ★ isPaid ステータスをセット (recruitSubscriptionStatus を参照)
                 const isRecruitPaid = data.recruitSubscriptionStatus === 'Paid' || data.recruitSubscriptionStatus === 'active';
 
-                // ★ 既存のプロフィール情報をセット (usersドキュメントに求人プロファイルデータが混在していると仮定)
-                setFormData(prev => ({
-                    ...prev,
-                    // 課金ステータス
+                // ★★★ FIX: 既存データをマージしてStateに設定（データ消失を防ぐ） ★★★
+                const loadedProfile: CompanyProfile = {
+                    ...DEFAULT_FORM_DATA, 
+                    ...(data as Partial<CompanyProfile>), // Firestoreデータをマージ
                     isPaid: isRecruitPaid,
-                    // 求人プロファイルデータ (usersドキュメントから読み取る)
-                    companyName: data.companyName || data.storeName || '', // companyNameがない場合 storeNameを使用
-                    address: data.address || '',
-                    phoneNumber: data.phoneNumber || '',
-                    website: data.website || '',
-                    ourMission: data.ourMission || '',
-                    whatWeDo: data.whatWeDo || '',
-                    ourCulture: data.ourCulture || '',
-                    messageToCandidates: data.messageToCandidates || '',
-                    galleryImageUrls: data.galleryImageUrls || [],
-                    videoUrl: data.videoUrl || '',
-                    verificationStatus: data.verificationStatus || 'unverified',
-                    aiFeedback: data.aiFeedback || '',
-                    minMatchScore: data.minMatchScore || 60,
+                    // appealPoints内のネストされた配列も安全にマージ
                     appealPoints: {
-                        atmosphere: data.appealPoints?.atmosphere || [],
-                        organization: data.appealPoints?.organization || [],
-                        growth: data.appealPoints?.growth || [],
-                        wlb: data.appealPoints?.wlb || [],
-                        benefits: data.appealPoints?.benefits || [],
-                    }
-                }));
+                        ...DEFAULT_FORM_DATA.appealPoints,
+                        ...data.appealPoints,
+                    } as AppealPoints,
+                };
+                
+                setFormData(loadedProfile);
+
             } else {
-                // userドキュメントが存在しない場合
-                // 新規ユーザーの場合、空のプロフィールで続行 (フリーズ解消のため、エラーではなく警告とする)
-                console.warn("User document does not exist, initializing with default profile.");
+                 // userドキュメントが存在しない場合はデフォルトで初期化
+                 setFormData(DEFAULT_FORM_DATA);
             }
 
         } catch (e) {
@@ -206,7 +168,27 @@ const CompanyProfilePage = () => {
             setError("データの読み込みに失敗しました。Firestoreの設定をご確認ください。");
         }
         setLoading(false);
-    };
+    }, []);
+
+
+    // --- Firebase認証状態の監視とデータ取得 ---
+    useEffect(() => {
+        // dbが存在しない場合は読み込み処理自体をスキップ
+        if (!db) { setLoading(false); return; }
+        
+        const authInstance = getAuth(); // 👈 getAuthをここで取得
+        
+        const unsubscribe = onAuthStateChanged(authInstance, (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                loadCompanyProfile(currentUser.uid);
+            } else {
+                // 認証がない場合はログインページへリダイレクト
+                window.location.href = '/partner/login'; 
+            }
+        });
+        return () => unsubscribe();
+    }, [loadCompanyProfile]); 
 
 
     // --- 入力変更 ---
@@ -214,33 +196,31 @@ const CompanyProfilePage = () => {
         const { name, value } = e.target;
         if (name === 'minMatchScore') {
             const numValue = Number(value);
-            // 60未満または99より大きい入力を制御
             const controlledValue = Math.max(60, Math.min(99, numValue));
-            // ★ 修正: 値がNaNや空文字列でないことを確認してから更新
+            
             if (!isNaN(numValue) && value !== "") {
                 setFormData(prev => ({ ...prev, [name]: controlledValue }));
             } else if (value === "") {
-                // 空の場合は0（無効値として扱う）
-                setFormData(prev => ({ ...prev, [name]: 0 }));
+                setFormData(prev => ({ ...prev, [name]: 0 })); 
             }
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
     
-    // ★★★ 新規追加: スコアの増減処理 ★★★
+    // スコアの増減処理
     const handleScoreChange = useCallback((delta: number) => {
         setFormData(prev => {
-            const newScore = Math.max(60, Math.min(99, prev.minMatchScore + delta));
+            const currentScore = typeof prev.minMatchScore === 'number' ? prev.minMatchScore : 60;
+            const newScore = Math.max(60, Math.min(99, currentScore + delta));
             return { ...prev, minMatchScore: newScore };
         });
     }, []);
 
 
-    // --- チェックボックス変更 (変更なし) ---
+    // --- チェックボックス変更 ---
     const handleAppealCheckboxChange = (category: keyof CompanyProfile['appealPoints'], value: string) => {
         setFormData(prev => {
-            // オプショナルプロパティでも空配列を保証して操作
             const currentValues = prev.appealPoints[category] || []; 
             const newValues = currentValues.includes(value)
                 ? currentValues.filter(item => item !== value)
@@ -250,141 +230,134 @@ const CompanyProfilePage = () => {
     };
 
 
-    // --- 画像アップロード (フリーズ対策修正 & サイズチェック追加) ---
-    const MAX_FILE_SIZE_MB = 3; // 3MBに制限を設定
+    // --- 画像アップロード ---
+    const MAX_FILE_SIZE_MB = 3; 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || !user || !storage) {
-            setError("画像ファイルを選択してください。またはストレージが初期化されていません。");
-            return;
-        }
-        
+        if (!e.target.files) return;
         const files = Array.from(e.target.files);
-        const validFiles: File[] = [];
-        let sizeError = false;
         
-        for (const file of files) {
-            if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-                sizeError = true;
-                continue;
-            }
-            validFiles.push(file);
+        // ★★★ FIX: user/storage の null チェックを強化 ★★★
+        if (!user || !storage) {
+             setError('ログイン情報がないか、ストレージが初期化されていません。');
+             e.target.value = '';
+             return;
         }
 
-        if (sizeError) {
-            setError(`一部のファイルサイズが大きすぎます。${MAX_FILE_SIZE_MB}MB以下のファイルを選択してください。`);
-            e.target.value = ''; // ファイル入力をリセット
-            return;
+        if (files.some(file => file.size > MAX_FILE_SIZE_MB * 1024 * 1024)) {
+             setError(`一部のファイルサイズが大きすぎます。${MAX_FILE_SIZE_MB}MB以下のファイルを選択してください。`);
+             e.target.value = '';
+             return;
         }
-        
-        if (validFiles.length === 0) {
-            setError("アップロードできる有効なファイルがありません。");
-            e.target.value = '';
-            return;
-        }
-
 
         setIsUploading(true);
         setError(null);
         setUploadProgress(0);
 
-        const uploadPromises = validFiles.map(file => {
-            const storageRef = ref(storage, `recruiters/${user.uid}/images/${Date.now()}_${file.name}`);
-            const uploadTask = uploadBytesResumable(storageRef, file);
-            
-            // ★ FIX: Promise.allSettled を使用し、一つでも失敗しても全体がハングしないようにする
-            return new Promise<string>((resolve, reject) => {
+        const uploadPromises = files.map(file => {
+             const storageInstance = storage as FirebaseStorage;
+             const storageRef = ref(storageInstance, `recruiters/${user.uid}/images/${Date.now()}_${file.name}`);
+             const uploadTask = uploadBytesResumable(storageRef, file);
+             
+             return new Promise<string>((resolve, reject) => {
                 uploadTask.on('state_changed',
                     (snapshot: any) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
-                    (error: any) => { 
-                        console.error("Upload failed:", error);
-                        // エラーを捕捉し、Promise を reject する
-                        reject(error);
-                    },
-                    // 完了時にURLを取得
+                    reject,
                     () => getDownloadURL(uploadTask.snapshot.ref).then(resolve).catch(reject)
                 );
-            });
+             });
         });
 
-        Promise.allSettled(uploadPromises) // ★ FIX: allSettled を使用し、一つでも失敗しても全体がハングしないようにする
+        Promise.allSettled(uploadPromises)
             .then(results => {
                 const successfulUrls = results
                     .filter((res): res is PromiseFulfilledResult<string> => res.status === 'fulfilled')
                     .map(res => res.value);
                 
-                const failedCount = results.length - successfulUrls.length;
-
                 setFormData(prev => ({
                     ...prev,
                     galleryImageUrls: [...prev.galleryImageUrls, ...successfulUrls]
                 }));
 
+                const failedCount = results.length - successfulUrls.length;
                 if (failedCount > 0) {
-                     // 失敗したファイルがある場合はエラー通知
-                     setError(`一部の画像（${failedCount}ファイル）のアップロードに失敗しました。Storageのルールやネットワークの問題を確認してください。`);
+                     setError(`一部の画像（${failedCount}ファイル）のアップロードに失敗しました。`);
                 } else if (successfulUrls.length > 0) {
-                     // 成功した場合はエラーをリセット
-                     setError(null);
+                     setError('画像アップロードが完了しました。');
                 }
             })
-            .catch(() => {
-                // Promise.allSettled は catch に入らないため、実質 unused
-            })
             .finally(() => {
-                setIsUploading(false);
-                setUploadProgress(0);
-                // ファイル入力欄をリセット
-                if (e.target) e.target.value = '';
+                 setIsUploading(false);
+                 setUploadProgress(0);
+                 if (e.target) e.target.value = '';
             });
     };
 
 
-    // --- 画像削除 (変更なし) ---
+    // --- 画像削除 (Storage/Firestoreからの削除) ---
     const removeImage = async (imageUrl: string) => {
-        if (!storage) return;
+        if (!user || !db || !storage) return;
 
-        // ★ FIX: alert, confirm は使用禁止のため、console.log に置換
-        console.log("画像を削除します。");
+        if (!window.confirm("この画像を削除しますか？")) return;
+        
         try {
+            // Storageからの削除
             const imageRef = ref(storage, imageUrl);
             await deleteObject(imageRef);
+            
+            // FirestoreのURL配列を更新
+            const userRef = doc(db, 'users', user.uid);
+            const newUrls = formData.galleryImageUrls.filter(url => url !== imageUrl);
+            
+            await setDoc(userRef, { galleryImageUrls: newUrls }, { merge: true }); // ★ merge:true で安全に更新
+            
+            // Stateの更新
             setFormData(prev => ({
                 ...prev,
-                galleryImageUrls: prev.galleryImageUrls.filter(url => url !== imageUrl)
+                galleryImageUrls: newUrls
             }));
-            setError(null);
+            
+            setError("画像を削除しました。");
+
         } catch (error) {
-            setError("画像の削除に失敗しました。時間をおいて再試行してください。");
+            setError("画像の削除に失敗しました。");
             console.error("削除エラー:", error);
         }
     };
 
 
-    // --- ★★★ 保存＆AI審査申請 (フリーズ対策済み) ★★★ ---
+    // --- ★★★ 保存＆AI審査申請 (データ永続性のための修正) ★★★ ---
     const handleSaveAndSubmitForReview = async (e: React.FormEvent, isManualReset: boolean = false) => {
         e.preventDefault();
-        if (!user || !db) return;
         
+        // 🚨 FIX: user/db の存在チェックを明示的に行う
+        if (!user || !db) {
+            setError('ログイン情報がないか、データベースが初期化されていません。');
+            setSaving(false);
+            return;
+        }
+
         setSaving(true);
         setError(null);
 
-        const appealPointsToSave: { [key: string]: string[] | undefined } = { ...formData.appealPoints };
-        
-        // 空の配列を Firestore に送るのを防ぐ (オプショナルなフィールド)
-        if (appealPointsToSave.growth && appealPointsToSave.growth.length === 0) delete appealPointsToSave.growth;
-        if (appealPointsToSave.wlb && appealPointsToSave.wlb.length === 0) delete appealPointsToSave.wlb;
-        if (appealPointsToSave.benefits && appealPointsToSave.benefits.length === 0) delete appealPointsToSave.benefits;
+        // 必須チェック
+        if (!isManualReset && (!isReadyToSubmit || !formData.companyName || !formData.address)) {
+             setError("企業名、所在地を含む全ての必須項目を記入してください。");
+             setSaving(false);
+             return;
+        }
 
+        const appealPointsToSave: { [key: string]: string[] } = { ...formData.appealPoints };
+        
         try {
-            // 1. 'users' ドキュメントを更新
             const userRef = doc(db, 'users', user.uid);
             
-            // isPaid を分解代入で安全に除外
+            // isPaid はローカル State のみで扱い、Firestore には書き込まない (サブスクリプション情報と分離)
             const { isPaid, ...formDataWithoutIsPaid } = formData; 
 
             const dataToSave = {
+                // 手動リセット時はプロファイルデータ全体を送信しない
                 ...(isManualReset ? {} : { 
-                    ...formDataWithoutIsPaid, // isPaidを除外したプロファイルデータ
+                    ...formDataWithoutIsPaid,
                     appealPoints: appealPointsToSave,
                 }), 
                 verificationStatus: 'pending_review' as VerificationStatus,
@@ -392,35 +365,27 @@ const CompanyProfilePage = () => {
                 updatedAt: serverTimestamp()
             };
             
-            // setDocでマージ書き込み
+            // ★★★ FIX: setDocでマージ書き込み、データ消失を防ぐ ★★★
             await setDoc(userRef, dataToSave, { merge: true });
             
-            // UIを更新
-            setFormData(prev => ({...prev, verificationStatus: 'pending_review', aiFeedback: isManualReset ? 'AI審査を強制的に再実行します...' : 'AIが内容を審査中です...'}));
-
-
-            // 2. AI審査APIの呼び出し
-            const response = await fetch('/api/recruit/profile-review', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: user.uid })
+            // 2. AI審査APIの呼び出し (このAPIは別途実装が必要です)
+            const response = await fetch('/api/recruit/profile-review', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ uid: user.uid })
             });
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: `HTTP Error: ${response.status}` }));
-                throw new Error(errorData.error || `AI審査APIの呼び出しに失敗しました。(${response.status})`);
-            }
 
+            if (!response.ok) {
+                 throw new Error("AI審査APIからの応答が失敗しました。");
+            }
+            
             // 3. ユーザーに通知し、ダッシュボードへリダイレクト
-            // ★ FIX: alert は使用禁止のため、console.log に置換
-            console.log('✅ プロフィールを保存し、AI審査を開始しました。ダッシュボードに戻り、結果をご確認ください。');
-            // router.push('/recruit/dashboard'); // Next.js routerの代わりに
-            window.location.href = '/recruit/dashboard';
+            console.log('✅ プロフィールを保存し、AI審査を開始しました。');
+            window.location.href = '/recruit/dashboard'; // 強制リダイレクト
 
         } catch (err: any) {
-            setError(`エラーが発生しました: ${err.message}`);
+            setError(`エラーが発生しました: ${err.message}。Firestoreの書き込み権限を確認してください。`);
             console.error("申請エラー:", err);
-            
             setFormData(prev => ({...prev, verificationStatus: 'rejected', aiFeedback: 'システムエラーにより審査は中断されました。内容を確認し、再申請してください。'}));
         } finally {
             setSaving(false);
@@ -429,19 +394,54 @@ const CompanyProfilePage = () => {
     
     // 💡 強制リセット用のヘルパー関数
     const handleManualReset = () => {
-        // ★ FIX: window.confirm は使用禁止のため、console.log に置換し、即時実行
-        console.log('AI審査の強制リセットを試行します。');
-        handleSaveAndSubmitForReview({ preventDefault: () => {} } as React.FormEvent, true); 
+        // ★★★ FIX: フォーム送信を防ぎ、API処理を実行する ★★★
+        if (isUploading || saving || !user || !db) {
+            setError('処理中か、ログイン情報/データベースが不足しています。');
+            return;
+        }
+        
+        setSaving(true);
+        setError(null);
+        
+        // データを保存せずに、AI審査のみをトリガーする
+        const userRef = doc(db as Firestore, 'users', user!.uid);
+        
+        updateDoc(userRef, {
+             verificationStatus: 'pending_review',
+             aiFeedback: 'AI審査を強制的に再実行します...',
+             updatedAt: serverTimestamp()
+        })
+        .then(() => {
+             // UIを更新し、APIを呼び出す
+             setFormData(prev => ({...prev, verificationStatus: 'pending_review', aiFeedback: 'AI審査を強制的に再実行します...'}));
+             return fetch('/api/recruit/profile-review', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ uid: user!.uid })
+             });
+        })
+        .then(response => {
+             if (!response.ok) throw new Error("AI審査APIからの応答が失敗しました。");
+             window.location.href = '/recruit/dashboard';
+        })
+        .catch(err => {
+             console.error("強制リセット失敗:", err);
+             setError(`強制審査リセット中にエラーが発生しました: ${err.message}`);
+             setFormData(prev => ({...prev, verificationStatus: 'rejected'}));
+        })
+        .finally(() => {
+             setSaving(false);
+        });
     };
 
 
-    // --- ステータス表示 ---
-    const getStatusBanner = () => {
+    // --- ステータス表示 (useMemo で最適化) ---
+    const getStatusBanner = useMemo(() => {
         switch (formData.verificationStatus) {
             case 'pending_review':
                 return (
                     <div className="p-4 mb-8 bg-yellow-100 text-yellow-800 rounded-lg flex items-center text-sm">
-                        <RefreshCcw className="w-5 h-5 mr-2 animate-spin" />{formData.aiFeedback}
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />{formData.aiFeedback}
                     </div>
                 );
             case 'verified':
@@ -457,11 +457,9 @@ const CompanyProfilePage = () => {
                             <ShieldAlert className="w-5 h-5 mr-2" />AIからの修正指摘
                         </div>
                         <p className="mt-2 whitespace-pre-wrap">{formData.aiFeedback}</p>
-                        {/* Next.js Link の代わりに標準の <a> タグを使用 */}
-                        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                        <a href="/trust-and-safety" className="mt-3 inline-flex items-center text-xs font-bold text-blue-700 hover:underline">
+                        <Link href="/trust-and-safety" className="mt-3 inline-flex items-center text-xs font-bold text-blue-700 hover:underline">
                             <HelpCircle size={14} className="mr-1" />AIの審査基準を確認する
-                        </a>
+                        </Link>
                     </div>
                 );
             default:
@@ -471,7 +469,7 @@ const CompanyProfilePage = () => {
                     </div>
                 );
         }
-    };
+    }, [formData.verificationStatus, formData.aiFeedback]); // useMemo で最適化
 
 
     if (loading) {
@@ -507,12 +505,11 @@ const CompanyProfilePage = () => {
                 {/* 課金ステータス通知バナー (無料プランでもスコア変更可能になったため、文言を修正) */}
                 {formData.isPaid ? (
                     <div className="p-4 mb-6 bg-indigo-100 text-indigo-800 rounded-lg font-bold flex items-center">
-                        <RiImageEditLine className="w-5 h-5 mr-2" /> AIマッチング許容スコアを自由に設定できます。
+                        <Camera className="w-5 h-5 mr-2" /> AIマッチング許容スコアを自由に設定できます。
                     </div>
                 ) : (
-                    // ★ FIX: 無料プランでも操作可能になったため、固定されている旨のメッセージを削除
                     <div className="p-4 mb-6 bg-yellow-100 text-yellow-800 rounded-lg flex items-center">
-                        <RiAlertFill className="w-5 h-5 mr-2" /> 現在無料プランをご利用中です。
+                        <AlertTriangle className="w-5 h-5 mr-2" /> 現在無料プランをご利用中です。
                     </div>
                 )}
 
@@ -526,7 +523,7 @@ const CompanyProfilePage = () => {
                         </div>
                         <button
                             type="submit"
-                            disabled={saving || isUploading}
+                            disabled={saving || isUploading || !isReadyToSubmit}
                             className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 disabled:bg-gray-400 flex items-center"
                         >
                             {saving ? <><Loader2 className="animate-spin mr-2" />AI審査中...</> : <><Send className="w-4 h-4 mr-2" />保存してAI登録審査を申請</>}
@@ -534,7 +531,7 @@ const CompanyProfilePage = () => {
                     </div>
 
 
-                    {getStatusBanner()}
+                    {getStatusBanner}
                     
                     {/* 💡 強制リセットボタンのエリア */}
                     {formData.verificationStatus === 'pending_review' && (
@@ -590,8 +587,8 @@ const CompanyProfilePage = () => {
                                 onBlur={(e) => {
                                     // 最小・最大値の制御をフォーカスが外れたときにも適用
                                     const numValue = Number(e.target.value);
-                                    if (isNaN(numValue) || numValue < 60) handleScoreChange(60 - formData.minMatchScore);
-                                    if (numValue > 99) handleScoreChange(99 - formData.minMatchScore);
+                                    if (isNaN(numValue) || numValue < 60) setFormData(prev => ({...prev, minMatchScore: 60}));
+                                    if (numValue > 99) setFormData(prev => ({...prev, minMatchScore: 99}));
                                 }}
                                 required
                                 className="block w-20 h-12 px-2 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-2xl font-extrabold text-center transition duration-150"
@@ -627,12 +624,10 @@ const CompanyProfilePage = () => {
                             </div>
                             <div>
                                 <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">電話番号 *</label>
-                                {/* ★ FIX: requiredを追加して必須化 */}
                                 <input type="tel" id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                             </div>
                             <div>
                                 <label htmlFor="website" className="block text-sm font-medium text-gray-700">ウェブサイトURL</label>
-                                {/* ★ FIX: requiredを削除して必須ではない項目にする */}
                                 <input type="url" id="website" name="website" value={formData.website} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                             </div>
                         </div>
@@ -656,13 +651,11 @@ const CompanyProfilePage = () => {
                         </div>
                         <div>
                             <label htmlFor="ourCulture" className="block text-sm font-medium text-gray-700">Our Culture (文化・風土) *</label>
-                            {/* ★ FIX: requiredを追加して必須化 */}
                             <p className="text-xs text-gray-500 mb-1">職場の雰囲気、社員の働き方、コミュニケーションの取り方など、会社の文化を教えてください。</p>
                             <textarea id="ourCulture" name="ourCulture" value={formData.ourCulture} onChange={handleChange} required rows={4} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                         </div>
                         <div>
                             <label htmlFor="messageToCandidates" className="block text-sm font-medium text-gray-700">未来の仲間へのメッセージ *</label>
-                            {/* ★ FIX: requiredを追加して必須化 */}
                             <p className="text-xs text-gray-500 mb-1">どのような人に仲間になってほしいか、候補者への期待を込めたメッセージをどうぞ。</p>
                             <textarea id="messageToCandidates" name="messageToCandidates" value={formData.messageToCandidates} onChange={handleChange} required rows={4} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" />
                         </div>
@@ -725,7 +718,6 @@ const CompanyProfilePage = () => {
                             <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-700 flex items-center">
                                 <Video className="w-4 h-4 mr-2" />紹介動画URL
                             </label>
-                            {/* ★ FIX: requiredを削除して必須ではない項目にする */}
                             <input type="url" id="videoUrl" name="videoUrl" value={formData.videoUrl} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="https://www.youtube.com/watch?v=..." />
                         </div>
                         <div>
@@ -734,7 +726,7 @@ const CompanyProfilePage = () => {
                             </label>
                             <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                                 <div className="space-y-1 text-center">
-                                    <RiImageEditLine className="mx-auto h-12 w-12 text-gray-400" />
+                                    <Camera className="mx-auto h-12 w-12 text-gray-400" />
                                     <div className="flex text-sm text-gray-600">
                                         <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
                                             <span>ファイルを選択</span>
@@ -781,7 +773,7 @@ const CompanyProfilePage = () => {
                     <div className="pt-6 border-t border-gray-200 flex justify-end">
                         <button
                             type="submit"
-                            disabled={saving || isUploading}
+                            disabled={saving || isUploading || !isReadyToSubmit}
                             className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 disabled:bg-gray-400 flex items-center text-lg"
                         >
                             {saving ? <><Loader2 className="animate-spin mr-2" />AI審査中...</> : <><Send className="w-4 h-4 mr-2" />保存してAI登録審査を申請</>}

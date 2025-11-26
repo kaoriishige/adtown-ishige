@@ -1,9 +1,17 @@
-// pages/nasu/index.js
-
+import React from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import { Store, MapPin, ExternalLink, Sparkles, Home } from 'lucide-react';
+
+// 店舗データの型定義
+type StoreInfo = {
+  city: string;
+  name: string;
+  url: string;
+};
 
 // 提供された店舗情報とURLのリスト
-const storeData = [
+const storeData: StoreInfo[] = [
   // 那須塩原市、那須町
   { city: '那須塩原市・那須町', name: 'カワチ薬品 黒磯店', url: 'https://tokubai.co.jp/%E3%82%AB%E3%83%AF%E3%83%81%E8%96%AC%E5%93%81/76062' },
   { city: '那須塩原市・那須町', name: 'ウエルシア 那須塩原黒磯店', url: 'https://tokubai.co.jp/%E3%82%A6%E3%82%A8%E3%83%AB%E3%82%B7%E3%82%A2/297164' },
@@ -39,7 +47,7 @@ const storeData = [
 ];
 
 // 地域でグループ化
-const groupedStores = storeData.reduce((acc, store) => {
+const groupedStores = storeData.reduce((acc: { [key: string]: StoreInfo[] }, store) => {
   if (!acc[store.city]) {
     acc[store.city] = [];
   }
@@ -47,111 +55,77 @@ const groupedStores = storeData.reduce((acc, store) => {
   return acc;
 }, {});
 
-// Reactコンポーネント
 const NasuFlyerApp = () => {
   return (
-    <div style={styles.container}>
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Head>
-        <title>那須・大田原 ドラッグストア特売情報</title>
-        <meta name="description" content="那須塩原市・那須町・大田原市のドラッグストア特売情報（チラシ）リンク集" />
+        <title>那須・大田原 ドラッグストアチラシ一覧</title>
       </Head>
 
-      <header style={styles.header}>
-        <h1 style={styles.h1}>📰 那須・大田原エリア ドラッグストア特売情報（チラシ）</h1>
-        <p style={styles.p}>各店舗名をクリックすると、外部サイト「トクバイ」の特売情報ページに移動します。</p>
+      <header className="bg-white shadow-sm sticky top-0 z-10 p-4 border-b border-gray-200">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* ホームに戻るボタンを追加 */}
+            <Link 
+              href="/home" 
+              className="p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <Home className="w-5 h-5" />
+            </Link>
+            
+            <h1 className="text-lg font-bold text-blue-600 flex items-center gap-2">
+              <Store className="w-6 h-6" />
+              ドラッグストア チラシNAVI
+            </h1>
+          </div>
+          
+          {/* AIアプリへのリンクボタン */}
+          <Link 
+            href="/nasu/kondate" 
+            className="bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow hover:bg-green-700 transition flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            AI献立作成へ
+          </Link>
+        </div>
       </header>
       
-      <main style={styles.main}>
+      <main className="max-w-3xl mx-auto p-4 pb-20">
+        <p className="text-sm text-gray-500 mb-6 bg-blue-50 p-3 rounded-lg border border-blue-100">
+          各店舗名をクリックすると、トクバイ（外部サイト）の特売ページへ移動します。
+        </p>
+
         {Object.entries(groupedStores).map(([city, stores]) => (
-          <section key={city} style={styles.section}>
-            <h2 style={styles.h2}>📍 {city}</h2>
-            <ul style={styles.ul}>
+          <section key={city} className="mb-8">
+            <h2 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-2 border-b border-gray-300 pb-2">
+              <MapPin className="w-5 h-5 text-gray-400" />
+              {city}
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
               {stores.map((store, index) => (
-                <li key={index} style={styles.li}>
-                  <a 
-                    href={store.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    style={styles.link}
-                  >
-                    **{store.name}**
-                  </a>
-                </li>
+                <a 
+                  key={index} 
+                  href={store.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="block bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-800 group-hover:text-blue-600">{store.name}</span>
+                    <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-blue-400" />
+                  </div>
+                </a>
               ))}
-            </ul>
+            </div>
           </section>
         ))}
       </main>
 
-      <footer style={styles.footer}>
+      <footer className="bg-white border-t border-gray-200 py-6 text-center text-xs text-gray-400">
         <p>情報元: トクバイ</p>
       </footer>
     </div>
   );
-};
-
-// スタイル定義 (基本的なデザイン)
-const styles = {
-  container: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
-    padding: '20px',
-    maxWidth: '800px',
-    margin: '0 auto',
-  },
-  header: {
-    textAlign: 'center',
-    marginBottom: '30px',
-    borderBottom: '2px solid #eee',
-    paddingBottom: '15px',
-  },
-  h1: {
-    fontSize: '24px',
-    color: '#0070f3',
-  },
-  p: {
-    fontSize: '14px',
-    color: '#666',
-  },
-  main: {
-    marginBottom: '40px',
-  },
-  section: {
-    marginBottom: '30px',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    padding: '15px',
-  },
-  h2: {
-    fontSize: '20px',
-    color: '#333',
-    marginBottom: '15px',
-    borderBottom: '1px solid #eee',
-    paddingBottom: '5px',
-  },
-  ul: {
-    listStyle: 'none',
-    padding: '0',
-    margin: '0',
-  },
-  li: {
-    padding: '8px 0',
-    borderBottom: '1px dotted #eee',
-  },
-  link: {
-    textDecoration: 'none',
-    color: '#0070f3',
-    fontSize: '16px',
-    display: 'block',
-    padding: '5px 0',
-  },
-  footer: {
-    textAlign: 'center',
-    marginTop: '20px',
-    paddingTop: '10px',
-    borderTop: '1px solid #eee',
-    fontSize: '12px',
-    color: '#999',
-  },
 };
 
 export default NasuFlyerApp;

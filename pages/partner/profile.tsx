@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback, useMemo, FC } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 
-// Firebaseのインポート
-import { db, auth, storage } from '../../lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+// ★★★ 修正箇所: getAuth を firebase/auth からインポートに追加 ★★★
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+// Firebaseのインポートパスを修正し、db, auth, storage を取得
+import { db, auth, storage } from '../../lib/firebase-client'; 
+
 import {
     collection, query, getDocs, doc,
     updateDoc, addDoc, serverTimestamp, arrayUnion, DocumentData, 
@@ -14,10 +16,14 @@ import {
     ref, uploadBytesResumable, getDownloadURL,
     FirebaseStorage // 型をインポート
 } from 'firebase/storage';
+// ★★★ 修正箇所ここまで ★★★
 
 import { v4 as uuidv4 } from 'uuid';
 // ★ React Icons のインポート
-import { RiFocus2Line, RiCheckLine } from 'react-icons/ri';
+import {
+    RiFocus2Line, RiCheckLine, RiArrowLeftLine, RiEyeLine, 
+    RiEditBoxLine, RiAlertFill, RiLoader4Line
+} from 'react-icons/ri'; // アイコンのインポート不足を修正
 
 // ★★★ 外部ファイルのインポート ★★★
 import { VALUE_QUESTIONS, QuestionSet, COMMON_QUESTIONS_GENERAL } from '../../lib/aiValueTemplate'; 
@@ -55,7 +61,7 @@ const getNormalizedIndustryKey = (main: string, sub: string): string => {
 };
 
 // *******************************************************
-// 型定義 (変更あり)
+// 型定義 (変更済み)
 // *******************************************************
 interface IndustrySpecificData {
     seats?: string; // 飲食
@@ -64,10 +70,9 @@ interface IndustrySpecificData {
     specialtyCut?: string; // 美容
 }
 
-// ★★★ 修正点1: 「3つの強み」の型をオブジェクトに変更 ★★★
 interface SpecialtyPoint {
-  title: string;
-  description: string;
+    title: string;
+    description: string;
 }
 
 // ==========================================================
@@ -182,8 +187,8 @@ const MatchingValuesForm: FC<MatchingValuesFormProps> = ({
 
 
     const FocusIcon = () => (<RiFocus2Line className="w-6 h-6 mr-2" />);
-    const CheckIcon = () => (<RiCheckLine className="w-5 h-5 inline-block mr-1" />);
-
+    // const CheckIcon = () => (<RiCheckLine className="w-5 h-5 inline-block mr-1" />); // 削除済みアイコン
+    
     // 6. ボタンの無効化ロジック
     const isOptionDisabled = (optionValue: string): boolean => {
         if (selectedItems.includes(optionValue)) return false; 
@@ -268,7 +273,7 @@ const MatchingValuesForm: FC<MatchingValuesFormProps> = ({
                         onChange={(e) => setCustomValue(e.target.value)}
                         placeholder={`例：ペット同伴可 (最大${MAX_CUSTOM_SELECTION}個まで)`}
                         disabled={customValues.length >= MAX_CUSTOM_SELECTION}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-gray-100"
+                        className="w-full p-2 border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-gray-100"
                     />
                     <button
                         type="button"
@@ -306,6 +311,7 @@ const MatchingValuesForm: FC<MatchingValuesFormProps> = ({
 const StoreProfilePage: FC = () => {
     const router = useRouter();
     
+    // Stateの初期化
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true); 
     const [isSaving, setIsSaving] = useState(false);
@@ -321,7 +327,7 @@ const StoreProfilePage: FC = () => {
     const [description, setDescription] = useState('');
     const [targetUserInterests, setTargetUserInterests] = useState('');
     
-    // ★★★ 修正点2: Stateの型と初期値を変更 ★★★
+    // 「3つの強み」のState
     const [specialtyPoints, setSpecialtyPoints] = useState<SpecialtyPoint[]>([
       { title: '', description: '' },
       { title: '', description: '' },
@@ -340,6 +346,7 @@ const StoreProfilePage: FC = () => {
     const [industryData, setIndustryData] = useState<IndustrySpecificData>({});
     const [matchingValues, setMatchingValues] = useState<string[]>([]); // AIマッチング用価値観
 
+    // プレースホルダーの計算
     const descriptionPlaceholder = useMemo(() => {
         const key = subCategory.includes('整体') || subCategory.includes('整骨院') || subCategory.includes('鍼灸院')
             ? '整体・整骨院・鍼灸院'
@@ -352,16 +359,18 @@ const StoreProfilePage: FC = () => {
     }, [mainCategory, subCategory]);
 
 
-    // ★ 認証ロジック (変更なし)
+    // ★ 認証ロジック
     useEffect(() => {
-        if (!auth || !auth.onAuthStateChanged) {
+        const authInstance = getAuth(); // 👈 getAuthをここで取得
+        
+        if (!authInstance || !authInstance.onAuthStateChanged) {
             console.error("Firebase Auth is not available.");
             setLoading(false);
             router.push('/partner/login');
             return;
         }
         
-        const unsubscribe = onAuthStateChanged(auth, (currentUser: User | null) => {
+        const unsubscribe = onAuthStateChanged(authInstance, (currentUser: User | null) => {
             if (currentUser) {
                 setUser(currentUser);
             } else {
@@ -374,7 +383,7 @@ const StoreProfilePage: FC = () => {
     }, [router]);
 
 
-    // ★ 店舗情報フェッチ (変更あり)
+    // ★ 店舗情報フェッチ
     const fetchStoreProfile = useCallback(async (currentUser: User) => {
         if (!currentUser || !db) {
             console.error("User or Firestore is not available.");
@@ -383,7 +392,9 @@ const StoreProfilePage: FC = () => {
         }
         
         try {
-            const storesRef = collection(db as Firestore, 'artifacts', appId, 'users', currentUser.uid, 'stores');
+            const firestore = db as Firestore;
+            // ユーザーUIDに基づいて stores コレクションからドキュメントを取得
+            const storesRef = collection(firestore, 'artifacts', appId, 'users', currentUser.uid, 'stores');
             const q = query(storesRef);
             const querySnapshot = await getDocs(q);
 
@@ -406,19 +417,22 @@ const StoreProfilePage: FC = () => {
                 
                 // ★★★ 修正点3: 読み込みロジックを変更 (古いstring[]にも対応) ★★★
                 const loadedData = storeData.specialtyPoints || [];
-                let formattedPoints: SpecialtyPoint[];
+                let formattedPoints: SpecialtyPoint[] = [];
 
-                if (loadedData.length > 0 && typeof loadedData[0] === 'string') {
-                    // 古い形式 (string[]) から新しい形式 (SpecialtyPoint[]) に変換
-                    formattedPoints = (loadedData as string[]).map((title: string) => ({
-                        title: title,
-                        description: '', // 古いデータには説明がないため空にする
-                    }));
-                } else {
-                    // 新しい形式 (SpecialtyPoint[])
-                    formattedPoints = loadedData;
+                if (loadedData.length > 0) {
+                    if (typeof loadedData[0] === 'string') {
+                        // 古い形式 (string[]) から新しい形式 (SpecialtyPoint[]) に変換
+                        formattedPoints = (loadedData as string[]).map((title: string) => ({
+                            title: title,
+                            description: '', // 古いデータには説明がないため空にする
+                        }));
+                    } else {
+                        // 新しい形式 (SpecialtyPoint[]) または空
+                        formattedPoints = loadedData;
+                    }
                 }
-
+                
+                // 3つになるように調整
                 setSpecialtyPoints([
                     formattedPoints[0] || { title: '', description: '' },
                     formattedPoints[1] || { title: '', description: '' },
@@ -432,12 +446,7 @@ const StoreProfilePage: FC = () => {
                 setSnsUrls(storeData.snsUrls || ['', '', '']);
                 setMainImageUrl(storeData.mainImageUrl || null);
                 setGalleryImageUrls(storeData.galleryImageUrls || []);
-                setIndustryData({
-                    seats: storeData.seats || '',
-                    privateRooms: storeData.privateRooms || '',
-                    smoking: storeData.smoking || '',
-                    specialtyCut: storeData.specialtyCut || '',
-                });
+                setIndustryData(storeData.industryData || {});
                 setMatchingValues(storeData.matchingValues || []);
             } else {
                 setMatchingValues([]); // 新規作成時
@@ -450,6 +459,7 @@ const StoreProfilePage: FC = () => {
         }
     }, [appId]); 
 
+    // ユーザーが変わったとき/ロード時にプロフィールをフェッチ
     useEffect(() => {
         if (user) {
             fetchStoreProfile(user);
@@ -457,24 +467,23 @@ const StoreProfilePage: FC = () => {
     }, [user, fetchStoreProfile]);
 
 
-    // ★ カテゴリ変更時のAIマッチング値リセット処理 (削除済み)
+    // カテゴリ変更時のサブカテゴリオプション更新
     useEffect(() => {
         if (mainCategory && categoryData[mainCategory as keyof typeof categoryData]) {
             setSubCategoryOptions(categoryData[mainCategory as keyof typeof categoryData]);
         } else {
             setSubCategoryOptions([]);
         }
-        // setMatchingValues([]); // リセット処理を削除 (意図した動作)
     }, [mainCategory]);
     
     const handleSubCategoryChange = (newSubCategory: string) => {
         if (newSubCategory === subCategory) return;
         setSubCategory(newSubCategory);
-        // setMatchingValues([]); // リセット処理を削除 (意図した動作)
+        // setMatchingValues([]); // 必要に応じてマッチング値をリセット
     };
 
     // ----------------------------------------------------
-    // その他ユーティリティハンドラー (変更あり)
+    // その他ユーティリティハンドラー
     // ----------------------------------------------------
 
     const handleIndustryDataChange = (key: keyof IndustrySpecificData, value: string) => {
@@ -492,7 +501,7 @@ const StoreProfilePage: FC = () => {
         });
     };
 
-    // ★★★ 修正点4: 「3つの強み」用のハンドラを修正 ★★★
+    // ★★★ 「3つの強み」用のハンドラ ★★★
     const handleSpecialtyPointChange = (
       index: number,
       field: keyof SpecialtyPoint, // 'title' | 'description'
@@ -512,32 +521,8 @@ const StoreProfilePage: FC = () => {
             return;
         }
 
-        const customConfirm = (message: string): Promise<boolean> => {
-            return new Promise((resolve) => {
-                const messageBox = document.createElement('div');
-                messageBox.innerHTML = `
-                    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-                        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <p style="margin-top: 0; color: #333;">${message}</p>
-                            <button id="confirm-delete-yes" style="margin-top: 15px; padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">削除する</button>
-                            <button id="confirm-delete-no" style="margin-top: 15px; padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">キャンセル</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(messageBox);
-                
-                const handleYes = (e: Event) => { e.preventDefault(); messageBox.remove(); resolve(true); };
-                const handleNo = (e: Event) => { e.preventDefault(); messageBox.remove(); resolve(false); };
-
-                messageBox.querySelector('#confirm-delete-yes')?.addEventListener('click', handleYes);
-                messageBox.querySelector('#confirm-delete-no')?.addEventListener('click', handleNo);
-            });
-        };
-
-        const shouldDelete = await customConfirm("この写真を本当に削除しますか？この操作は元に戻せません。");
-        if (!shouldDelete) {
-            return;
-        }
+        // NOTE: alert/confirm はカスタムモーダルに置き換え推奨
+        if (!window.confirm("この写真を本当に削除しますか？")) return;
 
         setError(null);
         try {
@@ -568,7 +553,7 @@ const StoreProfilePage: FC = () => {
     };
 
     // ----------------------------------------------------
-    // ★ 保存ロジック (変更あり)
+    // ★ 保存ロジック (FireStore/Storage)
     // ----------------------------------------------------
     const handleSaveProfile = async () => {
         if (!user || !db || !storage) {
@@ -576,29 +561,17 @@ const StoreProfilePage: FC = () => {
             return;
         }
 
-        // カテゴリの必須チェック
-        if (!mainCategory) {
-            setError('カテゴリ（大分類）は必須項目です。');
-            setIsSaving(false);
+        // 必須チェック
+        if (!mainCategory || (mainCategory !== 'その他' && !subCategory)) {
+            setError('カテゴリは必須項目です。');
             return;
         }
-
-        if (mainCategory !== 'その他' && !subCategory) {
-            setError('カテゴリ（小分類）は必須項目です。');
-            setIsSaving(false);
-            return;
-        }
-        
         if (mainCategory === 'その他' && !otherMainCategory) {
             setError('カテゴリ（大分類）で「その他」を選択した場合は、詳細なカテゴリ名を記入してください。');
-            setIsSaving(false);
             return;
         }
-
-        // AIマッチング価値観の必須チェック
         if (matchingValues.length === 0) {
             setError('AIマッチング用の価値観を1つ以上選択してください。');
-            setIsSaving(false);
             return;
         }
 
@@ -614,8 +587,7 @@ const StoreProfilePage: FC = () => {
 
             const normalizedIndustryKey = getNormalizedIndustryKey(mainCategory, subCategory);
             
-            // ★★★ 修正点5: 保存時のフィルターロジックを変更 ★★★
-            // タイトルが入力されているものだけを保存対象とする
+            // 保存対象とする強み (タイトルが空でないもの)
             const filteredSpecialtyPoints = specialtyPoints.filter(
               p => p.title.trim() !== ''
             );
@@ -626,7 +598,7 @@ const StoreProfilePage: FC = () => {
                 otherMainCategory: mainCategory === 'その他' ? otherMainCategory : '',
                 otherSubCategory: subCategory === 'その他' ? otherSubCategory : '',
                 description, targetUserInterests, 
-                specialtyPoints: filteredSpecialtyPoints, // ★ 修正したデータを保存
+                specialtyPoints: filteredSpecialtyPoints, // フィルターした強みデータを保存
                 matchingValues: matchingValues, 
                 lineOfficialId: lineOfficialId, lineLiffUrl: lineLiffUrl, websiteUrl,
                 snsUrls: snsUrls.filter(url => url.trim() !== ''), ownerId: user.uid, updatedAt: serverTimestamp(),
@@ -634,24 +606,24 @@ const StoreProfilePage: FC = () => {
             };
 
             if (!currentStoreId) {
+                // 新規作成
                 const docRef = await addDoc(userStoresCollectionRef, { ...allStoreData, status: 'pending', createdAt: serverTimestamp(), mainImageUrl: '', galleryImageUrls: [] });
                 currentStoreId = docRef.id;
                 setStoreId(currentStoreId);
             } else {
+                // 更新
                 const storeDocRefForUpdate = doc(userStoresCollectionRef, currentStoreId);
                 await updateDoc(storeDocRefForUpdate, allStoreData);
             }
 
             // 2. 画像のアップロードとFirestore更新
-            let imageUploadFailed = false;
-            let uploadErrorMessage = '';
-
             if (storage && currentStoreId) {
                 const storeDocRef = doc(userStoresCollectionRef, currentStoreId);
+                let uploadErrorMessage = '';
 
                 // メイン画像処理
                 if (mainImageFile) {
-                    try {
+                     try {
                         const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
                         const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
                         const fileRef = ref(storageInstance, storagePath);
@@ -660,8 +632,7 @@ const StoreProfilePage: FC = () => {
                         await updateDoc(storeDocRef, { mainImageUrl: updatedMainImageUrl });
                         setMainImageUrl(updatedMainImageUrl);
                     } catch (err: any) {
-                        imageUploadFailed = true;
-                        uploadErrorMessage += `メイン画像のアップロードに失敗: ${err.message}\n`;
+                        uploadErrorMessage += `メイン画像のアップロードに失敗。\n`;
                         console.error("Main Image Upload Failed:", err);
                     }
                 }
@@ -670,7 +641,7 @@ const StoreProfilePage: FC = () => {
                 if (galleryImageFiles.length > 0) {
                     const newGalleryImageUrls: string[] = [];
                     for (const file of galleryImageFiles) {
-                        try {
+                         try {
                             const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
                             const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
                             const fileRef = ref(storageInstance, storagePath);
@@ -678,8 +649,7 @@ const StoreProfilePage: FC = () => {
                             const downloadURL = await getDownloadURL(uploadTask.ref);
                             newGalleryImageUrls.push(downloadURL);
                         } catch (err: any) {
-                            imageUploadFailed = true;
-                            uploadErrorMessage += `ギャラリー画像 (${file.name}) のアップロードに失敗: ${err.message}\n`;
+                            uploadErrorMessage += `ギャラリー画像 (${file.name}) のアップロードに失敗。\n`;
                             console.error(`Gallery Image Upload Failed (${file.name}):`, err);
                         }
                     }
@@ -688,17 +658,17 @@ const StoreProfilePage: FC = () => {
                         setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
                     }
                 }
+                setMainImageFile(null);
+                setGalleryImageFiles([]);
+
+                if (uploadErrorMessage) {
+                    setError(`店舗情報は保存されましたが、画像アップロード中にエラーが発生しました:\n\n${uploadErrorMessage}原因: Storageのルール、タイムアウト、またはネットワークの問題を確認してください。`);
+                } else {
+                    setError('店舗情報を保存しました。');
+                }
             }
 
-            setMainImageFile(null);
-            setGalleryImageFiles([]);
-
-            if (imageUploadFailed) {
-                 setError(`店舗情報は保存されましたが、画像アップロード中にエラーが発生しました:\n\n${uploadErrorMessage}\n\n原因: Storageのルール、タイムアウト、またはネットワークの問題を確認してください。`);
-            } else {
-                 setError('店舗情報を保存しました。');
-            }
-            
+            // 処理成功後、強制リロードして最新データをフェッチ
             router.reload();
 
         } catch (err: any) {
@@ -717,8 +687,6 @@ const StoreProfilePage: FC = () => {
     // ----------------------------------------------------
     // UIレンダリングヘルパー (変更なし)
     // ----------------------------------------------------
-
-
     const RenderRestaurantFields = () => (
         <div className="mt-6 p-4 border rounded-md bg-white">
             <h3 className="font-bold text-lg mb-3 border-b pb-2">【飲食関連】詳細情報</h3>
@@ -765,16 +733,27 @@ const StoreProfilePage: FC = () => {
     };
     
 
-    if (loading) return <div>読み込み中...</div>;
+    if (loading) return (
+        <div className="flex justify-center items-center h-screen text-gray-600">
+            <RiLoader4Line className="animate-spin w-6 h-6 mr-2" /> 読み込み中...
+        </div>
+    );
 
 
     return (
         <div className="container mx-auto p-4 md:p-8 max-w-3xl">
+             <Link
+                href="/partner/dashboard"
+                className="flex items-center text-sm text-gray-600 hover:text-gray-900 font-semibold mb-6"
+            >
+                <RiArrowLeftLine className="w-4 h-4 mr-2" /> ダッシュボードに戻る
+            </Link>
+            
             <h1 className="text-2xl font-bold mb-6 text-gray-800">店舗プロフィールの登録・編集</h1>
             
             
             <div className="space-y-8">
-                {/* 1. 基本情報 (変更なし) */}
+                {/* 1. 基本情報 */}
                 <div className="space-y-6 p-4 border rounded-md bg-white shadow-sm">
                     <h2 className="text-xl font-bold border-b pb-2 text-gray-700">基本情報・カテゴリ</h2>
                     <div><label className="font-bold">店舗名 *</label><input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
@@ -828,7 +807,7 @@ const StoreProfilePage: FC = () => {
                     />
                 )}
 
-                {/* 3. 店舗紹介と特化ポイント (変更あり) */}
+                {/* 3. 店舗紹介と特化ポイント */}
                 <div className="space-y-6 p-4 border rounded-md bg-white shadow-sm">
                     <h2 className="text-xl font-bold border-b pb-2 text-gray-700">店舗紹介・強み・詳細情報</h2>
                     <div>
@@ -844,7 +823,7 @@ const StoreProfilePage: FC = () => {
 
                     {renderIndustrySpecificFields()}
 
-                    {/* ★★★ 修正点6: 「3つの強み」のJSXを変更 ★★★ */}
+                    {/* ★★★ 「3つの強み」のJSX ★★★ */}
                     <div className="border p-4 rounded-md bg-yellow-50">
                         <label className="font-bold block mb-3 text-lg text-yellow-800">貴店の特化ポイント（3つの強み）</label>
                         <p className="text-sm text-gray-600 mb-3">
@@ -899,12 +878,12 @@ const StoreProfilePage: FC = () => {
                             onChange={e => setTargetUserInterests(e.target.value)}
                             className="w-full p-2 border rounded mt-1"
                             rows={3}
-                            placeholder="例：週末に体験イベントに参加したいアクティブな層、価格よりも品質を重視する層など。"
+                            placeholder="例: 週末に体験イベントに参加したいアクティブな層、価格よりも品質を重視する層など。"
                         />
                     </div>
                 </div>
 
-                {/* 4. 画像・SNS・連携情報 (変更なし) */}
+                {/* 4. 画像・SNS・連携情報 */}
                 <div className="space-y-6 p-4 border rounded-md bg-white shadow-sm">
                     <h2 className="text-xl font-bold border-b pb-2 text-gray-700">画像・SNS・連携情報</h2>
 

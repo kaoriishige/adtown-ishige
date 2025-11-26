@@ -1,63 +1,71 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { adminDb } from '@/lib/firebase-admin';
-import * as admin from 'firebase-admin';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import nookies from 'nookies';
+import { FieldValue } from 'firebase-admin/firestore';
 
-// --- 型定義 ---
-type VerificationStatus = 'unverified' | 'pending_review' | 'verified' | 'rejected';
-
-// --- 審査ロジック (ダミー) ---
-async function performAIGrading(uid: string): Promise<{ status: VerificationStatus, feedback: string }> {
-    // 実際にはここで、Gemini APIを呼び出し、プロンプトを渡して審査を実行します。
-    // 処理時間が長くフリーズする場合は、Cloud Functionsへの移行を検討してください。
-
-    return {
-        status: 'verified',
-        feedback: 'AIによりプロファイルが優秀であると評価されました。求人は公開可能状態です。',
-    };
+/**
+ * 応答型定義
+ */
+interface ReviewResponse {
+    success: boolean;
+    message: string;
+    error?: string;
 }
 
-
-// --- メイン Webhook ハンドラー ---
-export default async function handler(req: NextApiRequest, res: NextApiResponse<{ message: string } | { error: string }>) {
+/**
+ * 企業プロフィールのAI審査トリガーAPIハンドラ
+ */
+export default async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse<ReviewResponse | { error: string }>
+) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { uid } = req.body;
-
-    if (!uid) {
-        return res.status(400).json({ error: 'UIDが不足しています。' });
-    }
-
-    // ★★★ 修正: Firestore参照を 'users' コレクションに統一 ★★★
-    const userRef = adminDb.collection('users').doc(uid); 
-    // ★★★
+    let currentUserUid: string;
+    const db = adminDb;
 
     try {
-        // 1. AI審査ロジックを実行
-        const reviewResult = await performAIGrading(uid);
+        // 1. 認証チェック
+        const cookies = nookies.get({ req });
+        const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
+        currentUserUid = token.uid;
+        
+    } catch (err) {
+        console.error('Authentication Error:', err);
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    try {
+        // 2. クライアントに即座に応答を返す（フリーズ回避）
+        res.status(200).json({ success: true, message: 'AI審査を受け付けました。' });
 
-        // 2. Firestoreを更新 (ユーザーデータ内に求人プロフィールを保存する構造)
+        // 3. 非同期で審査ロジックをトリガー（応答後も処理を継続）
+        // NOTE: この部分はクライアントに応答を返した後、サーバー側で非同期に実行されます。
+        
+        await new Promise(resolve => setTimeout(resolve, 5000)); // 審査時間（5秒）をシミュレート
+        
+        const userRef = db.collection('users').doc(currentUserUid);
+        const userSnap = await userRef.get();
+        
+        if (!userSnap.exists) return;
+
+        // ★★★ FIX: ランダム判定を削除し、常に承認 (verified) に設定 ★★★
+        const newStatus = 'verified'; 
+        const newFeedback = 'AIがプロファイルの整合性を確認し、魅力的であると判断しました。プロファイルは公開状態です。';
+
+        // 4. Firestoreに審査結果を書き込む
         await userRef.update({
-            verificationStatus: reviewResult.status, // usersドキュメント内にverificationStatusがあることを想定
-            aiFeedback: reviewResult.feedback,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            verificationStatus: newStatus,
+            aiFeedback: newFeedback,
+            updatedAt: FieldValue.serverTimestamp(),
         });
 
-        // 3. 成功応答
-        return res.status(200).json({ message: 'AI審査が完了し、ステータスが更新されました。' });
-
-    } catch (e: any) {
-        console.error('❌ サーバー側AI審査APIエラー:', e);
-
-        // 審査APIが失敗した場合、ステータスを rejected に強制更新
-        await userRef.update({
-            verificationStatus: 'rejected',
-            aiFeedback: `システムエラーにより審査が中断されました。再試行してください。`,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        return res.status(500).json({ error: `AI審査処理中に致命的なエラーが発生しました。` });
+        console.log(`[AI Review] User ${currentUserUid} result: ${newStatus}`);
+        
+    } catch (error) {
+        console.error('AI Review Async Process Failed:', error);
     }
 }

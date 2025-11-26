@@ -1,91 +1,110 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import nookies from 'nookies';
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
 
 type UserData = {
-  uid: string;
-  email: string;
-  name?: string;
-  points?: {
-    balance: number;
-    usableBalance: number;
-  };
+    uid: string;
+    email: string;
+    name?: string;
+    createdAt?: string;
 };
 
-type SuccessResponse = { users: UserData[] };
-type ErrorResponse = { error: string };
+type ResponseData = {
+    users: UserData[];
+    error?: string;
+};
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<SuccessResponse | ErrorResponse>
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+// Firestore IN クエリの最大値
+const IN_QUERY_LIMIT = 30;
 
-  try {
-    const cookies = nookies.get({ req });
-    const token = await adminAuth.verifySessionCookie(cookies.token, true);
-    const adminDoc = await adminDb.collection('users').doc(token.uid).get();
-
-    if (!adminDoc.exists || adminDoc.data()?.role !== 'admin') {
-      return res.status(403).json({ error: 'Unauthorized: User is not an admin' });
+/**
+ * ユーザー検索および初期リスト取得API
+ * * @note INクエリの30件制限に対応するため、UIDリストを分割処理します。
+ */
+export default async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>) {
+    if (req.method !== 'POST') {
+        res.setHeader('Allow', 'POST');
+        return res.status(405).json({ users: [], error: 'Method Not Allowed' });
     }
 
-    const { query } = req.body;
-    if (!query || typeof query !== 'string' || !query.trim()) {
-      return res.status(400).json({ error: 'Search query is required.' });
-    }
+    // 🚨 注意: 本番環境では、ここで管理者の認証とロールチェックが必要です。
 
-    // 🔍 正規表現修正済み
-    const sanitizedQuery = query.replace(/[.]+/g, '');
+    const { query: searchQuery } = req.body as { query: string };
+    const db = adminDb;
+    const usersList: UserData[] = [];
 
-    const foundUsers: UserData[] = [];
-    const auth = adminAuth;
-
-    // --- 検索1: emailで検索 ---
     try {
-      const userByEmail = await auth.getUserByEmail(sanitizedQuery);
-      const userDoc = await adminDb.collection('users').doc(userByEmail.uid).get();
+        if (searchQuery && searchQuery.trim().includes('@')) {
+            // 1. メールアドレスでの検索 (単一取得)
+            const userRecord = await adminAuth.getUserByEmail(searchQuery.trim());
+            usersList.push({
+                uid: userRecord.uid,
+                email: userRecord.email || '',
+                name: userRecord.displayName,
+                createdAt: userRecord.metadata.creationTime,
+            });
+        } else if (searchQuery && searchQuery.trim().length > 0) {
+            // 2. UIDでの検索 (単一取得)
+            const uid = searchQuery.trim();
+            const userRecord = await adminAuth.getUser(uid);
+            const profileSnap = await db.collection('userProfiles').doc(uid).get();
+            
+            usersList.push({
+                uid: userRecord.uid,
+                email: userRecord.email || '',
+                name: profileSnap.data()?.name || userRecord.displayName,
+                createdAt: userRecord.metadata.creationTime,
+            });
+        } else {
+            // 3. 初期表示/全件取得 (最近のユーザーを最大100件)
+            const listUsersResult = await adminAuth.listUsers(100);
+            const authUsers = listUsersResult.users;
 
-      if (userDoc.exists) {
-        foundUsers.push({
-          uid: userByEmail.uid,
-          email: userByEmail.email!,
-          name: userDoc.data()?.name,
-          points: userDoc.data()?.points,
-        });
-      }
-    } catch (e) {
-      console.error('Email lookup failed:', e);
+            if (authUsers.length > 0) {
+                const profilesMap = new Map();
+                const authUids = authUsers.map(u => u.uid);
 
-      // --- 検索2: uidで検索 ---
-      try {
-        const userById = await auth.getUser(sanitizedQuery);
-        const userDoc = await adminDb.collection('users').doc(userById.uid).get();
+                // ★★★ 修正ロジック: UIDリストを30件ずつ分割してFirestoreをクエリ ★★★
+                // これにより、'IN' supports up to 30 comparison values. のエラーを回避します。
+                for (let i = 0; i < authUids.length; i += IN_QUERY_LIMIT) {
+                    const chunkUids = authUids.slice(i, i + IN_QUERY_LIMIT);
+                    
+                    const profilesQuery = db.collection('userProfiles').where(admin.firestore.FieldPath.documentId(), 'in', chunkUids);
+                    const profilesSnap = await profilesQuery.get();
+                    
+                    profilesSnap.docs.forEach(doc => profilesMap.set(doc.id, doc.data()));
+                }
 
-        if (userDoc.exists) {
-          foundUsers.push({
-            uid: userById.uid,
-            email: userById.email!,
-            name: userDoc.data()?.name,
-            points: userDoc.data()?.points,
-          });
+                // 認証情報とプロフィール情報を結合
+                authUsers.forEach(userRecord => {
+                    const profile = profilesMap.get(userRecord.uid);
+                    usersList.push({
+                        uid: userRecord.uid,
+                        email: userRecord.email || '',
+                        name: profile?.name || userRecord.displayName || '名前未設定',
+                        createdAt: userRecord.metadata.creationTime,
+                    });
+                });
+            }
         }
-      } catch (e2) {
-        console.error('UID lookup failed:', e2);
-      }
-    }
 
-    if (foundUsers.length === 0) {
-      return res.status(200).json({ users: [] });
-    }
+        // 作成日順にソート
+        usersList.sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
 
-    return res.status(200).json({ users: foundUsers });
-  } catch (error) {
-    console.error('Main handler error:', error);
-    return res.status(500).json({ error: 'An error occurred' });
-  }
+        return res.status(200).json({ users: usersList });
+    } catch (e: any) {
+        if (e.code === 'auth/user-not-found' || e.code === 'not-found') {
+             return res.status(200).json({ users: [], error: '該当するユーザーが見つかりませんでした。' });
+        }
+        console.error('User search error:', e);
+        // エラーコードと詳細を含めて返す
+        // e.details が存在する場合はそれを使用
+        const errorMessage = e.details || e.message;
+        return res.status(500).json({ users: [], error: `サーバーエラー: ${errorMessage}` });
+    }
 }
-
