@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -7,78 +7,109 @@ import {
     getAuth, 
     signInWithEmailAndPassword, 
     GoogleAuthProvider, 
-    signInWithPopup 
+    signInWithPopup,
+    onAuthStateChanged
 } from 'firebase/auth';
-// FirebaseErrorの型定義が必要なため、firebase/app からインポートする（または any で扱う）
-// ここでは FirebaseError をインポートしている前提で修正します。
-// import { FirebaseError } from 'firebase/app'; 
-import { app } from '@/lib/firebase';
-import { FcGoogle } from 'react-icons/fc';
-import { RiLoginBoxLine } from 'react-icons/ri';
+// ★重要: あなたのプロジェクトのFirebase初期化ファイルのパスに合わせてください
+// (以前のやり取りでは @/lib/firebase-client でしたが、ご提示のコードでは @/lib/firebase でした。
+//  エラーが出る場合は正しい方に書き換えてください)
+import { app } from '@/lib/firebase'; 
 
-// --- SVGアイコン ---
-const EyeIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg> );
-const EyeOffIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a1.89 1.89 0 0 1 0-.66M22 12s-3 7-10 7a9.75 9.75 0 0 1-4.24-1.16"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9.9 9.9a3 3 0 1 0 4.2 4.2"></path></svg> );
+// アイコンライブラリ (npm install react-icons が必要)
+import { FcGoogle } from 'react-icons/fc';
+import { RiLoginBoxLine, RiInformationLine } from 'react-icons/ri';
+
+// --- SVGアイコンコンポーネント (パスワード表示切替用) ---
+const EyeIcon = (props: React.SVGProps<SVGSVGElement>) => ( 
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg> 
+);
+const EyeOffIcon = (props: React.SVGProps<SVGSVGElement>) => ( 
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a1.89 1.89 0 0 1 0-.66M22 12s-3 7-10 7a9.75 9.75 0 0 1-4.24-1.16"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9.9 9.9a3 3 0 1 0 4.2 4.2"></path></svg> 
+);
 
 /**
- * Firebase Authのエラーコードおよびカスタムエラーメッセージを日本語に変換します。
- * @param err catchで捕捉されたエラーオブジェクト
+ * Firebase Authのエラーコードを日本語メッセージに変換するヘルパー関数
  */
 const translateFirebaseError = (err: any): string => {
-    // 1. カスタムエラーメッセージ（APIなどから投げられた場合）を優先的に処理
-    if (err instanceof Error && err.message) {
-        // 'code'プロパティの存在チェック
-        if (!('code' in err) || typeof err.code !== 'string') {
-             return err.message;
+    if (typeof err === 'object' && err !== null && 'code' in err) {
+        switch (err.code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                return 'メールアドレスまたはパスワードが正しくありません。';
+            case 'auth/invalid-email':
+                return 'メールアドレスの形式が正しくありません。';
+            case 'auth/user-disabled':
+                return 'このアカウントは無効になっています。運営にお問い合わせください。';
+            case 'auth/too-many-requests':
+                return '試行回数が多すぎます。時間をおいて再度お試しください。';
+            case 'auth/popup-closed-by-user':
+                return 'ログイン画面が閉じられました。もう一度お試しください。';
+            case 'auth/popup-blocked':
+                return 'ブラウザによってポップアップがブロックされました。設定で許可してください。';
+            case 'auth/network-request-failed':
+                return 'ネットワーク接続に問題があります。通信環境を確認してください。';
+            default:
+                return `エラーが発生しました: ${err.code}`;
         }
     }
-    
-    // 2. err.code が存在しない、または不明な場合は不明なエラーとして処理
-    if (!err.code || typeof err.code !== 'string') {
-        console.error('Unhandled System Error (No Code):', err);
-        return err.message || 'ログインに失敗しました。予期せぬシステムエラーが発生しました。';
-    }
-
-    // 3. Firebase Authのエラーコードに基づく処理
-    switch (err.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-            return 'メールアドレスまたはパスワードが正しくありません。';
-        case 'auth/invalid-email':
-            return 'メールアドレスの形式が正しくありません。';
-        case 'auth/user-disabled':
-            return 'このアカウントは無効になっています。運営にお問い合わせください。';
-        case 'auth/too-many-requests':
-            return '試行回数が多すぎます。時間をおいて再度お試しください。';
-        case 'auth/popup-closed-by-user':
-            return 'ログインウィンドウが閉じられました。もう一度お試しください。';
-        case 'auth/popup-blocked':
-            return 'ブラウザによってポップアップがブロックされました。ポップアップを許可してください。';
-        case 'auth/network-request-failed':
-            return 'ネットワーク接続に問題があります。インターネット接続を確認してください。';
-        case 'auth/operation-not-allowed':
-             return 'このログイン方法は現在許可されていません。運営にご連絡ください。';
-        default:
-            console.error('Unhandled Auth Error:', err);
-            return 'ログインに失敗しました。不明なエラーが発生しました。';
-    }
+    // エラーコードがない場合
+    return err.message || '予期せぬエラーが発生しました。';
 };
 
 const LoginPage: NextPage = () => {
-    // 'router' is declared but its value is never read. の警告を回避するため、未使用であれば削除
-    // const router = useRouter(); 
-    useRouter(); // 警告回避のため、結果を使用しない場合はこのように記述することも可能（TypeScriptの設定による）
-    
+    const router = useRouter();
+    // コンポーネント内で auth インスタンスを取得
     const auth = getAuth(app); 
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [passwordVisible, setPasswordVisible] = useState(false); 
 
+    // 既にログイン済みならホームへリダイレクト
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                router.push('/home');
+            }
+        });
+        return () => unsubscribe();
+    }, [auth, router]);
+
     /**
-     * ✅ 通常ログイン処理（メール/パスワード）
+     * ✅ サーバーサイドセッション作成処理
+     * FirebaseのIDトークンをサーバーに送り、HttpOnly Cookieをセットしてもらう
+     */
+    const createSession = async (user: any) => {
+        try {
+            const idToken = await user.getIdToken(true);
+            const res = await fetch('/api/auth/sessionLogin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({ loginType: 'user' }), 
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'サーバーセッションの作成に失敗しました。');
+            }
+            
+            // 成功したらホームへ
+            router.push('/home');
+        } catch (err: any) {
+            console.error('Session Creation Error:', err);
+            setError('ログイン処理中にサーバーエラーが発生しました。');
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * ✅ メール/パスワードログイン処理
      */
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,77 +117,31 @@ const LoginPage: NextPage = () => {
         setError(null);
 
         try {
-            // --- 1. Firebase Authによる認証 ---
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            const idToken = await user.getIdToken(true);
-
-            // --- 2. カスタムセッションの作成（サーバーサイド） ---
-            const res = await fetch('/api/auth/sessionLogin', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`,
-                },
-                body: JSON.stringify({ loginType: 'user' }), 
-                credentials: 'include',
-            });
-
-            // サーバー側APIが失敗した場合
-            if (!res.ok) {
-                const data = await res.json();
-                // サーバーから返されたエラーメッセージをthrow
-                throw new Error(data.error || 'サーバーでセッション作成に失敗しました。（HTTPエラー）');
-            }
-
-            // 3. 成功後の処理
-            await new Promise((r) => setTimeout(r, 500));
-            window.location.href = '/home'; 
+            await createSession(userCredential.user);
         } catch (err: any) {
-            console.error('Login Process Error:', err);
-            // エラーを日本語化して表示
-            setError(translateFirebaseError(err)); 
+            console.error('Login Error:', err);
+            setError(translateFirebaseError(err));
             setIsLoading(false);
         }
     };
 
     /**
      * ✅ Googleログイン処理
+     * ※ signInWithPopup を使うことでスマホでのセッション切れ問題を回避
      */
     const handleGoogleLogin = async () => {
         setIsLoading(true);
         setError(null);
+        
         const provider = new GoogleAuthProvider();
         
         try {
-            // --- 1. Firebase AuthによるGoogle Pop-up認証 ---
             const result = await signInWithPopup(auth, provider);
-            const user = result.user;
-            const idToken = await user.getIdToken(true);
-
-            // --- 2. カスタムセッションの作成（サーバーサイド） ---
-            const res = await fetch('/api/auth/sessionLogin', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`,
-                },
-                body: JSON.stringify({ loginType: 'user' }), 
-                credentials: 'include',
-            });
-
-            // サーバー側APIが失敗した場合
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'サーバーでセッション作成に失敗しました。（HTTPエラー）');
-            }
-
-            // 3. 成功後の処理
-            await new Promise((r) => setTimeout(r, 500));
-            window.location.href = '/home'; 
+            await createSession(result.user);
         } catch (err: any) {
-            console.error('Google Login Process Error:', err);
-            setError(translateFirebaseError(err)); 
+            console.error('Google Login Error:', err);
+            setError(translateFirebaseError(err));
             setIsLoading(false);
         }
     };
@@ -174,8 +159,9 @@ const LoginPage: NextPage = () => {
                     </h1>
 
                     {error && (
-                        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center">
-                            {error}
+                        <div className="p-3 bg-red-50 border-l-4 border-red-400 text-red-700 rounded-r-lg text-sm flex items-start">
+                            <RiInformationLine className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+                            <span>{error}</span>
                         </div>
                     )}
 
@@ -256,8 +242,8 @@ const LoginPage: NextPage = () => {
                             </Link>
                         </p>
                         
-                        <p className="text-gray-600 text-xs">
-                            メールアドレスを忘れた方は、通常お使いのメールで{' '}
+                        <p className="text-gray-600 text-xs mt-4">
+                            ログインできない場合は{' '}
                             <a 
                                 href="mailto:adtown001@gmail.com" 
                                 className="text-blue-600 hover:underline"
