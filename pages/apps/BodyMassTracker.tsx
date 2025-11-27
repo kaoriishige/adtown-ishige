@@ -12,14 +12,12 @@ import {
   addDoc, 
   onSnapshot, 
   query, 
-  orderBy,
   serverTimestamp,
   deleteDoc,
   doc
 } from 'firebase/firestore';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { Plus, AlertTriangle, LogOut, Heart, Loader2, ArrowLeft, Calculator, Home, Clock, Trash2, BookOpen } from 'lucide-react'; 
-import Head from 'next/head';
+import { Plus, AlertTriangle, LogOut, Heart, Loader2, ArrowLeft, Calculator, Clock, Trash2, BookOpen } from 'lucide-react'; 
 
 // --- 型定義 ---
 interface RecordItem {
@@ -112,6 +110,7 @@ const BodyMassTrackerApp = () => {
   // 2. Data Synchronization (onSnapshot)
   useEffect(() => {
     const { db, appId } = firebase;
+    // 認証が完了し、ユーザーが存在する場合のみデータ取得を行う
     if (!isAuthReady || !user || !db || globalError) {
       setRecords([]);
       return;
@@ -120,8 +119,9 @@ const BodyMassTrackerApp = () => {
     setLoading(true);
     // Path: /artifacts/{appId}/users/{userId}/bodyRecords
     const recordsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'bodyRecords');
-    // 最新の記録を上に表示
-    const q = query(recordsRef, orderBy('date', 'desc')); 
+    
+    // ★重要: orderByを使わず、全てのデータを取得する単純なクエリにします（インデックスエラー回避）
+    const q = query(recordsRef); 
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedRecords: RecordItem[] = snapshot.docs.map(doc => ({
@@ -129,10 +129,17 @@ const BodyMassTrackerApp = () => {
         ...(doc.data() as Omit<RecordItem, 'id'>), 
       } as RecordItem));
 
+      // JavaScript側で日付の降順（新しい順）に並び替え
+      fetchedRecords.sort((a, b) => {
+        if (a.date > b.date) return -1;
+        if (a.date < b.date) return 1;
+        return 0;
+      });
+
       setRecords(fetchedRecords);
       setLoading(false);
 
-      // 身長がまだ保存されていなければ、最新の記録から取得
+      // 身長がまだ入力欄になく、過去の記録がある場合は最新の身長を自動セット
       if (fetchedRecords.length > 0 && !newHeight) {
           const lastHeight = fetchedRecords[0].height;
           if (lastHeight) setNewHeight(lastHeight.toString());
@@ -140,12 +147,18 @@ const BodyMassTrackerApp = () => {
       
     }, (err: any) => {
       console.error("Data sync error:", err);
-      setGlobalError("データ読み込みに失敗しました。ルールを確認してください。"); 
+      // エラーの詳細を表示してデバッグしやすくする
+      setGlobalError(`データ読み込みに失敗しました。(${err.code || err.message})`); 
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, user, globalError, firebase]); 
+  }, [isAuthReady, user, globalError, firebase, newHeight]); // newHeightを依存配列に追加（自動入力のため）
+
+  // 3. タイトル設定 (Next/Headの代替)
+  useEffect(() => {
+    document.title = "体重記録＆BMI";
+  }, []);
 
   // --- Calculations & Helpers ---
 
@@ -182,11 +195,10 @@ const BodyMassTrackerApp = () => {
     const heightNum = parseFloat(newHeight);
 
     if (!weightNum || !heightNum || !user || !db || isNaN(weightNum) || isNaN(heightNum)) {
-        setGlobalError("体重と身長を正しく入力してください。");
+        alert("体重と身長を正しく入力してください。");
         return;
     }
     
-    setGlobalError(null);
     setLoading(true);
 
     try {
@@ -196,10 +208,10 @@ const BodyMassTrackerApp = () => {
         date: currentDate,
         createdAt: serverTimestamp(),
       });
-      setNewWeight(''); // 体重だけリセット
-    } catch (err) {
+      setNewWeight(''); // 体重だけリセット（身長は維持）
+    } catch (err: any) {
       console.error("Add record error:", err);
-      setGlobalError("記録の追加に失敗しました。");
+      alert(`記録の追加に失敗しました: ${err.message}`);
     } finally {
         setLoading(false);
     }
@@ -213,6 +225,7 @@ const BodyMassTrackerApp = () => {
       await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'bodyRecords', recordId));
     } catch (err) {
       console.error("Delete record error:", err);
+      alert("削除に失敗しました。");
     }
   };
 
@@ -233,15 +246,13 @@ const BodyMassTrackerApp = () => {
     );
   }
 
-  // リンクの代わりにボタンを使用し、window.locationで遷移させる
   const handleGoCategories = () => {
       window.location.href = '/apps/categories';
   };
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans pb-20">
-      <Head><title>体重記録＆BMI</title></Head>
-
+      
       <header className="bg-white shadow-sm sticky top-0 z-10 p-4 border-b border-gray-200">
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <button onClick={handleGoCategories} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -386,7 +397,7 @@ const BodyMassTrackerApp = () => {
         </section>
       </main>
       
-      {/* 使い方ガイドセクションをフッターの上に移動 */}
+      {/* 使い方ガイドセクション */}
       <section className="max-w-xl mx-auto p-4 sm:p-6 pt-0">
           <div className="mt-8 p-6 bg-white rounded-xl shadow-lg border border-blue-200">
               <h2 className="text-lg font-bold text-blue-600 mb-3 flex items-center gap-2">
@@ -402,7 +413,6 @@ const BodyMassTrackerApp = () => {
                   </div>
                   <div className="border-t pt-3">
                       <h4 className="font-bold text-base mb-1">2. BMI判定基準（厚生労働省）</h4>
-                      {/* ★修正ポイント: BMI基準の表を追加 */}
                       <div className="overflow-x-auto mt-2">
                           <table className="w-full text-left text-sm border-collapse">
                               <thead>
