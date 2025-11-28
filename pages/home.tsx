@@ -189,10 +189,16 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
             <footer className="text-center mt-8 pb-4 space-y-8">
               
-              <section>
-                <Link href="/contact" className="inline-block bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-8 rounded-lg shadow-sm transition-colors">
-                  お問い合わせ
-                </Link>
+              <section className="flex flex-col items-center gap-2">
+                <p className="text-sm font-bold text-gray-700">お問い合わせはLINEでお願いします。</p>
+                <a href="https://lin.ee/Aac3C0d">
+                  <img 
+                    src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" 
+                    alt="友だち追加" 
+                    height="36" 
+                    style={{ border: '0' }} 
+                  />
+                </a>
               </section>
 
               {/* ログアウトボタン */}

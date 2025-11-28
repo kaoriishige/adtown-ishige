@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import { IoSparklesSharp } from 'react-icons/io5';
 import { RiLayoutGridFill } from 'react-icons/ri';
 // 必要なアイコンをlucide-reactからインポート
-import { Clock, Gift, Heart, Store, Brain, Zap, Utensils, Droplet, Gamepad, User, Users, Trash2, Shield, TrendingUp, ArrowLeft, Target, BookOpen, Calendar, Smile, Lightbulb, Shirt, Mail, Sun, Sparkles } from 'lucide-react'; 
+import { Clock, Gift, Heart, Store, Brain, Zap, Utensils, Droplet, Gamepad, User, Users, Trash2, Shield, TrendingUp, ArrowLeft, Target, BookOpen, Calendar, Smile, Lightbulb, Shirt, Mail, Sun, Sparkles, WashingMachine } from 'lucide-react'; 
 
 // 2025年12月1日を基準日として設定 (利用制限ロジック維持)
 const FUTURE_ACCESS_DATE = new Date('2025-12-01T00:00:00');
@@ -33,8 +33,26 @@ const APP_LIST = [
     { title: "子育て支援情報ナビ", category: '子育て', description: '各市町の子育て・教育情報リンク集', href: '/apps/ParentingInfo', Icon: User, disabled: false },
     
     // ----------------------------------------------------
-    // 節約・特売 (統合された新しい名称)
+    // 節約・特売 (時短レシピアプリを再追加)
     // ----------------------------------------------------
+    // ★再追加: 10分で完成！時短レシピ
+    { 
+        title: "10分で完成！時短レシピ", 
+        category: '節約・特売', 
+        description: 'レンジ/ワンパン調理を優先！10分でできる超速献立を提案', 
+        href: '/apps/QuickRecipes', 
+        Icon: Zap, 
+        disabled: false 
+    },
+    // ★再追加: 超速！10分以内メインディッシュ
+    { 
+        title: "超速！10分以内メインディッシュ", 
+        category: '節約・特売', 
+        description: '豚肉・鶏肉などを使った人気のメインおかずを10分以内に限定提案', 
+        href: '/apps/TenMinMainDish', 
+        Icon: Utensils, 
+        disabled: false 
+    },
     { 
       title: "スーパー特売チラシ＆AI献立ナビ", 
       category: '節約・特売', 
@@ -83,16 +101,16 @@ const APP_LIST = [
 
 // カテゴリ名の維持
 const CATEGORIES = [
-  '生活情報',
-  '健康支援',
-  '子育て',
-  '節約・特売',
-  'エンタメ',
-  '防災・安全', 
-  'スキルアップ・キャリア', 
-  '診断・運勢',
-  '人間関係',
-  '趣味・文化' 
+    '生活情報',
+    '健康支援',
+    '子育て',
+    '節約・特売',
+    'エンタメ',
+    '防災・安全', 
+    'スキルアップ・キャリア', 
+    '診断・運勢',
+    '人間関係',
+    '趣味・文化' 
 ];
 
 // カテゴリにアプリが登録されているかチェックし、アプリがない場合はプレースホルダー表示をするヘルパー関数
@@ -142,8 +160,8 @@ export default function CategoriesPage() {
                         <ArrowLeft className="w-5 h-5 text-gray-600" />
                     </button>
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                          <RiLayoutGridFill className="w-6 h-6 text-green-600" />
-                          アプリカテゴリ
+                        <RiLayoutGridFill className="w-6 h-6 text-green-600" />
+                        アプリカテゴリ
                     </h1>
                 </div>
             </header>

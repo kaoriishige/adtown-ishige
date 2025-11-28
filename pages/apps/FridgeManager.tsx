@@ -20,6 +20,9 @@ import {
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { Plus, Trash2, AlertTriangle, LogOut, CheckCircle, Clock, Loader2, ArrowLeft, X, BookOpen, ChefHat, RefreshCw, Users, Sparkles } from 'lucide-react'; 
 
+// Google Gen AI SDK のインポート
+import { GoogleGenAI } from '@google/genai'; 
+
 // --- 型定義 ---
 interface FridgeItem {
   id: string;
@@ -30,16 +33,33 @@ interface FridgeItem {
 }
 
 // --- Firebase Config & Initialization Helper ---
-const getEnvVar = (name: string): any => {
+/**
+ * 環境変数を取得するヘルパー関数。
+ * (エラー7030対策: 戻り値の型を any に広げ、明示的に undefined を返す)
+ */
+const getEnvVar = (name: string): any => { // 戻り値の型を any に設定
+    // Netlify/Next.jsのクライアント公開変数を直接読み込む
+    if (typeof window !== 'undefined' && name === 'NEXT_PUBLIC_GEMINI_API_KEY') {
+        return process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    }
+    
+    // 他の特殊な環境変数のための既存ロジック (windowオブジェクトからの取得を想定)
     if (typeof window !== 'undefined' && (window as any)[name] !== undefined) {
         return (window as any)[name];
     }
-    return undefined;
+    
+    // すべてのコードパスで値を返すことを保証
+    return undefined; 
 };
 
-const firebaseConfigRaw = getEnvVar('__firebase_config');
-const initialAuthToken = getEnvVar('__initial_auth_token') || null;
-const appId = getEnvVar('__app_id') || 'default-app-id';
+// 初期化時に値を安全に取得し、型を確定させる
+const firebaseConfigRaw: string | null = getEnvVar('__firebase_config') || null;
+const initialAuthToken: string | null = getEnvVar('__initial_auth_token') || null;
+const appId: string = getEnvVar('__app_id') || 'default-app-id';
+
+// NEXT_PUBLIC_GEMINI_API_KEY を取得 (string | undefined)
+const GEMINI_API_KEY: string | undefined = getEnvVar('NEXT_PUBLIC_GEMINI_API_KEY');
+
 
 const FridgeManagerApp = () => {
   // --- Firebase State ---
@@ -192,7 +212,7 @@ const FridgeManagerApp = () => {
     }
   };
 
-  // --- AI Recipe Generation (Server-side API Call) ---
+  // --- AI Recipe Generation (Client-side API Call) ---
   const handleGenerateRecipe = async () => {
     const activeIngredients = items.filter(item => !item.used).map(item => item.name);
     
@@ -201,43 +221,49 @@ const FridgeManagerApp = () => {
       return;
     }
 
+    // NEXT_PUBLIC_GEMINI_API_KEYが設定されているか確認
+    if (!GEMINI_API_KEY) {
+        // エラー2345対策: 型アサーションで string | null であることを強制
+        setAiRecipe("エラー: NEXT_PUBLIC_GEMINI_API_KEYが設定されていません。Netlify環境変数を確認してください。" as string | null);
+        return;
+    }
+
     setIsRecipeLoading(true);
     setAiRecipe(null);
-
+    
+    // クライアントサイドで直接GoogleGenAIを使用 (APIキーをオプションオブジェクトとして渡す)
     try {
-      // サーバーサイドAPIを呼び出す
-      // APIキーはサーバー側 (.env.local) で管理されるため、ここでは送りません
-      const response = await fetch('/api/ai/recipe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          ingredients: activeIngredients,
-          servings: servings
-        }),
-      });
+        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY }); 
+        
+        const prompt = `以下の食材を使って、${servings}人分の簡単で美味しいレシピを提案してください。冷蔵庫の在庫を使い切ることを最優先にしてください。\n\n食材リスト: ${activeIngredients.join(', ')}\n\n(指示: レシピ名、材料、手順を分かりやすく箇条書きで記述してください。)`;
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Server API Error:", response.status, errorData);
-        throw new Error(errorData.message || `API Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setAiRecipe(data.result);
-      
-    } catch (error: any) {
-      console.error("AI Generation Error:", error);
-      
-      let errorMessage = "レシピの生成に失敗しました。";
-      if (error.message.includes('500')) {
-        errorMessage = "サーバーエラーが発生しました。時間を置いて再度お試しください。";
-      } else if (error.message.includes('404')) {
-        errorMessage = "APIが見つかりません。/api/ai/recipe が存在するか確認してください。";
-      }
-      
-      setAiRecipe(`${errorMessage} (${error.message})`);
+        // 🚨 resultTextのエラー対策: response.textがundefinedでないかチェック
+        const resultText = response.text; 
+        
+        if (resultText) {
+             setAiRecipe(resultText); 
+        } else {
+             setAiRecipe("レシピの生成に失敗しました。AIからの応答が空でした。プロンプトを見直してください。");
+        }
+        
+    } catch (error) { // エラーハンドリングを安全な型で実装
+        console.error("AI Generation Error:", error);
+        
+        let errorMessage: string;
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'object' && error !== null && 'message' in error) {
+             errorMessage = String((error as any).message); 
+        } else {
+             errorMessage = String(error);
+        }
+        
+        setAiRecipe(`レシピの生成に失敗しました。Gemini APIエラー: ${errorMessage}`);
     } finally {
       setIsRecipeLoading(false);
     }
@@ -354,7 +380,7 @@ const FridgeManagerApp = () => {
           </div>
           <div className="flex gap-2 items-center">
               <button onClick={() => setIsGuideOpen(true)} className="text-sm text-blue-600 hover:text-blue-800 border border-blue-600 hover:border-blue-800 rounded-full px-3 py-1 transition-colors flex items-center gap-1">
-                  <BookOpen size={16} /><span className="hidden sm:inline">使い方</span>
+                <BookOpen size={16} /><span className="hidden sm:inline">使い方</span>
               </button>
               {user && (
                   <button onClick={() => signOut(firebase.auth!)} className="text-sm text-gray-500 hover:text-red-500 ml-1"><LogOut className="w-5 h-5" /></button>
