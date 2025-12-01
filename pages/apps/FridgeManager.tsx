@@ -212,18 +212,75 @@ const FridgeManagerApp = () => {
     }
   };
 
+  // 決定されたレシピの食材を在庫から削除する（used: true にする）
+  const handleRecipeDecision = async () => {
+    const { db, appId } = firebase;
+    if (!user || !db || !aiRecipe) return;
+    
+    if (!confirm('このレシピで作りますか？使用した食材は在庫から「使用済み」に移動します。')) {
+      return;
+    }
+
+    try {
+        // 1. AIの応答から使用した食材のIDをパースする (ユニークIDを持つもののみ)
+        // 正規表現: 括弧内の文字列を全て抽出
+        const regex = /\(([^)]+)\)/g; 
+        
+        let match;
+        const usedIds: string[] = [];
+        
+        // aiRecipeから、プロンプトで要求した形式のIDを全て抽出
+        while ((match = regex.exec(aiRecipe)) !== null) {
+            const potentialId = match[1].trim();
+            usedIds.push(potentialId);
+        }
+        
+        // 重複を排除し、実際にアクティブな在庫リストにあるIDのみを対象とする
+        const uniqueUsedIds = Array.from(new Set(usedIds)).filter(id => 
+            items.some(item => item.id === id && !item.used)
+        );
+
+        if (uniqueUsedIds.length === 0) {
+            alert('レシピから使用する食材のIDを特定できませんでした。全ての在庫をそのまま残します。');
+            setAiRecipe(null);
+            return;
+        }
+        
+        // 2. IDに基づいて該当アイテムのusedフラグをtrueに更新
+        // ※ 厳密な在庫の残量計算（例：300g中150g使用で残り150g）は、AI応答の複雑なパースとFirestoreのフィールド構造変更が必要なため、今回はスキップします。
+        // シンプル化のため、レシピにIDが登場したアイテムは「使用済み」に移動します。
+        const updates = uniqueUsedIds.map(id => {
+            const itemRef = doc(db, 'artifacts', appId, 'users', user.uid, 'fridgeItems', id);
+            return updateDoc(itemRef, { used: true });
+        });
+        
+        await Promise.all(updates);
+
+        setAiRecipe(null); // レシピ表示をクリア
+        alert(`${uniqueUsedIds.length}種類の食材を使用済みに移動しました。`);
+
+    } catch (err) {
+      console.error("Recipe decision error:", err);
+      setGlobalError("在庫の更新に失敗しました。");
+    }
+  };
+
+
   // --- AI Recipe Generation (Client-side API Call) ---
   const handleGenerateRecipe = async () => {
-    const activeIngredients = items.filter(item => !item.used).map(item => item.name);
+    // 修正: activeItemsをIDと名前を持つオブジェクトの配列として保持
+    const activeItems = items.filter(item => !item.used);
     
-    if (activeIngredients.length === 0) {
+    if (activeItems.length === 0) {
       setAiRecipe("冷蔵庫が空っぽです！まずは食材を追加してください。");
       return;
     }
 
+    // 修正: プロンプトに渡す食材リストを「食材名 (ID)」形式にする
+    const activeIngredients = activeItems.map(item => `${item.name} (${item.id})`);
+    
     // NEXT_PUBLIC_GEMINI_API_KEYが設定されているか確認
     if (!GEMINI_API_KEY) {
-        // エラー2345対策: 型アサーションで string | null であることを強制
         setAiRecipe("エラー: NEXT_PUBLIC_GEMINI_API_KEYが設定されていません。Netlify環境変数を確認してください。" as string | null);
         return;
     }
@@ -235,14 +292,28 @@ const FridgeManagerApp = () => {
     try {
         const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY }); 
         
-        const prompt = `以下の食材を使って、${servings}人分の簡単で美味しいレシピを提案してください。冷蔵庫の在庫を使い切ることを最優先にしてください。\n\n食材リスト: ${activeIngredients.join(', ')}\n\n(指示: レシピ名、材料、手順を分かりやすく箇条書きで記述してください。)`;
+        // 🚨 修正後のプロンプト: 日本の標準的な分量を強く要求し、ID付与を指示
+        const prompt = `以下の食材を使って、${servings}人分の簡単で美味しいレシピを提案してください。
+
+提案するレシピの分量は**${servings}人分を厳守**し、材料には**具体的なグラム数、個数、またはml、大さじなどの単位**を記載してください。
+特に肉や魚、野菜などの主たる材料は、**日本の家庭料理における${servings}人前の標準的な分量（例：肉類は1人あたり80g〜100g）**を基準に記載してください。
+在庫リストは、使用可能な食材の参照にのみ使用してください。
+
+**重要**: レシピの「材料」セクションでは、元の食材リストにある食材を使う場合、必ずその食材名に続く括弧内のユニークIDをレシピの材料名にもそのまま付与してください。
+例: 食材リストに「豚こま肉 300g (item_xyz)」がある場合、レシピの材料は「豚こま肉 (item_xyz) 150g」のようにしてください。
+
+レシピに使い切れなかった食材については、**残った食材の保管方法または翌日以降の活用方法**を箇条書きで提案してください。
+
+食材リスト: ${activeIngredients.join(', ')}
+
+(指示: レシピ名、材料、手順を分かりやすく箇条書きで記述してください。)`;
         
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
 
-        // 🚨 resultTextのエラー対策: response.textがundefinedでないかチェック
+        // resultTextのエラー対策: response.textがundefinedでないかチェック
         const resultText = response.text; 
         
         if (resultText) {
@@ -449,9 +520,16 @@ const FridgeManagerApp = () => {
                         <div className="prose prose-orange prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
                             {aiRecipe}
                         </div>
-                        <button onClick={handleGenerateRecipe} className="mt-4 text-orange-600 text-sm font-bold hover:underline flex items-center gap-1">
-                            <RefreshCw className="w-4 h-4" /> 別のレシピを見る
-                        </button>
+                        
+                        <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+                            <button onClick={handleRecipeDecision} className="flex-1 py-2 bg-green-600 text-white font-bold rounded-lg shadow hover:bg-green-700 transition-colors">
+                                <CheckCircle className="w-5 h-5 inline mr-1" /> このレシピで決定
+                            </button>
+                            <button onClick={handleGenerateRecipe} className="py-2 px-3 text-orange-600 text-sm font-bold hover:bg-orange-50 rounded-lg flex items-center gap-1 transition-colors">
+                                <RefreshCw className="w-4 h-4" /> 別のレシピ
+                            </button>
+                        </div>
+                        
                     </div>
                 )}
             </div>

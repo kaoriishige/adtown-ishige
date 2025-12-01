@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { NextPage, GetServerSideProps } from 'next';
 import Link from 'next/link';
+// ★ 変更: next/image をインポート
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import nookies from 'nookies';
 import { adminAuth, adminDb } from '@/lib/firebase-admin'; 
@@ -13,6 +15,7 @@ import {
   RiBriefcase4Line, 
   RiHealthBookLine, 
   RiLogoutBoxRLine,
+  RiMagicLine, 
 } from 'react-icons/ri';
 import { IoSparklesSharp } from 'react-icons/io5'; 
 
@@ -39,7 +42,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false); 
 
-  // ★ 変更: 2026年1月1日を基準日として設定
+  // 2026年1月1日を基準日として設定
   const FUTURE_ACCESS_DATE = new Date('2026-01-01T00:00:00');
   const isFutureAccessEnabled = new Date() >= FUTURE_ACCESS_DATE;
 
@@ -65,32 +68,24 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
     { name: '水道のトラブル 緊急対応 (有)クリプトン', number: '090-2463-6638', description: '地元で40年 有限会社クリプトン', url: 'https://xn--bbkyao7065bpyck41as89d.com/emergency/', },
   ];
 
-  // ▼▼▼ メインナビゲーションボタンリスト (地域活動掲示板を削除) ▼▼▼
+  // ▼▼▼ メインナビゲーションボタンリスト ▼▼▼
   const mainNavButtons = [
-    // {
-    //   title: '地域活動掲示板',
-    //   description: 'ボランティア・イベント・互助の仲間募集',
-    //   href: '/projects',
-    //   Icon: RiHandHeartFill,
-    //   gradient: 'bg-gradient-to-r from-amber-500 to-yellow-600',
-    //   status: 'free',
-    // },
     {
       title: '店舗マッチングAI',
-      description: 'あなたの興味のあるお店を探します!! (2026.1～ 利用開始)', // ★ 変更
+      description: 'あなたの興味のあるお店を探します!! (2026.1～ 利用開始)', 
       href: '/search-dashboard',
       Icon: IoSparklesSharp,
       gradient: 'bg-gradient-to-r from-blue-500 to-cyan-600',
-      status: isFutureAccessEnabled ? 'free' : 'coming_soon', // 2026.1以降は利用可
+      status: isFutureAccessEnabled ? 'free' : 'coming_soon',
       disabled: !isFutureAccessEnabled,
     },
     {
       title: '求人マッチングAI',
-      description: 'あなたの働きたい会社を探します!! (2026.1～ 利用開始)', // ★ 変更
+      description: 'あなたの働きたい会社を探します!! (2026.1～ 利用開始)', 
       href: '/users/dashboard',
       Icon: RiBriefcase4Line,
       gradient: 'bg-gradient-to-r from-green-500 to-teal-600',
-      status: isFutureAccessEnabled ? 'free' : 'coming_soon', // 2026.1以降は利用可
+      status: isFutureAccessEnabled ? 'free' : 'coming_soon',
       disabled: !isFutureAccessEnabled,
     },
     {
@@ -116,9 +111,36 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
       Icon: RiLayoutGridFill,
       gradient: 'bg-gradient-to-r from-cyan-500 to-blue-500',
       status: 'free',
+    },
+    {
+      title: '今日の運勢占い',
+      description: 'あなたの毎日を占います', 
+      href: '/apps/DailyFortune',
+      Icon: RiMagicLine,
+      gradient: 'bg-gradient-to-r from-indigo-500 to-purple-600',
+      status: 'free',
     }
   ];
   // ▲▲▲ ここまで ▲▲▲
+
+  // ★ 修正: 協賛企業リストの画像パスを `/images/` から始める形に修正
+  const sponsors = [
+    {
+      name: '株式会社おまかせオート',
+      image: '/images/partner-omakaseauto.png', // signup.tsxの形式に合わせる
+      url: 'https://www.omakase-auto.jp/',
+    },
+    {
+      name: '株式会社大輪',
+      image: '/images/partner-dairin.png', // signup.tsxの形式に合わせる
+      url: 'https://jp-dairin.jp/',
+    },
+    {
+      name: '社会福祉法人 小春福祉会',
+      image: '/images/partner-koharu.png', // signup.tsxの形式に合わせる
+      url: 'https://koharu-fukushikai.com/wp-content/themes/koharu/images/careplace/careplace_pamphlet.pdf',
+    },
+  ];
 
 
   return (
@@ -167,10 +189,8 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 </div>
               ))}
             </section>
-            {/* ▲▲▲ カテゴリセクションここまで ▲▲▲ */}
             
-            {/* ▼▼▼ 天気予報・警報ボタンは既に削除済み ▼▼▼ */}
-            
+            {/* ▼▼▼ プレミアムプラン案内 ▼▼▼ */}
             <section className="bg-white p-6 rounded-xl shadow-md border-2 border-yellow-400">
               <h2 className="text-xl font-bold text-gray-800 text-center mb-2">
                 限定機能で、年間<span className="text-red-600">9.3万円</span>以上がお得に！
@@ -179,7 +199,6 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 プレミアムプランにアップグレードして、全ての節約機能を利用しましょう。
               </p>
               <button
-                // 有料ボタンを準備中でクリック不可にする
                 disabled={true} 
                 className="w-full text-center p-4 rounded-xl shadow-md transition transform bg-gray-300 text-gray-600 cursor-not-allowed"
               >
@@ -187,11 +206,42 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               </button>
             </section>
 
+            {/* ▼▼▼ 協賛企業一覧セクション (Next/image 使用) ▼▼▼ */}
+            <section className="bg-white pt-4 pb-2 px-4 rounded-xl shadow-sm">
+                <h3 className="text-sm font-bold text-gray-500 text-center mb-4 border-b pb-2">地域の協賛企業</h3>
+                <div className="space-y-4">
+                    {sponsors.map((sponsor) => (
+                        <a 
+                            key={sponsor.name}
+                            href={sponsor.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block group transition-opacity hover:opacity-80"
+                        >
+                            <div className="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden shadow-sm flex items-center justify-center min-h-[60px] relative"> 
+                                {/* Imageコンポーネントを使用し、画像の表示を確実にします */}
+                                <Image
+                                    src={sponsor.image} 
+                                    alt={sponsor.name}
+                                    width={200} // ロゴの最大幅を想定して指定
+                                    height={50}  // ロゴの最大高さを想定して指定
+                                    className="object-contain p-2" 
+                                    // ロゴ画像は最適化の恩恵が少ないためunoptimizedを付与（不要なら削除可）
+                                    unoptimized={true} 
+                                />
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </section>
+            {/* ▲▲▲ 協賛企業一覧セクションここまで ▲▲▲ */}
+
             <footer className="text-center mt-8 pb-4 space-y-8">
               
               <section className="flex flex-col items-center gap-2">
                 <p className="text-sm font-bold text-gray-700">お問い合わせはLINEでお願いします。</p>
                 <a href="https://lin.ee/Aac3C0d">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" 
                     alt="友だち追加" 

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Camera, Sparkles, Loader2, RefreshCw, AlertTriangle, Heart, Briefcase, Coins, Star, CheckCircle2, HelpingHand } from 'lucide-react';
 
 // ★プレビュー環境用にAPIキーを埋め込みます
-const GEMINI_API_KEY = "AIzaSyDlbWiBKO3LFNnqGcX8rYYNDh-Nkl1rrFU";
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY!;
 
 type Topic = 'general' | 'love' | 'work' | 'money' | 'health';
 type HandType = 'right' | 'left';

@@ -2,9 +2,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import Head from 'next/head';
-import Link from 'next/link';
-import { ArrowLeft, ChefHat, ShoppingCart, Sparkles, Clock, Utensils, ThumbsUp, Lightbulb, Flame, Loader2 } from 'lucide-react';
+// next/head は使用できないため削除し、useEffectでdocument.titleを設定します
+import { ArrowLeft, ShoppingCart, Flame, Loader2, ThumbsUp } from 'lucide-react';
 
 // --- 環境変数の取得 ---
 const getEnvVar = (name: string) => {
@@ -104,6 +103,20 @@ const RECIPE_SCHEMA = {
     required: ["menuConcept", "totalSavings", "mainDishes", "sideDishes", "shoppingList"]
 };
 
+// --- 家族構成の選択肢 ---
+const FAMILY_SIZE_OPTIONS = [
+    "1人",
+    "2人",
+    "3人",
+    "4人",
+    "5人以上",
+    "大人2人, 子供1人",
+    "大人2人, 子供2人",
+    "大人2人, 子供3人",
+    "大人3人, 子供1人",
+    "その他（詳細を要望欄へ）"
+];
+
 const App = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -117,8 +130,9 @@ const App = () => {
         return SALE_DATA_BY_AREA[selectedArea] ? Object.keys(SALE_DATA_BY_AREA[selectedArea]) : [];
     }, [selectedArea]);
 
-    const [fridgeInventory, setFridgeInventory] = useState('米, じゃがいも, 玉ねぎ, 醤油');
-    const [customIngredients, setCustomIngredients] = useState('豚こま肉が特売で100g 78円だった。'); 
+    // --- 変更点: 初期データを削除 ---
+    const [fridgeInventory, setFridgeInventory] = useState('');
+    const [customIngredients, setCustomIngredients] = useState(''); 
     const [familySize, setFamilySize] = useState('大人2人, 子供2人'); 
     
     const [menuResult, setMenuResult] = useState<any>(null);
@@ -126,12 +140,21 @@ const App = () => {
     const [uiMessage, setUiMessage] = useState('');
     const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
 
+    // タイトル設定
     useEffect(() => {
-        setActiveStore(null);
+        document.title = "那須こんだて | 節約レシピ提案";
+    }, []);
+
+    // エリア変更時や初期ロード時の店舗選択ロジック
+    useEffect(() => {
         if (storesInArea.length > 0) {
-            setFinalStoreSelection(storesInArea[0]);
+            const firstStore = storesInArea[0];
+            setFinalStoreSelection(firstStore);
+            // 変更点: 初期状態でもアクティブストアを設定し、チラシボタンを表示させる
+            setActiveStore(firstStore);
         } else {
             setFinalStoreSelection(null);
+            setActiveStore(null);
         }
     }, [selectedArea, storesInArea]);
 
@@ -286,12 +309,18 @@ const App = () => {
     }, []);
     
     const handleStoreClick = (storeName: string) => {
-        if (storeName === activeStore) {
-            setActiveStore(null);
-        } else {
-            setActiveStore(storeName);
-        }
+        // 同じ店舗をクリックしても非表示にせず、アクティブなままにする（あるいは再読み込みの挙動にする）
+        // UX向上のため、トグルで非表示にする機能は削除し、常に選択状態にするのが一般的だが、
+        // 既存の「activeStore」のロジックを維持しつつ、クリック時は常にactiveにする。
+        setActiveStore(storeName);
         setFinalStoreSelection(storeName); 
+    };
+
+    // --- 戻るボタンのハンドラ ---
+    const handleBack = () => {
+        if (typeof window !== 'undefined') {
+            window.history.back();
+        }
     };
 
     // RecipeCard コンポーネント定義 (UIを強調しつつ維持)
@@ -334,7 +363,6 @@ const App = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
-            <Head><title>那須こんだて | 節約レシピ提案</title></Head>
             <style jsx global>{`
                 .text-nasu-green { color: #38761D; }
                 .bg-nasu-green { background-color: #38761D; }
@@ -347,9 +375,14 @@ const App = () => {
 
             <header className="bg-white shadow-md sticky-top p-4">
                 <div className="max-w-4xl mx-auto flex items-center gap-3">
-                    <Link href="/home" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    {/* 変更点: Linkからbuttonに変更し、ブラウザバック機能を実装 */}
+                    <button 
+                        onClick={handleBack}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors focus:outline-none"
+                        aria-label="戻る"
+                    >
                         <ArrowLeft size={20} className="text-gray-600" />
-                    </Link>
+                    </button>
                     <h1 className="text-xl sm:text-2xl font-extrabold text-nasu-green tracking-tight">
                         💰 AI献立＆特売ナビ「那須こんだて」
                     </h1>
@@ -433,14 +466,20 @@ const App = () => {
                             
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700">3. 人数</label>
-                                    <input
+                                    <label htmlFor="family-size" className="block text-sm font-bold text-gray-700">3. 人数</label>
+                                    {/* 変更点: テキスト入力からセレクトボックスに変更 */}
+                                    <select
                                         id="family-size"
-                                        type="text"
                                         value={familySize}
                                         onChange={(e) => setFamilySize(e.target.value)}
-                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-nasu-green focus:border-nasu-green"
-                                    />
+                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-nasu-green focus:border-nasu-green bg-white text-base"
+                                    >
+                                        {FAMILY_SIZE_OPTIONS.map((option) => (
+                                            <option key={option} value={option}>
+                                                {option}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700">4. 在庫</label>
@@ -449,6 +488,7 @@ const App = () => {
                                         value={fridgeInventory}
                                         onChange={(e) => setFridgeInventory(e.target.value)}
                                         rows={1}
+                                        placeholder="例: 米, じゃがいも, 玉ねぎ"
                                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-nasu-green focus:border-nasu-green"
                                     ></textarea>
                                 </div>
