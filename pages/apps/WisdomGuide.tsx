@@ -113,6 +113,19 @@ const YouTubeEmbed: React.FC<{ youtubeId: string }> = ({ youtubeId }) => {
     );
 };
 
+// ★修正・追加: 初期データとして組み込む動画
+const INITIAL_HARDCODED_VIDEOS: VideoItem[] = [
+    {
+        id: '7mi9G4kaNuw', // YouTube IDを便宜的にIDとして使用
+        title: 'AI時代を生き抜く方法：マイクロソフトCEO サティア・ナデラの教え',
+        youtubeId: '7mi9G4kaNuw',
+        url: 'https://youtu.be/7mi9G4kaNuw',
+        createdAt: Date.now() + 1, // 他の動画より新しくするため
+    },
+    // ここに他の初期動画を必要に応じて追加できます
+];
+
+
 // --- メインコンポーネント ---
 const App: React.FC = () => { // コンポーネントにReact.FCを適用
     // Firebase State
@@ -125,12 +138,16 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
     });
 
     // App State
-    const [videos, setVideos] = useState<VideoItem[]>([]);
+    // ★修正: 初期動画リストを組み込み
+    const [videos, setVideos] = useState<VideoItem[]>(INITIAL_HARDCODED_VIDEOS);
     const [error, setError] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState<boolean>(false);
     const [newUrl, setNewUrl] = useState<string>('');
     const [newTitle, setNewTitle] = useState<string>('');
-    const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+    // ★修正: 初期動画リストがある場合は、その最新のIDをアクティブにする
+    const [activeVideoId, setActiveVideoId] = useState<string | null>(
+        INITIAL_HARDCODED_VIDEOS.length > 0 ? INITIAL_HARDCODED_VIDEOS[0].id : null
+    );
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     // ★追加: 管理者判定
@@ -202,6 +219,7 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
     }, []);
 
     // Firestoreデータリスナー
+    // 注意: Firebaseが正常に動作している環境では、このリスナーによって初期のハードコードされたデータはFirestoreのデータに置き換えられます。
     useEffect(() => {
         if (!appState.isAuthReady || !appState.db) return;
 

@@ -97,7 +97,7 @@ const SignupPage: NextPage = () => {
       </Head>
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-          <h1 className="text-3xl font-bold text-center">地域お守り無料プランに登録</h1>
+          <h1 className="text-3xl font-bold text-center">みんなの那須アプリ無料プランに登録</h1>
           <p className="text-center text-gray-600">メールアドレスとパスワードだけで始められます。</p>
           
           {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
