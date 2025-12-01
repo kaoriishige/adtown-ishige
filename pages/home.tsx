@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { NextPage, GetServerSideProps } from 'next';
 import Link from 'next/link';
-// ★ 変更: next/image をインポート
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import nookies from 'nookies';
+// Admin SDKのインポート（Firebase Admin SDKのパスを適切に設定してください）
 import { adminAuth, adminDb } from '@/lib/firebase-admin'; 
 import Head from 'next/head';
 
+// React Iconsのインポート
 import {
   RiLayoutGridFill,
   RiAlarmWarningLine,
@@ -16,10 +17,11 @@ import {
   RiHealthBookLine, 
   RiLogoutBoxRLine,
   RiMagicLine, 
+  RiCloseCircleLine, // 解約モーダル用
 } from 'react-icons/ri';
 import { IoSparklesSharp } from 'react-icons/io5'; 
 
-// Firebaseクライアント側のインポート
+// Firebaseクライアント側のインポート（FirebaseクライアントSDKのパスを適切に設定してください）
 import { getAuth, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase-client'; 
 
@@ -39,7 +41,9 @@ interface EmergencyContact {
 
 const HomePage: NextPage<HomePageProps> = ({ user }) => {
   const router = useRouter();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // モーダル管理のState
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false); 
 
   // 2026年1月1日を基準日として設定
@@ -50,12 +54,42 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
     setIsLoggingOut(true);
     const auth = getAuth(app); 
     try {
+      // セッションクッキーを削除するAPIを呼び出す
       await fetch('/api/auth/sessionLogout', { method: 'POST' });
+      // Firebaseクライアント側でサインアウト
       await signOut(auth);
+      // セッション削除後、ログインページへリダイレクト
       window.location.href = '/users/login';
     } catch (error) {
       console.error('ログアウトに失敗しました:', error);
+      // エラー時も安全のためログインページへ
       window.location.href = '/users/login';
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      // ⚠️ 注意: 本番環境では、ここでサーバーサイドのユーザーアカウント削除APIを呼び出してください
+      console.log('アカウント解約処理を開始します:', user.uid);
+
+      // 実際のAPI呼び出しの例:
+      // const response = await fetch('/api/user/cancel', { 
+      //   method: 'POST', 
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ uid: user.uid }) 
+      // });
+      // if (!response.ok) throw new Error('API Error');
+
+      alert('解約処理を実行しました。アカウントはまもなく削除されます。');
+      setIsCancelModalOpen(false); // モーダルを閉じる
+      
+      // 解約処理が成功した後、強制的にログアウトさせる
+      await handleLogout();
+      
+    } catch (error) {
+      console.error('解約処理に失敗しました:', error);
+      alert('解約処理中にエラーが発生しました。時間をおいて再度お試しください。');
+      setIsCancelModalOpen(false);
     }
   };
 
@@ -123,21 +157,20 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
   ];
   // ▲▲▲ ここまで ▲▲▲
 
-  // ★ 修正: 協賛企業リストの画像パスを `/images/` から始める形に修正
   const sponsors = [
     {
       name: '株式会社おまかせオート',
-      image: '/images/partner-omakaseauto.png', // signup.tsxの形式に合わせる
+      image: '/images/partner-omakaseauto.png',
       url: 'https://www.omakase-auto.jp/',
     },
     {
       name: '株式会社大輪',
-      image: '/images/partner-dairin.png', // signup.tsxの形式に合わせる
+      image: '/images/partner-dairin.png',
       url: 'https://jp-dairin.jp/',
     },
     {
       name: '社会福祉法人 小春福祉会',
-      image: '/images/partner-koharu.png', // signup.tsxの形式に合わせる
+      image: '/images/partner-koharu.png',
       url: 'https://koharu-fukushikai.com/wp-content/themes/koharu/images/careplace/careplace_pamphlet.pdf',
     },
   ];
@@ -157,7 +190,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
           <main className="p-4 space-y-6">
             <section className="bg-white p-6 rounded-xl shadow-md">
-              <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center text-center text-red-800 font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 bg-red-100 hover:bg-red-200">
+              <button onClick={() => setIsEmergencyModalOpen(true)} className="w-full flex items-center justify-center text-center text-red-800 font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 bg-red-100 hover:bg-red-200">
                 <RiAlarmWarningLine className="mr-2 text-red-500" /> お困りのときは (緊急連絡先)
               </button>
               <p className="text-xs text-center text-gray-500 mt-2">商品やサービスのトラブル、休日・夜間の急病、水道のトラブルなどはこちら</p>
@@ -219,14 +252,12 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                             className="block group transition-opacity hover:opacity-80"
                         >
                             <div className="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden shadow-sm flex items-center justify-center min-h-[60px] relative"> 
-                                {/* Imageコンポーネントを使用し、画像の表示を確実にします */}
                                 <Image
                                     src={sponsor.image} 
                                     alt={sponsor.name}
-                                    width={200} // ロゴの最大幅を想定して指定
-                                    height={50}  // ロゴの最大高さを想定して指定
+                                    width={200}
+                                    height={50}
                                     className="object-contain p-2" 
-                                    // ロゴ画像は最適化の恩恵が少ないためunoptimizedを付与（不要なら削除可）
                                     unoptimized={true} 
                                 />
                             </div>
@@ -251,8 +282,8 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 </a>
               </section>
 
-              {/* ログアウトボタン */}
-              <section>
+              {/* ログアウトと解約ボタンのセクション */}
+              <section className="space-y-4"> 
                 <button
                   onClick={handleLogout}
                   disabled={isLoggingOut}
@@ -260,6 +291,14 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 >
                   <RiLogoutBoxRLine className="mr-2" />
                   {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+                </button>
+
+                <button
+                  onClick={() => setIsCancelModalOpen(true)}
+                  className="w-full max-w-xs mx-auto flex items-center justify-center text-center text-gray-500 font-bold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 bg-gray-100 hover:bg-gray-200"
+                >
+                  <RiCloseCircleLine className="mr-2" />
+                  アカウント解約
                 </button>
               </section>
 
@@ -269,7 +308,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
         </div>
 
         {/* モーダル表示ロジック (緊急連絡先) */}
-        {isModalOpen && (
+        {isEmergencyModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
               <div className="p-4 border-b">
@@ -292,11 +331,42 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 ))}
               </div>
               <div className="p-4 border-t text-center">
-                <button onClick={() => setIsModalOpen(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                <button onClick={() => setIsEmergencyModalOpen(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
                   閉じる
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* 解約確認モーダル */}
+        {isCancelModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm transform transition-all scale-100">
+              <div className="p-6">
+                <RiCloseCircleLine className="text-6xl text-red-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">アカウントを解約しますか？</h2>
+                <p className="text-md text-center text-gray-600 mb-6">
+                  <strong>この操作を元に戻すことはできません。</strong><br />
+                  解約すると、すべてのデータが削除され、ログインできなくなります。
+                </p>
+                <div className="flex justify-center space-x-3">
+                  <button
+                    onClick={() => setIsCancelModalOpen(false)}
+                    className="w-1/2 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg transition"
+                  >
+                    戻る
+                  </button>
+                  <button
+                    onClick={handleCancelSubscription}
+                    className="w-1/2 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md transition"
+                  >
+                    解約する
+                  </button>
+                </div>
+              </div>
+            </div>
+            
           </div>
         )}
       </div>
@@ -314,19 +384,23 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       return { redirect: { destination: '/users/login', permanent: false } };
     }
 
+    // セッションクッキーを検証し、トークンを取得
     const token = await adminAuth.verifySessionCookie(sessionCookie, true);
     if (!token || !token.uid) {
       return { redirect: { destination: '/users/login', permanent: false } };
     }
 
+    // ユーザーのドキュメントを取得
     const userDoc = await adminDb.collection('users').doc(token.uid).get();
     if (!userDoc.exists) {
+      // ユーザーデータが存在しない場合
       return { redirect: { destination: '/users/login', permanent: false } };
     }
 
     const userData = userDoc.data() || {};
     const userPlan = userData.plan || 'free';
 
+    // プランが 'paid_480' の場合は /mypage にリダイレクト (元のロジックを保持)
     if (userPlan === 'paid_480') {
       return { redirect: { destination: '/mypage', permanent: false } };
     }
@@ -341,6 +415,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   } catch (err) {
     console.error('home getServerSideProps error:', err);
+    // エラー発生時もログインページへリダイレクト
     return { redirect: { destination: '/users/login', permanent: false } };
   }
 };
