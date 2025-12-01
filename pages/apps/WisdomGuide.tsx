@@ -13,11 +13,11 @@ declare const __initial_auth_token: string | undefined;
 
 // --- 型定義 ---
 interface VideoItem {
-  id: string; // Firestore Document ID
-  title: string;
-  youtubeId: string; // YouTube埋め込み用ID
-  url: string; // 元のURL
-  createdAt: number;
+    id: string; // Firestore Document ID
+    title: string;
+    youtubeId: string; // YouTube埋め込み用ID
+    url: string; // 元のURL
+    createdAt: number;
 }
 
 interface AppState {
@@ -74,30 +74,41 @@ const DEVELOPER_MESSAGE = {
 // YouTube URLから動画IDを抽出するヘルパー関数
 const getYoutubeId = (url: string): string | null => {
     // 短縮URL (youtu.be/ID)
-    // エスケープ文字 \? を ? に修正 (no-useless-escape対応)
     const shortUrlMatch = url.match(/(?:youtu\.be\/|v=)([\w-]{11})(?:[?&].*)?$/);
     if (shortUrlMatch && shortUrlMatch[1]) return shortUrlMatch[1];
     
     // 通常URL (watch?v=ID)
-    // エスケープ文字 \? を ? に修正 (no-useless-escape対応)
     const longUrlMatch = url.match(/[?&]v=([\w-]{11})(?:[?&].*)?$/);
     if (longUrlMatch && longUrlMatch[1]) return longUrlMatch[1];
     
     return null;
 };
 
-// --- YouTube埋め込みコンポーネント ---
+// --- YouTube埋め込みコンポーネント (修正済み) ---
 const YouTubeEmbed: React.FC<{ youtubeId: string }> = ({ youtubeId }) => {
     const embedUrl = `https://www.youtube.com/embed/${youtubeId}`;
 
     return (
-        <div className="aspect-video w-full rounded-xl overflow-hidden shadow-lg border border-gray-100">
+        // ★修正箇所: Tailwindのaspect-videoを外し、確実なアスペクト比制御CSSを適用
+        // ラッパー要素 (親要素) に relativeと16:9比率を適用
+        <div 
+            className="w-full rounded-xl overflow-hidden shadow-lg border border-gray-100"
+            style={{ position: 'relative', paddingTop: '56.25%', height: 0 }} // 16:9比率 (9/16 = 0.5625)
+        >
             <iframe
                 title="YouTube video player"
                 src={embedUrl}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
-                className="w-full h-full border-0"
+                // iframe自体を親要素のサイズいっぱいに広げる
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                }}
             />
         </div>
     );
@@ -507,11 +518,6 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
             >
             </div>
             
-            {/* <footer>
-                <div className="text-center text-xs text-gray-400 py-2 border-t mt-4">
-                    データはFirestoreに公開保存されています。
-                </div>
-            </footer> */}
         </div>
     );
 }

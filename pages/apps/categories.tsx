@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 // lucide-reactから必要なアイコンをインポート
 import { 
-  Clock, Gift, Heart, Store, Brain, Zap, Utensils, Droplet, Gamepad, User, Users, Shield, TrendingUp, ArrowLeft, Target, Smile, Lightbulb, Shirt, Mail, Sun, Sparkles, WashingMachine, Home, LayoutGrid, Award, Filter 
+    Clock, Gift, Heart, Store, Brain, Zap, Utensils, Droplet, Gamepad, User, Users, Shield, TrendingUp, ArrowLeft, Target, Smile, Lightbulb, Shirt, Mail, Sun, Sparkles, WashingMachine, Home, LayoutGrid, Award, Filter 
 } from 'lucide-react'; 
 
 // アイコンの型定義
@@ -30,20 +30,20 @@ const APP_LIST: AppItem[] = [
 // ----------------------------------------------------
 // ★追加: アレどこ (Aredoko)
 { 
-title: "アレどこ (Aredoko)", 
-category: '収納・片付け', 
-description: 'たまにしか使わない大事なモノの「しまった場所」を記録・検索', 
-href: '/apps/Aredoko', 
-Icon: Filter, // モノを整理・特定するイメージ
-disabled: false 
+    title: "アレどこ (Aredoko)", 
+    category: '収納・片付け', 
+    description: 'たまにしか使わない大事なモノの「しまった場所」を記録・検索', 
+    href: '/apps/Aredoko', 
+    Icon: Filter, // モノを整理・特定するイメージ
+    disabled: false 
 },
 { 
-title: "AIクローゼットスリム化診断", 
-category: '収納・片付け', 
-description: '衣類の断捨離をAIが質問でサポートし、意思決定を支援', 
-href: '/apps/ClosetSlimmerAI', 
-Icon: WashingMachine, 
-disabled: false 
+    title: "AIクローゼットスリム化診断", 
+    category: '収納・片付け', 
+    description: '衣類の断捨離をAIが質問でサポートし、意思決定を支援', 
+    href: '/apps/ClosetSlimmerAI', 
+    Icon: WashingMachine, 
+    disabled: false 
 },
 
 // ----------------------------------------------------
@@ -65,24 +65,24 @@ disabled: false
 { title: "子育て支援情報ナビ", category: '子育て', description: '各市町の子育て・教育情報リンク集', href: '/apps/ParentingInfo', Icon: User, disabled: false },
 // ★追加: 賢人の子育て指針 Wisdom Guide
 { 
-title: "賢人の子育て指針 Wisdom Guide", 
-category: '子育て', 
-description: 'AIと著名人の知恵の言葉から、子育ての羅針盤を見つける', 
-href: '/apps/WisdomGuide', 
-Icon: Award, 
-disabled: false 
+    title: "賢人の子育て指針 Wisdom Guide", 
+    category: '子育て', 
+    description: 'AIと著名人の知恵の言葉から、子育ての羅針盤を見つける', 
+    href: '/apps/WisdomGuide', 
+    Icon: Award, 
+    disabled: false 
 },
 
 // ----------------------------------------------------
 // 節約・特売 
 // ----------------------------------------------------
 { 
-title: "スーパー特売チラシ＆AI献立ナビ", 
-category: '節約・特売', 
-description: '地域のチラシ確認とプロの節約レシピを提案', 
-href: '/nasu/kondate', 
-Icon: Utensils,
-disabled: false 
+    title: "スーパー特売チラシ＆AI献立ナビ", 
+    category: '節約・特売', 
+    description: '地域のチラシ確認とプロの節約レシピを提案', 
+    href: '/nasu/kondate', 
+    Icon: Utensils,
+    disabled: false 
 },
 { title: "ドラッグストアチラシ", category: '節約・特売', description: 'ドラッグストアの特売情報', href: '/nasu', Icon: Store, disabled: false },
 
@@ -115,6 +115,15 @@ disabled: false
 // スキルアップ・キャリア
 // ----------------------------------------------------
 { title: "スキル学習時間トラッカー", category: 'スキルアップ・キャリア', description: '収益化スキル（ライティング等）の目標時間を管理', href: '/apps/SkillTimeTracker', Icon: TrendingUp, disabled: false },
+// ★追加: 賢人の子育て指針 Wisdom Guide (スキルアップ・キャリアにも追加)
+{ 
+    title: "賢人の子育て指針 Wisdom Guide", 
+    category: 'スキルアップ・キャリア', 
+    description: 'AIと著名人の知恵の言葉から、子育ての羅針盤を見つける', 
+    href: '/apps/WisdomGuide', 
+    Icon: Award, 
+    disabled: false 
+},
 
 // ----------------------------------------------------
 // 趣味・文化
@@ -256,7 +265,7 @@ export default function CategoriesPage() {
                             filteredApps.map(app => (
                                 // next/linkの代わりに通常の<a>タグを使用
                                 <a 
-                                    key={app.title} 
+                                    key={`${app.title}-${app.category}`} // キーを複合化して重複を回避
                                     // 警告を減らすため、hrefをダミーの'#'に変更し、遷移はonClickで制御する
                                     href='#' 
                                     className={`block p-4 rounded-xl shadow-md border transition-all transform hover:scale-[1.01] ${
