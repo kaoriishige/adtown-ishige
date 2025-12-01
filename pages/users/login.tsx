@@ -11,8 +11,6 @@ import {
     onAuthStateChanged
 } from 'firebase/auth';
 // ★重要: あなたのプロジェクトのFirebase初期化ファイルのパスに合わせてください
-// (以前のやり取りでは @/lib/firebase-client でしたが、ご提示のコードでは @/lib/firebase でした。
-//  エラーが出る場合は正しい方に書き換えてください)
 import { app } from '@/lib/firebase'; 
 
 // アイコンライブラリ (npm install react-icons が必要)
@@ -242,16 +240,22 @@ const LoginPage: NextPage = () => {
                             </Link>
                         </p>
                         
-                        <p className="text-gray-600 text-xs mt-4">
-                            ログインできない場合は{' '}
+                        {/* 修正箇所: ログインできない場合の連絡先をLINEに変更 */}
+                        <div className="text-gray-600 text-xs mt-4">
+                            <p className="mb-2">ログインできない場合は<strong className="text-green-600">LINE</strong>よりご連絡ください。</p>
                             <a 
-                                href="mailto:adtown001@gmail.com" 
-                                className="text-blue-600 hover:underline"
+                                href="https://lin.ee/8aXyUwD" 
+                                className="inline-block"
                             >
-                                adtown001@gmail.com
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img 
+                                    src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" 
+                                    alt="友だち追加" 
+                                    height="36" 
+                                    style={{ border: '0' }}
+                                />
                             </a>
-                            {' '}までご連絡ください。
-                        </p>
+                        </div>
                     </div>
                 </div>
             </div>

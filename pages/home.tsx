@@ -229,7 +229,8 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                 限定機能で、年間<span className="text-red-600">9.3万円</span>以上がお得に！
               </h2>
               <p className="text-center text-gray-600 mb-4">
-                プレミアムプランにアップグレードして、全ての節約機能を利用しましょう。
+                プレミアムプランにアップグレードして、全ての節約機能を利用しましょう。<br />
+                また、紹介機能で収入をアップしましょう。
               </p>
               <button
                 disabled={true} 
@@ -271,6 +272,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
               
               <section className="flex flex-col items-center gap-2">
                 <p className="text-sm font-bold text-gray-700">お問い合わせはLINEでお願いします。</p>
+                <p className="text-xs text-gray-600">変更等はLINEでお知らせします。</p> 
                 <a href="https://lin.ee/Aac3C0d">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
