@@ -5,11 +5,13 @@ import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged }
 import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, setLogLevel } from 'firebase/firestore';
 
 // --- グローバル変数型定義 (環境提供の変数のための宣言) ---
-// これらの変数は実行環境から提供されるため、TypeScriptに存在を知らせる必要があります。
 declare const __app_id: string | undefined;
 declare const __firebase_config: string | undefined;
 declare const __initial_auth_token: string | undefined;
 
+// ★追加: 管理者ID (開発者は自身のIDに置き換える必要があります)
+// Firebase Authでログインした際に得られる管理者アカウントのUIDを設定してください。
+const ADMIN_USER_ID = "YOUR_ACTUAL_ADMIN_USER_ID"; // 例: "u-abcdef123456" 
 
 // --- 型定義 ---
 interface VideoItem {
@@ -89,8 +91,6 @@ const YouTubeEmbed: React.FC<{ youtubeId: string }> = ({ youtubeId }) => {
     const embedUrl = `https://www.youtube.com/embed/${youtubeId}`;
 
     return (
-        // ★修正箇所: Tailwindのaspect-videoを外し、確実なアスペクト比制御CSSを適用
-        // ラッパー要素 (親要素) に relativeと16:9比率を適用
         <div 
             className="w-full rounded-xl overflow-hidden shadow-lg border border-gray-100"
             style={{ position: 'relative', paddingTop: '56.25%', height: 0 }} // 16:9比率 (9/16 = 0.5625)
@@ -100,7 +100,6 @@ const YouTubeEmbed: React.FC<{ youtubeId: string }> = ({ youtubeId }) => {
                 src={embedUrl}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
-                // iframe自体を親要素のサイズいっぱいに広げる
                 style={{
                     position: 'absolute',
                     top: 0,
@@ -133,6 +132,9 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
     const [newTitle, setNewTitle] = useState<string>('');
     const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+
+    // ★追加: 管理者判定
+    const isAdmin = appState.userId === ADMIN_USER_ID;
 
     // 認証とFirebase初期化 (初回のみ実行)
     useEffect(() => {
@@ -169,7 +171,14 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
             };
 
             const unsubscribe = onAuthStateChanged(auth, (user) => {
-                const userId = user?.uid || crypto.randomUUID();
+                // 認証ユーザーIDまたはランダムUUIDを使用
+                const userId = user?.uid || crypto.randomUUID(); 
+                
+                // ★修正: 匿名ユーザー認証時に、Admin IDが設定されていない場合は警告を出す（デバッグ用）
+                if (!initialAuthToken && ADMIN_USER_ID === "YOUR_ACTUAL_ADMIN_USER_ID") {
+                    console.warn("ADMIN_USER_IDが設定されていません。動画登録機能は利用できません。");
+                }
+
                 setAppState({
                     db,
                     auth,
@@ -235,6 +244,13 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
     // 動画の追加
     const handleAddVideo = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // ★修正: 管理者チェックを追加
+        if (!isAdmin) {
+            setError("管理者のみが動画を追加できます。");
+            return;
+        }
+
         if (!appState.db || !newUrl.trim() || !newTitle.trim()) {
             setError("タイトルとURLを入力してください。");
             return;
@@ -287,12 +303,17 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
         } finally {
             setIsAdding(false);
         }
-    }, [appState.db, appState.appId, newUrl, newTitle]);
+    }, [appState.db, appState.appId, newUrl, newTitle, isAdmin]); // isAdminを依存配列に追加
 
     // 動画の削除
     const handleDeleteVideo = useCallback(async (id: string) => {
-        // window.confirmの代わりにカスタムモーダルを使用することを推奨しますが、今回は既存の動作を踏襲します。
-        // NOTE: Canvas環境ではwindow.confirmは非推奨ですが、ここでは動作確認のため残します。
+        
+        // ★修正: 管理者チェックを追加
+        if (!isAdmin) {
+            console.warn("管理者以外は削除できません。");
+            return; 
+        }
+
         if (!appState.db || !window.confirm("この動画を本当に削除しますか？")) return;
 
         try {
@@ -325,7 +346,7 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
             console.error("Delete Video Error:", e);
             setError("動画の削除中にエラーが発生しました。");
         }
-    }, [appState.db, appState.appId, activeVideoId, videos]);
+    }, [appState.db, appState.appId, activeVideoId, videos, isAdmin]); // isAdminを依存配列に追加
 
     // 現在アクティブな動画の取得
     const activeVideo = useMemo(() => {
@@ -342,7 +363,6 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
     }
 
     if (error && !appState.db) {
-        // TypeScript Error TS7030 (Not all code paths return a value) の対応済み
         return (
             <div className="flex items-center justify-center min-h-screen bg-red-50 p-4">
                 <div className="text-red-700 p-4 border border-red-300 bg-white rounded-lg shadow-md">
@@ -360,9 +380,8 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
             <header className="bg-white shadow-md p-4 sticky top-0 z-10 border-b border-indigo-100">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        {/* 修正箇所: カテゴリ一覧に戻る機能を追加 */}
                         <button
-                            onClick={() => window.history.back()} // console.log から window.history.back() に変更
+                            onClick={() => window.history.back()} 
                             className="p-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-indigo-600 transition-colors flex items-center justify-center"
                             title="カテゴリ一覧に戻る"
                         >
@@ -372,8 +391,16 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
                             賢人の子育て指針 <span className="text-sm font-normal text-gray-400">Wisdom Guide</span>
                         </h1>
                     </div>
-                    <div className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-mono shadow-inner border border-indigo-200 hidden sm:block">
-                        USER ID: {appState.userId}
+                    {/* ★修正: 管理者であることをUIで視覚的に確認できるようにする */}
+                    <div className="flex items-center gap-2">
+                        {isAdmin && (
+                            <span className="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold shadow-inner border border-yellow-300">
+                                ADMIN MODE
+                            </span>
+                        )}
+                        <div className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-mono shadow-inner border border-indigo-200 hidden sm:block">
+                            USER ID: {appState.userId}
+                        </div>
                     </div>
                 </div>
             </header>
@@ -418,52 +445,49 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
                     {/* 右カラム: 動画リスト & 登録フォーム (Lg以上で1/3幅) */}
                     <div className="lg:col-span-1 space-y-6">
                         
-                        {/* 動画登録フォーム */}
-                        <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
-                            <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">
-                                ➕ 新しい知恵を登録
-                            </h3>
-                            <form onSubmit={handleAddVideo} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">
-                                        動画タイトル
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newTitle}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTitle(e.target.value)} // 型追加
-                                        placeholder="例: スティーブ・ジョブズ 卒業式スピーチ"
-                                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">
-                                        YouTube URL
-                                    </label>
-                                    <input
-                                        type="url"
-                                        required
-                                        value={newUrl}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewUrl(e.target.value)} // 型追加
-                                        placeholder="例: https://www.youtube.com/watch?v=..."
-                                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                    />
-                                </div>
-                                <button
-                                    type="submit"
-                                    disabled={isAdding}
-                                    className="w-full py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-md disabled:bg-indigo-400"
-                                >
-                                    {isAdding ? '登録中...' : '登録してリストに追加'}
-                                </button>
-                                {error && (
-                                    <p className="text-sm text-red-600 mt-2 p-2 bg-red-50 rounded-lg border border-red-200">
-                                        エラー: {error}
-                                    </p>
-                                )}
-                            </form>
-                        </div>
+                        {/* ★修正: 動画登録フォーム (管理者のみに表示) */}
+                        {isAdmin && (
+                            <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
+                                <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">
+                                    ➕ 新しい知恵を登録 (管理者専用)
+                                </h3>
+                                <form onSubmit={handleAddVideo} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            動画タイトル
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newTitle}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTitle(e.target.value)} // 型追加
+                                            placeholder="例: スティーブ・ジョブズ 卒業式スピーチ"
+                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                                            YouTube URL
+                                        </label>
+                                        <input
+                                            type="url"
+                                            required
+                                            value={newUrl}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewUrl(e.target.value)} // 型追加
+                                            placeholder="例: https://www.youtube.com/watch?v=..."
+                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={isAdding}
+                                        className="w-full py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-md disabled:bg-indigo-400"
+                                    >
+                                        {isAdding ? '登録中...' : '登録してリストに追加'}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
                         
                         {/* 動画リスト */}
                         <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 max-h-[60vh] overflow-y-auto">
@@ -491,16 +515,19 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
                                                 <span className={`text-sm font-medium ${activeVideoId === video.id ? 'text-indigo-800' : 'text-gray-700'}`}>
                                                     {video.title}
                                                 </span>
-                                                <button
-                                                    onClick={(e: React.MouseEvent) => { // 型追加
-                                                        e.stopPropagation(); // 親要素のクリックイベントを停止
-                                                        handleDeleteVideo(video.id);
-                                                    }}
-                                                    className="text-gray-300 hover:text-red-500 p-1 rounded-full transition-colors"
-                                                    title="削除"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                </button>
+                                                {/* ★修正: 削除ボタン (管理者のみに表示) */}
+                                                {isAdmin && (
+                                                    <button
+                                                        onClick={(e: React.MouseEvent) => { // 型追加
+                                                            e.stopPropagation(); // 親要素のクリックイベントを停止
+                                                            handleDeleteVideo(video.id);
+                                                        }}
+                                                        className="text-gray-300 hover:text-red-500 p-1 rounded-full transition-colors"
+                                                        title="削除"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                    </button>
+                                                )}
                                             </div>
                                         </li>
                                     ))}
