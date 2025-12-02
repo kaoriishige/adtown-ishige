@@ -1,6 +1,9 @@
-// pages/apps/AptitudeTest.tsx
 import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
+// HeadはNext.js固有のため、この実行環境ではコメントアウトまたは削除が適切ですが、
+// ユーザー提供のコードを尊重し、エラーを避けるためにReact Nativeのコンポーネントを
+// 使用する代わりに、この環境では使用を避けるため、そのままにしておきます。
+// ただし、この環境では Next.js の Head は機能しません。
+// import Head from 'next/head'; 
 // 使用するアイコンのみ維持
 import { ArrowLeft, Loader2, User, MessageSquare, Briefcase, Zap } from 'lucide-react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -194,7 +197,8 @@ export default function AptitudeTestApp() {
     };
 
     const handleSelectOption = (option: string, weight: number) => {
-        if (selectedOption) return; // 二重クリック防止
+        // 修正点1: 既に選択されていても、新しいオプションを選択できるようにガード句を削除
+        // if (selectedOption) return; // 二重クリック防止
 
         setSelectedOption(option);
 
@@ -211,7 +215,8 @@ export default function AptitudeTestApp() {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans pb-20">
-            <Head><title>適職＆性格診断</title></Head>
+            {/* Next.jsのHeadコンポーネントは機能しないため削除 */}
+            {/* <Head><title>適職＆性格診断</title></Head> */}
 
             {/* ヘッダー */}
             <header className="bg-white shadow-sm sticky top-0 z-10 p-4 border-b border-gray-200">
@@ -284,7 +289,8 @@ export default function AptitudeTestApp() {
                                         <button
                                             key={index}
                                             onClick={() => handleSelectOption(option, weight)}
-                                            disabled={!!selectedOption} // 選択済みなら無効化
+                                            // 修正点2: 選択済みでも無効化しないように disabled 属性を削除
+                                            // disabled={!!selectedOption} 
                                             className={`w-full p-4 rounded-xl font-semibold text-left border-2 transition-all duration-200 ${
                                                 isSelected
                                                     ? 'bg-pink-500 text-white shadow-lg'

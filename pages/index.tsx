@@ -1,16 +1,15 @@
 import React, { useEffect } from 'react';
-// next/link は削除し、標準の a タグを使用します
-import { 
-  ShieldCheck, 
-  HeartPulse, 
-  ShoppingCart, 
-  Briefcase, 
-  Ticket, 
-  Lightbulb, 
-  Users, 
-  Building2, 
-  Rocket, 
-  Star, 
+import {
+  ShieldCheck,
+  HeartPulse,
+  ShoppingCart,
+  Briefcase,
+  Ticket,
+  Lightbulb,
+  Users,
+  Building2,
+  Rocket,
+  Star,
   Coins,
   Sparkles,
   Smile,
@@ -19,7 +18,7 @@ import {
   Gift,
   Crown,
   Infinity,
-  HeartHandshake // 追加: 助け合いアイコン用
+  HeartHandshake
 } from 'lucide-react';
 
 // -------------------------
@@ -73,10 +72,10 @@ const IndexPage = () => {
 
   // データ定義
   const data: LandingData = {
-    mainTitle: 'みんなの那須アプリ',
+    mainTitle: '株式会社adtown運営「みんなの那須アプリ」',
     areaDescription: '那須塩原・大田原・那須町のママたちへ。地域密着型の暮らし応援アプリ。',
 
-    heroHeadline: '【完全無料】\n毎日がんばるあなたへ。\nその貴重な時間、\n**まだ「探しもの」に使いますか？**',
+    heroHeadline: '【完全無料】\n毎日がんばるあなたへ。\nその貴重な時間、\n**“探して・比べて・悩むこと”に使いますか？**',
     heroSubheadline: '献立も、お買い得情報も、困った時の相談も。\nこれからは全部、アプリに頼ってください。\n**登録はたったの30秒。ずっと0円で使い放題です。**',
 
     // ベネフィット
@@ -122,7 +121,7 @@ const IndexPage = () => {
 
     // フリープラン
     freePlanTitle: '【信じられないかもしれませんが】\nこれら全部、**一生無料**です。',
-    freePlanSubTitle: '「あとで課金されるんじゃ...？」そんな心配は無用です。基本機能はずっと0円でお使いいただけます。',
+    freePlanSubTitle: '「あとで課金されるんじゃ...」そんな心配は無用です。基本機能はずっと0円でお使いいただけます。',
     freePlanFeatures: [
       '📸 AI手相鑑定 (本格プロンプト搭載)',
       '🍳 冷蔵庫管理＆AI献立提案',
@@ -135,7 +134,7 @@ const IndexPage = () => {
     freePlanConclusion:
       '→ **無料で使い倒すのが、賢い那須ライフの正解です。\n登録しない理由が、見つかりません。**',
 
-    // 有料プラン（ボリューム感を出すために項目を細分化して列挙）
+    // 有料プラン
     premiumPlanHeadline:
       '**さらに上を目指す方へ**\n月480円で「もっと豊かな時間」を買う。',
     premiumPlanDesc:
@@ -143,7 +142,7 @@ const IndexPage = () => {
 
     premiumPlanTitle:
       '【月480円プレミアム】那須ライフを極める',
-    // 項目を大幅に増やして「たくさんある」感を出す
+    // 項目定義（紹介システムは保持）
     premiumPlanFeatures: [
       {
         title: '店舗マッチングAI',
@@ -182,7 +181,7 @@ const IndexPage = () => {
         desc: '那須地域の限定イベントやセミナーへの招待が届きます。',
       },
       {
-        title: '紹介報酬システム',
+        title: '紹介報酬システム', // ★維持
         desc: 'お友達を紹介すると報酬GET。使えば使うほど得する仕組みです。',
       },
       {
@@ -202,39 +201,39 @@ const IndexPage = () => {
       'ご安心ください。これは地域の企業様が**「那須に住むあなたを応援したい」**という想いでスポンサーになってくれているからです。<br class="my-2">**だから、あなたは遠慮なく、堂々と無料で使い倒してください。**<br>あなたが便利に暮らすことが、地域の元気につながるのです。',
 
     finalCtaTitle: '**迷う必要はありません。**\nだって、**完全無料**なんですから。',
-    finalCtaSubtext: '● メールアドレスだけで30秒 ● 追加課金なし ● 解約も自由',
+    finalCtaSubtext: '● 無料で使い放題 ● 解約も自由',
     finalTagline1: 'このボタンを押すだけで、',
     finalTagline2: 'あなたの毎日は、もっとやさしく、もっと楽になります。',
   };
 
   // アイコン定義
   const freePlanIcons = [
-    Sparkles,     // 手相
+    Sparkles,   // 手相
     ShoppingCart, // チラシ
     HeartPulse,   // 健康・BMI
-    Smile,        // 褒め言葉・気分
-    Lightbulb,    // 裏技
-    Rocket,       // 引越し・効率化
-    Users,        // 育児
+    Smile, // 褒め言葉・気分
+    Lightbulb, // 裏技
+    Rocket,   // 引越し・効率化
+    Users, // 育児
   ];
 
-  // 有料プラン用アイコン（項目数に合わせて拡張・繰り返し利用）
+  // 有料プラン用アイコン
   const premiumPlanIcons = [
-    Building2,    // 店舗
-    Briefcase,    // 求人
+    Building2, // 店舗
+    Briefcase, // 求人
     ShoppingCart, // フリマ
     HeartHandshake, // 助け合い
-    Ticket,       // クーポン
+    Ticket,   // クーポン
     HeartPulse,   // カウンセラー
-    Coins,        // 家計簿
-    Zap,          // スピード・広告なし
-    Gift,         // イベント
-    Crown,        // 報酬
-    Star,         // 先行利用
-    Infinity      // 容量
+    Coins, // 家計簿
+    Zap, // スピード・広告なし
+    Gift,   // イベント
+    Crown, // 報酬
+    Star,   // 先行利用
+    Infinity // 容量
   ];
 
-  // パートナー企業ロゴリスト（参考コードより）
+  // パートナー企業ロゴリスト
   const partnerLogos = [
     '/images/partner-adtown.png',
     '/images/partner-aquas.png',
@@ -271,28 +270,29 @@ const IndexPage = () => {
               style={{ textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}
             >
               {data.heroHeadline?.split('\n').map((line, i) => (
-                <span key={i} className="block">
-                  {line}
-                </span>
+                <span key={i} className="block" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<span>$1</span>') }} />
               ))}
             </h2>
 
             <div className="mt-6 text-lg md:text-xl text-pink-700 max-w-2xl mx-auto">
               {data.heroSubheadline?.split('\n').map((line, i) => (
-                <span key={i} className="block">
-                  {line}
-                </span>
+                <span key={i} className="block" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-pink-900">$1</span>') }} />
               ))}
             </div>
 
-            <div className="mt-10">
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-              <a href="/users/signup" className="bg-pink-500 text-white font-bold py-4 px-10 rounded-full shadow-lg transition-all transform hover:scale-105 hover:bg-pink-600 inline-block max-w-xs w-full animate-bounce-subtle">
-                完全無料で今すぐ登録する
-              </a>
-              <p className="text-sm text-pink-600 mt-4 font-bold">
-                {data.finalCtaSubtext}
-              </p>
+            {/* Hero CTA: LINE Only (アカウント作成削除済) */}
+            <div className="mt-10 flex flex-col items-center space-y-6">
+              <div className="flex flex-col items-center space-y-3">
+                {/* テキストから「1.」を削除し、単一選択肢として強調 */}
+                <p className="text-xl font-black text-pink-800 bg-yellow-100 px-6 py-2 rounded-full border border-yellow-300 shadow-md">
+                  最速3秒！LINEで友だち追加
+                </p>
+                {/* LINEボタン */}
+                <a href="https://lin.ee/N4x90pv" target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -330,7 +330,7 @@ const IndexPage = () => {
           </div>
         </section>
 
-        {/* Partner logos (画像表示) */}
+        {/* Partner logos */}
         <section className="py-16 bg-white border-y">
           <div className="container mx-auto px-6 text-center">
             <h3 className="text-sm tracking-widest text-gray-500 mb-8 font-semibold uppercase">
@@ -347,7 +347,6 @@ const IndexPage = () => {
                     height={50}
                     className="object-contain max-h-12 w-auto"
                     onError={(e) => {
-                      // 画像がない場合のフォールバック（念のため）
                       e.currentTarget.style.display = 'none';
                     }}
                   />
@@ -364,7 +363,7 @@ const IndexPage = () => {
               <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
                 アプリの主な機能（すべて無料）
               </h2>
-              <p className="mt-2 text-pink-600 font-bold">これら全部、追加料金なしで使い放題です。</p>
+              <p className="mt-2 text-pink-600 font-bold">これら全部、追加料金なしで使い放題です。アプリはどんどん増えていきます!!</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -477,7 +476,6 @@ const IndexPage = () => {
                   {data.premiumPlanTitle}
                 </h3>
 
-                {/* グリッドの列数を増やしてたくさんある感を演出 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {data.premiumPlanFeatures?.map((feature, index) => {
                     const Icon =
@@ -520,29 +518,40 @@ const IndexPage = () => {
           </div>
         </section>
 
-        {/* CTA */}
+        {/* CTA (LINEのみ) */}
         <section id="cta" className="bg-pink-900 text-white">
           <div className="container mx-auto px-6 py-20 text-center">
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-3xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-bold">
                 {data.finalCtaTitle?.split('\n').map((line, i) => (
-                  <span key={i} className="block">
-                    {line}
-                  </span>
+                  <span key={i} className="block" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<span>$1</span>') }} />
                 ))}
               </h2>
               <p className="mt-4 text-pink-200">{data.finalCtaSubtext}</p>
-              <div className="mt-8">
-                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                <a href="/users/signup" className="bg-white text-pink-700 font-bold text-xl py-5 px-12 rounded-full shadow-lg transition-transform transform hover:scale-105 hover:bg-pink-50 inline-block animate-pulse">
-                  完全無料で今すぐ登録する
-                </a>
-                <p className="mt-6 text-sm text-pink-300">
-                  {data.finalTagline1}
-                  <br />
-                  {data.finalTagline2}
-                </p>
+              
+              {/* LINE Button Only */}
+              <div className="mt-10 flex flex-col items-center justify-center space-y-6">
+                
+                <div className="flex flex-col items-center space-y-2">
+                  <p className="text-lg font-bold text-pink-100">
+                    最速！LINEで友だち追加
+                  </p>
+                  <a href="https://lin.ee/N4x90pv" target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
+                  </a>
+                </div>
+
+                {/* Deleted "OR" and "Account Create" buttons here */}
+
               </div>
+
+              {/* Tagline below buttons */}
+              <div className="mt-10 text-pink-300 text-sm md:text-base">
+                 <p>{data.finalTagline1}</p>
+                 <p>{data.finalTagline2}</p>
+              </div>
+
             </div>
           </div>
         </section>
