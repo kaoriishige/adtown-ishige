@@ -72,7 +72,7 @@ const IndexPage = () => {
 
   // データ定義
   const data: LandingData = {
-    mainTitle: '株式会社adtown運営「みんなの那須アプリ」',
+    mainTitle: 'みんなの那須アプリ',
     areaDescription: '那須塩原・大田原・那須町のママたちへ。地域密着型の暮らし応援アプリ。',
 
     heroHeadline: '【完全無料】\n毎日がんばるあなたへ。\nその貴重な時間、\n**“探して・比べて・悩むこと”に使いますか？**',
