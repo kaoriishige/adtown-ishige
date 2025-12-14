@@ -262,10 +262,17 @@ const AIGasPriceTrackerApp = () => {
                     <h2 className="font-bold mb-3 flex items-center gap-2"><MapPin size={18}/> 地域別価格サイト</h2>
                     <div className="grid grid-cols-1 gap-2">
                         {GAS_PRICE_LINKS.map(l => (
-                            <a key={l.region} href={l.url} target="_blank" rel="noreferrer" className="bg-white text-blue-600 py-2 px-4 rounded font-bold text-center block hover:bg-gray-100 flex justify-between items-center">
-                                {l.region} <ExternalLink size={16}/>
-                            </a>
-                        ))}
+    <button
+        key={l.region}
+        onClick={() => {
+            window.open(l.url, '_blank', 'noopener,noreferrer');
+        }}
+        className="bg-white text-blue-600 py-2 px-4 rounded font-bold text-center block hover:bg-gray-100 flex justify-between items-center w-full"
+    >
+        {l.region} <ExternalLink size={16}/>
+    </button>
+))}
+
                     </div>
                 </section>
 

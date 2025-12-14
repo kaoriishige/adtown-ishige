@@ -103,18 +103,21 @@ const NasuFlyerApp = () => {
             </h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {stores.map((store, index) => (
-                <a 
-                  key={index} 
-                  href={store.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="block bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group"
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-800 group-hover:text-blue-600">{store.name}</span>
-                    <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-blue-400" />
-                  </div>
-                </a>
+                <button
+  key={index}
+  onClick={() => {
+    window.open(store.url, '_blank', 'noopener,noreferrer');
+  }}
+  className="block w-full text-left bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group"
+>
+  <div className="flex justify-between items-center">
+    <span className="font-bold text-gray-800 group-hover:text-blue-600">
+      {store.name}
+    </span>
+    <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-blue-400" />
+  </div>
+</button>
+
               ))}
             </div>
           </section>

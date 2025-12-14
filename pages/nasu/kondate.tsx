@@ -452,14 +452,16 @@ const App = () => {
                                         {activeStore} のチラシ情報
                                     </h3>
                                     {/* チラシリンク (ログアウト対策のため target="_blank" を適用) */}
-                                    <a 
-                                        href={SALE_DATA_BY_AREA[selectedArea][activeStore].url}
-                                        target="_blank" // 新しいタブで開く
-                                        rel="noopener noreferrer" 
-                                        className="w-full py-2 text-base font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition block text-center"
-                                    >
-                                        トクバイでチラシをチェック 📰 (別タブで開く)
-                                    </a>
+                                   <button
+    onClick={() => {
+        const url = SALE_DATA_BY_AREA[selectedArea][activeStore].url;
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }}
+    className="w-full py-2 text-base font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition block text-center"
+>
+    トクバイでチラシをチェック 📰 (別タブで開く)
+</button>
+
                                     
                                     {/* ★★★ 外部サイトからの戻り方ガイドの追加 ★★★ */}
                                     <p className="mt-3 text-xs text-blue-700 font-bold bg-blue-100 p-2 rounded">
