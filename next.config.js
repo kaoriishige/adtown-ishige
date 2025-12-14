@@ -2,21 +2,18 @@
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    // ビルド時にeslintエラーで止めない（クライアントに渡すための一時措置）
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: true, // ビルド時にeslintエラーで止めない
   },
   typescript: {
-    // 型エラーでビルドを止めない（納品前に型は直すこと推奨）
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true, // 型エラーでビルドを止めない
   },
   images: {
-    // 🚨 修正箇所: domains を remotePatterns に変更し、非推奨の警告を解消
+    unoptimized: true, // ← ここが重要。Netlify で next/image の問題回避
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com',
-        // Firebase Storageはパスが複雑なため、全パスを許可
-        pathname: '**', 
+        pathname: '**',
       },
       {
         protocol: 'https',
@@ -26,12 +23,8 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
-        // Googleのユーザーコンテンツ画像は全パスを許可
         pathname: '**',
       },
-      // /images/partner-*.png の静的アセットを Next.js で処理している場合、
-      // 開発環境ではlocalhostからの画像も許可する必要がありますが、ここでは静的画像として扱い、
-      // 外部ドメインのみを定義します。
     ],
   },
   webpack: (config) => {
@@ -48,6 +41,7 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+
 
 
 
