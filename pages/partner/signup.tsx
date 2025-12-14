@@ -1,17 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-// ★★★ Firebaseの認証とFirestoreのインポート ★★★
-// import { onAuthStateChanged, User } from 'firebase/auth'; // ★ 不要なため削除
-// import { doc, getDoc } from 'firebase/firestore'; // ★ 不要なため削除
 import { NextPage } from 'next';
-// 🚨 パスはプロジェクトに合わせてください
-// import { auth, db } from '../../lib/firebase'; // ★ このページでは不要
-
 
 // --- 画像パスの定義（public/images/に配置されていることを前提とする） ---
+// あなたのファイルエクスプローラーに合わせて、ここで使用されているロゴ画像を全て public/images/ に配置してください
 const PARTNER_LOGOS = [
     '/images/partner-adtown.png',
     '/images/partner-aquas.png',
@@ -30,13 +25,11 @@ const PARTNER_LOGOS = [
     '/images/partner-yamakiya.png'
 ];
 
-
 // --- Inline SVG Icon Components (sizeプロパティを受け取れるように型定義を調整) ---
 interface CustomIconProps extends React.SVGProps<SVGSVGElement> {
     size?: number | string; // sizeプロパティを許容
 }
 
-// 修正済み: SVG内の自己終了タグ (/, <line />) を確実に記述
 const UsersIcon = (props: CustomIconProps) => ( <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> );
 const XCircleIcon = (props: CustomIconProps) => ( <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> );
 const MessageCircleIcon = (props: CustomIconProps) => ( <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> );
@@ -59,17 +52,11 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
     );
 };
 
-// ★ 修正: usePersistentState を通常の useState に変更
-// (sessionStorageによる自動入力を無効化)
-// const usePersistentState = (key: string, defaultValue: any) => { ... };
-
 
 const PartnerSignupPage: NextPage = () => {
     const router = useRouter();
 
-    // ★ 修正: 通常の useState を使い、常にまっさらな状態にする
     const [storeName, setStoreName] = useState('');
-    // const [companyName, setCompanyName] = useState(''); // companyNameは使われていないためコメントアウト
     const [address, setAddress] = useState('');
     const [area, setArea] = useState('');
     const [contactPerson, setContactPerson] = useState('');
@@ -84,20 +71,11 @@ const PartnerSignupPage: NextPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [showTerms, setShowTerms] = useState(false);
 
-    // ★ 修正: 認証状態の監視を削除 (常にまっさらな状態のため)
-    // const [currentAuthUser, setCurrentAuthUser] = useState<User | null>(null);
-    // const [isDataLoading, setIsDataLoading] = useState(true); // ★ 不要
-
     const [registeredCount] = useState(32); // Dummy value for registered stores
     const totalSlots = 100;
     const remainingSlots = totalSlots - registeredCount;
 
     const registrationFormRef = useRef<HTMLDivElement>(null);
-
-    // ★ 修正: 認証状態の監視と自動入力ロジックをすべて削除
-    // const fetchUserData = useCallback(...)
-    // useEffect(() => { onAuthStateChanged(...) }, []);
-
 
     // Auto-detect area from address
     useEffect(() => {
@@ -114,8 +92,6 @@ const PartnerSignupPage: NextPage = () => {
         registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
-    // Check if form is complete (to control button's disabled state)
-    // ★ 修正: 常にパスワードを必須にする
     const isPasswordRequired = true; 
     
     // フォームバリデーションロジック (passwordは常に必須)
@@ -148,7 +124,7 @@ const PartnerSignupPage: NextPage = () => {
 
         setIsLoading(true);
         try {
-            // ★ 修正: 既存ユーザーID (existingUid) を null に固定
+            // 既存ユーザーID (existingUid) を null に固定
             const existingUid = null; 
 
             // New API call for free registration (APIパスは適宜修正してください)
@@ -164,13 +140,11 @@ const PartnerSignupPage: NextPage = () => {
                     phoneNumber,
                     email,
                     password: password, // パスワードは必ず送信される
-                    existingUid: existingUid // ★ 常に null
+                    existingUid: existingUid // 常に null
                 }),
             });
 
-
             const data = await response.json();
-
 
             if (!response.ok) {
                 if (data.error && (data.error.includes('already in use') || data.error.includes('exists') || data.error.includes('既に使用'))) {
@@ -179,9 +153,6 @@ const PartnerSignupPage: NextPage = () => {
                     throw new Error(data.error || 'サーバーでエラーが発生しました。');
                 }
             }
-
-            // ★ 修正: sessionStorage をクリアする必要がなくなる (usePersistentState を削除したため)
-            // Object.keys(window.sessionStorage).forEach(key => { ... });
 
             // 登録成功後、ログインページへリダイレクト（ユーザーが自分でログインする必要がある）
             router.push('/partner/login?signup_success=true');
@@ -196,34 +167,61 @@ const PartnerSignupPage: NextPage = () => {
 
     const getButtonText = () => {
         if (isLoading) return 'アカウント作成中...';
-        // if (isDataLoading) return '読み込み中...'; // ★ 削除
         return '無料でダッシュボードに進む';
     };
 
-    // ★ 修正: ロード中UIを削除 (isDataLoading を削除したため)
-    // if (isDataLoading) { ... }
-
+    const lineUrl = "https://lin.ee/your-line-id"; // LINE URLは適宜置き換えてください
 
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
             <Head>
-                <title>{"みんなの那須アプリ パートナー無料登録"}</title>
+                <title>{"みんなのNasuアプリ パートナー無料登録"}</title>
             </Head>
-            <header className="bg-white shadow-md sticky top-0 z-50">
-                <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-800">みんなの那須アプリ</h1>
-                    <button onClick={scrollToForm} className="bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300 shadow-lg animate-pulse">
-                        無料集客広告へ
-                    </button>
+            
+            {/* ★★★ 修正箇所: minna_nasu_s.png を使用し、unoptimizedを適用 ★★★ */}
+            <header className="relative bg-white overflow-hidden shadow-lg">
+                <div className="relative w-full aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6] mx-auto">
+                    <Image
+                        // あなたのコードに合わせて minna_nasu_s.png に修正
+                        src="/images/minna_nasu_s.png" 
+                        alt="みんなの那須アプリ パートナー向けヘッダー画像"
+                        fill
+                        priority={true}
+                        sizes="(max-width: 768px) 100vw, 100vw"
+                        // 画像が切れないように 'contain' に設定
+                        style={{ objectFit: 'contain' }}
+                        // ★重要: これで画像が表示される可能性が高まります
+                        unoptimized={true} 
+                    />
+                </div>
+
+                {/* 画像の下にCTAボタンを配置するためのコンテナ */}
+                <div className="container mx-auto px-6 py-6 relative z-20 text-center bg-white">
+                    <div className="max-w-3xl mx-auto">
+                        {/* CTA: LINE Only */}
+                        <div className="flex flex-col items-center space-y-4">
+                            {/* 誘導テキスト */}
+                            <p className="text-xl font-black text-pink-800 bg-yellow-100 px-6 py-2 rounded-full border border-yellow-300 shadow-md">
+                                最速3秒！LINEで友だち追加
+                            </p>
+                            {/* LINEボタン: 公式LINE URLへ誘導 */}
+                            <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </header>
+            {/* ★★★ 修正箇所ここまで ★★★ */}
+
             <main className="container mx-auto px-6">
 
                 {/* Hero Section - タイトルを変更し、無料を強調 */}
                 <section className="text-center pt-16 pb-8">
                     <h2 className="text-3xl font-bold text-gray-800">おかげさまで株式会社adtown20周年、感謝企画</h2>
                     <p className="mt-4 text-lg text-gray-600">日頃よりご支援いただいている那須地域の皆さまへの感謝を込めて、
-                    このたび「みんなの那須アプリ」を開発いたしました。</p>
+                    このたび「みんなのNasuアプリ」を開発いたしました。</p>
                 </section>
 
                 <section className="text-center py-16 md:py-24">
@@ -245,14 +243,13 @@ const PartnerSignupPage: NextPage = () => {
                     </div>
                 </section>
 
-                {/* ★★★ 集客の悩みに絞ったセクションを追加 ★★★ */}
+                {/* 集客の悩みに絞ったセクション */}
                 <section className="mt-12 md:mt-16 py-8 bg-white rounded-2xl shadow-lg border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center px-6">
                         <h3 className="text-2xl font-extrabold text-gray-800 mb-6">
                             こんな集客の悩み、ありませんか？
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left max-w-2xl mx-auto">
-
                             <div className="flex items-start space-x-3 p-4 bg-red-50 rounded-lg border border-red-200">
                                 <XCircleIcon className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                                 <p className="text-lg font-medium text-gray-700">
@@ -265,7 +262,6 @@ const PartnerSignupPage: NextPage = () => {
                                     何を、どのようにして集客するのかわからない...
                                 </p>
                             </div>
-                            {/* 2行目 (元コードからコピー) */}
                             <div className="flex items-start space-x-3 p-4 bg-red-50 rounded-lg border border-red-200">
                                 <XCircleIcon className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                                 <p className="text-lg font-medium text-gray-700">
@@ -278,10 +274,9 @@ const PartnerSignupPage: NextPage = () => {
                                     割引だけ利用してリピートしない...
                                 </p>
                             </div>
-
                         </div>
                         <p className="mt-8 text-xl font-bold text-orange-600">
-                            「みんなの那須アプリ」の無料登録が、その解決の第一歩です！
+                            「みんなのNasuアプリ」の無料登録が、その解決の第一歩です！
                         </p>
                     </div>
                 </section>
@@ -301,20 +296,20 @@ const PartnerSignupPage: NextPage = () => {
                     </div>
                 </section>
 
-                {/* ★★★ 修正箇所: 以前削除された「社会的証明」セクションを復元 ★★★ */}
+                {/* 社会的証明セクション */}
                 <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
                     <div className="max-w-4xl mx-auto text-center">
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
                         <h3 className="text-3xl font-extrabold">第３の集客、なぜアプリ集客広告（集客マッチングAI）なのか？答えは「圧倒的な見込み客」です。</h3>
                         <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-                            那須地域限定の『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。
+                            那須地域限定の『みんなのNasuアプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。
                             先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
                             貴店の広告やクーポン、フードロスを、アプリ広告（集客マッチングAI）出し放題で、この<strong className="font-bold">爆発的に増え続ける「貴店に理想の常連客」</strong>に直接届くのです。
                         </p>
                     </div>
                 </section>
 
-                {/* ★★★ 修正追加: 【無料の価値】セクション ★★★ */}
+                {/* 【無料の価値】セクション */}
                 <section className="mt-20">
                     <h3 className="text-3xl font-extrabold text-center border-b pb-2 mb-8">【無料の価値・待ちの集客】今すぐ集客マッチングAIを始めるための基本機能</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -331,13 +326,10 @@ const PartnerSignupPage: NextPage = () => {
                         <div className="text-center p-6 bg-green-50 rounded-lg shadow-lg border-green-300 border">
                             <div className="bg-green-500 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4"><ZapIcon size={30} /></div>
                             <h4 className="text-xl font-bold">簡単操作と即時反映</h4>
-                            {/* 元コードのテキストをコピー */}
                             <p className="mt-2 text-gray-600">簡単に掲載・更新でき、誰でもすぐに集客を始められます。毎日更新のSNSではなく、一度登録するだけで、理想の顧客をAIでマッチング!!</p>
                         </div>
                     </div>
                 </section>
-                {/* ★★★ 修正追加: 【無料の価値】セクションここまで ★★★ */}
-
 
                 {/* Monetization Mechanism Section - 有料機能として再定義 */}
                 <section className="mt-20">
@@ -426,16 +418,13 @@ const PartnerSignupPage: NextPage = () => {
                 <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
                         <div className="text-center mb-10">
+                            <h2 className="text-3xl font-bold text-center mb-2">パートナー無料登録</h2>
                             <p className="text-gray-700 leading-relaxed">
                                 まずは無料で広告管理ページにログインし、すぐに広告掲載をスタートしましょう。<br/>
                                 <strong className="text-red-600 font-bold">有料機能の割引枠（月額4,400円→3,850円）</strong>を確保するためにも、今すぐご登録ください。
                             </p>
-                            {/* ★ 修正: ログイン中メッセージは表示しない (常に新規登録のため) */}
-                            {/* {currentAuthUser && ( ... )} */}
                         </div>
-                        <h2 className="text-3xl font-bold text-center mb-2">パートナー無料登録</h2>
 
-                        {/* ★ 修正: 常に新規登録の案内を表示 */}
                         <p className="text-center text-gray-600 mb-8">
                             以下のフォームをご入力ください。ご登録後、広告管理ページにログインできるようになります。
                         </p>
@@ -445,18 +434,15 @@ const PartnerSignupPage: NextPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">店舗名・企業名 *</label>
-                                    {/* ★ 修正: readOnly を削除 */}
                                     <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
                                 </div>
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label>
-                                    {/* ★ 修正: readOnly を削除 */}
                                     <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-gray-700 font-medium mb-2">住所 *</label>
-                                {/* ★ 修正: readOnly を削除 */}
                                 <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
                                 {address && !area && <p className="text-red-500 text-xs mt-1">那須塩原市、那須郡那須町、那須町、大田原市のいずれかである必要があります。</p>}
                             </div>
@@ -464,11 +450,10 @@ const PartnerSignupPage: NextPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">電話番号 *</label>
-                                    {/* ★ 修正: readOnly を削除 */}
                                     <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
                                 </div>
 
-                                {/* ★★★ 修正: 常にパスワード入力を必須にする ★★★ */}
+                                {/* パスワード入力を必須にする */}
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">パスワード *</label>
                                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required={isPasswordRequired} disabled={!isPasswordRequired} minLength={isPasswordRequired ? 6 : 0} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed"/>
@@ -476,15 +461,21 @@ const PartnerSignupPage: NextPage = () => {
 
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">メールアドレス *</label>
-                                    {/* ★ 修正: readOnly を削除 (常に入力可能) */}
-                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required readOnly={false} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
                                 </div>
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）*</label>
-                                    {/* ★ 修正: readOnly を削除 (常に入力可能) */}
-                                    <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required readOnly={false} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                    <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
                                 </div>
                             </div>
+                            
+                            {/* エラーメッセージ */}
+                            {error && (
+                                <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center">
+                                    {error}
+                                </div>
+                            )}
+
                             <div className="pt-4">
                                 <label className="flex items-start">
                                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-5 w-5 text-orange-600 focus:ring-orange-500 rounded"/>
@@ -492,63 +483,64 @@ const PartnerSignupPage: NextPage = () => {
                                         <button type="button" onClick={() => setShowTerms(true)} className="text-blue-600 hover:underline">
                                             パートナー利用規約
                                         </button>
-                                        （広告掲載プログラム**無料版**）に同意します。
+                                        と<Link href="/privacy" target="_blank" className="text-blue-600 hover:underline">プライバシーポリシー</Link>に同意します。*
                                     </span>
                                 </label>
                             </div>
 
-                            {/* Error display area */}
-                            {error && ( <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center"><XCircleIcon className="h-5 w-5 mr-3"/><p className="text-sm">{error}</p></div> )}
-
-
-                            {/* メインの登録ボタン: 無料登録を実行 */}
-                            <button type="button" onClick={handleFreeSignup} disabled={isLoading || !isFormValid} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
+                            <button
+                                type="button"
+                                onClick={handleFreeSignup}
+                                disabled={!isFormValid || isLoading}
+                                className={`w-full py-3 mt-8 text-xl font-bold rounded-full transition duration-300 shadow-lg ${
+                                    isFormValid && !isLoading
+                                        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:from-orange-600 hover:to-red-700 transform hover:scale-[1.01]'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
+                            >
                                 {getButtonText()}
                             </button>
-                            <p className="text-sm text-center -mt-2 text-gray-500">ご登録後、ログインして管理ページより有料機能をお申込みいただけます。</p>
+                            <p className="text-center text-sm text-gray-500 mt-2">※ 登録後、広告管理ページにリダイレクトします。</p>
+
+                            <p className="text-center text-sm text-gray-500 mt-4">
+                                すでにアカウントをお持ちの場合は <Link href="/partner/login" className="text-blue-600 hover:underline font-medium">ログインはこちら</Link>
+                            </p>
+
                         </form>
-                        <p className="text-sm text-center mt-6">
-                            すでにアカウントをお持ちですか？ <Link href="/partner/login" className="text-orange-600 hover:underline font-medium">ログインはこちら</Link>
-                        </p>
                     </div>
                 </section>
+
+
+                {/* Terms Modal */}
+                {showTerms && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+                        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 md:p-8">
+                            <h3 className="text-2xl font-bold mb-4 border-b pb-2">パートナー利用規約</h3>
+                            <div className="text-gray-700 text-sm space-y-4">
+                                <p>
+                                    （規約のテキストがここに入ります。実際には別のコンポーネントまたはファイルからロードされるべきです。）
+                                </p>
+                                <p>
+                                    ※ 実際の利用規約の内容をここに挿入するか、または /terms などのページへのリンクを使用してください。
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowTerms(false)}
+                                className="mt-6 bg-orange-500 text-white font-bold py-2 px-6 rounded-full hover:bg-orange-600 transition duration-300"
+                            >
+                                閉じる
+                            </button>
+                        </div>
+                    </div>
+                )}
             </main>
 
-            <footer className="bg-white mt-20 border-t">
-                <div className="container mx-auto px-6 py-8 text-center text-gray-600">
-                    <p>&copy; {new Date().getFullYear()} 株式会社adtown. All Rights Reserved.</p>
-                    <div className="mt-4">
-                        <Link href="/legal/" className="text-sm text-gray-500 hover:underline mx-2">特定商取引法に基づく表記</Link>
-                        <Link href="/privacy" className="text-sm text-gray-500 hover:underline mx-2">プライバシーポリシー</Link>
-                    </div>
-                </div>
+            {/* Footer Placeholder (必要に応じて追加) */}
+            <footer className="mt-20 py-8 bg-gray-200 text-center text-sm text-gray-600">
+                &copy; {new Date().getFullYear()} adtown Inc. All rights reserved.
             </footer>
-
-            {/* 利用規約モーダル */}
-            {showTerms && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
-                        <h2 className="text-xl font-bold mb-4 border-b pb-2">パートナー利用規約</h2>
-                        <div className="overflow-y-auto space-y-4 pr-2">
-                            <p><strong>第1条（本規約の適用範囲）</strong><br />本規約は、株式会社adtown（以下「当社」といいます。）が提供する「みんなの那須アプリ」パートナープログラム（以下「本サービス」といいます。）の利用に関する一切の関係に適用されます。</p>
-                            <p><strong>第2条（本サービスの利用資格）</strong><br />本サービスは、当社が別途定める審査基準を満たした法人または個人事業主（以下「パートナー」といいます。）のみが利用できるものとします。申込者は、当社が要求する情報が真実かつ正確であることを保証するものとします。</p>
-                            <p><strong>第3条（利用料金）</strong><br />**本サービスの基本機能（店舗情報登録・広告掲載、特典・クーポンの発行）は無料です。**ただし、以下の<strong className="font-bold">有料機能</strong>を利用する場合、パートナーは当社に対し、別途定める利用料金（月額<strong className="font-bold">4,400円</strong>（税込））を支払うものとします。<br/>1. 集客マッチングAIの利用<br/>2. AIによる特典強化（AIマッチング）<br/>3. アプリ利用者の紹介料取得プログラム<br/>支払い方法は、クレジットカード決済または銀行振込（年額一括のみ、ダッシュボード内参照）とします。</p>
-
-                            <p><strong>第5条（紹介手数料）</strong><br />1. パートナーは、**有料プランに加入している場合**、当社が提供する専用のQRコードを経由してアプリ利用者が有料会員登録を行った場合、当社所定の紹介手数料（以下「手数料」といいます。）を受け取ることができます。<br />2. 手数料は、有料会員の月額利用料金の30%とします。<br />3. 手数料は、月末締めで計算し、翌々月15日にご指定の銀行口座へお振り込みします。ただし、振込額の合計が3,000円に満たない場合は、お支払いは翌月以降に繰り越されます。パートナー様専用のダッシュボードで、いつでも収益状況をご確認いただけます。</p>
-                            <p><strong>第6条（契約期間と解約）</strong><br />1. 本サービスの有料プランの契約期間は、申込日を起算日として1ヶ月または1年間とします。期間満了までにいずれかの当事者から解約の申し出がない場合、契約は同一条件で自動更新されるものとします。<br />2. パートナーは、いつでも有料プランの解約を申し出ることができますが、契約期間中の利用料金の返金は行わないものとします（月額払いの場合）。次回の更新日までに解約手続きをいただければ、追加の料金は発生いたしません。</p>
-                            <p><strong>第7条（本サービスの提供の停止等）</strong><br />当社は、以下のいずれかの事由があると判断した場合、パートナーに事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。<br />1. 本サービスにかかるコンピュータシステムの保守点検または更新を行う場合<br />2. 地震、落雷、火災、停電または天災などの不可抗力により、本サービスの提供が困難となった場合<br />3. その他、当社が本サービスの提供が困難と判断した場合</p>
-                            <p><strong>第8条（免責事項）</strong><br />当社は、本サービスに起因してパートナーに生じたあらゆる損害について一切の責任を負いません。ただし、本サービスに関する当社とパートナーとの間の契約が消費者契約法に定める消費者契約となる場合、この免責規定は適用されません。</p>
-                            <p><strong>第9条（準拠法・裁判管轄）</strong><br />本規約の解釈にあたっては、日本法を準拠法とします。本サービスに関して紛争が生じた場合には、当社の本店所在地を管轄する裁判所を専属的合意管轄とします。</p>
-                        </div>
-                        <div className="mt-6 flex justify-end">
-                            <button onClick={() => setShowTerms(false)} className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600">閉じる</button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
-
 
 export default PartnerSignupPage;

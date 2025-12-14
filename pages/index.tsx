@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import Image from 'next/image'; // Next.jsのImageコンポーネントをインポート
 import {
   ShieldCheck,
   HeartPulse,
@@ -65,14 +66,41 @@ const SafeHTML: React.FC<{ html?: string }> = ({ html }) => (
 // Page component
 // -------------------------
 const IndexPage = () => {
-  // タイトル設定
+  // ---------------------------------------------------------
+  // 紹介システム連動ロジック
+  // ---------------------------------------------------------
+  
+  // 基本となるLINE公式アカウントのURL
+  const BASE_LINE_URL = "https://lin.ee/N4x90pv";
+  
+  // 実際にボタンに設定されるURL（初期値は基本URL）
+  const [lineUrl, setLineUrl] = useState(BASE_LINE_URL);
+
   useEffect(() => {
-    document.title = "みんなの那須アプリ | 公式";
+    // 1. ページタイトル設定
+    document.title = "みんなのNasuアプリ | 公式";
+
+    // 2. URLパラメータから紹介ID (ref) を取得
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const referralId = searchParams.get('ref'); 
+
+      if (referralId) {
+        // IDがある場合、LINEのURLに ?ref=ID を追加
+        const newUrl = `${BASE_LINE_URL}?ref=${referralId}`;
+        setLineUrl(newUrl);
+        console.log("紹介ID検知: LINEリンクを書き換えました ->", newUrl);
+      }
+    } catch (e) {
+      console.error("パラメータ取得エラー", e);
+    }
   }, []);
 
+  // ---------------------------------------------------------
   // データ定義
+  // ---------------------------------------------------------
   const data: LandingData = {
-    mainTitle: 'みんなの那須アプリ',
+    mainTitle: 'みんなのNasuアプリ',
     areaDescription: '那須塩原・大田原・那須町のママたちへ。地域密着型の暮らし応援アプリ。',
 
     heroHeadline: '【完全無料】\n毎日がんばるあなたへ。\nその貴重な時間、\n**“探して・比べて・悩むこと”に使いますか？**',
@@ -121,7 +149,7 @@ const IndexPage = () => {
 
     // フリープラン
     freePlanTitle: '【信じられないかもしれませんが】\nこれら全部、**一生無料**です。',
-    freePlanSubTitle: '「あとで課金されるんじゃ...」そんな心配は無用です。基本機能はずっと0円でお使いいただけます。',
+    freePlanSubTitle: '「あとで課金されるんじゃ...？」そんな心配は無用です。基本機能はずっと0円でお使いいただけます。',
     freePlanFeatures: [
       '📸 AI手相鑑定 (本格プロンプト搭載)',
       '🍳 冷蔵庫管理＆AI献立提案',
@@ -142,7 +170,7 @@ const IndexPage = () => {
 
     premiumPlanTitle:
       '【月480円プレミアム】那須ライフを極める',
-    // 項目定義（紹介システムは保持）
+    // 項目定義
     premiumPlanFeatures: [
       {
         title: '店舗マッチングAI',
@@ -181,7 +209,7 @@ const IndexPage = () => {
         desc: '那須地域の限定イベントやセミナーへの招待が届きます。',
       },
       {
-        title: '紹介報酬システム', // ★維持
+        title: '紹介報酬システム',
         desc: 'お友達を紹介すると報酬GET。使えば使うほど得する仕組みです。',
       },
       {
@@ -201,36 +229,36 @@ const IndexPage = () => {
       'ご安心ください。これは地域の企業様が**「那須に住むあなたを応援したい」**という想いでスポンサーになってくれているからです。<br class="my-2">**だから、あなたは遠慮なく、堂々と無料で使い倒してください。**<br>あなたが便利に暮らすことが、地域の元気につながるのです。',
 
     finalCtaTitle: '**迷う必要はありません。**\nだって、**完全無料**なんですから。',
-    finalCtaSubtext: '● 無料で使い放題 ● 解約も自由',
+    finalCtaSubtext: '● 追加課金なし ● 解約も自由',
     finalTagline1: 'このボタンを押すだけで、',
     finalTagline2: 'あなたの毎日は、もっとやさしく、もっと楽になります。',
   };
 
   // アイコン定義
   const freePlanIcons = [
-    Sparkles,   // 手相
-    ShoppingCart, // チラシ
-    HeartPulse,   // 健康・BMI
-    Smile, // 褒め言葉・気分
-    Lightbulb, // 裏技
-    Rocket,   // 引越し・効率化
-    Users, // 育児
+    Sparkles, 
+    ShoppingCart, 
+    HeartPulse, 
+    Smile, 
+    Lightbulb, 
+    Rocket, 
+    Users, 
   ];
 
   // 有料プラン用アイコン
   const premiumPlanIcons = [
-    Building2, // 店舗
-    Briefcase, // 求人
-    ShoppingCart, // フリマ
-    HeartHandshake, // 助け合い
-    Ticket,   // クーポン
-    HeartPulse,   // カウンセラー
-    Coins, // 家計簿
-    Zap, // スピード・広告なし
-    Gift,   // イベント
-    Crown, // 報酬
-    Star,   // 先行利用
-    Infinity // 容量
+    Building2, 
+    Briefcase, 
+    ShoppingCart, 
+    HeartHandshake, 
+    Ticket, 
+    HeartPulse, 
+    Coins, 
+    Zap, 
+    Gift, 
+    Crown, 
+    Star, 
+    Infinity 
   ];
 
   // パートナー企業ロゴリスト
@@ -254,45 +282,39 @@ const IndexPage = () => {
 
   return (
     <div className="bg-white text-gray-800 font-sans">
-      {/* Hero Section */}
-      <header className="relative bg-gradient-to-br from-pink-50 via-white to-pink-100 text-pink-900 overflow-hidden">
-        <div className="container mx-auto px-6 py-24 md:py-32 relative z-20 text-center">
+      
+      {/* 修正された Hero Section: 画像ヘッダー */}
+      {/* ⚠️ 修正後の Hero Section: 画像ヘッダーとCTA */}
+      <header className="relative bg-white overflow-hidden shadow-lg">
+        
+        {/* Next.jsのImageコンポーネントをインポートしたため、Imageタグを使用できます。 */}
+        {/* 画像を切り取らずに表示するため、aspect比率とobjectFitを調整 */}
+        <div className="relative w-full aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6] mx-auto">
+            <Image
+                src="/images/minna_nasu.png" // 指定されたパス
+                alt="みんなのNasuアプリ 公式ヘッダー画像"
+                fill // 親要素に合わせて画像を埋める
+                priority={true} // 最優先で読み込み
+                sizes="(max-width: 768px) 100vw, 100vw"
+                // objectFit: 'contain' にすることで、画像が切れることなく全体が表示される
+                style={{ objectFit: 'contain' }}
+            />
+        </div>
+
+        {/* 画像の下にCTAボタンを配置するためのコンテナ */}
+        <div className="container mx-auto px-6 py-6 relative z-20 text-center bg-white">
           <div className="max-w-3xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-bold text-pink-800 opacity-90">
-              {data.mainTitle}
-            </h1>
-            <p className="mt-2 text-md text-pink-600">
-              {data.areaDescription}
-            </p>
-
-            <h2
-              className="mt-6 text-3xl md:text-5xl font-black leading-tight text-pink-900"
-              style={{ textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}
-            >
-              {data.heroHeadline?.split('\n').map((line, i) => (
-                <span key={i} className="block" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<span>$1</span>') }} />
-              ))}
-            </h2>
-
-            <div className="mt-6 text-lg md:text-xl text-pink-700 max-w-2xl mx-auto">
-              {data.heroSubheadline?.split('\n').map((line, i) => (
-                <span key={i} className="block" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-pink-900">$1</span>') }} />
-              ))}
-            </div>
-
-            {/* Hero CTA: LINE Only (アカウント作成削除済) */}
-            <div className="mt-10 flex flex-col items-center space-y-6">
-              <div className="flex flex-col items-center space-y-3">
-                {/* テキストから「1.」を削除し、単一選択肢として強調 */}
+            {/* CTA: LINE Only */}
+            <div className="flex flex-col items-center space-y-4">
+                {/* 誘導テキスト */}
                 <p className="text-xl font-black text-pink-800 bg-yellow-100 px-6 py-2 rounded-full border border-yellow-300 shadow-md">
-                  最速3秒！LINEで友だち追加
+                    最速3秒！LINEで友だち追加
                 </p>
-                {/* LINEボタン */}
-                <a href="https://lin.ee/N4x90pv" target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
+                {/* LINEボタン: 紹介ID付きのURL (lineUrl) に動的に変わる */}
+                <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
                 </a>
-              </div>
             </div>
           </div>
         </div>
@@ -306,7 +328,7 @@ const IndexPage = () => {
               おかげさまで株式会社adtown20周年、感謝企画
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              みんなの那須アプリを開発しましたので、下記をご覧の上ご利用ください。
+              みんなのNasuアプリを開発しましたので、下記をご覧の上ご利用ください。
             </p>
           </div>
         </section>
@@ -363,7 +385,7 @@ const IndexPage = () => {
               <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
                 アプリの主な機能（すべて無料）
               </h2>
-              <p className="mt-2 text-pink-600 font-bold">これら全部、追加料金なしで使い放題です。アプリはどんどん増えていきます!!</p>
+              <p className="mt-2 text-pink-600 font-bold">これら全部、追加料金なしで使い放題です。</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -518,7 +540,7 @@ const IndexPage = () => {
           </div>
         </section>
 
-        {/* CTA (LINEのみ) */}
+        {/* CTA (LINEのみ・連動対応) */}
         <section id="cta" className="bg-pink-900 text-white">
           <div className="container mx-auto px-6 py-20 text-center">
             <div className="max-w-3xl mx-auto">
@@ -536,20 +558,21 @@ const IndexPage = () => {
                   <p className="text-lg font-bold text-pink-100">
                     最速！LINEで友だち追加
                   </p>
-                  <a href="https://lin.ee/N4x90pv" target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                  {/* stateのlineUrl (例: ...?ref=7X7...) を使用 */}
+                  <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
                   </a>
                 </div>
 
-                {/* Deleted "OR" and "Account Create" buttons here */}
+                {/* Account Create Button Deleted */}
 
               </div>
 
               {/* Tagline below buttons */}
               <div className="mt-10 text-pink-300 text-sm md:text-base">
-                 <p>{data.finalTagline1}</p>
-                 <p>{data.finalTagline2}</p>
+                  <p>{data.finalTagline1}</p>
+                  <p>{data.finalTagline2}</p>
               </div>
 
             </div>
@@ -564,7 +587,7 @@ const IndexPage = () => {
           <a href="/legal" className="hover:text-white">
             特定商取引法に基づく表記
           </a>
-          <p>みんなの那須アプリ運営 | 株式会社adtown</p>
+          <p>みんなのNasuアプリ運営 | 株式会社adtown</p>
           <p>
             〒329-2711 栃木県那須塩原市石林698-35 | TEL:0287-39-7577
           </p>

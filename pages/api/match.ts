@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { adminDb } from '@/lib/firebase-admin';
-import * as admin from 'firebase-admin';
+// import * as admin from 'firebase-admin';  // エラー解消のため削除
 
 // --- 型定義 ---
 interface CustomField {
@@ -19,17 +19,17 @@ const MATCH_WEIGHTS = {
   EMPLOYMENT_TYPE: 4,
   GROWTH_ATMOSPHERE: 8,
   WLB_FEATURES: 7,
+  // 💡 追加: スキルマッチの重み
+  SKILL_MATCHING: 20, // スキルマッチングの基本点
+  SKILL_PER_HIT: 5,  // スキル1つあたりの加点
 };
 
 // --- ユーティリティ関数 ---
 const parseSalaryRange = (salaryStr: string): { min: number; max: number } => {
   const normalized = salaryStr
     .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
-    // ← 修正済み：ハイフンは文字クラスの最後に置くことでエスケープ不要に
-    //     ここでは /[^0-9〜+.-]/ としている（ハイフンは末尾）
     .replace(/[^0-9〜+.-]/g, '');
 
-  // split の方もハイフンを先頭に置く（範囲と解釈されない）
   const parts = normalized.split(/[-〜]/);
 
   const min = parseFloat(parts[0] || '0');
@@ -51,7 +51,9 @@ const countKeywordMatches = (text: string, keywordList: string[]): number => {
   const lowerText = text.toLowerCase();
   let count = 0;
   for (const keyword of keywordList) {
-    if (lowerText.includes(keyword.toLowerCase())) {
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedKeyword, 'i');
+    if (regex.test(lowerText)) {
       count++;
     }
   }
@@ -73,14 +75,14 @@ export default async function handler(
   }
 
   try {
-    const userDoc = await adminDb.collection('users').doc(uid).get();
+    const userDoc = await adminDb.collection('userProfiles').doc(uid).get(); 
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User profile not found.' });
     }
-    const userProfile = userDoc.data() as any;
+    const userProfile = userDoc.data() as any; 
 
     const jobsSnapshot = await adminDb
-      .collection('jobs')
+      .collection('recruitments') 
       .where('status', '==', 'active')
       .get();
     const jobs = jobsSnapshot.docs.map((doc) => ({
@@ -90,9 +92,46 @@ export default async function handler(
 
     const matchingResults: { job: any; score: number; details: string[] }[] = [];
 
+    // ユーザーのスキルセットを準備
+    const userSkills = userProfile.skills 
+      ? String(userProfile.skills).split(/[,\s、]+/)
+        .map((s: string) => s.trim().toLowerCase()) // ★修正済
+        .filter((s: string) => s) // ★修正済
+      : [];
+
+
     for (const job of jobs) {
       let totalScore = 0;
       const matchDetails: string[] = [];
+
+      // ------------------------------------
+      // 🌟 追加: スキルマッチングロジック
+      // ------------------------------------
+      const requiredSkillsText = job.requiredSkills || ''; 
+      
+      const requiredSkills = requiredSkillsText.split(/[,\n、]+/)
+        .map((s: string) => s.trim().toLowerCase()) // ★修正済
+        .filter((s: string) => s); // ★修正済
+      
+      let skillMatchCount = 0;
+      const matchedSkills: string[] = [];
+
+      for (const reqSkill of requiredSkills) {
+        if (userSkills.includes(reqSkill)) {
+          skillMatchCount++;
+          matchedSkills.push(reqSkill);
+        }
+      }
+
+      if (skillMatchCount > 0) {
+        const skillScore = MATCH_WEIGHTS.SKILL_MATCHING + skillMatchCount * MATCH_WEIGHTS.SKILL_PER_HIT; 
+        totalScore += skillScore;
+        matchDetails.push(`🌟 必須スキル ${skillMatchCount} 項目が一致（${matchedSkills.join(', ')}） (+${skillScore}点)`);
+      }
+      
+      // ------------------------------------
+      // 既存のロジック
+      // ------------------------------------
 
       // 職種カテゴリ
       const jobCategory = job.jobCategory;
@@ -140,11 +179,10 @@ export default async function handler(
         userProfile.desiredWLBFeatures || []
       );
       if (wlbScore > 0) {
-        totalScore += MATCH_WEIGHTS.WLB_FEATURES + wlbScore;
+        const score = MATCH_WEIGHTS.WLB_FEATURES + wlbScore;
+        totalScore += score;
         matchDetails.push(
-          `✅ WLB（休日/休暇）の特徴 ${wlbScore}項目一致 (+${
-            MATCH_WEIGHTS.WLB_FEATURES + wlbScore
-          }点)`
+          `✅ WLB（休日/休暇）の特徴 ${wlbScore}項目一致 (+${score}点)`
         );
       }
 
@@ -160,21 +198,20 @@ export default async function handler(
       const appealMatches = countKeywordMatches(jobAppealText, allUserKeywords);
 
       if (appealMatches > 0) {
-        totalScore += MATCH_WEIGHTS.GROWTH_ATMOSPHERE;
+        let keywordScore = MATCH_WEIGHTS.GROWTH_ATMOSPHERE;
 
         const benefitMatches = countKeywordMatches(
           job.benefits || '',
           userProfile.desiredBenefits || []
         );
-        totalScore += benefitMatches * MATCH_WEIGHTS.BENEFIT_PER_HIT;
+        keywordScore += benefitMatches * MATCH_WEIGHTS.BENEFIT_PER_HIT;
+        
+        totalScore += keywordScore;
 
         matchDetails.push(
           `✅ 成長/雰囲気/福利厚生のキーワード ${
             appealMatches + benefitMatches
-          }項目一致 (+${
-            MATCH_WEIGHTS.GROWTH_ATMOSPHERE +
-            benefitMatches * MATCH_WEIGHTS.BENEFIT_PER_HIT
-          }点)`
+          }項目一致 (+${keywordScore}点)`
         );
       }
 
@@ -195,5 +232,4 @@ export default async function handler(
     });
   }
 }
-
 

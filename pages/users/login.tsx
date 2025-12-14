@@ -1,3 +1,4 @@
+// ファイル名: users/login.tsx
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
@@ -77,13 +78,20 @@ const LoginPage: NextPage = () => {
     }, [auth, router]);
 
     /**
-     * ✅ サーバーサイドセッション作成処理
+     * ✅ サーバーサイドセッション作成処理（フリーズ対策済）
      * FirebaseのIDトークンをサーバーに送り、HttpOnly Cookieをセットしてもらう
      */
     const createSession = async (user: any) => {
         try {
             const idToken = await user.getIdToken(true);
-            const res = await fetch('/api/auth/sessionLogin', {
+            
+            // 💡 10秒でタイムアウトさせるタイマーを設定
+            const timeoutPromise = new Promise<Response>((_, reject) =>
+                setTimeout(() => reject(new Error('サーバー応答タイムアウト（10秒）')), 10000)
+            );
+
+            // 実際の通信とタイマーを競合させる
+            const fetchPromise = fetch('/api/auth/sessionLogin', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -92,8 +100,12 @@ const LoginPage: NextPage = () => {
                 body: JSON.stringify({ loginType: 'user' }), 
             });
 
-            if (!res.ok) {
-                const data = await res.json();
+            // 競合処理 (Promise.race)
+            const res = await Promise.race([fetchPromise, timeoutPromise]);
+
+            // レスポンスの確認
+            if (!(res instanceof Response) || !res.ok) {
+                const data = res instanceof Response ? await res.json() : {};
                 throw new Error(data.error || 'サーバーセッションの作成に失敗しました。');
             }
             
@@ -101,7 +113,13 @@ const LoginPage: NextPage = () => {
             router.push('/home');
         } catch (err: any) {
             console.error('Session Creation Error:', err);
-            setError('ログイン処理中にサーバーエラーが発生しました。');
+            
+            // エラーメッセージを分かりやすく表示
+            if (err.message.includes('タイムアウト')) {
+                setError('ネットワーク接続が不安定です。時間をおいて再試行してください。');
+            } else {
+                setError('ログイン処理中にサーバーエラーが発生しました。');
+            }
             setIsLoading(false);
         }
     };

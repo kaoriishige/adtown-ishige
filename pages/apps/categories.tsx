@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 // lucide-reactから必要なアイコンをインポート
 import { 
-    Clock, Gift, Heart, Store, Brain, Zap, Utensils, Droplet, Gamepad, User, Users, Shield, TrendingUp, ArrowLeft, Target, Smile, Lightbulb, Shirt, Mail, Sun, Sparkles, WashingMachine, Home, LayoutGrid, Award, Filter 
+    Clock, Gift, Heart, Store, Brain, Zap, Utensils, Droplet, Gamepad, User, Users, Shield, TrendingUp, ArrowLeft, Target, Smile, Lightbulb, Shirt, Mail, Sun, Sparkles, WashingMachine, Home, LayoutGrid, Award, Filter, Fuel 
 } from 'lucide-react'; 
 
 // アイコンの型定義
@@ -19,12 +19,23 @@ interface AppItem {
 }
 
 // 2025年12月1日を基準日として設定 (利用制限ロジック維持)
-// このロジックはデモ環境では機能しない可能性がありますが、元のコードを尊重し維持します。
 const FUTURE_ACCESS_DATE = new Date('2025-12-01T00:00:00');
 const isFutureAccessEnabled = new Date() >= FUTURE_ACCESS_DATE;
 
 // --- アプリ定義リスト ---
 const APP_LIST: AppItem[] = [
+// ----------------------------------------------------
+// 車・交通 (★給油トラッカーはここに追加することを推奨)
+// ----------------------------------------------------
+{ 
+    title: "最安ガソリン＆価格投稿", 
+    category: '生活情報', // 既存のリストにはないので、今回は生活情報に追加
+    description: '地域の最安ガソリン価格ランキングと価格投稿', 
+    href: '/apps/AIGasPriceTracker', 
+    Icon: Fuel, // 新しくインポートしたFuelアイコンを使用
+    disabled: false 
+},
+
 // ----------------------------------------------------
 // 収納・片付け ★新カテゴリ
 // ----------------------------------------------------
@@ -63,10 +74,10 @@ const APP_LIST: AppItem[] = [
 // ----------------------------------------------------
 { title: "育児記録ワンタッチログ", category: '子育て', description: '授乳・オムツ・睡眠の時刻を簡単記録', href: '/apps/BabyLog', Icon: Gift, disabled: false },
 { title: "子育て支援情報ナビ", category: '子育て', description: '各市町の子育て・教育情報リンク集', href: '/apps/ParentingInfo', Icon: User, disabled: false },
-// ★追加: 賢人の子育て指針 Wisdom Guide
+// ★追加/統合: 賢人の子育て指針 Wisdom Guide
 { 
     title: "賢人の子育て指針 Wisdom Guide", 
-    category: '子育て', 
+    category: '子育て', // メインカテゴリ
     description: 'AIと著名人の知恵の言葉から、子育ての羅針盤を見つける', 
     href: '/apps/WisdomGuide', 
     Icon: Award, 
@@ -104,7 +115,14 @@ const APP_LIST: AppItem[] = [
 { title: "適職＆性格診断", category: '診断・運勢', description: 'あなたの強みと適職（在宅ワーク含む）を診断', href: '/apps/AptitudeTest', Icon: Target, disabled: false },
 { title: "朝の褒め言葉AI", category: '診断・運勢', description: 'AIが今日のモチベーションを高めるメッセージを提案', href: '/apps/MorningComplimentAI', Icon: Sun, disabled: false },
 // ★追加: AI手相鑑定
-{ title: "AI手相鑑定", category: '診断・運勢', description: 'カメラで手相を撮影するだけで、AIが本格鑑定', href: '/apps/Palmistry', Icon: Sparkles, disabled: false },
+{ 
+    title: "AI手相鑑定", 
+    category: '診断・運勢', 
+    description: 'カメラで手相を撮影するだけで、AIが本格鑑定', 
+    href: '/apps/Palmistry', 
+    Icon: Sparkles, 
+    disabled: false 
+},
 
 // ----------------------------------------------------
 // 人間関係 
@@ -115,25 +133,16 @@ const APP_LIST: AppItem[] = [
 // スキルアップ・キャリア
 // ----------------------------------------------------
 { title: "スキル学習時間トラッカー", category: 'スキルアップ・キャリア', description: '収益化スキル（ライティング等）の目標時間を管理', href: '/apps/SkillTimeTracker', Icon: TrendingUp, disabled: false },
-// ★追加: 賢人の子育て指針 Wisdom Guide (スキルアップ・キャリアにも追加)
-{ 
-    title: "賢人の子育て指針 Wisdom Guide", 
-    category: 'スキルアップ・キャリア', 
-    description: 'AIと著名人の知恵の言葉から、子育ての羅針盤を見つける', 
-    href: '/apps/WisdomGuide', 
-    Icon: Award, 
-    disabled: false 
-},
-
 // ----------------------------------------------------
 // 趣味・文化
 // ----------------------------------------------------
 { title: "わたしの気分ログ", category: '趣味・文化', description: '毎日の気分と感情の傾向を記録・分析', href: '/apps/MoodTracker', Icon: Smile, disabled: false },
+
 ];
 
 // カテゴリ名の定義
 const CATEGORIES: string[] = [
-'収納・片付け', // ★新カテゴリ
+'収納・片付け', // ★追加
 '生活情報',
 '健康支援',
 '子育て',
@@ -161,7 +170,19 @@ const getCategoryAppList = (category: string): AppItem[] => {
             category: category,
         }];
     }
-    return list;
+    
+    // アプリ定義リストをカテゴリーごとにフィルターする
+    const uniqueApps = list.reduce((acc, current) => {
+        // 同じtitleとhrefを持つアプリが既に追加されているかチェック
+        const isDuplicate = acc.some(item => item.title === current.title && item.href === current.href);
+        if (!isDuplicate) {
+            acc.push(current);
+        }
+        return acc;
+    }, [] as AppItem[]);
+
+
+    return uniqueApps;
 }
 
 
@@ -173,13 +194,21 @@ export default function CategoriesPage() {
         push: (path: string) => {
             console.log(`[Router Simulation] Navigate to: ${path}`);
             // Canvas環境での実際のリンク遷移をシミュレート
-            // Next.jsの警告を減らすため、<a>タグのhrefではなく、router.pushに一本化する
             window.location.href = path;
         }
     }; 
 
+    // アプリリストの重複を排除し、カテゴリごとに整理
+    const allUniqueApps: AppItem[] = APP_LIST.reduce((acc, current) => {
+        const isDuplicate = acc.some(item => item.title === current.title && item.href === current.href);
+        if (!isDuplicate) {
+            acc.push(current);
+        }
+        return acc;
+    }, [] as AppItem[]);
+
     const filteredApps = selectedCategory === 'すべて'
-        ? APP_LIST
+        ? allUniqueApps
         : getCategoryAppList(selectedCategory); 
 
     // カテゴリボタンをクリックしたときのハンドラ
@@ -263,10 +292,8 @@ export default function CategoriesPage() {
                     <div className="space-y-4">
                         {filteredApps.length > 0 ? (
                             filteredApps.map(app => (
-                                // next/linkの代わりに通常の<a>タグを使用
                                 <a 
                                     key={`${app.title}-${app.category}`} // キーを複合化して重複を回避
-                                    // 警告を減らすため、hrefをダミーの'#'に変更し、遷移はonClickで制御する
                                     href='#' 
                                     className={`block p-4 rounded-xl shadow-md border transition-all transform hover:scale-[1.01] ${
                                         app.disabled 
@@ -274,14 +301,9 @@ export default function CategoriesPage() {
                                         : 'bg-white border-gray-200 hover:shadow-xl'
                                     }`}
                                     onClick={(e) => { 
-                                        // デフォルトのリンク動作を無効化
                                         e.preventDefault(); 
                                         
-                                        if (app.disabled) {
-                                            // 何もしない
-                                            return;
-                                        } else {
-                                            // 有効なリンクの場合、シミュレーションを行う
+                                        if (!app.disabled) {
                                             router.push(app.href); 
                                         }
                                     }}

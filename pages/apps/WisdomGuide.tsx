@@ -113,14 +113,23 @@ const YouTubeEmbed: React.FC<{ youtubeId: string }> = ({ youtubeId }) => {
     );
 };
 
-// ★修正・追加: 初期データとして組み込む動画
+// ★修正・追加: 初期データとして組み込む動画 (新しい動画を追加)
 const INITIAL_HARDCODED_VIDEOS: VideoItem[] = [
+    // 1. ジェンスン・フアンの動画 (最新として追加)
     {
-        id: '7mi9G4kaNuw', // YouTube IDを便宜的にIDとして使用
+        id: 'KKB4ZgU15F0',
+        title: 'ジェンスン・フアンの「プログラミングは学ぶな」AI革命サバイバルガイド',
+        youtubeId: 'KKB4ZgU15F0',
+        url: 'https://youtu.be/KKB4ZgU15F0',
+        createdAt: Date.now() + 2, 
+    },
+    // 2. サティア・ナデラの動画 (元々存在)
+    {
+        id: '7mi9G4kaNuw', 
         title: 'AI時代を生き抜く方法：マイクロソフトCEO サティア・ナデラの教え',
         youtubeId: '7mi9G4kaNuw',
         url: 'https://youtu.be/7mi9G4kaNuw',
-        createdAt: Date.now() + 1, // 他の動画より新しくするため
+        createdAt: Date.now() + 1, 
     },
     // ここに他の初期動画を必要に応じて追加できます
 ];
@@ -245,11 +254,19 @@ const App: React.FC = () => { // コンポーネントにReact.FCを適用
             });
             // 取得後にJavaScript側でソート（新しい順）
             loadedVideos.sort((a, b) => b.createdAt - a.createdAt);
-            setVideos(loadedVideos);
+            
+            // ★修正: Firestoreのデータがない場合、ハードコードされたデータを表示する
+            if (loadedVideos.length === 0) {
+                setVideos(INITIAL_HARDCODED_VIDEOS.sort((a, b) => b.createdAt - a.createdAt));
+            } else {
+                setVideos(loadedVideos);
+            }
+            
 
             // 初回ロード時に最新の動画をアクティブにする
-            if (!activeVideoId && loadedVideos.length > 0) {
-                setActiveVideoId(loadedVideos[0].id);
+            if (!activeVideoId && (loadedVideos.length > 0 || INITIAL_HARDCODED_VIDEOS.length > 0)) {
+                 const firstVideo = loadedVideos.length > 0 ? loadedVideos[0] : INITIAL_HARDCODED_VIDEOS[0];
+                 setActiveVideoId(firstVideo.id);
             }
         }, (e) => {
             console.error("Firestore Listen Error:", e);

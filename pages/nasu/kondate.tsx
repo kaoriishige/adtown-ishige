@@ -2,8 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-// next/head は使用できないため削除し、useEffectでdocument.titleを設定します
-import { ArrowLeft, ShoppingCart, Flame, Loader2, ThumbsUp } from 'lucide-react';
+import { ShoppingCart, Flame, Loader2, ThumbsUp, ArrowLeft } from 'lucide-react'; 
 
 // --- 環境変数の取得 ---
 const getEnvVar = (name: string) => {
@@ -130,7 +129,6 @@ const App = () => {
         return SALE_DATA_BY_AREA[selectedArea] ? Object.keys(SALE_DATA_BY_AREA[selectedArea]) : [];
     }, [selectedArea]);
 
-    // --- 変更点: 初期データを削除 ---
     const [fridgeInventory, setFridgeInventory] = useState('');
     const [customIngredients, setCustomIngredients] = useState(''); 
     const [familySize, setFamilySize] = useState('大人2人, 子供2人'); 
@@ -150,7 +148,6 @@ const App = () => {
         if (storesInArea.length > 0) {
             const firstStore = storesInArea[0];
             setFinalStoreSelection(firstStore);
-            // 変更点: 初期状態でもアクティブストアを設定し、チラシボタンを表示させる
             setActiveStore(firstStore);
         } else {
             setFinalStoreSelection(null);
@@ -226,7 +223,7 @@ const App = () => {
         const inventory = fridgeInventory.trim();
         const customPrompt = customIngredients.trim();
         
-        // プロンプトの更新: プロの料理人目線に強化 (「貧乏くさい」を削除)
+        // プロンプトの更新: プロの料理人目線に強化
         const systemPrompt = `あなたは那須地域（${areaName}）の「一流レストラン出身の節約シェフ」です。
         ユーザーは「安く済ませたいが、家庭料理として最高の満足度と豊かな見た目を求めている」と思っています。
         その願いを叶える、魔法のような献立を提案してください。
@@ -309,16 +306,18 @@ const App = () => {
     }, []);
     
     const handleStoreClick = (storeName: string) => {
-        // 同じ店舗をクリックしても非表示にせず、アクティブなままにする（あるいは再読み込みの挙動にする）
-        // UX向上のため、トグルで非表示にする機能は削除し、常に選択状態にするのが一般的だが、
-        // 既存の「activeStore」のロジックを維持しつつ、クリック時は常にactiveにする。
         setActiveStore(storeName);
         setFinalStoreSelection(storeName); 
     };
 
-    // --- 戻るボタンのハンドラ ---
+    // ★ 戻るボタンのハンドラ
     const handleBack = () => {
-        if (typeof window !== 'undefined') {
+        if (menuResult) {
+            // 献立結果画面から設定画面に戻る (アプリ内戻る)
+            setMenuResult(null);
+            setUiMessage('条件設定に戻りました。');
+        } else if (typeof window !== 'undefined') {
+            // 設定画面からブラウザの履歴上の前のページに戻る (例: LINEのトーク画面、カテゴリ画面など)
             window.history.back();
         }
     };
@@ -375,14 +374,15 @@ const App = () => {
 
             <header className="bg-white shadow-md sticky-top p-4">
                 <div className="max-w-4xl mx-auto flex items-center gap-3">
-                    {/* 変更点: Linkからbuttonに変更し、ブラウザバック機能を実装 */}
+                    {/* ★ 1箇所目の戻るボタンの設置 (アプリ内履歴に対応) */}
                     <button 
                         onClick={handleBack}
                         className="p-2 hover:bg-gray-100 rounded-full transition-colors focus:outline-none"
                         aria-label="戻る"
                     >
-                        <ArrowLeft size={20} className="text-gray-600" />
+                        <ArrowLeft size={24} className="text-gray-600" />
                     </button>
+
                     <h1 className="text-xl sm:text-2xl font-extrabold text-nasu-green tracking-tight">
                         💰 AI献立＆特売ナビ「那須こんだて」
                     </h1>
@@ -392,7 +392,6 @@ const App = () => {
             <main className="max-w-4xl mx-auto p-4 sm:p-6">
                 
                 <div className="bg-nasu-light p-4 sm:p-6 rounded-xl border border-nasu-green/30 shadow-md mb-8">
-                    {/* ★文言修正: 一流シェフの技術を強調 */}
                     <p className="text-sm sm:text-base font-semibold text-nasu-green mb-2">
                         一流シェフの技術を家庭へ！料理の悩みと食費の苦痛から解放！
                     </p>
@@ -452,12 +451,24 @@ const App = () => {
                                     <h3 className="text-sm font-bold text-blue-800 mb-2">
                                         {activeStore} のチラシ情報
                                     </h3>
-                                    <button 
-                                        onClick={() => window.open(SALE_DATA_BY_AREA[selectedArea][activeStore].url, '_blank')}
-                                        className="w-full py-2 text-base font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                                    {/* チラシリンク (ログアウト対策のため target="_blank" を適用) */}
+                                    <a 
+                                        href={SALE_DATA_BY_AREA[selectedArea][activeStore].url}
+                                        target="_blank" // 新しいタブで開く
+                                        rel="noopener noreferrer" 
+                                        className="w-full py-2 text-base font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition block text-center"
                                     >
                                         トクバイでチラシをチェック 📰 (別タブで開く)
-                                    </button>
+                                    </a>
+                                    
+                                    {/* ★★★ 外部サイトからの戻り方ガイドの追加 ★★★ */}
+                                    <p className="mt-3 text-xs text-blue-700 font-bold bg-blue-100 p-2 rounded">
+                                        ✅ **【重要】セッションは切れません。**<br/>
+                                        チラシを確認後、ブラウザの**「タブを閉じる」**または**「左上の◀」**で元のアプリ画面に戻ってください。
+                                    </p>
+                                    {/* ★★★ 外部サイトからの戻り方ガイドの追加 END ★★★ */}
+
+
                                     <p className="mt-2 text-xs text-blue-700 text-center">
                                         ✅ このお店は献立に反映されています。
                                     </p>
@@ -467,7 +478,6 @@ const App = () => {
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="family-size" className="block text-sm font-bold text-gray-700">3. 人数</label>
-                                    {/* 変更点: テキスト入力からセレクトボックスに変更 */}
                                     <select
                                         id="family-size"
                                         value={familySize}
@@ -529,13 +539,14 @@ const App = () => {
 
                 {menuResult && (
                     <section>
+                        {/* ★ 2箇所目の戻るボタンの設置 (結果から設定に戻る) */}
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-2xl font-bold text-gray-800">提案結果</h2>
                             <button 
                                 onClick={() => setMenuResult(null)}
-                                className="text-sm text-blue-600 hover:underline"
+                                className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-medium"
                             >
-                                条件を変えてやり直す
+                                <ArrowLeft size={16} /> 条件を変えてやり直す
                             </button>
                         </div>
                         
@@ -547,7 +558,7 @@ const App = () => {
                                     <h2 className="text-xl font-bold text-gray-800 mb-3 flex items-center">
                                         🛍️ 買い物リスト
                                     </h2>
-                                    {/* ★強調表示されたコンセプトセクション */}
+                                    {/* 強調表示されたコンセプトセクション */}
                                     <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg">
                                         <h3 className="text-sm font-bold text-yellow-800 flex items-center gap-1 mb-2">
                                             <ThumbsUp className="w-4 h-4" /> シェフのコンセプト
@@ -606,12 +617,12 @@ const App = () => {
                     </p>
                 )}
                 
-                <footer className="mt-8 pt-4 border-t text-center text-xs text-gray-400">
-                    &copy; 2025 AI献立＆特売ナビ「那須こんだて」
+                <footer>
+                {/* フッターコンテンツがあればここに追加 */}
                 </footer>
             </main>
         </div>
     );
-}
+};
 
 export default App;

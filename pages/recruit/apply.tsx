@@ -305,7 +305,7 @@ const RecruitSignupPage: NextPage = () => {
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
             <Head>
-                <title>{"AI求人パートナー無料登録（みんなの那須アプリ）"}</title>
+                <title>{"AI求人パートナー無料登録（みんなのNasuアプリ）"}</title>
             </Head>
             <header className="bg-white shadow-md sticky top-0 z-50">
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -321,7 +321,7 @@ const RecruitSignupPage: NextPage = () => {
                 <section className="text-center pt-16 pb-8">
                     <h2 className="text-3xl font-bold text-gray-800">おかげさまで株式会社adtown20周年、感謝企画</h2>
                     <p className="mt-4 text-lg text-gray-600">日頃よりご支援いただいている那須地域の皆さまへの感謝を込めて、
-                    このたび「みんなの那須アプリ」のAI求人サービスを開始いたします。</p>
+                    このたび「みんなのNasuアプリ」のAI求人サービスを開始いたします。</p>
                 </section>
 
                 <section className="text-center py-16 md:py-24">

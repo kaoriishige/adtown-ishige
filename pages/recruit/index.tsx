@@ -228,24 +228,35 @@ const RecruitSignupPage: NextPage = () => {
                     このたび「みんなの那須アプリ」のAI求人サービスを開始いたします。</p>
                 </section>
 
-                <section className="text-center py-16 md:py-24">
-                    <p className="text-orange-500 font-semibold">地元企業を応援するadtownからのご提案</p>
-                    <h2 className="text-4xl md:text-5xl font-extrabold mt-4 leading-tight">
-                        「採用に困っている企業様」は必見！<br />
-                        <span className="text-orange-600">WebでもSNSでもない、第３の求人方法を無料でスタート！</span><br />
-                        無料で求人掲載管理ページへアクセス！
-                    </h2>
-                    <p className="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
-                        まずは<strong className="font-bold">無料</strong>で求人掲載管理ページにログインし、求人情報の登録（広告掲載）を始めましょう。
-                        有料機能（求人マッチングAI、求人アドバイスAI）は、求人管理ページ内で<strong className="font-bold">いつでも</strong>お申し込みいただけます。
-                    </p>
-                    <div className="mt-8">
-                        <button onClick={scrollToForm} className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-                            無料で求人広告を掲載する
-                        </button>
-                        <p className="mt-2 text-sm text-gray-500">登録は3分、料金は一切かかりません。</p>
-                    </div>
-                </section>
+                {/* Hero Section - 画像ヘッドライン版 */}
+<section className="text-center py-16 md:py-24">
+    {/* ヘッドライン画像 */}
+    <div className="max-w-5xl mx-auto px-4">
+        <img
+            src="/images/minna_nasu_k.png"
+            alt="採用に困っている企業様は必見。第3の求人方法を無料でスタート"
+            className="w-full h-auto mx-auto"
+        />
+    </div>
+
+    {/* CTA */}
+    <div className="mt-10">
+        <button
+            onClick={scrollToForm}
+            className="bg-gradient-to-r from-orange-500 to-red-500
+                       text-white font-extrabold py-4 px-10
+                       rounded-full text-lg shadow-xl
+                       hover:shadow-2xl transform hover:-translate-y-1
+                       transition-all duration-300"
+        >
+            無料で求人広告を掲載する
+        </button>
+        <p className="mt-2 text-sm text-gray-500">
+            登録は3分、料金は一切かかりません。
+        </p>
+    </div>
+</section>
+
 
                 {/* ★★★ 求人の悩みセクション ★★★ */}
                 <section className="mt-12 md:mt-16 py-8 bg-white rounded-2xl shadow-lg border border-gray-200">
@@ -521,13 +532,3 @@ const RecruitSignupPage: NextPage = () => {
 
 
 export default RecruitSignupPage;
-
-
-
-
-
-
-
-
-
-

@@ -46,9 +46,12 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false); 
 
-  // 2026年1月1日を基準日として設定
-  const FUTURE_ACCESS_DATE = new Date('2026-01-01T00:00:00');
-  const isFutureAccessEnabled = new Date() >= FUTURE_ACCESS_DATE;
+  // 変更点 1: 日付によるアクセス制限のロジックを再導入
+  const FUTURE_ACCESS_DATE = new Date('2026-01-01T00:00:00'); // 2026年1月1日 00:00:00 JST
+  const isStoreMatchingEnabled = new Date() >= FUTURE_ACCESS_DATE; // 現在日が開始日以降か
+
+  // ⚠️ 元のコードの 'isFutureAccessEnabled' が削除されていたため、再導入はしませんが、
+  // 必要な判定ロジックを `isStoreMatchingEnabled` として定義しました。
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -74,9 +77,9 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
 
       // 実際のAPI呼び出しの例:
       // const response = await fetch('/api/user/cancel', { 
-      //   method: 'POST', 
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ uid: user.uid }) 
+      // method: 'POST', 
+      // headers: { 'Content-Type': 'application/json' },
+      // body: JSON.stringify({ uid: user.uid }) 
       // });
       // if (!response.ok) throw new Error('API Error');
 
@@ -106,21 +109,25 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
   const mainNavButtons = [
     {
       title: '店舗マッチングAI',
-      description: 'あなたの興味のあるお店を探します!! (2026.1～ 利用開始)', 
+      // 変更点 2: 説明文に開始日を含める
+      description: `あなたの興味のあるお店を探します!! (${isStoreMatchingEnabled ? '公開中' : '2026.1月スタート'})`, 
       href: '/search-dashboard',
       Icon: IoSparklesSharp,
       gradient: 'bg-gradient-to-r from-blue-500 to-cyan-600',
-      status: isFutureAccessEnabled ? 'free' : 'coming_soon',
-      disabled: !isFutureAccessEnabled,
+      // 変更点 3: 判定ロジックに基づいて無効化フラグを設定
+      status: isStoreMatchingEnabled ? 'free' : 'coming_soon',
+      disabled: !isStoreMatchingEnabled, // 2026年1月1日まで無効化
     },
     {
       title: '求人マッチングAI',
-      description: 'あなたの働きたい会社を探します!! (2026.1～ 利用開始)', 
-      href: '/users/dashboard',
+      // 修正点 4: 説明文から開始日を削除 (元の指示に従い)
+      description: 'あなたの働きたい会社を探します!!登録可能ですが、現在企業募集中になりますので、お急ぎの方はご遠慮ください。', 
+      href: '/users/dashboard', // 仮のダッシュボードパス
       Icon: RiBriefcase4Line,
       gradient: 'bg-gradient-to-r from-green-500 to-teal-600',
-      status: isFutureAccessEnabled ? 'free' : 'coming_soon',
-      disabled: !isFutureAccessEnabled,
+      // 修正点 5: ステータスと無効化フラグを調整 (元のコードの意図に従い有効化)
+      status: 'free',
+      disabled: false,
     },
     {
       title: 'スーパー特売価格.com',
@@ -129,6 +136,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
       Icon: RiShoppingBagLine,
       gradient: 'bg-gradient-to-r from-yellow-400 to-orange-500',
       status: 'free',
+      disabled: false,
     },
     {
       title: 'ドラッグストア特売価格.com',
@@ -137,6 +145,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
       Icon: RiHealthBookLine,
       gradient: 'bg-gradient-to-r from-purple-500 to-pink-600',
       status: 'free',
+      disabled: false,
     },
     {
       title: 'アプリのカテゴリからチェック!!',
@@ -145,6 +154,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
       Icon: RiLayoutGridFill,
       gradient: 'bg-gradient-to-r from-cyan-500 to-blue-500',
       status: 'free',
+      disabled: false,
     },
     {
       title: '今日の運勢占い',
@@ -153,6 +163,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
       Icon: RiMagicLine,
       gradient: 'bg-gradient-to-r from-indigo-500 to-purple-600',
       status: 'free',
+      disabled: false,
     }
   ];
   // ▲▲▲ ここまで ▲▲▲
@@ -179,12 +190,12 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
   return (
     <>
       <Head>
-        <title>{"ホーム - みんなの那須アプリ"}</title>
+        <title>{"ホーム - みんなのNasuアプリ"}</title>
       </Head>
       <div className="bg-gray-100 min-h-screen">
         <div className="max-w-md mx-auto bg-white">
           <header className="text-center p-6 bg-white shadow-sm sticky top-0 z-10">
-            <h1 className="text-3xl font-bold text-gray-800">みんなの那須アプリ</h1>
+            <h1 className="text-3xl font-bold text-gray-800">みんなのNasuアプリ</h1>
             <p className="text-gray-600 mt-2">ようこそ、{user.email}さん</p>
           </header>
 
@@ -200,6 +211,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             <section className="space-y-4">
               {mainNavButtons.map((item) => (
                 <div key={item.title}>
+                  {/* 変更点 4: Linkコンポーネントのロジックを変更し、無効化時は'#'にリンクし、クリックを阻止 */}
                   <Link 
                     href={item.disabled ? '#' : item.href} 
                     legacyBehavior
@@ -211,7 +223,15 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                       <div className="flex items-center">
                         <item.Icon className="text-4xl mr-4 flex-shrink-0" />
                         <div>
-                          <h2 className="font-bold text-lg">{item.title}</h2>
+                          <h2 className="font-bold text-lg">
+                            {item.title}
+                            {/* 無効化時のみ「COMING SOON」バッジを表示 */}
+                            {item.disabled && (
+                              <span className="ml-2 inline-block bg-white text-blue-600 text-xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-inner">
+                                COMING SOON
+                              </span>
+                            )}
+                          </h2>
                           {item.description && (
                             <p className="text-sm mt-1 opacity-90">{item.description}</p>
                           )}
