@@ -1,34 +1,40 @@
-// pages/_app.tsx
 import type { AppProps } from 'next/app'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import liff from '@line/liff'
 import '@/styles/globals.css'
 
-export default function App({ Component, pageProps }: AppProps) {
-  useEffect(() => {
-    // ✅ LINE内ブラウザでのみLIFFを使う
-    if (typeof window === 'undefined') return
-    if (!window.navigator.userAgent.includes('Line')) return
+export default function MyApp({ Component, pageProps }: AppProps) {
+  const [liffReady, setLiffReady] = useState(false)
 
-    const initLiff = async () => {
+  useEffect(() => {
+    const initLIFF = async () => {
       try {
-        const liff = (await import('@line/liff')).default
+        if (!process.env.NEXT_PUBLIC_LIFF_ID) {
+          console.error('LIFF ID が未設定')
+          return
+        }
+
         await liff.init({
-          liffId: process.env.NEXT_PUBLIC_LIFF_ID!,
+          liffId: process.env.NEXT_PUBLIC_LIFF_ID,
         })
 
-        if (!liff.isLoggedIn()) {
-          liff.login()
-        }
-      } catch (err) {
-        console.error('LIFF init error', err)
+        // ★ login はここでやらない ★
+        setLiffReady(true)
+      } catch (e) {
+        console.error('LIFF init error', e)
       }
     }
 
-    initLiff()
+    initLIFF()
   }, [])
+
+  if (!liffReady) return null
 
   return <Component {...pageProps} />
 }
+
+
+
 
 
 

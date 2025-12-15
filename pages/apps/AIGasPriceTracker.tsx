@@ -24,6 +24,7 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import {
     Loader2, ArrowLeft, Fuel, Settings, MapPin, ExternalLink, Trash2, Calendar
 } from 'lucide-react';
+import liff from '@line/liff'; // LIFFをインポート
 
 // --- 型定義 ---
 type Region = '那須塩原市' | '大田原市' | '那須町' | '';
@@ -58,6 +59,24 @@ const getEnvVar = (name: string): any => {
     return undefined;
 };
 
+/**
+ * 外部URLを開くハンドラ
+ * LIFFクライアント内であれば liff.openWindow({ external: false }) で開く
+ * それ以外であれば window.open() で開く
+ * @param url 開くURL
+ */
+const openUrlInLiff = (url: string) => {
+    if (typeof liff !== 'undefined' && liff.isInClient()) {
+        // LIFF 環境の場合: LIFFブラウザ内の新しいタブ/ビューで開く
+        liff.openWindow({
+            url: url, 
+            external: false 
+        });
+    } else {
+        // 標準ブラウザの場合: 別タブで開く
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+};
 
 // --- メインコンポーネント ---
 const AIGasPriceTrackerApp = () => {
@@ -138,11 +157,11 @@ const AIGasPriceTrackerApp = () => {
         
         // 価格データのみを取得
         const pricesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'gas_prices');
-        const qPrices = query(pricesRef, orderBy('date', 'desc'), orderBy('createdAt', 'desc'));    
+        const qPrices = query(pricesRef, orderBy('date', 'desc'), orderBy('createdAt', 'desc'));     
         const unsubscribePrices = onSnapshot(qPrices, (snapshot) => {
             const fetchedPrices = snapshot.docs.map(doc => ({
                 id: doc.id,
-                ...(doc.data() as Omit<GasPriceEntry, 'id'>),    
+                ...(doc.data() as Omit<GasPriceEntry, 'id'>),     
             } as GasPriceEntry));
             setPrices(fetchedPrices);
         });
@@ -150,7 +169,7 @@ const AIGasPriceTrackerApp = () => {
         return () => {
             unsubscribePrices();
         };
-    }, [isAuthReady, user, globalError, firebase]);    
+    }, [isAuthReady, user, globalError, firebase]);     
 
     // 3. アクション (追加・削除)
     const handleAddPrice = async (e: React.FormEvent) => {
@@ -177,11 +196,11 @@ const AIGasPriceTrackerApp = () => {
                 createdAt: serverTimestamp(),
             });
             setNewStationName(''); setNewPrice(''); setNewRegion('');
-        } catch(e: any) {    
-            console.error("Save Error:", e);    
+        } catch(e: any) {      
+            console.error("Save Error:", e);      
             alert("保存に失敗しました: " + e.message);
-        } finally {    
-            setIsSubmitting(false);    
+        } finally {      
+            setIsSubmitting(false);      
         }
     };
 
@@ -191,7 +210,7 @@ const AIGasPriceTrackerApp = () => {
         if (!confirm('削除しますか？')) return;
         try {
             await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, collectionName, id));
-        } catch(e: any) {    
+        } catch(e: any) {      
             console.error("Delete Error:", e);
             alert("削除失敗: " + e.message);
         }
@@ -218,11 +237,11 @@ const AIGasPriceTrackerApp = () => {
             if (entries.length === 0) return;
             const total = entries.reduce((sum, e) => sum + e.price, 0);
             const ranking = entries.sort((a, b) => a.price - b.price);
-            rankings.push({    
-                region: r.value,    
-                average: total / entries.length,    
-                ranking,    
-                latestUpdate: entries[0].date    
+            rankings.push({      
+                region: r.value,      
+                average: total / entries.length,      
+                ranking,      
+                latestUpdate: entries[0].date      
             });
         });
         return rankings;
@@ -239,7 +258,11 @@ const AIGasPriceTrackerApp = () => {
         <div className="min-h-screen bg-gray-50 font-sans pb-20">
             <header className="bg-white shadow-sm sticky top-0 z-10 p-4 border-b border-gray-200">
                 <div className="max-w-xl mx-auto flex items-center justify-between">
-                    <button onClick={() => window.location.href='/apps/categories'} className="p-2 hover:bg-gray-100 rounded-full">
+                    {/* 変更箇所 1: 戻るボタンを openUrlInLiff で Next.jsのページ遷移に対応 */}
+                    <button 
+                        onClick={() => openUrlInLiff('/apps/categories')} 
+                        className="p-2 hover:bg-gray-100 rounded-full"
+                    >
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -262,17 +285,15 @@ const AIGasPriceTrackerApp = () => {
                     <h2 className="font-bold mb-3 flex items-center gap-2"><MapPin size={18}/> 地域別価格サイト</h2>
                     <div className="grid grid-cols-1 gap-2">
                         {GAS_PRICE_LINKS.map(l => (
-    <button
-        key={l.region}
-        onClick={() => {
-            window.open(l.url, '_blank', 'noopener,noreferrer');
-        }}
-        className="bg-white text-blue-600 py-2 px-4 rounded font-bold text-center block hover:bg-gray-100 flex justify-between items-center w-full"
-    >
-        {l.region} <ExternalLink size={16}/>
-    </button>
-))}
-
+                            // 変更箇所 2: 地域別価格サイトのリンクを openUrlInLiff で LIFF対応
+                            <button
+                                key={l.region}
+                                onClick={() => openUrlInLiff(l.url)}
+                                className="bg-white text-blue-600 py-2 px-4 rounded font-bold text-center block hover:bg-gray-100 flex justify-between items-center w-full"
+                            >
+                                {l.region} <ExternalLink size={16}/>
+                            </button>
+                        ))}
                     </div>
                 </section>
 

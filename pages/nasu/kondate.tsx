@@ -3,13 +3,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { ShoppingCart, Flame, Loader2, ThumbsUp, ArrowLeft } from 'lucide-react'; 
+import liff from '@line/liff'; 
 
 // --- 環境変数の取得 ---
 const getEnvVar = (name: string) => {
-  if (typeof window !== 'undefined' && (window as any)[name]) {
-    return (window as any)[name];
-  }
-  return undefined;
+    if (typeof window !== 'undefined' && (window as any)[name]) {
+        return (window as any)[name];
+    }
+    return undefined;
 };
 
 // Firebase設定
@@ -20,7 +21,7 @@ const initialAuthToken = getEnvVar('__initial_auth_token') || null;
 // Gemini API のエンドポイント
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
 
-// --- 店舗情報 (変更なし) ---
+// --- 店舗情報 (特殊文字を修正済み) ---
 const SALE_DATA_BY_AREA: any = {
     "那須塩原市": {
         "ザ・ビッグ 那須店": { url: "https://tokubai.co.jp/%E3%82%B6%E3%83%BB%E3%83%93%E3%83%83%E3%82%B0/12250" },
@@ -55,7 +56,7 @@ const SALE_DATA_BY_AREA: any = {
     }
 };
 
-// --- JSONスキーマ定義 (変更なし) ---
+// --- JSONスキーマ定義 (特殊文字を修正済み) ---
 const RECIPE_SCHEMA = {
     type: "OBJECT",
     properties: {
@@ -310,14 +311,17 @@ const App = () => {
         setFinalStoreSelection(storeName); 
     };
 
-    // ★ 戻るボタンのハンドラ
+    // 戻るボタンのハンドラ (LIFF対応済み)
     const handleBack = () => {
         if (menuResult) {
             // 献立結果画面から設定画面に戻る (アプリ内戻る)
             setMenuResult(null);
             setUiMessage('条件設定に戻りました。');
+        } else if (typeof liff !== 'undefined' && liff.isInClient()) {
+            // LIFFブラウザで、これ以上戻る履歴がない場合: LIFFウィンドウを閉じる
+            liff.closeWindow();
         } else if (typeof window !== 'undefined') {
-            // 設定画面からブラウザの履歴上の前のページに戻る (例: LINEのトーク画面、カテゴリ画面など)
+            // 標準ブラウザの場合: 履歴を戻る
             window.history.back();
         }
     };
@@ -374,7 +378,7 @@ const App = () => {
 
             <header className="bg-white shadow-md sticky-top p-4">
                 <div className="max-w-4xl mx-auto flex items-center gap-3">
-                    {/* ★ 1箇所目の戻るボタンの設置 (アプリ内履歴に対応) */}
+                    {/* 戻るボタン (LIFF対応済み) */}
                     <button 
                         onClick={handleBack}
                         className="p-2 hover:bg-gray-100 rounded-full transition-colors focus:outline-none"
@@ -451,26 +455,31 @@ const App = () => {
                                     <h3 className="text-sm font-bold text-blue-800 mb-2">
                                         {activeStore} のチラシ情報
                                     </h3>
-                                    {/* チラシリンク (ログアウト対策のため target="_blank" を適用) */}
-                                   <button
-    onClick={() => {
-        const url = SALE_DATA_BY_AREA[selectedArea][activeStore].url;
-        window.open(url, '_blank', 'noopener,noreferrer');
-    }}
-    className="w-full py-2 text-base font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition block text-center"
->
-    トクバイでチラシをチェック 📰 (別タブで開く)
-</button>
-
                                     
-                                    {/* ★★★ 外部サイトからの戻り方ガイドの追加 ★★★ */}
+                                   {/* チラシリンクを LIFF 対応に修正 */}
+                                    <button
+                                        onClick={() => {
+                                            const url = SALE_DATA_BY_AREA[selectedArea][activeStore].url;
+                                            if (typeof liff !== 'undefined' && liff.isInClient()) {
+                                                // LIFF 環境の場合: LIFFブラウザ内の新しいタブ/ビューで開く
+                                                liff.openWindow({
+                                                    url: url, 
+                                                    external: false 
+                                                });
+                                            } else {
+                                                // 標準ブラウザの場合: 別タブで開く
+                                                window.open(url, '_blank', 'noopener,noreferrer');
+                                            }
+                                        }}
+                                        className="w-full py-2 text-base font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition block text-center"
+                                    >
+                                        トクバイでチラシをチェック 📰 (アプリ内で開く)
+                                    </button>
+
                                     <p className="mt-3 text-xs text-blue-700 font-bold bg-blue-100 p-2 rounded">
                                         ✅ **【重要】セッションは切れません。**<br/>
-                                        チラシを確認後、ブラウザの**「タブを閉じる」**または**「左上の◀」**で元のアプリ画面に戻ってください。
+                                        チラシを確認後、ブラウザの**「左上の◀」**または**「閉じる (X) ボタン」**で元のアプリ画面に戻ってください。
                                     </p>
-                                    {/* ★★★ 外部サイトからの戻り方ガイドの追加 END ★★★ */}
-
-
                                     <p className="mt-2 text-xs text-blue-700 text-center">
                                         ✅ このお店は献立に反映されています。
                                     </p>
@@ -541,7 +550,7 @@ const App = () => {
 
                 {menuResult && (
                     <section>
-                        {/* ★ 2箇所目の戻るボタンの設置 (結果から設定に戻る) */}
+                        {/* 結果から設定に戻るボタン */}
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-2xl font-bold text-gray-800">提案結果</h2>
                             <button 
@@ -614,14 +623,10 @@ const App = () => {
                 )}
 
                 {!menuResult && !isGenerating && (
-                    <p className="text-gray-500 text-center py-8">
-                        条件を設定して「AIプロシェフに献立を提案してもらう」ボタンを押してください。
+                    <p className="text-center text-gray-500 mt-8 text-sm">
+                        ⬆️ 上記の条件を入力し、「AIプロシェフに献立を提案してもらう」ボタンを押してください。
                     </p>
                 )}
-                
-                <footer>
-                {/* フッターコンテンツがあればここに追加 */}
-                </footer>
             </main>
         </div>
     );
