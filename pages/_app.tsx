@@ -4,31 +4,32 @@ import liff from '@line/liff'
 import '@/styles/globals.css'
 
 export default function MyApp({ Component, pageProps }: AppProps) {
-  const [liffReady, setLiffReady] = useState(false)
+  const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-    const initLIFF = async () => {
-      try {
-        if (!process.env.NEXT_PUBLIC_LIFF_ID) {
-          console.error('LIFF ID が未設定')
-          return
+    const init = async () => {
+      // LIFF_ID がある場合だけ LIFF 初期化
+      if (process.env.NEXT_PUBLIC_LIFF_ID) {
+        try {
+          await liff.init({
+            liffId: process.env.NEXT_PUBLIC_LIFF_ID,
+          })
+        } catch (e) {
+          console.error('LIFF init failed', e)
         }
-
-        await liff.init({
-          liffId: process.env.NEXT_PUBLIC_LIFF_ID,
-        })
-
-        // ★ login はここでやらない ★
-        setLiffReady(true)
-      } catch (e) {
-        console.error('LIFF init error', e)
       }
+
+      // 🔥 重要：LIFF 成否に関係なく描画を許可
+      setInitialized(true)
     }
 
-    initLIFF()
+    init()
   }, [])
 
-  if (!liffReady) return null
+  // 初期化中だけローディング（真っ白回避）
+  if (!initialized) {
+    return <div style={{ padding: 20 }}>Loading...</div>
+  }
 
   return <Component {...pageProps} />
 }
