@@ -74,7 +74,7 @@ const SignupPage: NextPage = () => {
       if (sessionResponse.ok) {
         // 4. Cookieがブラウザに反映されるのを少し待ってから、ページを完全にリロードしてホームページへ
         await new Promise((resolve) => setTimeout(resolve, 300));
-        window.location.href = '/home';
+        router.replace('/home');
       } else {
         const errorData = await sessionResponse.json();
         throw new Error(errorData.error || 'セッションの作成に失敗しました。');
