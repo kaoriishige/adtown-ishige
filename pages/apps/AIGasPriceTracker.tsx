@@ -18,23 +18,32 @@ import {
     deleteDoc,
     doc,
     orderBy,
-    Firestore
+    Firestore,
+    Timestamp // Import Timestamp for better type safety
 } from 'firebase/firestore';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import {
     Loader2, ArrowLeft, Fuel, Settings, MapPin, ExternalLink, Trash2, Calendar
 } from 'lucide-react';
-import liff from '@line/liff'; // LIFFをインポート
 
 // --- 型定義 ---
 type Region = '那須塩原市' | '大田原市' | '那須町' | '';
+
+// FirestoreのTimestamp型を使用
 interface GasPriceEntry {
     id: string;
     stationName: string;
     price: number;
     region: Region;
     date: string;
-    createdAt: any;
+    createdAt: Timestamp; // any -> Timestamp に修正
+}
+
+interface GasPriceSummaryItem {
+    region: Region;
+    average: number;
+    ranking: GasPriceEntry[];
+    latestUpdate: string;
 }
 
 // --- 定数 ---
@@ -61,17 +70,13 @@ const getEnvVar = (name: string): any => {
 
 /**
  * 外部URLを開くハンドラ
- * LIFFクライアント内であれば liff.openWindow({ external: false }) で開く
- * それ以外であれば window.open() で開く
  * @param url 開くURL
+ * @param isInternal Next.jsのページ遷移であればtrue
  */
-const openUrlInLiff = (url: string) => {
-    if (typeof liff !== 'undefined' && liff.isInClient()) {
-        // LIFF 環境の場合: LIFFブラウザ内の新しいタブ/ビューで開く
-        liff.openWindow({
-            url: url, 
-            external: false 
-        });
+const openUrl = (url: string, isInternal: boolean = false) => {
+    if (isInternal) {
+        // Next.js のページ遷移（内部リンク）
+        window.location.href = url;
     } else {
         // 標準ブラウザの場合: 別タブで開く
         window.open(url, '_blank', 'noopener,noreferrer');
@@ -93,7 +98,7 @@ const AIGasPriceTrackerApp = () => {
     // 入力フォーム状態
     const [newStationName, setNewStationName] = useState('');
     const [newPrice, setNewPrice] = useState('');
-    const [newRegion, setNewRegion] = useState<Region>('');
+    const [newRegion, setNewRegion] = useState<Region>(''); // 初期値を空地域に設定
     const [currentDate, setCurrentDate] = useState(new Date().toISOString().substring(0, 10));
 
     // データ状態
@@ -157,11 +162,13 @@ const AIGasPriceTrackerApp = () => {
         
         // 価格データのみを取得
         const pricesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'gas_prices');
-        const qPrices = query(pricesRef, orderBy('date', 'desc'), orderBy('createdAt', 'desc'));     
+        // orderBy('date', 'desc') で日付の降順、orderBy('createdAt', 'desc') で同時刻の最新順
+        const qPrices = query(pricesRef, orderBy('date', 'desc'), orderBy('createdAt', 'desc')); 
+        
         const unsubscribePrices = onSnapshot(qPrices, (snapshot) => {
             const fetchedPrices = snapshot.docs.map(doc => ({
                 id: doc.id,
-                ...(doc.data() as Omit<GasPriceEntry, 'id'>),     
+                ...(doc.data() as Omit<GasPriceEntry, 'id'>), 
             } as GasPriceEntry));
             setPrices(fetchedPrices);
         });
@@ -169,7 +176,7 @@ const AIGasPriceTrackerApp = () => {
         return () => {
             unsubscribePrices();
         };
-    }, [isAuthReady, user, globalError, firebase]);     
+    }, [isAuthReady, user, globalError, firebase]); 
 
     // 3. アクション (追加・削除)
     const handleAddPrice = async (e: React.FormEvent) => {
@@ -177,8 +184,8 @@ const AIGasPriceTrackerApp = () => {
         const { db, appId } = firebase;
         const priceNum = parseInt(newPrice, 10);
         
-        if (!priceNum || !newStationName.trim() || !newRegion) {
-            alert("入力内容を確認してください。");
+        if (!priceNum || !newStationName.trim() || newRegion === '') { // newRegionの空文字列チェックを追加
+            alert("入力内容を確認してください。地域、スタンド名、価格は必須です。");
             return;
         }
         if (!db || !user) {
@@ -195,12 +202,13 @@ const AIGasPriceTrackerApp = () => {
                 date: currentDate,
                 createdAt: serverTimestamp(),
             });
-            setNewStationName(''); setNewPrice(''); setNewRegion('');
-        } catch(e: any) {      
-            console.error("Save Error:", e);      
+            setNewStationName(''); setNewPrice(''); // 地域は残しておいても良いが、今回はリセット
+            // setNewRegion(''); 
+        } catch(e: any) { 
+            console.error("Save Error:", e); 
             alert("保存に失敗しました: " + e.message);
-        } finally {      
-            setIsSubmitting(false);      
+        } finally { 
+            setIsSubmitting(false); 
         }
     };
 
@@ -209,39 +217,52 @@ const AIGasPriceTrackerApp = () => {
         if (!db || !user) return;
         if (!confirm('削除しますか？')) return;
         try {
+            // docのパスが正しく修正されています: artifacts/{appId}/users/{userId}/{collectionName}/{docId}
             await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, collectionName, id));
-        } catch(e: any) {      
+        } catch(e: any) { 
             console.error("Delete Error:", e);
             alert("削除失敗: " + e.message);
         }
     };
 
     // 4. 計算ロジック
-    // 価格ランキングのみ
-    const gasPriceSummary = useMemo(() => {
+    // 地域別・スタンド名別の最新価格を計算し、ランキングを作成
+    const gasPriceSummary: GasPriceSummaryItem[] = useMemo(() => {
         if (prices.length === 0) return [];
+        
+        // 1. 地域別・スタンド名別の最新価格のみを抽出
         const latestPrices: { [region: string]: { [name: string]: GasPriceEntry } } = {};
         
         prices.forEach(entry => {
+            if (!entry.region) return; // 地域が空の場合はスキップ
+            
             const current = latestPrices[entry.region]?.[entry.stationName];
-            if (!current || entry.date > current.date || (entry.date === current.date && entry.createdAt > current.createdAt)) {
+            
+            // 最新のエントリを判定 (日付が最新、または日付が同じならcreatedAtが最新)
+            if (!current || entry.date > current.date || (entry.date === current.date && (entry.createdAt as Timestamp)?.seconds > (current.createdAt as Timestamp)?.seconds)) {
                 if (!latestPrices[entry.region]) latestPrices[entry.region] = {};
                 latestPrices[entry.region][entry.stationName] = entry;
             }
         });
 
-        const rankings: any[] = [];
+        // 2. ランキングと平均を計算
+        const rankings: GasPriceSummaryItem[] = [];
         REGIONS.forEach(r => {
-            if (!r.value) return;
+            if (!r.value) return; // '--- 地域を選択 ---' はスキップ
+            
             const entries = Object.values(latestPrices[r.value] || {});
             if (entries.length === 0) return;
+            
             const total = entries.reduce((sum, e) => sum + e.price, 0);
-            const ranking = entries.sort((a, b) => a.price - b.price);
-            rankings.push({      
-                region: r.value,      
-                average: total / entries.length,      
-                ranking,      
-                latestUpdate: entries[0].date      
+            
+            // 価格の昇順でソート（最安値が最初）
+            const ranking = entries.sort((a, b) => a.price - b.price); 
+            
+            rankings.push({ 
+                region: r.value, 
+                average: total / entries.length, 
+                ranking: ranking, 
+                latestUpdate: ranking[0].date // 最安値のエントリの日付を最終更新日とする
             });
         });
         return rankings;
@@ -249,7 +270,11 @@ const AIGasPriceTrackerApp = () => {
 
 
     // 数値フォーマット関数
-    const formatNum = (n: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(n);
+    const formatNum = (n: number | string): string => {
+        const num = typeof n === 'string' ? parseFloat(n) : n;
+        if (isNaN(num)) return 'N/A';
+        return new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(num);
+    };
 
     if (globalError) return <div className="p-10 text-center text-red-500">Error: {globalError}</div>;
     if (isPageLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin w-10 h-10 text-blue-500"/></div>;
@@ -258,9 +283,8 @@ const AIGasPriceTrackerApp = () => {
         <div className="min-h-screen bg-gray-50 font-sans pb-20">
             <header className="bg-white shadow-sm sticky top-0 z-10 p-4 border-b border-gray-200">
                 <div className="max-w-xl mx-auto flex items-center justify-between">
-                    {/* 変更箇所 1: 戻るボタンを openUrlInLiff で Next.jsのページ遷移に対応 */}
                     <button 
-                        onClick={() => openUrlInLiff('/apps/categories')} 
+                        onClick={() => openUrl('/apps/categories', true)} 
                         className="p-2 hover:bg-gray-100 rounded-full"
                     >
                         <ArrowLeft size={20} className="text-gray-600" />
@@ -285,10 +309,9 @@ const AIGasPriceTrackerApp = () => {
                     <h2 className="font-bold mb-3 flex items-center gap-2"><MapPin size={18}/> 地域別価格サイト</h2>
                     <div className="grid grid-cols-1 gap-2">
                         {GAS_PRICE_LINKS.map(l => (
-                            // 変更箇所 2: 地域別価格サイトのリンクを openUrlInLiff で LIFF対応
                             <button
                                 key={l.region}
-                                onClick={() => openUrlInLiff(l.url)}
+                                onClick={() => openUrl(l.url)}
                                 className="bg-white text-blue-600 py-2 px-4 rounded font-bold text-center block hover:bg-gray-100 flex justify-between items-center w-full"
                             >
                                 {l.region} <ExternalLink size={16}/>
@@ -301,7 +324,13 @@ const AIGasPriceTrackerApp = () => {
                 <section className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2"><Fuel size={20}/> 価格を投稿</h2>
                     <form onSubmit={handleAddPrice} className="space-y-3">
-                        <select value={newRegion} onChange={e=>setNewRegion(e.target.value as Region)} className="w-full p-2 border rounded" required>
+                        {/* 地域選択 - newRegionが空文字列でないことを必須とする */}
+                        <select 
+                            value={newRegion} 
+                            onChange={e => setNewRegion(e.target.value as Region)} 
+                            className="w-full p-2 border rounded" 
+                            required
+                        >
                             {REGIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                         </select>
                         <input type="text" placeholder="スタンド名 (例: ENEOS 黒磯)" value={newStationName} onChange={e=>setNewStationName(e.target.value)} className="w-full p-2 border rounded" required />
