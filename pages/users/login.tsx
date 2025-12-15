@@ -4,6 +4,9 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 
+// --- ログ出力 0: ファイルのインポートが完了し、定義の直前 ---
+console.log("--- 0. login.tsx: ファイルのインポート/定義の直前 ---");
+
 // 【重要修正点】
 // 認証機能（getAuth, signInWith...など）は 'firebase/auth' からインポート
 import { 
@@ -19,16 +22,15 @@ import {
     initializeApp, 
     getApps, 
     getApp
-} from 'firebase/app'; // 👈 ここを修正しました
+} from 'firebase/app'; 
 
 // --- アイコンライブラリ（lucide-reactまたは類似）からのインポートを仮定 ---
-// LogIn は未使用のため削除しました (エラー 6133 解消)
 import { 
-    AlertTriangle,   
-    Key,             
-    Loader2,         
-    Eye,             
-    EyeOff,          
+    AlertTriangle,    
+    Key,              
+    Loader2,          
+    Eye,              
+    EyeOff,           
 } from 'lucide-react'; 
 
 // --- Firebase の設定 ---
@@ -42,7 +44,6 @@ const firebaseConfig = {
 };
 
 // サービス初期化ロジック
-// 【修正】getApps, getApp, initializeApp が 'firebase/app' からインポートされたためエラー解消
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
@@ -63,7 +64,6 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 // エラーメッセージのハンドリング関数
 // ------------------------------------------------
 const getErrorMessage = (e: any): string => {
-    // ... (前の回答で定義されたエラーメッセージ処理ロジックをそのまま使用) ...
     if (typeof e === 'object' && e !== null && 'code' in e) {
         switch (e.code) {
             case 'auth/user-not-found':
@@ -95,6 +95,9 @@ const getErrorMessage = (e: any): string => {
 // ------------------------------------------------
 
 const LoginPage: NextPage = () => {
+    // ★ ログ出力 1: コンポーネントがレンダリングを開始しました
+    console.log("--- 1. login.tsx: コンポーネントのレンダリングが開始されました ---");
+
     const router = useRouter();
     const firebaseAuth = auth;
 
@@ -107,16 +110,24 @@ const LoginPage: NextPage = () => {
 
     // ログイン状態の監視とリダイレクト
     useEffect(() => {
+        // ★ ログ出力 2: useEffect の処理が開始されました
+        console.log("--- 2. login.tsx: useEffect (onAuthStateChanged) の処理が開始されました ---");
+
         const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
             if (user) {
                 router.push('/home');
             }
         });
-        return () => unsubscribe();
+        return () => {
+            // ★ ログ出力 3: useEffect のクリーンアップが実行されました
+            console.log("--- 3. login.tsx: useEffect のクリーンアップが実行されました ---");
+            unsubscribe();
+        };
     }, [firebaseAuth, router]);
 
     // サーバーセッション作成関数
     const createSession = async (user: any) => {
+        // ... (既存のロジックは変更なし) ...
         try {
             const idToken = await user.getIdToken(true);
             const timeoutPromise = new Promise((_, reject) =>
@@ -150,6 +161,7 @@ const LoginPage: NextPage = () => {
 
     // メール/パスワードログイン処理
     const handleEmailLogin = async (e: React.FormEvent) => {
+        // ... (既存のロジックは変更なし) ...
         e.preventDefault();
         setIsLoggingIn(true);
         setError(null);
@@ -166,6 +178,7 @@ const LoginPage: NextPage = () => {
 
     // Googleログイン処理
     const handleGoogleLogin = async () => {
+        // ... (既存のロジックは変更なし) ...
         setIsLoggingIn(true);
         setError(null);
 
@@ -183,7 +196,8 @@ const LoginPage: NextPage = () => {
     // JSX (レンダリング)
     // ------------------------------------------------
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        // ★ ログ出力 4: JSX の描画が完了しました (ブラウザに表示されるはず)
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" onClick={() => console.log("--- 4. login.tsx: JSXがクリックされました ---")}>
             <Head>
                 <title>ログイン - みんなの那須アプリ</title>
             </Head>
