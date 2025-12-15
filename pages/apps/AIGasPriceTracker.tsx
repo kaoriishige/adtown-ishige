@@ -1,4 +1,6 @@
+"use client"; // ファイルの先頭に追加
 import React, { useState, useEffect, useMemo } from 'react';
+// Firebase関連のインポートは残しますが、使用しません。
 import {
     getAuth,
     signInWithCustomToken,
@@ -19,24 +21,24 @@ import {
     doc,
     orderBy,
     Firestore,
-    Timestamp // Import Timestamp for better type safety
+    // Timestamp のインポートは削除します
 } from 'firebase/firestore';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import {
     Loader2, ArrowLeft, Fuel, Settings, MapPin, ExternalLink, Trash2, Calendar
 } from 'lucide-react';
 
-// --- 型定義 ---
+// --- 型定義を修正 ---
 type Region = '那須塩原市' | '大田原市' | '那須町' | '';
 
-// FirestoreのTimestamp型を使用
+// createdAt の型を Date | string に変更し、FirebaseのTimestampに依存しないようにします
 interface GasPriceEntry {
     id: string;
     stationName: string;
     price: number;
     region: Region;
     date: string;
-    createdAt: Timestamp; // any -> Timestamp に修正
+    createdAt: Date | string; 
 }
 
 interface GasPriceSummaryItem {
@@ -60,7 +62,7 @@ const GAS_PRICE_LINKS: { region: Region, label: string, url: string }[] = [
     { region: '那須町', label: '那須町の価格情報サイトへ', url: 'https://gogo.gs/ranking/9?city%5B%5D=09407&span=1&submit=1' },
 ];
 
-// --- Firebase設定と環境変数取得 ---
+// --- Firebase設定と環境変数取得（デバッグモードでは使用しません） ---
 const getEnvVar = (name: string): any => {
     if (typeof window !== 'undefined' && (window as any)[name] !== undefined) {
         return (window as any)[name];
@@ -70,26 +72,22 @@ const getEnvVar = (name: string): any => {
 
 /**
  * 外部URLを開くハンドラ
- * @param url 開くURL
- * @param isInternal Next.jsのページ遷移であればtrue
  */
 const openUrl = (url: string, isInternal: boolean = false) => {
     if (isInternal) {
-        // Next.js のページ遷移（内部リンク）
         window.location.href = url;
     } else {
-        // 標準ブラウザの場合: 別タブで開く
         window.open(url, '_blank', 'noopener,noreferrer');
     }
 };
 
 // --- メインコンポーネント ---
 const AIGasPriceTrackerApp = () => {
-    // Firebase Init State
-    const [firebase, setFirebase] = useState<{ auth: Auth | null, db: Firestore | null, appId: string }>({ auth: null, db: null, appId: 'default-app-id' });
+    // Firebase Init State (ダミー値)
+    const [firebase, setFirebase] = useState<{ auth: Auth | null, db: Firestore | null, appId: string }>({ auth: null, db: null, appId: 'dummy-app-id' });
     const [globalError, setGlobalError] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
-    
+
     // Loading States
     const [isPageLoading, setIsPageLoading] = useState(true); 
     const [isSubmitting, setIsSubmitting] = useState(false); 
@@ -98,135 +96,51 @@ const AIGasPriceTrackerApp = () => {
     // 入力フォーム状態
     const [newStationName, setNewStationName] = useState('');
     const [newPrice, setNewPrice] = useState('');
-    const [newRegion, setNewRegion] = useState<Region>(''); // 初期値を空地域に設定
+    const [newRegion, setNewRegion] = useState<Region>('');
     const [currentDate, setCurrentDate] = useState(new Date().toISOString().substring(0, 10));
 
-    // データ状態
-    const [prices, setPrices] = useState<GasPriceEntry[]>([]);
+    // データ状態 - UIテスト用にダミーデータをセット
+    const [prices, setPrices] = useState<GasPriceEntry[]>([
+        // createdAt を ISO文字列（Dateの代わりに）に修正
+        { id: 'd1', stationName: 'ダミーSS 1号店', price: 160, region: '那須塩原市', date: '2025-12-15', createdAt: new Date().toISOString() },
+        { id: 'd2', stationName: 'ダミーSS 2号店', price: 165, region: '那須塩原市', date: '2025-12-14', createdAt: new Date().toISOString() },
+        { id: 'd3', stationName: 'ダミーSS 3号店', price: 170, region: '大田原市', date: '2025-12-16', createdAt: new Date().toISOString() },
+    ]);
     
-    // 1. Firebase 初期化
+    // 1. Firebase 初期化 (LIFF/Firebase認証を無視してUIを強制表示する)
     useEffect(() => {
-        if (typeof window === 'undefined') return;
+        // ダミーのユーザー情報と初期化完了を設定
+        // uidに値を設定することで、アプリのメインUIレンダリングを許可します
+        setUser({ uid: 'anonymous-user-id', email: 'dummy@example.com', displayName: 'Dummy User' } as User); 
+        
+        // ローディングをすぐに解除し、UIを表示する
+        setIsAuthReady(true);
+        setIsPageLoading(false); 
+        
+        console.warn("WARN: Firebase connection is disabled. UI is forced to display.");
 
-        const firebaseConfigRaw = getEnvVar('__firebase_config');
-        const initialAuthToken = getEnvVar('__initial_auth_token') || null;
-        const appId = getEnvVar('__app_id') || 'default-app-id';
-
-        if (!firebaseConfigRaw) {
-            console.error("Firebase configuration not found.");
-            setGlobalError("Firebase configuration not found. (Check environment variables)");
-            setIsPageLoading(false);
-            return;
-        }
-
-        try {
-            const firebaseConfig = JSON.parse(firebaseConfigRaw);
-            
-            const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            const db = getFirestore(app);
-            setFirebase({ auth, db, appId });
-
-            const initAuth = async () => {
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken as string);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (err) {
-                    console.error("Auth error:", err);
-                }
-            };
-            
-            initAuth(); 
-
-            const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-                setUser(currentUser);
-                setIsAuthReady(true);
-                setIsPageLoading(false); 
-            });
-
-            return () => unsubscribe();
-        } catch (e: any) {
-            console.error("Firebase Init Error:", e);
-            setGlobalError("Firebase initialization failed: " + e.message);
-            setIsPageLoading(false);
-        }
+        return; 
     }, []); 
 
-    // 2. データ同期 (リアルタイム更新)
+    // 2. データ同期 (データフェッチを停止)
     useEffect(() => {
-        const { db, appId } = firebase;
-        if (!isAuthReady || !user || !db || globalError) return;
-        
-        // 価格データのみを取得
-        const pricesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'gas_prices');
-        // orderBy('date', 'desc') で日付の降順、orderBy('createdAt', 'desc') で同時刻の最新順
-        const qPrices = query(pricesRef, orderBy('date', 'desc'), orderBy('createdAt', 'desc')); 
-        
-        const unsubscribePrices = onSnapshot(qPrices, (snapshot) => {
-            const fetchedPrices = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...(doc.data() as Omit<GasPriceEntry, 'id'>), 
-            } as GasPriceEntry));
-            setPrices(fetchedPrices);
-        });
-        
-        return () => {
-            unsubscribePrices();
-        };
+        if (!isAuthReady || !user || globalError) return;
+        return () => {}; // onSnapshot 購読をスキップ
     }, [isAuthReady, user, globalError, firebase]); 
 
-    // 3. アクション (追加・削除)
+    // 3. アクション (追加・削除) - 機能停止の警告に変更
     const handleAddPrice = async (e: React.FormEvent) => {
         e.preventDefault();
-        const { db, appId } = firebase;
-        const priceNum = parseInt(newPrice, 10);
-        
-        if (!priceNum || !newStationName.trim() || newRegion === '') { // newRegionの空文字列チェックを追加
-            alert("入力内容を確認してください。地域、スタンド名、価格は必須です。");
-            return;
-        }
-        if (!db || !user) {
-            alert("エラー: ユーザー認証が完了していません。");
-            return;
-        }
-        
-        setIsSubmitting(true);
-        try {
-            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'gas_prices'), {
-                stationName: newStationName,
-                price: priceNum,
-                region: newRegion,
-                date: currentDate,
-                createdAt: serverTimestamp(),
-            });
-            setNewStationName(''); setNewPrice(''); // 地域は残しておいても良いが、今回はリセット
-            // setNewRegion(''); 
-        } catch(e: any) { 
-            console.error("Save Error:", e); 
-            alert("保存に失敗しました: " + e.message);
-        } finally { 
-            setIsSubmitting(false); 
-        }
+        alert("機能停止中: 認証が無効なため、データの追加はできません。画面表示確認用です。");
+        console.log("Add attempted:", { newStationName, newPrice, newRegion, currentDate });
     };
 
     const handleDelete = async (collectionName: string, id: string) => {
-        const { db, appId } = firebase;
-        if (!db || !user) return;
-        if (!confirm('削除しますか？')) return;
-        try {
-            // docのパスが正しく修正されています: artifacts/{appId}/users/{userId}/{collectionName}/{docId}
-            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, collectionName, id));
-        } catch(e: any) { 
-            console.error("Delete Error:", e);
-            alert("削除失敗: " + e.message);
-        }
+        alert("機能停止中: 認証が無効なため、データの削除はできません。画面表示確認用です。");
+        console.log("Delete attempted for ID:", id);
     };
 
-    // 4. 計算ロジック
-    // 地域別・スタンド名別の最新価格を計算し、ランキングを作成
+    // 4. 計算ロジック (ダミーデータで動作)
     const gasPriceSummary: GasPriceSummaryItem[] = useMemo(() => {
         if (prices.length === 0) return [];
         
@@ -234,12 +148,19 @@ const AIGasPriceTrackerApp = () => {
         const latestPrices: { [region: string]: { [name: string]: GasPriceEntry } } = {};
         
         prices.forEach(entry => {
-            if (!entry.region) return; // 地域が空の場合はスキップ
+            if (!entry.region) return; 
             
             const current = latestPrices[entry.region]?.[entry.stationName];
             
-            // 最新のエントリを判定 (日付が最新、または日付が同じならcreatedAtが最新)
-            if (!current || entry.date > current.date || (entry.date === current.date && (entry.createdAt as Timestamp)?.seconds > (current.createdAt as Timestamp)?.seconds)) {
+            // createdAt を比較するために Dateオブジェクトに変換（stringの場合）
+            const entryTime = entry.createdAt instanceof Date ? entry.createdAt.getTime() : new Date(entry.createdAt).getTime();
+            const currentTime = current?.createdAt instanceof Date ? current.createdAt.getTime() : (current?.createdAt ? new Date(current.createdAt).getTime() : 0);
+
+            // 最新のエントリを判定 (日付が最新、または日付が同じなら createdAt が最新)
+            if (!current || 
+                entry.date > current.date || 
+                (entry.date === current.date && entryTime > currentTime)) 
+            {
                 if (!latestPrices[entry.region]) latestPrices[entry.region] = {};
                 latestPrices[entry.region][entry.stationName] = entry;
             }
@@ -248,21 +169,20 @@ const AIGasPriceTrackerApp = () => {
         // 2. ランキングと平均を計算
         const rankings: GasPriceSummaryItem[] = [];
         REGIONS.forEach(r => {
-            if (!r.value) return; // '--- 地域を選択 ---' はスキップ
+            if (!r.value) return; 
             
             const entries = Object.values(latestPrices[r.value] || {});
             if (entries.length === 0) return;
             
             const total = entries.reduce((sum, e) => sum + e.price, 0);
             
-            // 価格の昇順でソート（最安値が最初）
             const ranking = entries.sort((a, b) => a.price - b.price); 
             
             rankings.push({ 
                 region: r.value, 
                 average: total / entries.length, 
                 ranking: ranking, 
-                latestUpdate: ranking[0].date // 最安値のエントリの日付を最終更新日とする
+                latestUpdate: ranking[0].date
             });
         });
         return rankings;
@@ -279,6 +199,7 @@ const AIGasPriceTrackerApp = () => {
     if (globalError) return <div className="p-10 text-center text-red-500">Error: {globalError}</div>;
     if (isPageLoading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin w-10 h-10 text-blue-500"/></div>;
 
+    // --- ここからUI描画 ---
     return (
         <div className="min-h-screen bg-gray-50 font-sans pb-20">
             <header className="bg-white shadow-sm sticky top-0 z-10 p-4 border-b border-gray-200">
@@ -290,19 +211,24 @@ const AIGasPriceTrackerApp = () => {
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <Fuel className="w-6 h-6 text-orange-500" /> 最安ガソリン
+                        <Fuel className="w-6 h-6 text-orange-500" /> 最安ガソリン (デバッグモード)
                     </h1>
                     <div className="w-8">
-                        {user && firebase.auth && (
-                            <button onClick={() => signOut(firebase.auth!)} title="サインアウト">
-                                <Settings size={20} className="text-gray-400"/>
-                            </button>
-                        )}
+                        {/* 認証が無効なため、設定ボタンは機能しません */}
+                        <button onClick={() => alert("デバッグモードのため認証機能は停止しています。")} title="設定">
+                            <Settings size={20} className="text-gray-400"/>
+                        </button>
                     </div>
                 </div>
             </header>
 
             <main className="max-w-xl mx-auto p-4 sm:p-6 space-y-8">
+                
+                {/* 強制表示の警告 */}
+                <div className="p-3 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg">
+                    <p className="font-bold">🚨 警告: デバッグモード</p>
+                    <p className="text-sm">LINE認証とデータ同期を停止し、UIを強制表示しています。機能（投稿・削除）は使えません。</p>
+                </div>
                 
                 {/* 1. リンクボタン */}
                 <section className="bg-blue-600 p-5 rounded-xl shadow text-white">
@@ -322,9 +248,8 @@ const AIGasPriceTrackerApp = () => {
 
                 {/* 2. 価格投稿 */}
                 <section className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                    <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2"><Fuel size={20}/> 価格を投稿</h2>
+                    <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2"><Fuel size={20}/> 価格を投稿 (機能停止中)</h2>
                     <form onSubmit={handleAddPrice} className="space-y-3">
-                        {/* 地域選択 - newRegionが空文字列でないことを必須とする */}
                         <select 
                             value={newRegion} 
                             onChange={e => setNewRegion(e.target.value as Region)} 
@@ -345,15 +270,15 @@ const AIGasPriceTrackerApp = () => {
                             />
                             <input type="date" value={currentDate} onChange={e=>setCurrentDate(e.target.value)} className="w-1/3 p-2 border rounded text-gray-500" />
                         </div>
-                        <button type="submit" disabled={isSubmitting} className="w-full bg-orange-500 text-white py-2 rounded font-bold shadow hover:bg-orange-600">
-                            {isSubmitting ? <Loader2 className="animate-spin mx-auto"/> : "投稿する"}
+                        <button type="submit" disabled={isSubmitting} className="w-full bg-gray-500 text-white py-2 rounded font-bold shadow cursor-not-allowed">
+                            投稿する (機能停止中)
                         </button>
                     </form>
                 </section>
 
                 {/* 3. ランキング */}
                 <section className="space-y-4">
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Calendar size={20}/> 最新ランキング</h2>
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Calendar size={20}/> 最新ランキング (ダミーデータ)</h2>
                     {gasPriceSummary.length === 0 ? <p className="text-center text-gray-500 py-4">データがありません</p> : gasPriceSummary.map(s => (
                         <div key={s.region} className="border rounded-lg overflow-hidden shadow">
                             <div className="bg-gray-800 text-white p-3 flex justify-between items-center">
@@ -370,7 +295,7 @@ const AIGasPriceTrackerApp = () => {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <span className="text-xl font-bold text-green-600">{entry.price}円</span>
-                                            <button onClick={() => handleDelete('gas_prices', entry.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>
+                                            <button onClick={() => handleDelete('gas_prices', entry.id)} className="text-gray-300 hover:text-red-500 cursor-not-allowed"><Trash2 size={16}/></button>
                                         </div>
                                     </div>
                                 ))}
