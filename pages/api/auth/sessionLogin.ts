@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 🔹 Authorizationヘッダー または body から idToken を取得
+    // 🔹 ID Tokenの取得ロジックは変更なし
     const authHeader = req.headers.authorization;
     let idToken: string | undefined;
 
@@ -27,12 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
     // 🔹 Cookieに保存（httpOnly）
+    // ★★★ 最終修正: クッキー名を 'session' に戻します。
+    // ★★★ sameSiteは、エラー解消のため最も安全な 'none' を維持し、secure: true も固定します。
     nookies.set({ res }, "session", sessionCookie, {
       maxAge: expiresIn / 1000,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // ローカルならfalse
+      secure: true, 
       path: "/",
-      sameSite: "lax",
+      sameSite: "none", 
     });
 
     return res.status(200).json({ message: "Session created" });

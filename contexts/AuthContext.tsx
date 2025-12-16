@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentUser);
         try {
           const token = await currentUser.getIdToken();
-          const response = await axios.get('/api/user/get-role', {
+          const response = await axios.get('/api/users/get-role', {
             headers: { Authorization: `Bearer ${token}` },
           });
           

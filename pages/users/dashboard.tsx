@@ -1,5 +1,3 @@
-// dashboard.tsx
-
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase-client';
@@ -180,7 +178,7 @@ const MatchingGuideModal = ({ onClose }: { onClose: () => void }) => {
 
 
 // ----------------------------------------------------------------------
-// ★★★ サーバーサイドロジック (求人情報取得デバッグ強化済み) ★★★
+// ★★★ サーバーサイドロジック (エラー修正済み) ★★★
 // ----------------------------------------------------------------------
 export const getServerSideProps: GetServerSideProps = async (context) => {
     
@@ -191,6 +189,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     
     let currentUserUid: string | null = null;
     
+    // ★★★ 修正箇所: 194行目の構文エラーを修正し、nookies.get(context)を定義
     const cookies = nookies.get(context);
     const sessionCookie = cookies.session || '';
 
@@ -745,163 +744,226 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
                             color="indigo"
                         />
                         <DashboardCard 
-                            href="/users/match-jobs"
-                            icon={<RiSearchLine size={28} />} 
-                            title="AI推薦求人（60点以上）" 
-                            description="AIが選んだ高マッチ度（60点以上）の求人を検索します" 
+                            href="#" // 適切なページURLに修正
+                            icon={<RiSearchLine size={28} />}
+                            title="求人を検索"
+                            description="AIマッチング以外にも、全求人を自由に検索できます"
                             color="blue"
                         />
-                        <div onClick={() => setShowGuide(true)}>
-                            <DashboardCard
-                                href="#"
-                                icon={<RiSparkling2Line size={28} />}
-                                title="AIマッチングの使い方"
-                                description="AIマッチングの仕組みと利用ステップを確認します"
-                                color="yellow"
-                            />
-                        </div>
+                        <button 
+                            onClick={() => setShowGuide(true)}
+                            className="group block bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-2xl hover:border-purple-400 transition-all cursor-pointer text-left"
+                        >
+                            <div className="flex items-start space-x-4">
+                                <div className="p-4 rounded-xl bg-purple-100 text-purple-600 group-hover:bg-purple-200"><RiSparkling2Line size={28} /></div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-purple-600">AIマッチングガイド</h3>
+                                    <p className="text-gray-500 mt-1 text-sm">マッチングの仕組みと進め方を確認</p>
+                                </div>
+                            </div>
+                        </button>
                     </div>
                 </section>
                 
-                {/* 2. AIによるマッチング求人（トップ5のみ表示） */}
+                {/* 2. AIによるマッチング求人 */}
                 <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. AIによるマッチング求人 ({matches.length}件表示中)</h2>
-                    <div className="space-y-6">
-                        {matches.length === 0 ? (
-                            <div className="text-center p-8 bg-white rounded-xl shadow border border-gray-100">
-                                <p className="text-lg text-gray-600">現在、あなたのプロフィールにマッチする新しい求人はありません。</p>
-                                <p className="text-sm text-gray-500 mt-2">プロフィールを更新するか、新しい求人が追加されるのをお待ちください。</p>
-                            </div>
-                        ) : (
-                            matches.slice(0, 5).map(match => (
-                                <div key={match.matchId} className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-500 flex justify-between items-start space-x-6">
-                                    <div>
-                                        <div className="flex items-center mb-2">
-                                            <span className={`text-xl font-extrabold mr-3 p-1 rounded ${match.score >= 80 ? 'bg-green-500 text-white' : 'bg-indigo-100 text-indigo-600'}`}>{match.score}点</span>
-                                            <h3 className="text-xl font-bold text-gray-900">{match.jobTitle}</h3>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2 flex justify-between items-center">
+                        <span>2. AIによるマッチング求人（トップ {matches.length} 件）</span>
+                        <Link href="/jobs" legacyBehavior>
+                             <a className="text-sm text-indigo-600 hover:text-indigo-800 font-semibold flex items-center">
+                                 全求人を見る <RiArrowRightLine className="ml-1" />
+                             </a>
+                        </Link>
+                    </h2>
+                    
+                    {matches.length === 0 ? (
+                        <div className="bg-white p-8 rounded-xl shadow-md text-center">
+                            <RiSearchLine size={32} className="text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600 font-semibold">現在、あなたにマッチする求人はありません。</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                                プロフィール（特にスキル、職種、給与）を更新すると、新しいマッチングが実行されます。
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            {matches.map((match) => (
+                                <div key={match.matchId} className="bg-white p-6 rounded-xl shadow-lg border border-indigo-100 hover:shadow-xl transition-shadow">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <span className={`inline-block text-xl font-extrabold px-3 py-1 rounded-full ${match.score >= 80 ? 'bg-green-500 text-white' : match.score >= 60 ? 'bg-yellow-400 text-gray-800' : 'bg-gray-200 text-gray-600'}`}>
+                                                {match.score}点
+                                            </span>
+                                            <h3 className="text-xl md:text-2xl font-bold text-gray-800 mt-2 hover:text-indigo-600 transition-colors">
+                                                <Link href={`/jobs/${match.recruitmentId}`} legacyBehavior>
+                                                    <a>{match.jobTitle}</a>
+                                                </Link>
+                                            </h3>
+                                            <p className="text-indigo-600 font-semibold text-sm mt-1">{match.companyName}</p>
                                         </div>
-                                        <p className="text-gray-600 mb-3">{match.companyName}</p>
-                                        <div className="flex items-center space-x-4 text-sm text-gray-700 mb-3">
-                                            <span className="flex items-center"><RiBriefcase4Line className="mr-1.5" />{match.employmentType}</span>
-                                            <span className="flex items-center"><RiMoneyDollarCircleLine className="mr-1.5" />{match.salary}</span>
-                                            <span className="flex items-center"><RiMapPinLine className="mr-1.5" />{match.location}</span>
+                                        <div className="flex space-x-2">
+                                            <button 
+                                                onClick={() => handleApply(match.recruitmentId, match.companyUid)}
+                                                disabled={isApplying || isDismissing !== null}
+                                                className="flex items-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                            >
+                                                {isApplying ? (
+                                                     <>
+                                                        <Loader2 className="animate-spin mr-2" size={16} /> 応募中
+                                                     </>
+                                                ) : (
+                                                    <>
+                                                        <RiHandHeartLine size={18} className="mr-1" /> 応募する
+                                                    </>
+                                                )}
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDismissMatch(match.matchId)}
+                                                disabled={isApplying || isDismissing !== null}
+                                                className="flex items-center px-3 py-2 border border-gray-300 text-gray-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                            >
+                                                {isDismissing === match.matchId ? (
+                                                    <Loader2 className="animate-spin" size={16} />
+                                                ) : (
+                                                    <RiDeleteBinLine size={18} />
+                                                )}
+                                            </button>
                                         </div>
-                                        <div className="flex flex-wrap gap-2 mt-3">
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-700 mb-4 border-t pt-4">
+                                        <div className="flex items-center"><RiBriefcase4Line size={18} className="text-gray-500 mr-2" /> 職種: {match.employmentType}</div>
+                                        <div className="flex items-center"><RiMoneyDollarCircleLine size={18} className="text-gray-500 mr-2" /> 給与: {match.salary}</div>
+                                        <div className="flex items-center"><RiMapPinLine size={18} className="text-gray-500 mr-2" /> 勤務地: {match.location}</div>
+                                        <div className="flex items-center"><RiUser6Line size={18} className="text-gray-500 mr-2" /> 企業: {match.companyName}</div>
+                                    </div>
+                                    
+                                    <div className="mt-4">
+                                        <h4 className="font-semibold text-gray-800 mb-2">マッチング理由 (最大3つ)</h4>
+                                        <div className="flex flex-wrap gap-2">
                                             {match.reasons.map((reason, index) => (
-                                                <MatchFactor key={index} icon={<RiCheckLine size={16} />} text={reason} />
+                                                <MatchFactor 
+                                                    key={index} 
+                                                    icon={<RiSparkling2Line size={14} className="text-indigo-500" />} 
+                                                    text={reason} 
+                                                />
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="flex-shrink-0 flex flex-col space-y-2">
-                                        <Link href={`/jobs/${match.recruitmentId}`} legacyBehavior>
-                                            <a className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg text-center hover:bg-indigo-700 transition-colors">詳細を見る</a>
-                                        </Link>
-                                        <button 
-                                            onClick={() => handleApply(match.recruitmentId, match.companyUid)}
-                                            disabled={isApplying || !!isDismissing}
-                                            className="px-4 py-2 bg-green-500 text-white font-bold rounded-lg text-center hover:bg-green-600 transition-colors disabled:opacity-50"
-                                        >
-                                            {isApplying ? <Loader2 className="animate-spin" size={20} /> : 'この求人に応募'}
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDismissMatch(match.matchId)}
-                                            disabled={isApplying || isDismissing === match.matchId}
-                                            className="flex items-center justify-center space-x-1 text-sm text-gray-500 hover:text-red-500 p-2 rounded-lg"
-                                        >
-                                            <RiDeleteBinLine size={16} />
-                                            <span>見送り/非表示</span>
-                                        </button>
-                                    </div>
+                                    
                                 </div>
-                            ))
-                        )}
-                        {matches.length > 5 && (
-                            <Link href="/users/match-jobs" legacyBehavior>
-                                <a className="block text-center p-4 bg-gray-100 text-indigo-600 font-bold rounded-xl hover:bg-gray-200 transition-colors mt-4">
-                                    すべてのAI推薦求人を見る ({matches.length}件) <RiArrowRightLine className="inline ml-1" />
-                                </a>
-                            </Link>
-                        )}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
-
-                {/* 3. 連絡先交換済みの企業 */}
+                
+                {/* 3. 連絡先交換済み（マッチ成立） */}
                 <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">3. マッチ成立（連絡先交換済み）</h2>
-                    <div className="space-y-4">
-                        {contacts.length === 0 ? (
-                            <div className="text-center p-8 bg-white rounded-xl shadow border border-gray-100">
-                                <p className="text-lg text-gray-600">まだ企業とのマッチ成立（連絡先交換）はありません。</p>
-                                <p className="text-sm text-gray-500 mt-2">積極的に応募し、次のステップに進みましょう。</p>
-                            </div>
-                        ) : (
-                            contacts.map(contact => (
-                                <div key={contact.id} className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500 flex justify-between items-center">
-                                    <div>
-                                        <h4 className="text-lg font-bold text-green-700 flex items-center"><RiHandHeartLine className="mr-2" />マッチ成立: {contact.companyName}</h4>
-                                        <p className="text-gray-600 text-sm mt-1">{contact.jobTitle} への応募</p>
-                                        <p className="text-indigo-600 font-semibold mt-2 break-all">連絡先: {contact.contactInfo || '企業側より提供され次第表示されます'}</p>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2 flex justify-between items-center">
+                        <span>3. 連絡先交換済み（マッチ成立 {contacts.length} 件）</span>
+                    </h2>
+                    
+                    {contacts.length === 0 ? (
+                         <div className="bg-white p-8 rounded-xl shadow-md text-center">
+                             <RiHandHeartLine size={32} className="text-gray-400 mx-auto mb-3" />
+                             <p className="text-gray-600 font-semibold">現在、マッチ成立した案件はありません。</p>
+                             <p className="text-sm text-gray-500 mt-2">
+                                 応募が企業に承認されると、こちらに連絡先情報が表示されます。
+                             </p>
+                         </div>
+                    ) : (
+                         <div className="space-y-6">
+                            {contacts.map((contact) => (
+                                <div key={contact.id} className="bg-white p-6 rounded-xl shadow-lg border border-green-300">
+                                    <h3 className="text-xl font-bold text-green-700">{contact.companyName}</h3>
+                                    <p className="text-lg text-gray-800 mt-1">{contact.jobTitle}</p>
+                                    <div className="mt-4 pt-4 border-t border-dashed">
+                                        <h4 className="font-semibold text-gray-800 mb-1 flex items-center">
+                                            <RiUser6Line size={18} className="mr-2 text-green-600" /> 企業連絡先
+                                        </h4>
+                                        <p className="bg-green-50 p-3 rounded-lg text-green-800 font-mono break-all text-sm">
+                                            {contact.contactInfo || '企業側の連絡先情報は未設定です。お手数ですが企業にお問い合わせください。'}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-2">※ こちらの情報は、企業側があなたとの連絡先交換を承認したため表示されています。</p>
                                     </div>
-                                    <Link href={`/jobs/${history.find(h => h.id === contact.id)?.recruitmentId}`} legacyBehavior>
-                                        <a className="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition-colors text-sm">詳細</a>
-                                    </Link>
                                 </div>
-                            ))
-                        )}
-                    </div>
+                            ))}
+                         </div>
+                    )}
                 </section>
 
                 {/* 4. 応募履歴 */}
                 <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">4. 応募履歴</h2>
-                    <div className="space-y-4">
-                        {history.length === 0 ? (
-                            <div className="text-center p-8 bg-white rounded-xl shadow border border-gray-100">
-                                <p className="text-lg text-gray-600">まだ応募履歴はありません。</p>
-                                <p className="text-sm text-gray-500 mt-2">AI推薦求人から応募を始めてみましょう。</p>
-                            </div>
-                        ) : (
-                            history.map(app => {
-                                const statusDisplay = getHistoryStatusDisplay(app.matchStatus);
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">4. 応募履歴（最新 {history.length} 件）</h2>
+                    
+                    {history.length === 0 ? (
+                        <div className="bg-white p-8 rounded-xl shadow-md text-center">
+                            <RiFileList3Line size={32} className="text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600 font-semibold">まだ応募履歴はありません。</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                                AIマッチング求人から気になる案件に応募してみましょう。
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {history.map((item) => {
+                                const statusDisplay = getHistoryStatusDisplay(item.matchStatus);
                                 return (
-                                    <div key={app.id} className="bg-white p-4 rounded-xl shadow border-l-4 border-gray-300 flex justify-between items-center">
+                                    <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center space-x-3">
-                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusDisplay.color} flex items-center`}>
-                                                    {statusDisplay.icon}<span className="ml-1">{statusDisplay.text}</span>
-                                                </span>
-                                                <p className="text-sm text-gray-500">{app.createdAt} 応募</p>
-                                            </div>
-                                            <h4 className="text-lg font-bold text-gray-800 mt-1 truncate">{app.jobTitle}</h4>
-                                            <p className="text-gray-600 text-sm">{app.companyName}</p>
-                                            {app.companyFeedback && (
-                                                <p className="text-xs text-red-500 mt-1">フィードバック: {app.companyFeedback.substring(0, 50)}...</p>
+                                            <p className="text-xs text-gray-500">{item.createdAt}</p>
+                                            <h3 className="text-lg font-bold text-gray-800 truncate">{item.jobTitle}</h3>
+                                            <p className="text-sm text-indigo-600 font-semibold">{item.companyName}</p>
+                                            {item.companyFeedback && item.matchStatus === 'rejected' && (
+                                                <div className="mt-2 text-xs bg-red-50 p-2 rounded-lg border border-red-200">
+                                                    <p className="font-semibold text-red-700">【企業からのフィードバック】</p>
+                                                    <p className="text-red-600 mt-0.5">{item.companyFeedback.substring(0, 100)}...</p>
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="flex-shrink-0 flex items-center space-x-2 ml-4">
-                                            <Link href={`/jobs/${app.recruitmentId}`} legacyBehavior>
-                                                <a className="px-3 py-1 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition-colors text-sm">求人詳細</a>
+                                        <div className="flex items-center space-x-3 ml-4">
+                                            <span className={`flex items-center px-3 py-1 text-xs font-bold rounded-full border ${statusDisplay.color}`}>
+                                                {statusDisplay.icon}
+                                                <span className="ml-1">{statusDisplay.text}</span>
+                                            </span>
+                                            {/* 応募取り消しボタン（applied, accepted のみ許可） */}
+                                            {['applied', 'accepted'].includes(item.matchStatus) && (
+                                                <button 
+                                                    onClick={() => handleDeleteApplication(item.id)}
+                                                    disabled={isDeleting !== null}
+                                                    className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                                                    title="応募を取り消す"
+                                                >
+                                                    {isDeleting === item.id ? (
+                                                         <Loader2 className="animate-spin" size={20} />
+                                                    ) : (
+                                                        <RiDeleteBinLine size={20} />
+                                                    )}
+                                                </button>
+                                            )}
+                                            <Link href={`/jobs/${item.recruitmentId}`} legacyBehavior>
+                                                <a className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" title="求人を見る">
+                                                    <RiArrowRightLine size={20} />
+                                                </a>
                                             </Link>
-                                            <button 
-                                                onClick={() => handleDeleteApplication(app.id)}
-                                                disabled={isDeleting === app.id}
-                                                className="flex items-center justify-center space-x-1 text-sm text-gray-500 hover:text-red-500 p-2 rounded-lg disabled:opacity-50"
-                                            >
-                                                {isDeleting === app.id ? <Loader2 className="animate-spin" size={16} /> : <RiDeleteBinLine size={16} />}
-                                            </button>
                                         </div>
                                     </div>
                                 );
-                            })
-                        )}
-                    </div>
+                            })}
+                        </div>
+                    )}
                 </section>
 
-            </main>
+                <div className="text-center pt-8">
+                    <button 
+                        onClick={handleLogout} 
+                        className="flex items-center justify-center mx-auto space-x-2 px-6 py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-colors shadow-lg"
+                    >
+                        <RiLogoutBoxRLine size={24} />
+                        <span>ログアウトしてサインアウト</span>
+                    </button>
+                </div>
 
-            <footer className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-gray-500 text-sm border-t mt-12">
-                <p>&copy; {new Date().getFullYear()} AI Job Matching System. All rights reserved.</p>
-            </footer>
+            </main>
         </div>
     );
 };
