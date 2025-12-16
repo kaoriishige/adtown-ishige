@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NextPage, GetServerSideProps } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -95,17 +95,17 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
     };
 
     // 緊急連絡先データ
-    const emergencyContacts: EmergencyContact[] = [
+    const emergencyContacts: EmergencyContact[] = useMemo(() => [
         { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/', },
         { name: '救急安心センター', number: '#7119', description: '急な病気やケガで救急車を呼ぶか迷った時', url: 'https://www.fdma.go.jp/publication/portal/post2.html', },
         { name: '那須塩原市の休日当番医', description: '那須塩原市の休日・夜間の急病', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/kyukyu_kyumei/1/3340.html', },
         { name: '大田原市の休日当番医', description: '大田原市の休日・夜間の急病', url: 'https://www.city.ohtawara.tochigi.jp/docs/2013082771612/', },
         { name: '那須町の休日当番医', description: '那須町の休日・夜間の急病', url: 'https://www.town.nasu.lg.jp/0130/info-0000003505-1.html', },
         { name: '水道のトラブル 緊急対応 (有)クリプトン', number: '090-2463-6638', description: '地元で40年 有限会社クリプトン', url: 'https://xn--bbkyao7065bpyck41as89d.com/emergency/', },
-    ];
+    ], []);
 
     // メインナビゲーションボタンリスト
-    const mainNavButtons: NavButton[] = [
+    const mainNavButtons: NavButton[] = useMemo(() => [
         {
             title: '店舗マッチングAI',
             description: `あなたの興味のあるお店を探します!! (${isStoreMatchingEnabled ? '公開中' : '2026.1月スタート'})`,
@@ -116,14 +116,14 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             disabled: !isStoreMatchingEnabled,
         },
         {
+            // ★★★ 修正箇所: 求人マッチングAIを完全に無効化 ★★★
             title: '求人マッチングAI',
-            description: 'あなたの働きたい会社を探します!!登録可能ですが、現在企業募集中になりますので、お急ぎの方はご遠慮ください。',
-            // 🌟 修正確定箇所: /users/dashboard へ確実に遷移させます
+            description: '現在、企業様を募集中です。準備が整い次第公開しますので、今しばらくお待ちください。',
             href: '/users/dashboard',
             Icon: RiBriefcase4Line,
             gradient: 'bg-gradient-to-r from-green-500 to-teal-600',
-            status: 'free',
-            disabled: false,
+            status: 'coming_soon',
+            disabled: true, // ★★★ 無効化 ★★★
         },
         {
             title: 'スーパー特売価格.com',
@@ -161,10 +161,10 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             status: 'free',
             disabled: false,
         }
-    ];
+    ], [isStoreMatchingEnabled]);
 
     // 協賛企業データ
-    const sponsors = [
+    const sponsors = useMemo(() => [
         {
             name: '株式会社おまかせオート',
             image: '/images/partner-omakaseauto.png',
@@ -180,7 +180,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
             image: '/images/partner-koharu.png',
             url: 'https://koharu-fukushikai.com/wp-content/themes/koharu/images/careplace/careplace_pamphlet.pdf',
         },
-    ];
+    ], []);
 
     return (
         <>

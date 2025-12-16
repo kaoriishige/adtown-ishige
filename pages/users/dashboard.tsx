@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase-client'; // Firebaseクライアントアプリインスタンスをインポート
+import { app } from '@/lib/firebase-client';
 import Link from 'next/link';
 import Head from 'next/head';
 import {
@@ -10,18 +10,17 @@ import {
     RiArrowRightLine, RiHandHeartLine,
     RiUser6Line, RiBriefcase4Line, RiMoneyDollarCircleLine, RiMapPinLine,
     RiTimerLine, RiCheckLine, RiCloseLine, RiSparkling2Line, RiEditBoxLine,
-    RiDeleteBinLine, RiArrowLeftLine // 💡 RiArrowLeftLine を追加
+    RiDeleteBinLine, RiArrowLeftLine
 } from 'react-icons/ri';
 import { GetServerSideProps, NextPage } from 'next';
 import nookies from 'nookies';
-// Admin SDKの型のみをインポート（実体はgetServerSideProps内でロード）
-import type * as admin from 'firebase-admin'; 
+import type * as admin from 'firebase-admin';
 import { FieldPath } from 'firebase-admin/firestore';
 import { useRouter } from 'next/router';
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-// --- 型定義 ---
+// --- 型定義 (省略なし) ---
 interface DetailedMatchJob {
     matchId: string;
     recruitmentId: string;
@@ -58,11 +57,10 @@ interface UserDashboardProps {
     isProfileComplete: boolean;
     error: string | null;
     userProfileData: any;
-    // 認証チェックに成功したことを示すフラグ
     isAuthenticated: boolean;
 }
 
-// --- UIコンポーネント (変更なし) ---
+// --- UIコンポーネント (省略) ---
 const DashboardCard = React.memo(({ href, icon, title, description, color }: { href: string; icon: React.ReactNode; title: string; description: string; color: 'indigo' | 'green' | 'red' | 'yellow' | 'purple' | 'blue'; }) => {
     const colorMap: any = {
         indigo: 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200',
@@ -120,6 +118,7 @@ const getHistoryStatusDisplay = (status: ApplicationHistory['matchStatus']) => {
 };
 
 const MatchingGuideModal = ({ onClose }: { onClose: () => void }) => {
+    // ... (UIコンポーネントのロジックは省略) ...
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
             <div className="bg-white p-8 rounded-xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -181,14 +180,12 @@ const MatchingGuideModal = ({ onClose }: { onClose: () => void }) => {
 
 
 // ----------------------------------------------------------------------
-// ★★★ サーバーサイドロジック (インポートを修正) ★★★
+// ★★★ サーバーサイドロジック (求人情報取得デバッグ強化済み) ★★★
 // ----------------------------------------------------------------------
 export const getServerSideProps: GetServerSideProps = async (context) => {
     
-    // 💡 修正箇所：getServerSideProps内で動的インポート
     const { adminDb, adminAuth } = await import('@/lib/firebase-admin');
 
-    // 型アサーション (admin SDKの型を使用)
     const db = adminDb as admin.firestore.Firestore; 
     const auth = adminAuth as admin.auth.Auth;
     
@@ -203,23 +200,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
     
     try {
-        // Step 1: セッションクッキーの検証
-        // authを使用する際は、authを明示的に指定
         const token = await auth.verifySessionCookie(sessionCookie, true);
         currentUserUid = token.uid;
-        // console.log('*** AUTH SUCCESS [DASHBOARD] ***: UID:', currentUserUid); // デバッグログ
+        console.log('--- DASHBOARD FETCH START ---');
+        console.log(`User UID: ${currentUserUid}`);
 
     } catch (err: any) {
-        // Step 2: 検証失敗
-        // console.error('*** AUTH ERROR [DASHBOARD] ***:', err.message); // デバッグログ
-        
-        // クッキーを削除してログインにリダイレクト
         nookies.destroy(context, 'session', { path: '/' }); 
-
+        console.error('AUTH ERROR [DASHBOARD]:', err.message);
         return { redirect: { destination: '/users/login', permanent: false } };
     }
     
-    // 認証成功後のデータフェッチ
     const defaultProps: UserDashboardProps = {
         userName: 'ゲスト',
         matches: [],
@@ -229,20 +220,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         isProfileComplete: false,
         error: null,
         userProfileData: null,
-        isAuthenticated: true, // 認証成功フラグ
+        isAuthenticated: true,
     };
     
     if (!currentUserUid) {
-        // 万が一UIDがない場合はログインへ戻す
-          return { redirect: { destination: '/users/login', permanent: false } };
+        return { redirect: { destination: '/users/login', permanent: false } };
     }
 
     try {
         const profileSnap = await db.collection('userProfiles').doc(currentUserUid).get();
-        const profileExists = profileSnap.exists;
         const profileData = profileSnap.data();
         
-        // サーバー側のTimestamp型を安全にシリアライズ可能な文字列に変換
         const cleanedProfileData = profileData ? JSON.parse(JSON.stringify({ 
             ...profileData, 
             updatedAt: (profileData.updatedAt as admin.firestore.Timestamp)?.toDate()?.toISOString() || null,
@@ -251,25 +239,29 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         defaultProps.userName = profileData?.name || 'ゲスト';
         defaultProps.userProfileData = cleanedProfileData;
 
-        // プロフィール必須項目のチェック (元のロジックを維持)
+        // プロフィール必須項目のチェック
         const hasDesiredJobTypes = Array.isArray(profileData?.desiredJobTypes) && profileData.desiredJobTypes.length > 0;
         const hasSkills = !!profileData?.skills && String(profileData.skills).trim() !== '';
         const salaryMax = profileData?.desiredSalaryMax;
         const hasDesiredSalaryMax = salaryMax !== undefined && salaryMax !== null && salaryMax !== '';
         
-        const isComplete = profileExists && hasDesiredJobTypes && hasSkills && hasDesiredSalaryMax;
+        const isComplete = profileSnap.exists && hasDesiredJobTypes && hasSkills && hasDesiredSalaryMax;
         
         defaultProps.isProfileComplete = !!isComplete;
         
-        // プロフィール不完全の場合はここで返す
         if (!isComplete) {
+            console.log('Profile is incomplete. Skipping data fetch.');
             return { props: defaultProps };
         }
-
-        // --- データ取得ロジック (元のロジックを維持) ---
-        // 応募履歴の取得と応募済みIDの特定
+        
+        console.log('Profile complete. Starting data queries...');
+        
+        // --- データ取得ロジック ---
+        
+        // 1. 応募履歴の取得と応募済みIDの特定
         const historyQuerySnap = await db.collection('applicants').where('userUid', '==', currentUserUid).get(); 
-
+        console.log(`[applicants] historyQuerySnap size: ${historyQuerySnap.docs.length}件`);
+        
         const historyList: ApplicationHistory[] = [];
         const summary = { applied: 0, accepted: 0, rejected: 0, agreed: 0 };
         const uniqueRecruitmentIds = new Set<string>(); 
@@ -284,13 +276,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             }
         });
         
-        // AIマッチング結果の取得と応募済み除外
+        // 2. AIマッチング結果の取得と応募済み除外
         const rawMatchQuery = db.collection('matchResults')
             .where('userUid', '==', currentUserUid)
             .orderBy('score', 'desc')
             .limit(5); 
         
         const matchSnap = await rawMatchQuery.get();
+        console.log(`[matchResults] matchSnap size (before filter): ${matchSnap.docs.length}件`);
         
         const rawMatches = matchSnap.docs
             .map((d) => ({
@@ -301,7 +294,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 reasons: d.data().matchReasons || [],
                 companyUid: d.data().companyUid, 
             }))
-            .filter(m => !appliedJobIds.has(m.recruitmentId)); // 応募済みIDを除外
+            .filter(m => !appliedJobIds.has(m.recruitmentId));
+            
+        console.log(`[matchResults] matchSnap size (after filter): ${rawMatches.length}件`);
             
         rawMatches.forEach(m => {
             if (m.recruitmentId) {
@@ -311,29 +306,44 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
         const recruitmentIds = Array.from(uniqueRecruitmentIds);
 
-        // 関連する求人情報と企業情報を結合 (バッチ取得)
+        // 3. 関連する求人情報と企業情報を結合 (バッチ取得)
         const recruitmentMap = new Map();
         const companyUids = new Set<string>();
         
         if (recruitmentIds.length > 0) {
+            console.log(`Fetching ${recruitmentIds.length} recruitments...`);
+            
+            // ★★★ 追加デバッグロジック: 取得できないIDをチェック ★★★
+            const foundRecruitmentIds = new Set<string>();
+            
             for (let i = 0; i < recruitmentIds.length; i += 10) {
                 const chunkIds = recruitmentIds.slice(i, i + 10);
-                // FieldPath.documentId() は firestore-admin からの型を使用
                 const jobQuery = db.collection('recruitments').where(FieldPath.documentId(), 'in', chunkIds);
                 const jobSnap = await jobQuery.get();
+                
                 jobSnap.docs.forEach(doc => {
                     if (doc.exists && doc.data()?.uid) {
                         recruitmentMap.set(doc.id, doc.data());
                         companyUids.add(doc.data().uid);
+                        foundRecruitmentIds.add(doc.id); // 取得できたIDを記録
                     }
                 });
             }
+            
+            // 取得できなかったIDをログ出力
+            const notFoundIds = recruitmentIds.filter(id => !foundRecruitmentIds.has(id));
+            if (notFoundIds.length > 0) {
+                 console.error(`!!! CRITICAL WARNING: ${notFoundIds.length} recruitment IDs were not found in 'recruitments' collection. These job(s) will be ignored.`);
+                 console.error('MISSING RECRUITMENT IDs:', notFoundIds);
+            }
+            // ★★★ デバッグロジック終了 ★★★
         }
         
         const companyMap = new Map();
         const companyUidArray = Array.from(companyUids);
         
         if (companyUidArray.length > 0) {
+            console.log(`Fetching ${companyUidArray.length} companies...`);
             for (let i = 0; i < companyUidArray.length; i += 10) {
                 const chunkIds = companyUidArray.slice(i, i + 10);
                 const companyQuery = db.collection('recruiters').where(FieldPath.documentId(), 'in', chunkIds);
@@ -349,6 +359,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         // マッチングデータの構築 
         const detailedMatches: DetailedMatchJob[] = rawMatches.reduce((acc: DetailedMatchJob[], raw) => {
             const job = recruitmentMap.get(raw.recruitmentId);
+            
+            // 求人データが取得できなかった場合はスキップ
             if (!job) return acc; 
             
             const company = companyMap.get(job.uid) || {};
@@ -370,21 +382,22 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }, []); 
         
         defaultProps.matches = detailedMatches; 
+        console.log(`Final detailedMatches count: ${detailedMatches.length}件`);
 
-        // 応募履歴データの構築
+        // 応募履歴データの構築とサマリーの集計
         for (const doc of historyQuerySnap.docs) {
             const data = doc.data();
-            const status = (data.status || data.matchStatus) as ApplicationHistory['matchStatus'];
+            const status = (data.status || data.matchStatus || 'applied') as ApplicationHistory['matchStatus'];
             
-            if (status) {
-                if (status === 'applied') summary.applied++;
-                if (status === 'accepted') summary.accepted++;
-                if (status === 'rejected') summary.rejected++;
-                if (status === 'agreed') summary.agreed++;
+            if (status === 'agreed') {
+                summary.agreed++;
+            } else if (status === 'rejected') {
+                summary.rejected++;
+            } else {
+                summary.applied++;
             }
             
             const job = recruitmentMap.get(data.recruitmentId);
-            // サーバー側のTimestamp型を安全に扱う
             const createdAtTimestamp = data.createdAt as admin.firestore.Timestamp; 
             
             historyList.push({
@@ -392,7 +405,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 recruitmentId: data.recruitmentId,
                 jobTitle: job?.jobTitle || data.jobTitle || 'タイトル不明',
                 companyName: companyMap.get(job?.uid)?.companyName || data.companyName || '企業名不明',
-                matchStatus: status || 'applied', 
+                matchStatus: status, 
                 companyFeedback: (data.companyFeedback === undefined || data.companyFeedback === null) ? null : data.companyFeedback, 
                 createdAt: createdAtTimestamp ? createdAtTimestamp.toDate().toLocaleDateString('ja-JP') : '不明'
             });
@@ -406,7 +419,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
         defaultProps.statusSummary = summary;
         defaultProps.history = historyList;
-
+        console.log('Final status summary:', summary);
+        
         // 連絡先交換済みの抽出
         const contactsList = historyList.filter(h => h.matchStatus === 'agreed').map(h => ({
             id: h.id, 
@@ -416,15 +430,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }));
         defaultProps.contacts = contactsList;
         
+        console.log('--- DASHBOARD FETCH END ---');
+
         return { props: defaultProps };
 
     } catch (err) {
-        // データ取得エラー
         console.error("User Dashboard Data Fetch Error:", err);
         const errMessage = err instanceof Error ? err.message : "不明なエラー";
         defaultProps.error = `データ取得中にエラーが発生しました: ${errMessage}。インデックスまたはセキュリティルールを確認してください。`;
-        
-        // エラーが発生しても、認証済みフラグは立てておく
         defaultProps.isAuthenticated = true; 
         return { props: defaultProps };
     }
@@ -432,7 +445,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
 
 // ----------------------------------------------------------------------
-// 💡 メインコンポーネント (UI)
+// 💡 メインコンポーネント (UI - 変更なし)
 // ----------------------------------------------------------------------
 const UserDashboard: NextPage<UserDashboardProps> = (props) => {
     const { 
@@ -444,11 +457,11 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
         isProfileComplete, 
         error,
         userProfileData,
-        isAuthenticated // サーバー側から渡された認証フラグ
+        isAuthenticated
     } = props;
 
     const router = useRouter();
-    const auth = useMemo(() => getAuth(app), []); // useMemoでインスタンス化を保証
+    const auth = useMemo(() => getAuth(app), []);
     
     const [loading, setLoading] = useState(true);
     const [isApplying, setIsApplying] = useState(false); 
@@ -457,47 +470,36 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
     const [applyMessage, setApplyMessage] = useState<string | null>(null); 
     const [showGuide, setShowGuide] = useState(false); 
 
-    // クライアント側の認証状態チェック（初期ローディングのみに限定）
     useEffect(() => {
-        // サーバー側で認証が成功している場合、クライアント側はすぐにロード完了と見なす
         if (isAuthenticated) {
             setLoading(false);
             return;
         }
 
-        // サーバー側で認証が失敗し、リダイレクトが行われなかった場合のみ、クライアント側で状態を確認
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setLoading(false);
             } else {
-                // サーバー側リダイレクトが失敗した場合のフォールバック
-                // 認証がないなら、サーバーサイドPropsで既にリダイレクトされているはずだが、念のため。
                 setLoading(false); 
             }
         });
         return () => unsubscribeAuth();
-    }, [auth, isAuthenticated]); // 認証フラグを依存関係に追加
+    }, [auth, isAuthenticated]);
 
-    // 💡 削除されたログアウト処理
     const handleLogout = async () => {
-        // ログアウト処理
         const confirmLogout = window.confirm("ログアウトしますか？");
         if (!confirmLogout) return;
         
         try {
-            // サーバー側のセッションクッキーを削除
             await fetch('/api/auth/sessionLogout', { method: 'POST' });
-            // クライアント側でFirebase認証をクリア
             await signOut(auth);
         } catch (error) {
             console.error('ログアウト処理中にエラーが発生しました:', error);
         } finally {
-            // 強制的にログインページに遷移
             router.push('/users/login');
         }
     };
 
-    // ★★★ 応募処理 (元のロジックを維持) ★★★
     const handleApply = async (jobId: string, companyUid: string) => {
         if (isApplying || !auth.currentUser || !userProfileData) return;
 
@@ -550,7 +552,6 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
         }
     };
 
-    // ★★★ AIマッチング求人を見送り・削除する処理 (元のロジックを維持) ★★★
     const handleDismissMatch = async (matchId: string) => {
         if (isDismissing) return;
 
@@ -585,7 +586,6 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
         }
     };
     
-    // 削除処理ハンドラ (応募履歴の削除) (元のロジックを維持)
     const handleDeleteApplication = async (applicationId: string) => {
         if (isDeleting) return; 
         if (!window.confirm("本当にこの応募を取り消しますか？この操作は元に戻せません。")) {
@@ -620,13 +620,11 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
     };
 
 
-    // --- ローディング/エラー/未認証時の表示 (変更なし) ---
     if (loading) {
         return <div className="min-h-screen bg-gray-50 flex justify-center items-center"><Loader2 className="animate-spin text-indigo-600 mr-3" size={32} /> データ準備中...</div>;
     }
 
     if (error) {
-        // 認証成功後のデータ取得エラー
         return (
             <div className="min-h-screen bg-gray-50 font-sans p-6">
                 <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
@@ -637,7 +635,6 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
         );
     }
     
-    // プロフィール不完全時の UI 
     if (!isProfileComplete) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -656,7 +653,6 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
                         </a>
                     </Link>
                     <p className="text-sm text-gray-500 mt-4">（企業マッチングはこの入力情報に基づいて行われます）</p>
-                    {/* 💡 修正箇所1: プロフィール不完全時の「アプリホームへ戻る」ボタン */}
                     <Link href="/home" legacyBehavior>
                         <a className="flex items-center space-x-2 text-sm text-gray-600 hover:bg-gray-100 p-2 rounded-xl mx-auto mt-4">
                             <RiArrowLeftLine size={20} /><span>アプリホームへ戻る</span>
@@ -672,12 +668,10 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
         <div className="min-h-screen bg-gray-50 font-sans">
             <Head><title>{`${userName}さんのダッシュボード｜AI求人マッチング`}</title></Head>
 
-            {/* ガイドモーダル */}
             {showGuide && <MatchingGuideModal onClose={() => setShowGuide(false)} />}
 
             <header className="bg-white shadow-md sticky top-0 z-10">
                 <div className="max-w-6xl mx-auto px-6 py-6 flex justify-between items-center">
-                    {/* 💡 修正箇所2: メインダッシュボードの「アプリホームへ」ボタン */}
                     <Link href="/home" legacyBehavior>
                         <a className="flex items-center space-x-2 text-base text-indigo-600 hover:bg-indigo-50 p-3 rounded-xl font-semibold shadow-sm transition-colors">
                             <RiArrowLeftLine size={20} />
@@ -690,7 +684,6 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
                         <p className="text-gray-500 text-sm mt-1">ようこそ、{userName} さん。</p>
                     </div>
                     
-                    {/* ログアウトボタンを右側に配置 */}
                     <button 
                         onClick={handleLogout} 
                         className="flex items-center space-x-2 text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-xl transition-colors font-semibold"
@@ -703,7 +696,6 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
 
             <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
                 
-                {/* メッセージ表示 */}
                 {applyMessage && (
                     <div className={`p-4 rounded-lg font-bold text-center shadow-md ${applyMessage.startsWith('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {applyMessage}
@@ -724,7 +716,7 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
                         <StatusCard 
                             icon={<RiTimerLine size={30} className="text-yellow-600" />}
                             title="企業審査中"
-                            count={statusSummary.applied}
+                            count={statusSummary.applied} 
                             color="border-yellow-300 bg-yellow-50 text-yellow-800"
                             description="企業が選考を進めています。"
                         />
@@ -757,209 +749,158 @@ const UserDashboard: NextPage<UserDashboardProps> = (props) => {
                             icon={<RiSearchLine size={28} />} 
                             title="AI推薦求人（60点以上）" 
                             description="AIが選んだ高マッチ度（60点以上）の求人を検索します" 
-                            color="green" 
+                            color="blue"
                         />
-                        <DashboardCard 
-                            href="#history" 
-                            icon={<RiFileList3Line size={28} />} 
-                            title="応募履歴を確認" 
-                            description="企業からの最新の対応状況をチェック" 
-                            color="yellow" 
-                        />
-                        {/* 💡 ガイドモーダルを表示するボタンを追加 */}
-                        <div 
-                            onClick={() => setShowGuide(true)} 
-                            className="group block bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-2xl hover:border-blue-400 transition-all cursor-pointer md:col-span-1"
-                        >
-                            <div className="flex items-start space-x-4">
-                                <div className="p-4 rounded-xl bg-blue-100 text-blue-600 group-hover:bg-blue-200"><RiSparkling2Line size={28} /></div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600">利用ガイド</h3>
-                                    <p className="text-gray-500 mt-1 text-sm">AIマッチングの仕組みと利用ステップを確認</p>
-                                </div>
-                            </div>
+                        <div onClick={() => setShowGuide(true)}>
+                            <DashboardCard
+                                href="#"
+                                icon={<RiSparkling2Line size={28} />}
+                                title="AIマッチングの使い方"
+                                description="AIマッチングの仕組みと利用ステップを確認します"
+                                color="yellow"
+                            />
                         </div>
                     </div>
                 </section>
                 
-                {/* 2. AIによるマッチング求人（トップ5） */}
+                {/* 2. AIによるマッチング求人（トップ5のみ表示） */}
                 <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2 flex justify-between items-center">
-                        <span>2. AIによるマッチング求人（高スコア順 TOP5）</span>
-                        <Link href="/users/match-jobs" legacyBehavior>
-                            <a className="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center">
-                                全ての推薦求人を見る <RiArrowRightLine className="ml-1" />
-                            </a>
-                        </Link>
-                    </h2>
-                    
-                    {matches.length === 0 ? (
-                        <div className="p-6 text-center bg-white rounded-xl shadow-md border border-dashed border-gray-300">
-                            <RiSearchLine size={32} className="text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600 font-semibold">現在、応募可能なAI推薦求人（未応募）はありません。</p>
-                            <p className="text-sm text-gray-500 mt-2">
-                                プロフィール（特にスキル、希望職種、給与）が最新であることを確認してください。
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {matches.slice(0, 5).map((match) => (
-                                <div 
-                                    key={match.matchId} 
-                                    className="bg-white p-5 rounded-xl shadow-lg border border-indigo-100 transition-all hover:shadow-xl"
-                                >
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. AIによるマッチング求人 ({matches.length}件表示中)</h2>
+                    <div className="space-y-6">
+                        {matches.length === 0 ? (
+                            <div className="text-center p-8 bg-white rounded-xl shadow border border-gray-100">
+                                <p className="text-lg text-gray-600">現在、あなたのプロフィールにマッチする新しい求人はありません。</p>
+                                <p className="text-sm text-gray-500 mt-2">プロフィールを更新するか、新しい求人が追加されるのをお待ちください。</p>
+                            </div>
+                        ) : (
+                            matches.slice(0, 5).map(match => (
+                                <div key={match.matchId} className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-500 flex justify-between items-start space-x-6">
+                                    <div>
+                                        <div className="flex items-center mb-2">
+                                            <span className={`text-xl font-extrabold mr-3 p-1 rounded ${match.score >= 80 ? 'bg-green-500 text-white' : 'bg-indigo-100 text-indigo-600'}`}>{match.score}点</span>
                                             <h3 className="text-xl font-bold text-gray-900">{match.jobTitle}</h3>
-                                            <p className="text-indigo-600 font-semibold text-sm mt-0.5">{match.companyName}</p>
                                         </div>
-                                        <div className="flex items-center space-x-2">
-                                            <span className="text-4xl font-extrabold" style={{ color: match.score >= 80 ? '#38A169' : match.score >= 60 ? '#D69E2E' : '#9CA3AF' }}>
-                                                {match.score}
-                                            </span>
-                                            <span className="text-lg font-bold text-gray-600">点</span>
+                                        <p className="text-gray-600 mb-3">{match.companyName}</p>
+                                        <div className="flex items-center space-x-4 text-sm text-gray-700 mb-3">
+                                            <span className="flex items-center"><RiBriefcase4Line className="mr-1.5" />{match.employmentType}</span>
+                                            <span className="flex items-center"><RiMoneyDollarCircleLine className="mr-1.5" />{match.salary}</span>
+                                            <span className="flex items-center"><RiMapPinLine className="mr-1.5" />{match.location}</span>
                                         </div>
-                                    </div>
-
-                                    <div className="space-y-2 text-sm text-gray-700 mb-4 border-t pt-3">
-                                        <div className="flex items-center space-x-2">
-                                            <RiBriefcase4Line size={16} className="text-indigo-500" />
-                                            <span>{match.employmentType} | {match.salary}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RiMapPinLine size={16} className="text-indigo-500" />
-                                            <span>{match.location}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="mb-4">
-                                        <h4 className="font-semibold text-gray-800 mb-2">マッチング理由 (AI分析)</h4>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-2 mt-3">
                                             {match.reasons.map((reason, index) => (
-                                                <MatchFactor key={index} icon={<RiSparkling2Line size={14} className="text-green-500" />} text={reason} />
+                                                <MatchFactor key={index} icon={<RiCheckLine size={16} />} text={reason} />
                                             ))}
                                         </div>
                                     </div>
-
-                                    <div className="flex justify-end space-x-3 mt-4">
-                                        <button
-                                            onClick={() => handleDismissMatch(match.matchId)}
-                                            disabled={!!isDismissing}
-                                            className="px-4 py-2 text-sm font-semibold rounded-lg text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center"
-                                        >
-                                            {isDismissing === match.matchId ? <Loader2 className="animate-spin mr-2" size={16} /> : <RiDeleteBinLine size={16} className="mr-1" />}
-                                            見送る
-                                        </button>
-                                        <button
+                                    <div className="flex-shrink-0 flex flex-col space-y-2">
+                                        <Link href={`/jobs/${match.recruitmentId}`} legacyBehavior>
+                                            <a className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg text-center hover:bg-indigo-700 transition-colors">詳細を見る</a>
+                                        </Link>
+                                        <button 
                                             onClick={() => handleApply(match.recruitmentId, match.companyUid)}
-                                            disabled={isApplying}
-                                            className="px-6 py-2 text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex items-center"
+                                            disabled={isApplying || !!isDismissing}
+                                            className="px-4 py-2 bg-green-500 text-white font-bold rounded-lg text-center hover:bg-green-600 transition-colors disabled:opacity-50"
                                         >
-                                            {isApplying ? <Loader2 className="animate-spin mr-2" size={16} /> : <RiArrowRightLine size={16} className="mr-1" />}
-                                            {isApplying ? '応募中...' : 'この求人に応募'}
+                                            {isApplying ? <Loader2 className="animate-spin" size={20} /> : 'この求人に応募'}
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDismissMatch(match.matchId)}
+                                            disabled={isApplying || isDismissing === match.matchId}
+                                            className="flex items-center justify-center space-x-1 text-sm text-gray-500 hover:text-red-500 p-2 rounded-lg"
+                                        >
+                                            <RiDeleteBinLine size={16} />
+                                            <span>見送り/非表示</span>
                                         </button>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        )}
+                        {matches.length > 5 && (
+                            <Link href="/users/match-jobs" legacyBehavior>
+                                <a className="block text-center p-4 bg-gray-100 text-indigo-600 font-bold rounded-xl hover:bg-gray-200 transition-colors mt-4">
+                                    すべてのAI推薦求人を見る ({matches.length}件) <RiArrowRightLine className="inline ml-1" />
+                                </a>
+                            </Link>
+                        )}
+                    </div>
                 </section>
 
-                {/* 3. 連絡先交換済み（マッチ成立） */}
+                {/* 3. 連絡先交換済みの企業 */}
                 <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">3. 連絡先交換済み（マッチ成立 {contacts.length}件）</h2>
-                    {contacts.length === 0 ? (
-                        <div className="p-6 text-center bg-white rounded-xl shadow-md border border-dashed border-gray-300">
-                            <RiHandHeartLine size={32} className="text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600 font-semibold">現在、マッチ成立した案件はありません。</p>
-                            <p className="text-sm text-gray-500 mt-2">
-                                応募した企業から「承諾（マッチ成立）」の連絡を待ちましょう。
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {contacts.map((contact) => (
-                                <div key={contact.id} className="bg-green-50 p-5 rounded-xl shadow-md border border-green-200">
-                                    <h3 className="text-lg font-bold text-green-800 flex items-center">
-                                        <RiHandHeartLine size={20} className="mr-2" /> マッチ成立: {contact.companyName}
-                                    </h3>
-                                    <p className="text-sm text-gray-700 mt-2">
-                                        **職種:** {contact.jobTitle || '不明'}
-                                    </p>
-                                    <div className="mt-3 p-3 bg-white border border-green-300 rounded-lg">
-                                        <p className="font-bold text-green-700">企業との連絡先情報</p>
-                                        <p className="text-gray-800 break-words">{contact.contactInfo}</p>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            （連絡先はあなたのプロフィール情報に基づいています）
-                                        </p>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">3. マッチ成立（連絡先交換済み）</h2>
+                    <div className="space-y-4">
+                        {contacts.length === 0 ? (
+                            <div className="text-center p-8 bg-white rounded-xl shadow border border-gray-100">
+                                <p className="text-lg text-gray-600">まだ企業とのマッチ成立（連絡先交換）はありません。</p>
+                                <p className="text-sm text-gray-500 mt-2">積極的に応募し、次のステップに進みましょう。</p>
+                            </div>
+                        ) : (
+                            contacts.map(contact => (
+                                <div key={contact.id} className="bg-white p-4 rounded-xl shadow border-l-4 border-green-500 flex justify-between items-center">
+                                    <div>
+                                        <h4 className="text-lg font-bold text-green-700 flex items-center"><RiHandHeartLine className="mr-2" />マッチ成立: {contact.companyName}</h4>
+                                        <p className="text-gray-600 text-sm mt-1">{contact.jobTitle} への応募</p>
+                                        <p className="text-indigo-600 font-semibold mt-2 break-all">連絡先: {contact.contactInfo || '企業側より提供され次第表示されます'}</p>
                                     </div>
+                                    <Link href={`/jobs/${history.find(h => h.id === contact.id)?.recruitmentId}`} legacyBehavior>
+                                        <a className="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition-colors text-sm">詳細</a>
+                                    </Link>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        )}
+                    </div>
                 </section>
 
                 {/* 4. 応募履歴 */}
-                <section id="history">
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">4. 応募履歴（{history.length}件）</h2>
-                    {history.length === 0 ? (
-                        <div className="p-6 text-center bg-white rounded-xl shadow-md border border-dashed border-gray-300">
-                            <RiFileList3Line size={32} className="text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600 font-semibold">まだ応募履歴がありません。</p>
-                            <p className="text-sm text-gray-500 mt-2">
-                                「AIによるマッチング求人」セクションから応募してみましょう！
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {history.map((app) => {
+                <section>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">4. 応募履歴</h2>
+                    <div className="space-y-4">
+                        {history.length === 0 ? (
+                            <div className="text-center p-8 bg-white rounded-xl shadow border border-gray-100">
+                                <p className="text-lg text-gray-600">まだ応募履歴はありません。</p>
+                                <p className="text-sm text-gray-500 mt-2">AI推薦求人から応募を始めてみましょう。</p>
+                            </div>
+                        ) : (
+                            history.map(app => {
                                 const statusDisplay = getHistoryStatusDisplay(app.matchStatus);
                                 return (
-                                    <div key={app.id} className="bg-white p-5 rounded-xl shadow-lg border border-gray-100">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs text-gray-500">{app.createdAt} 応募</p>
-                                                <h3 className="text-lg font-bold text-gray-800 truncate">{app.jobTitle}</h3>
-                                                <p className="text-sm text-gray-600">{app.companyName}</p>
+                                    <div key={app.id} className="bg-white p-4 rounded-xl shadow border-l-4 border-gray-300 flex justify-between items-center">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center space-x-3">
+                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusDisplay.color} flex items-center`}>
+                                                    {statusDisplay.icon}<span className="ml-1">{statusDisplay.text}</span>
+                                                </span>
+                                                <p className="text-sm text-gray-500">{app.createdAt} 応募</p>
                                             </div>
-                                            <div className={`px-3 py-1 text-sm font-semibold rounded-full flex items-center ml-4 ${statusDisplay.color}`}>
-                                                {statusDisplay.icon}
-                                                <span className="ml-1">{statusDisplay.text}</span>
-                                            </div>
+                                            <h4 className="text-lg font-bold text-gray-800 mt-1 truncate">{app.jobTitle}</h4>
+                                            <p className="text-gray-600 text-sm">{app.companyName}</p>
+                                            {app.companyFeedback && (
+                                                <p className="text-xs text-red-500 mt-1">フィードバック: {app.companyFeedback.substring(0, 50)}...</p>
+                                            )}
                                         </div>
-
-                                        {app.companyFeedback && (
-                                            <div className="mt-3 pt-3 border-t">
-                                                <p className="font-semibold text-gray-800 text-sm">企業フィードバック:</p>
-                                                <blockquote className="text-gray-600 text-sm italic border-l-2 border-indigo-400 pl-3 mt-1">
-                                                    {app.companyFeedback}
-                                                </blockquote>
-                                            </div>
-                                        )}
-                                        
-                                        {app.matchStatus !== 'agreed' && (
-                                            <div className="mt-3 pt-3 border-t flex justify-end">
-                                                <button
-                                                    onClick={() => handleDeleteApplication(app.id)}
-                                                    disabled={isDeleting === app.id}
-                                                    className="px-3 py-1 text-xs font-semibold rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-colors flex items-center"
-                                                >
-                                                    {isDeleting === app.id ? <Loader2 className="animate-spin mr-2" size={14} /> : <RiDeleteBinLine size={14} className="mr-1" />}
-                                                    {isDeleting === app.id ? '削除中' : '応募を取り消し'}
-                                                </button>
-                                            </div>
-                                        )}
+                                        <div className="flex-shrink-0 flex items-center space-x-2 ml-4">
+                                            <Link href={`/jobs/${app.recruitmentId}`} legacyBehavior>
+                                                <a className="px-3 py-1 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition-colors text-sm">求人詳細</a>
+                                            </Link>
+                                            <button 
+                                                onClick={() => handleDeleteApplication(app.id)}
+                                                disabled={isDeleting === app.id}
+                                                className="flex items-center justify-center space-x-1 text-sm text-gray-500 hover:text-red-500 p-2 rounded-lg disabled:opacity-50"
+                                            >
+                                                {isDeleting === app.id ? <Loader2 className="animate-spin" size={16} /> : <RiDeleteBinLine size={16} />}
+                                            </button>
+                                        </div>
                                     </div>
                                 );
-                            })}
-                        </div>
-                    )}
+                            })
+                        )}
+                    </div>
                 </section>
 
             </main>
 
-            <footer className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-gray-500 text-sm">
-                <p>&copy; 2024 AI Job Matching System. All rights reserved.</p>
+            <footer className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-gray-500 text-sm border-t mt-12">
+                <p>&copy; {new Date().getFullYear()} AI Job Matching System. All rights reserved.</p>
             </footer>
         </div>
     );

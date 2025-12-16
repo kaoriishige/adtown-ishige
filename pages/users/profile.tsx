@@ -1,3 +1,4 @@
+// pages/users/profile.tsx
 import React, { useState, useCallback, useMemo, ChangeEvent } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -7,12 +8,12 @@ import { GetServerSideProps, NextPage } from 'next';
 import nookies from 'nookies';
 import { UserRecord as AdminUserRecord } from 'firebase-admin/auth';
 
-// Firebase クライアントとサーバーのインポート（パスをプロジェクトに合わせて確認してください）
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase-client'; // クライアント側のFirestore
-// ★★★ ここはプロジェクトの firebase-admin インポートパスに合わせてください ★★★
+// 🚨 修正点1: クライアント側Firestoreの setDoc, serverTimestamp のインポートは不要になるため削除
+// import { doc, setDoc, serverTimestamp } from 'firebase/firestore'; 
+// import { db } from '../../lib/firebase-client'; // クライアント側のFirestore
+
+// Firebase サーバーのインポート（getServerSidePropsで使用）
 import { adminAuth, adminDb } from '../../lib/firebase-admin'; // サーバー側のAdmin SDK
-// ★★★
 
 // アイコンライブラリ
 import {
@@ -22,7 +23,7 @@ import {
 } from 'react-icons/ri';
 import { Loader2 } from 'lucide-react';
 
-// --- 定数 (変更なし) ---
+// --- 定数 ---
 const growthOptions = ['OJT（実務を通じた教育制度）', 'メンター制度（先輩社員によるサポート）', '定期的な社内研修あり', '社外研修・セミナー参加支援あり', '資格取得支援制度あり', '書籍・教材購入補助あり', 'AI・DX関連の研修あり', '海外研修・グローバル教育あり', 'キャリア面談制度あり', '評価・昇進が明確（スキルや成果で評価）', '社内表彰・インセンティブ制度あり', '他部署への異動・チャレンジを歓迎', '社員の挑戦を応援する文化', '失敗を許容する文化（トライ＆エラーを奨励）', '社内勉強会・ナレッジシェア会あり', '社外講師や専門家を招いた学習機会あり'];
 const wlbOptions = ['フルリモート勤務可', '一部リモート勤務可（ハイブリッドワーク）', 'フレックスタイム制あり', '残業少なめ（月20時間以内）', '完全週休2日制', '年間休日120日以上', '有給休暇取得率が高い', '産休・育休取得実績あり', '時短勤務制度あり', '介護・看護休暇あり', '副業・兼業OK', '私服勤務OK', '勤務地選択可（地方・在宅勤務など）', '長期休暇制度あり（リフレッシュ・サバティカルなど）', '定時退社を推奨', '家庭・育児と両立しやすい環境'];
 const benefitsOptions = ['社会保険完備', '通勤手当・交通費支給', '在宅勤務手当あり', '家賃補助・住宅手当あり', '家族手当あり', '賞与・ボーナスあり', '成果連動インセンティブあり', 'ストックオプション制度あり', '健康診断・人間ドック補助あり', '福利厚生サービス加入', '食事補助・社員食堂あり', '書籍・ツール購入補助あり', 'PC・デバイス支給（業務用）', '勤続表彰・特別休暇あり', '社員旅行・懇親イベントあり', '社内カフェ・フリードリンクあり', '資格手当・成果手当あり', '退職金制度あり', '定年後再雇用制度あり', '制服貸与'];
@@ -59,8 +60,8 @@ interface UserProfile {
         atmosphere: string[];
         organization: string[];
     };
-    // 💡 修正点1: updatedAt を追加し、シリアライズ可能な string | null に変更
-    updatedAt: string | null; 
+    // 💡 updatedAt はシリアライズ可能な string | null
+    updatedAt: string | null;
 }
 
 // サーバーサイドから受け取るPropsの型
@@ -75,7 +76,7 @@ interface ProfilePageProps {
 }
 
 
-// 💡 ヘルパーコンポーネント: チェックボックスグループ (変更なし)
+// 💡 ヘルパーコンポーネント: チェックボックスグループ
 interface CheckboxGroupProps {
     title: string;
     category: keyof UserProfile['matchingValues'];
@@ -106,7 +107,7 @@ CheckboxGroup.displayName = 'CheckboxGroup';
 
 
 // ----------------------------------------------------------------------
-// 💡 getServerSideProps (修正あり)
+// 💡 getServerSideProps
 // ----------------------------------------------------------------------
 export const getServerSideProps: GetServerSideProps<ProfilePageProps> = async (context) => {
     const cookies = nookies.get(context);
@@ -142,8 +143,7 @@ export const getServerSideProps: GetServerSideProps<ProfilePageProps> = async (c
         preferredWorkingHours: '',
         preferredWorkingDays: [],
         matchingValues: { growth: [], wlb: [], benefits: [], atmosphere: [], organization: [] },
-        // 💡 修正点1: baseInitialDataにもupdatedAt: nullを追加
-        updatedAt: null, 
+        updatedAt: null,
     };
 
     let initialData: UserProfile = baseInitialData;
@@ -176,7 +176,7 @@ export const getServerSideProps: GetServerSideProps<ProfilePageProps> = async (c
                     atmosphere: data.matchingValues?.atmosphere || [],
                     organization: data.matchingValues?.organization || [],
                 },
-                // 💡 修正点3: TimestampオブジェクトをJSONシリアライズ可能な文字列に変換
+                // 💡 TimestampオブジェクトをJSONシリアライズ可能な文字列に変換
                 updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : null,
             };
         }
@@ -201,7 +201,7 @@ export const getServerSideProps: GetServerSideProps<ProfilePageProps> = async (c
 
 
 // ----------------------------------------------------------------------
-// 💡 ページコンポーネント本体 (変更なし)
+// 💡 ページコンポーネント本体
 // ----------------------------------------------------------------------
 const UserProfilePage: NextPage<ProfilePageProps> = ({ user, initialData, isAuthenticated }) => {
     const router = useRouter();
@@ -266,27 +266,44 @@ const UserProfilePage: NextPage<ProfilePageProps> = ({ user, initialData, isAuth
         });
     }, []);
 
-    // 💡 プロフィール保存処理 (useCallback)
+    // 🚨 修正点2: クライアント側Firestore操作から、APIルートへの fetch 呼び出しに変更
     const handleSave = useCallback(async () => {
-        if (!currentUser) return false;
+        if (!currentUser) {
+            setError("認証情報が見つかりません。再ログインしてください。");
+            return false;
+        }
         setSaving(true);
         setError(null);
 
         try {
-            const userRef = doc(db, 'userProfiles', currentUser.uid);
-
+            // サーバー側APIに送信するためのデータ構造を構築
             const dataToSave = {
                 ...formData,
+                // 空文字を数値の 0 に変換
                 desiredSalaryMin: formData.desiredSalaryMin === '' ? 0 : Number(formData.desiredSalaryMin),
                 desiredSalaryMax: formData.desiredSalaryMax === '' ? 0 : Number(formData.desiredSalaryMax),
                 age: formData.age === '' ? 0 : Number(formData.age),
-                updatedAt: serverTimestamp()
+                // updatedAt はサーバー側で serverTimestamp() を設定するため、ここでは送信しない
             };
 
-            await setDoc(userRef, dataToSave, { merge: true });
+            // APIルートにデータを送信
+            const response = await fetch('/api/users/save-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dataToSave }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                // APIルートからのエラーメッセージをキャッチし、throwする
+                throw new Error(result.error || 'サーバーエラーが発生しました。');
+            }
+
             setSaving(false);
             return true;
         } catch (err: any) {
+            // 画面に表示するエラーメッセージ
             setError(`保存中にエラーが発生しました: ${err.message}`);
             setSaving(false);
             return false;
@@ -325,7 +342,7 @@ const UserProfilePage: NextPage<ProfilePageProps> = ({ user, initialData, isAuth
 
 
     // ----------------------------------------------------------------------
-    // 💡 ステップ 3: 最終確認・応募画面 (ReviewStep コンポーネント) (変更なし)
+    // 💡 ステップ 3: 最終確認・応募画面 (ReviewStep コンポーネント)
     // ----------------------------------------------------------------------
     const ReviewStep = () => {
         const salaryUnit = formData.desiredSalaryType === '年収' ? '万円' : '円';
@@ -410,7 +427,7 @@ const UserProfilePage: NextPage<ProfilePageProps> = ({ user, initialData, isAuth
     };
 
     // ----------------------------------------------------------------------
-    // 💡 メインレンダリング (変更なし)
+    // 💡 メインレンダリング
     // ----------------------------------------------------------------------
     return (
         <div className="min-h-screen bg-gray-50">
