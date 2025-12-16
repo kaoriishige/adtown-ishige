@@ -1,4 +1,4 @@
-// contexts/AuthContext.tsx (修正後)
+// contexts/AuthContext.tsx (完全版 - set/resetLoading の位置調整)
 
 import {
   createContext,
@@ -12,13 +12,12 @@ import { auth } from '../lib/firebase'; // クライアントサイドのFirebas
 import axios from 'axios';
 import { useRouter } from 'next/router';
 
-// ★ 1. userPlan の型を追加
 type UserPlan = 'free' | 'paid_480' | null;
 
 type AuthContextType = {
   user: User | null;
   userRole: 'admin' | 'user' | null;
-  userPlan: UserPlan; // ★ 2. Contextの型に userPlan を追加
+  userPlan: UserPlan; 
   loading: boolean;
   logout: () => Promise<void>;
 };
@@ -26,7 +25,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userRole: null,
-  userPlan: null, // ★ 3. 初期値を追加
+  userPlan: null, 
   loading: true,
   logout: async () => {},
 });
@@ -34,13 +33,14 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
-  const [userPlan, setUserPlan] = useState<UserPlan>(null); // ★ 4. userPlan用のstateを定義
-  const [loading, setLoading] = useState(true);
+  const [userPlan, setUserPlan] = useState<UserPlan>(null); 
+  const [loading, setLoading] = useState(true); // 初期値はtrue
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
+      // ★ 変更点1: ここにあった setLoading(true) を削除
+      
       if (currentUser) {
         setUser(currentUser);
         try {
@@ -49,30 +49,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             headers: { Authorization: `Bearer ${token}` },
           });
           
-          // ★ 5. レスポンスから role と plan を分割して取得
           const { role, plan } = response.data;
           setUserRole(role);
-          setUserPlan(plan); // ★ 6. userPlan stateを更新
+          setUserPlan(plan);
 
         } catch (error) {
           console.error('Failed to get user data:', error);
           setUserRole(null);
-          setUserPlan(null); // エラー時はplanもリセット
+          setUserPlan(null);
           await auth.signOut();
         }
       } else {
         setUser(null);
         setUserRole(null);
-        setUserPlan(null); // ログアウト時はplanもリセット
+        setUserPlan(null);
       }
-      setLoading(false);
+      // ★ 変更点2: 認証プロセスが完了した時に一度だけ false にする
+      setLoading(false); 
     });
 
     return () => unsubscribe();
   }, []);
 
   const logout = async () => {
-    setLoading(true);
+    // ログアウト処理中は loading にする必要がある
+    setLoading(true); 
     try {
       await axios.post('/api/logout'); 
       await auth.signOut(); 
@@ -82,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setUser(null);
       setUserRole(null);
-      setUserPlan(null); // ログアウト時はplanもリセット
+      setUserPlan(null); 
       setLoading(false);
     }
   };
@@ -90,14 +91,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     user,
     userRole,
-    userPlan, // ★ 7. valueにuserPlanを追加
+    userPlan, 
     loading,
     logout,
   };
 
+  // --- ★★★ loadingがtrueの間はローディング画面を表示するロジック ★★★
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh', 
+        fontSize: '20px',
+        color: '#333',
+        backgroundColor: '#fff' 
+      }}>
+        認証情報を読み込み中...
+      </div>
+    );
+  }
+
+  // loadingがfalseになったら、Contextを提供してchildren（アプリ本体）をレンダリングする
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children} 
     </AuthContext.Provider>
   );
 };
