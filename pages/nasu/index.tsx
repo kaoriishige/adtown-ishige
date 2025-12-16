@@ -1,7 +1,11 @@
 import React from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
-import { Store, MapPin, ExternalLink, Sparkles, Home } from 'lucide-react';
+// 💡 Link の代わりに useRouter を使用
+import { useRouter } from 'next/router'; 
+// 💡 Link は AI献立作成ボタンに使うため残します
+import Link from 'next/link'; 
+// ArrowLeft をインポートします。
+import { Store, MapPin, ExternalLink, Sparkles, ArrowLeft } from 'lucide-react'; 
 
 // 店舗データの型定義
 type StoreInfo = {
@@ -10,7 +14,7 @@ type StoreInfo = {
     url: string;
 };
 
-// 提供された店舗情報とURLのリスト (実際のURLに置き換え済み)
+// 提供された店舗情報とURLのリスト (変更なし)
 const storeData: StoreInfo[] = [
     // 那須塩原市、那須町
     { city: '那須塩原市・那須町', name: 'カワチ薬品 黒磯店', url: 'https://tokubai.co.jp/%E3%82%AB%E3%83%AF%E3%83%81%E8%96%AC%E5%93%81/76062' },
@@ -56,18 +60,17 @@ const groupedStores = storeData.reduce((acc: { [key: string]: StoreInfo[] }, sto
 }, {});
 
 /**
- * 外部URLを開くハンドラ (LIFF機能なし、標準のwindow.openを使用)
+ * 外部URLを開くハンドラ 
  */
 const openExternalUrl = (url: string) => {
     if (!url) return;
-    
-    // 標準ブラウザで新しいタブとして開く
     window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 
 const NasuFlyerApp = () => {
-    // ⚠ LIFFのエラー表示や初期化ロジックはすべて削除しました。
+    // 💡 useRouterフックを呼び出す
+    const router = useRouter(); 
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
@@ -79,13 +82,13 @@ const NasuFlyerApp = () => {
             <header className="bg-white shadow-md sticky top-0 z-10 p-4 border-b border-gray-200">
                 <div className="max-w-3xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        {/* ホームに戻るボタン (ダミーリンク) */}
-                        <Link 
-                            href="/" 
-                            className="p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                        {/* 💡 修正箇所: Link を Button に変更し、router.back() を設定 */}
+                        <button 
+                            onClick={() => router.back()} // ブラウザ履歴の直前のページに戻る
+                            className="p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
                         >
-                            <Home className="w-5 h-5" />
-                        </Link>
+                            <ArrowLeft className="w-5 h-5" /> 
+                        </button>
                         
                         <h1 className="text-xl font-extrabold text-blue-600 flex items-center gap-2 tracking-tight">
                             <Store className="w-7 h-7" />
@@ -93,7 +96,7 @@ const NasuFlyerApp = () => {
                         </h1>
                     </div>
                     
-                    {/* AIアプリへのリンクボタン (ダミーリンク) */}
+                    {/* AIアプリへのリンクボタン (ここは変更なし) */}
                     <Link 
                         href="/nasu/kondate" 
                         className="bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg hover:bg-green-700 transition flex items-center gap-2 whitespace-nowrap"

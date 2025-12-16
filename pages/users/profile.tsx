@@ -1,36 +1,28 @@
-import React, { useState, useEffect, useCallback, FormEvent, ChangeEvent, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, ChangeEvent } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import Link from 'next/link';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+
+// サーバーサイド認証に必要なNext.jsの型と外部ライブラリ
+import { GetServerSideProps, NextPage } from 'next';
+import nookies from 'nookies';
+import { UserRecord as AdminUserRecord } from 'firebase-admin/auth';
+
+// Firebase クライアントとサーバーのインポート（パスをプロジェクトに合わせて確認してください）
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../lib/firebase-client'; // クライアント側のFirestore
+// ★★★ ここはプロジェクトの firebase-admin インポートパスに合わせてください ★★★
+import { adminAuth, adminDb } from '../../lib/firebase-admin'; // サーバー側のAdmin SDK
+// ★★★
+
+// アイコンライブラリ
 import {
-    doc,
-    getDoc,
-    setDoc,
-    serverTimestamp,
-    Timestamp 
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase-client'; 
-import {
-    RiSave3Line,
-    RiUserLine,
-    RiHeartPulseLine,
-    RiArrowRightLine,
-    RiArrowLeftLine,
-    RiMoneyDollarCircleLine,
-    RiMapPinLine,
-    RiBriefcase4Line,
-    RiEditBoxLine,
-    RiComputerLine,
-    RiTimeLine,
-    RiCalendarLine,
-    RiSendPlane2Line,
-    RiPencilRuler2Line, 
-    RiErrorWarningLine
+    RiUserLine, RiHeartPulseLine, RiArrowRightLine, RiArrowLeftLine,
+    RiMoneyDollarCircleLine, RiMapPinLine, RiBriefcase4Line, RiEditBoxLine,
+    RiComputerLine, RiTimeLine, RiCalendarLine, RiSendPlane2Line, RiErrorWarningLine
 } from 'react-icons/ri';
 import { Loader2 } from 'lucide-react';
 
-// --- 定数 ---
+// --- 定数 (変更なし) ---
 const growthOptions = ['OJT（実務を通じた教育制度）', 'メンター制度（先輩社員によるサポート）', '定期的な社内研修あり', '社外研修・セミナー参加支援あり', '資格取得支援制度あり', '書籍・教材購入補助あり', 'AI・DX関連の研修あり', '海外研修・グローバル教育あり', 'キャリア面談制度あり', '評価・昇進が明確（スキルや成果で評価）', '社内表彰・インセンティブ制度あり', '他部署への異動・チャレンジを歓迎', '社員の挑戦を応援する文化', '失敗を許容する文化（トライ＆エラーを奨励）', '社内勉強会・ナレッジシェア会あり', '社外講師や専門家を招いた学習機会あり'];
 const wlbOptions = ['フルリモート勤務可', '一部リモート勤務可（ハイブリッドワーク）', 'フレックスタイム制あり', '残業少なめ（月20時間以内）', '完全週休2日制', '年間休日120日以上', '有給休暇取得率が高い', '産休・育休取得実績あり', '時短勤務制度あり', '介護・看護休暇あり', '副業・兼業OK', '私服勤務OK', '勤務地選択可（地方・在宅勤務など）', '長期休暇制度あり（リフレッシュ・サバティカルなど）', '定時退社を推奨', '家庭・育児と両立しやすい環境'];
 const benefitsOptions = ['社会保険完備', '通勤手当・交通費支給', '在宅勤務手当あり', '家賃補助・住宅手当あり', '家族手当あり', '賞与・ボーナスあり', '成果連動インセンティブあり', 'ストックオプション制度あり', '健康診断・人間ドック補助あり', '福利厚生サービス加入', '食事補助・社員食堂あり', '書籍・ツール購入補助あり', 'PC・デバイス支給（業務用）', '勤続表彰・特別休暇あり', '社員旅行・懇親イベントあり', '社内カフェ・フリードリンクあり', '資格手当・成果手当あり', '退職金制度あり', '定年後再雇用制度あり', '制服貸与'];
@@ -40,7 +32,7 @@ const desiredJobTypesList = ["営業・企画・マーケティング", "事務�
 const employmentTypeOptions = ["正社員", "契約社員", "アルバイト・パート", "業務委託"];
 const salaryTypeOptions = ["年収", "時給", "月給"];
 const remotePolicyOptions = [{ value: 'no', label: '出社必須' }, { value: 'hybrid', label: 'ハイブリッド可' }, { value: 'full', label: 'フルリモート可' }];
-const ALL_DAYS = ['月', '火', '水', '木', '金', '土', '日']; 
+const ALL_DAYS = ['月', '火', '水', '木', '金', '土', '日'];
 
 // --- 型定義 ---
 interface UserProfile {
@@ -49,17 +41,17 @@ interface UserProfile {
     email: string;
     phoneNumber: string;
     currentJobTitle: string;
-    skills: string; 
+    skills: string;
     workHistorySummary: string;
-    desiredJobTypes: string[]; 
-    desiredEmploymentType: string; 
-    desiredSalaryType: string; 
+    desiredJobTypes: string[];
+    desiredEmploymentType: string;
+    desiredSalaryType: string;
     desiredSalaryMin: number | '';
-    desiredSalaryMax: number | ''; 
-    desiredLocation: string; 
-    desiredRemotePolicy: string; 
-    preferredWorkingHours: string; 
-    preferredWorkingDays: string[]; 
+    desiredSalaryMax: number | '';
+    desiredLocation: string;
+    desiredRemotePolicy: string;
+    preferredWorkingHours: string;
+    preferredWorkingDays: string[];
     matchingValues: {
         growth: string[];
         wlb: string[];
@@ -67,9 +59,23 @@ interface UserProfile {
         atmosphere: string[];
         organization: string[];
     };
+    // 💡 修正点1: updatedAt を追加し、シリアライズ可能な string | null に変更
+    updatedAt: string | null; 
 }
 
-// 💡 ヘルパーコンポーネント: チェックボックスグループ
+// サーバーサイドから受け取るPropsの型
+interface ProfilePageProps {
+    user: {
+        uid: string;
+        email: string;
+        name: string;
+    } | null;
+    initialData: UserProfile;
+    isAuthenticated: boolean;
+}
+
+
+// 💡 ヘルパーコンポーネント: チェックボックスグループ (変更なし)
 interface CheckboxGroupProps {
     title: string;
     category: keyof UserProfile['matchingValues'];
@@ -78,7 +84,7 @@ interface CheckboxGroupProps {
     onChange: (category: keyof UserProfile['matchingValues'], value: string) => void;
 }
 
-const CheckboxGroup: React.FC<CheckboxGroupProps> = ({ title, category, options, selectedValues, onChange }) => (
+const CheckboxGroup: React.FC<CheckboxGroupProps> = React.memo(({ title, category, options, selectedValues, onChange }) => (
     <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
         <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">{title}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -95,98 +101,160 @@ const CheckboxGroup: React.FC<CheckboxGroupProps> = ({ title, category, options,
             ))}
         </div>
     </div>
-);
+));
+CheckboxGroup.displayName = 'CheckboxGroup';
 
 
-const UserProfilePage = () => {
+// ----------------------------------------------------------------------
+// 💡 getServerSideProps (修正あり)
+// ----------------------------------------------------------------------
+export const getServerSideProps: GetServerSideProps<ProfilePageProps> = async (context) => {
+    const cookies = nookies.get(context);
+    const sessionCookie = cookies.session || '';
+    let firebaseUser: AdminUserRecord | null = null;
+
+    // 1. セッションクッキーの検証
+    try {
+        const token = await adminAuth.verifySessionCookie(sessionCookie, true);
+        firebaseUser = await adminAuth.getUser(token.uid);
+
+    } catch (err: any) {
+        nookies.destroy(context, 'session', { path: '/' });
+        return { redirect: { destination: '/users/login', permanent: false } };
+    }
+
+    // 2. 認証成功: フォームの初期値設定
+    const baseInitialData: UserProfile = {
+        name: firebaseUser?.displayName || '',
+        age: '',
+        email: firebaseUser?.email || '',
+        phoneNumber: '',
+        currentJobTitle: '',
+        skills: '',
+        workHistorySummary: '',
+        desiredJobTypes: [],
+        desiredEmploymentType: '正社員',
+        desiredSalaryType: '年収',
+        desiredSalaryMin: '',
+        desiredSalaryMax: '',
+        desiredLocation: '',
+        desiredRemotePolicy: 'no',
+        preferredWorkingHours: '',
+        preferredWorkingDays: [],
+        matchingValues: { growth: [], wlb: [], benefits: [], atmosphere: [], organization: [] },
+        // 💡 修正点1: baseInitialDataにもupdatedAt: nullを追加
+        updatedAt: null, 
+    };
+
+    let initialData: UserProfile = baseInitialData;
+
+    // 3. Firestoreから初期プロフィールデータを読み込み
+    try {
+        const userRef = adminDb.collection('userProfiles').doc(firebaseUser!.uid);
+        const snap = await userRef.get();
+
+        if (snap.exists) {
+            // 💡 修正点2: dataの型に updated の Timestamp を含める
+            const data = snap.data() as Partial<UserProfile> & { updatedAt?: { toDate: () => Date } };
+
+            initialData = {
+                ...baseInitialData,
+                ...data,
+
+                // 数値型で空文字が許容されるフィールドのフォールバック
+                age: data.age === 0 ? '' : data.age || '',
+                desiredSalaryMin: data.desiredSalaryMin === 0 ? '' : data.desiredSalaryMin || '',
+                desiredSalaryMax: data.desiredSalaryMax === 0 ? '' : data.desiredSalaryMax || '',
+
+                // 配列/オブジェクトのフォールバック
+                desiredJobTypes: data.desiredJobTypes || [],
+                preferredWorkingDays: data.preferredWorkingDays || [],
+                matchingValues: {
+                    growth: data.matchingValues?.growth || [],
+                    wlb: data.matchingValues?.wlb || [],
+                    benefits: data.matchingValues?.benefits || [],
+                    atmosphere: data.matchingValues?.atmosphere || [],
+                    organization: data.matchingValues?.organization || [],
+                },
+                // 💡 修正点3: TimestampオブジェクトをJSONシリアライズ可能な文字列に変換
+                updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : null,
+            };
+        }
+
+    } catch (e) {
+        console.error('SSRでのFirestore読み込みエラー:', e);
+    }
+
+
+    return {
+        props: {
+            user: {
+                uid: firebaseUser!.uid,
+                email: firebaseUser!.email || '',
+                name: firebaseUser!.displayName || ''
+            },
+            initialData,
+            isAuthenticated: true,
+        },
+    };
+};
+
+
+// ----------------------------------------------------------------------
+// 💡 ページコンポーネント本体 (変更なし)
+// ----------------------------------------------------------------------
+const UserProfilePage: NextPage<ProfilePageProps> = ({ user, initialData, isAuthenticated }) => {
     const router = useRouter();
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+
+    // --- Hooksの定義 (コンポーネントのトップレベルで無条件に呼び出す) ---
+    const [currentUser] = useState(user);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [step, setStep] = useState(1);
-    const [isApplying, setIsApplying] = useState(false); 
-    const [applyMessage, setApplyMessage] = useState<string | null>(null); 
+    const [isApplying, setIsApplying] = useState(false);
+    const [applyMessage, setApplyMessage] = useState<string | null>(null);
 
-    const [formData, setFormData] = useState<UserProfile>({
-        name: '', age: '', email: '', phoneNumber: '', currentJobTitle: '', skills: '', workHistorySummary: '',
-        desiredJobTypes: [], desiredEmploymentType: '正社員', desiredSalaryType: '年収', desiredSalaryMin: '',
-        desiredSalaryMax: '', desiredLocation: '', desiredRemotePolicy: 'no', preferredWorkingHours: '',
-        preferredWorkingDays: [],
-        matchingValues: { growth: [], wlb: [], benefits: [], atmosphere: [], organization: [] },
-    });
+    // 初期データを設定
+    const [formData, setFormData] = useState<UserProfile>(initialData);
 
-    // --- Firebase認証監視とデータ読み込み ---
-    useEffect(() => {
-        if (!router.isReady) return;
-        const auth = getAuth();
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-                setFormData((prev) => ({ ...prev, email: currentUser.email || '' }));
-                loadUserProfile(currentUser.uid);
-            } else {
-                router.push('/users/login');
-            }
-        });
-        return () => unsubscribe();
-    }, [router.isReady]);
+    // 必須項目チェック (useMemo)
+    const isStep1Complete = useMemo(() => (
+        !!formData.name &&
+        (formData.age !== '' && Number(formData.age) >= 0) &&
+        String(formData.skills).trim().length > 0
+    ), [formData.name, formData.age, formData.skills]);
 
-    const loadUserProfile = async (uid: string) => {
-        setLoading(true);
-        setError(null); 
-        
-        try {
-            const userRef = doc(db, 'userProfiles', uid);
-            const snap = await getDoc(userRef);
-            if (snap.exists()) {
-                const data = snap.data();
-                setFormData((prev) => ({
-                    ...prev, ...data,
-                    // null/undefinedを''に変換
-                    age: data.age || '', desiredSalaryMin: data.desiredSalaryMin || '', desiredSalaryMax: data.desiredSalaryMax || '',
-                    skills: data.skills || '', desiredEmploymentType: data.desiredEmploymentType || '正社員',
-                    desiredSalaryType: data.desiredSalaryType || '年収', desiredRemotePolicy: data.desiredRemotePolicy || 'no',
-                    desiredJobTypes: data.desiredJobTypes || [], preferredWorkingHours: data.preferredWorkingHours || '', 
-                    preferredWorkingDays: data.preferredWorkingDays || [],
-                    matchingValues: {
-                        growth: data.matchingValues?.growth || [], wlb: data.matchingValues?.wlb || [], 
-                        benefits: data.matchingValues?.benefits || [], atmosphere: data.matchingValues?.atmosphere || [], 
-                        organization: data.matchingValues?.organization || [],
-                    }
-                }));
-            }
-        } catch (e) { 
-            console.error('Firestore読み込みエラー:', e); 
-            // 読み込みエラーが発生しても、フォームは初期値で表示を続ける
-        }
-        setLoading(false);
-    };
+    const isStep2Complete = useMemo(() => (
+        formData.desiredJobTypes.length > 0 &&
+        (formData.desiredSalaryMax !== '' && Number(formData.desiredSalaryMax) >= 0)
+    ), [formData.desiredJobTypes, formData.desiredSalaryMax]);
 
-    // --- フォーム操作ロジック ---
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
+
+    // フォーム操作ロジック (useCallback)
+    const handleChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const target = e.target;
+        const { name, value } = target;
+
         if (['age', 'desiredSalaryMin', 'desiredSalaryMax'].includes(name)) {
-            // 入力が数値フィールドの場合は数値型を維持し、空文字の場合はそのまま維持
             setFormData((prev) => ({ ...prev, [name]: value === '' ? '' : Number(value) }));
         } else {
             setFormData((prev) => ({ ...prev, [name]: value }));
         }
-    };
+    }, []);
 
     const handleValueCheckboxChange = useCallback((category: keyof UserProfile['matchingValues'], value: string) => {
         setFormData((prev) => {
-            const currentValues = prev.matchingValues[category] || []; 
+            const currentValues = prev.matchingValues[category] || [];
             const newValues = currentValues.includes(value) ? currentValues.filter((v) => v !== value) : [...currentValues, value];
             return { ...prev, matchingValues: { ...prev.matchingValues, [category]: newValues } };
         });
     }, []);
 
-    const handleJobTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleJobTypeChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
         const selectedOptions = Array.from(e.target.selectedOptions).map((o) => o.value);
         setFormData((prev) => ({ ...prev, desiredJobTypes: selectedOptions }));
     }, []);
-    
+
     const toggleDay = useCallback((day: string) => {
         setFormData(prev => {
             const currentDays = prev.preferredWorkingDays || [];
@@ -198,95 +266,77 @@ const UserProfilePage = () => {
         });
     }, []);
 
-    // 💡 プロフィール保存処理
+    // 💡 プロフィール保存処理 (useCallback)
     const handleSave = useCallback(async () => {
-        if (!user) return false;
+        if (!currentUser) return false;
         setSaving(true);
-        setError(null); 
-        
+        setError(null);
+
         try {
-            const userRef = doc(db, 'userProfiles', user.uid);
-            
-            // ★★★ 修正ロジック: 数値型が空文字のとき、確実に0として保存 ★★★
+            const userRef = doc(db, 'userProfiles', currentUser.uid);
+
             const dataToSave = {
-                ...formData, 
-                // 空文字をNumber型として保存する前に0に変換
+                ...formData,
                 desiredSalaryMin: formData.desiredSalaryMin === '' ? 0 : Number(formData.desiredSalaryMin),
                 desiredSalaryMax: formData.desiredSalaryMax === '' ? 0 : Number(formData.desiredSalaryMax),
                 age: formData.age === '' ? 0 : Number(formData.age),
-                updatedAt: serverTimestamp() 
+                updatedAt: serverTimestamp()
             };
 
-            // setDocはawaitで待機し、確実にFirestoreに反映されるようにする
             await setDoc(userRef, dataToSave, { merge: true });
             setSaving(false);
-            return true; 
+            return true;
         } catch (err: any) {
             setError(`保存中にエラーが発生しました: ${err.message}`);
             setSaving(false);
-            return false; 
+            return false;
         }
-    }, [user, formData]); // userとformDataが変更されたときのみ再生成
+    }, [currentUser, formData]);
 
-    // 💡 応募処理 (ステップ3から呼び出し - APIコールを削除し、リダイレクトのみ残す)
+
+    // 💡 応募処理
     const handleApplyFromReview = async () => {
         // 1. プロフィールを保存
         const saveSuccess = await handleSave();
-        if (!saveSuccess) return; 
+        if (!saveSuccess) return;
 
         // 2. 応募処理を実行 (リダイレクトのみ)
         setIsApplying(true);
         setApplyMessage(null);
-        
+
         try {
-            // プロフィール保存後のリダイレクト処理のみを行う
-            // alert() は非推奨だが、以前のコードを踏襲して利用
             alert(`✅ プロフィールを保存しました。AI推薦求人を確認するため、ダッシュボードに移動します。`);
-            
-            // router.replaceを使用して、ダッシュボードのgetServerSidePropsを強制的に再実行させる
-            router.replace('/users/dashboard', undefined, { shallow: false }); 
-             
+            router.replace('/users/dashboard', undefined, { shallow: false });
+
         } catch (e: any) {
-             // エラーハンドリング (通常は到達しない)
              setApplyMessage(`❌ 処理中にエラーが発生しました: ${e.message}`);
         } finally {
              setIsApplying(false);
         }
     };
+    // --- Hooksの定義ここまで ---
 
 
-    // --- 必須項目チェック (useMemoで最適化) ---
-    const isStep1Complete = useMemo(() => (
-        !!formData.name && 
-        // ageが空文字でなく、かつ0以上であること (0は許容)
-        (formData.age !== '' && Number(formData.age) >= 0) && 
-        String(formData.skills).trim().length > 0
-    ), [formData.name, formData.age, formData.skills]);
-    
-    const isStep2Complete = useMemo(() => (
-        formData.desiredJobTypes.length > 0 && 
-        // desiredSalaryMax が空文字でなく、かつ0以上であること
-        (formData.desiredSalaryMax !== '' && Number(formData.desiredSalaryMax) >= 0)
-    ), [formData.desiredJobTypes, formData.desiredSalaryMax]);
+    // --- 認証チェックと早期リターン (Hooksの呼び出し後) ---
+    if (!isAuthenticated || !user) {
+        if (typeof window !== 'undefined') router.push('/users/login');
+        return <div className="min-h-screen flex items-center justify-center">認証が必要です...</div>;
+    }
 
-    // --- ローディング中 ---
-    if (loading) { return (<div className="flex justify-center items-center h-screen text-gray-600"><Loader2 className="animate-spin w-6 h-6 mr-2" /> 読み込み中...</div>); }
 
     // ----------------------------------------------------------------------
-    // 💡 ステップ 3: 最終確認・応募画面 (価値観を完全に反映)
+    // 💡 ステップ 3: 最終確認・応募画面 (ReviewStep コンポーネント) (変更なし)
     // ----------------------------------------------------------------------
     const ReviewStep = () => {
         const salaryUnit = formData.desiredSalaryType === '年収' ? '万円' : '円';
         const remoteLabel = remotePolicyOptions.find(o => o.value === formData.desiredRemotePolicy)?.label || '未設定';
 
-        // 💡 価値観データを整形するヘルパー関数
         const getFormattedValues = (category: keyof UserProfile['matchingValues']) => {
             const selected = formData.matchingValues[category];
             if (selected.length === 0) return '特に希望なし';
-            // 選択肢が多すぎる場合は一部のみ表示
             return selected.slice(0, 3).join(', ') + (selected.length > 3 ? ` (+${selected.length - 3}項目)` : '');
         };
-        
+
         const ReviewItem: React.FC<{ title: string; value: string | JSX.Element }> = ({ title, value }) => (
             <div className='grid grid-cols-5 py-2 px-4 text-sm'>
                 <div className='font-semibold col-span-2'>{title}:</div>
@@ -299,12 +349,12 @@ const UserProfilePage = () => {
             <section className="space-y-8">
                 <h2 className="text-2xl font-bold text-gray-900 border-b pb-3 flex items-center">
                     <RiEditBoxLine className="w-6 h-6 mr-3 text-green-500" />
-                    ステップ 3/3: 最終確認と応募
+                    ステップ 3/3: 最終確認と保存
                 </h2>
-                
+
                 {/* 最終確認サマリーコンテナ */}
                 <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
-                    
+
                     {/* 基本情報 */}
                     <div className="p-4 bg-gray-100"><h3 className="font-bold text-lg text-gray-800">基本情報</h3></div>
                     <ReviewItem title='氏名' value={`${formData.name} (${formData.age}歳)`} />
@@ -322,7 +372,7 @@ const UserProfilePage = () => {
                     <ReviewItem title='勤務曜日' value={formData.preferredWorkingDays.join(', ') || '全曜日可'} />
                     <ReviewItem title='勤務時間' value={formData.preferredWorkingHours || '記入なし'} />
 
-                    {/* 💡 マッチング価値観 (追加) */}
+                    {/* 💡 マッチング価値観 */}
                     <div className="p-4 bg-gray-100"><h3 className="font-bold text-lg text-gray-800">AIマッチング価値観</h3></div>
                     <ReviewItem title='成長・教育' value={getFormattedValues('growth')} />
                     <ReviewItem title='働き方・WLB' value={getFormattedValues('wlb')} />
@@ -342,7 +392,7 @@ const UserProfilePage = () => {
                         <RiArrowLeftLine className="mr-2" /> 戻る (修正)
                     </button>
                     <button
-                        type="button" 
+                        type="button"
                         onClick={handleApplyFromReview}
                         disabled={isApplying || saving || !isStep1Complete || !isStep2Complete}
                         className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 disabled:bg-gray-400 flex items-center"
@@ -358,9 +408,9 @@ const UserProfilePage = () => {
             </section>
         );
     };
-    
+
     // ----------------------------------------------------------------------
-    // 💡 メインレンダリング
+    // 💡 メインレンダリング (変更なし)
     // ----------------------------------------------------------------------
     return (
         <div className="min-h-screen bg-gray-50">
@@ -380,18 +430,20 @@ const UserProfilePage = () => {
                     以下の{step === 3 ? '内容を確認' : '3ステップで情報を入力'}してください。
                 </p>
 
-                {/* ★ 修正: このエラーは、主に「保存」に失敗した時に表示されるようになります */}
-                {error && (<div className="p-4 mb-4 bg-red-100 text-red-700 rounded-md">{error}</div>)}
-                
+                {error && (<div className="p-4 mb-4 bg-red-100 text-red-700 rounded-md flex items-center"><RiErrorWarningLine className="mr-2 w-5 h-5"/>{error}</div>)}
+
                 {/* フォーム/レビューコンテナ */}
                 <form className="bg-white p-8 rounded-lg shadow-xl space-y-6" onSubmit={(e) => { e.preventDefault(); if (step !== 3) setStep(step + 1); }}>
+
+                    {/* --- ステップ 1, 2, 3 のコンテンツレンダリング --- */}
+
                     {step === 1 && (
                         /* --- ステップ 1: 基本情報・スキル --- */
                         <section className="space-y-6">
                             <h2 className="text-2xl font-bold text-gray-900 border-b pb-3 flex items-center">
                                 <RiUserLine className="w-6 h-6 mr-3 text-indigo-500" /> ステップ 1/3: 基本情報・スキル
                             </h2>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* 氏名 */}
                                 <div><label className="text-sm font-medium">氏名 *</label><input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full border rounded-md px-3 py-2"/></div>
@@ -414,7 +466,7 @@ const UserProfilePage = () => {
                             </div>
                         </section>
                     )}
-                    
+
                     {step === 2 && (
                         /* --- ステップ 2: 希望条件と価値観 --- */
                         <section className="space-y-8">
@@ -425,7 +477,7 @@ const UserProfilePage = () => {
                             {/* 希望スペック (AIマッチング必須項目) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
                                 <div className="md:col-span-2"><h3 className="text-lg font-bold text-blue-800">AIマッチング最重要項目</h3></div>
-                                
+
                                 {/* 1. 希望職種 (AIマッチング必須項目) */}
                                 <div>
                                     <label className="text-sm font-medium flex items-center mb-1"><RiBriefcase4Line className="mr-1" /> 希望職種 (複数選択可) *</label>
@@ -434,7 +486,7 @@ const UserProfilePage = () => {
                                     </select>
                                     <p className="text-xs text-gray-500 mt-1">Ctrl/Commandキーで複数選択できます。</p>
                                 </div>
-                                
+
                                 {/* 2. 希望給与と雇用形態 */}
                                 <div className="space-y-4">
                                     {/* 希望雇用形態 */}
@@ -462,7 +514,7 @@ const UserProfilePage = () => {
                                         {remotePolicyOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}</select></div>
                                     {/* 希望勤務地 */}
                                     <div><label className="text-sm font-medium flex items-center mb-1"><RiMapPinLine className="mr-1" /> 希望勤務地</label><input type="text" name="desiredLocation" value={formData.desiredLocation} onChange={handleChange} placeholder="例: 東京都、リモート可" className="w-full border rounded-md px-3 py-2"/></div>
-                                    
+
                                     {/* 勤務時間（記入） */}
                                     <div><label className="text-sm font-medium flex items-center mb-1"><RiTimeLine className="mr-1" /> 希望勤務時間（記入）</label><input type="text" name="preferredWorkingHours" value={formData.preferredWorkingHours} onChange={handleChange} placeholder="例: 10:00〜16:00、週3日" className="w-full border rounded-md px-3 py-2"/></div>
 
@@ -475,7 +527,7 @@ const UserProfilePage = () => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {/* 価値観チェックボックス群 */}
                             <div className="space-y-6">
                                 <p className="text-md font-semibold text-gray-700">AIマッチング要素：企業文化・価値観の希望</p>
@@ -498,11 +550,11 @@ const UserProfilePage = () => {
                             </div>
                         </section>
                     )}
-                    
+
                     {step === 3 && <ReviewStep />}
                 </form>
             </main>
-            
+
             {/* CSSの追加: input type="number"のスピナーボタンを非表示にする */}
             <style jsx global>{`
                 .no-spinner::-webkit-outer-spin-button,
