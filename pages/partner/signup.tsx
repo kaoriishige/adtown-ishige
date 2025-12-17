@@ -69,7 +69,7 @@ const PartnerSignupPage: NextPage = () => {
     // UI state management
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [showTerms, setShowTerms] = useState(false);
+    const [showTerms, setShowTerms] = useState(false); // 規約モーダルの表示/非表示
 
     const [registeredCount] = useState(32); // Dummy value for registered stores
     const totalSlots = 100;
@@ -170,9 +170,9 @@ const PartnerSignupPage: NextPage = () => {
         return '無料でダッシュボードに進む';
     };
 
-    // ★ 修正後のLINE URL定義: 元のエラーになっていたURLをここに設定
-    // 友だち追加リンク: https://lin.ee/gPZEi4C
-    const lineUrl = "https://lin.ee/gPZEi4C"; 
+    // ★ 修正箇所: LINE URLを minna-no-nasu-app.netlify.app に変更し、変数名を変更
+    const landingPageUrl = "https://minna-no-nasu-app.netlify.app/"; 
+    const lineOfficialUrl = "https://lin.ee/gPZEi4C"; // 元のLINE URLを予備で残しておく場合
 
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
@@ -298,32 +298,26 @@ const PartnerSignupPage: NextPage = () => {
                             貴店の広告やクーポン、フードロスを、アプリ広告（集客マッチングAI）出し放題で、この<strong className="font-bold">爆発的に増え続ける「貴店に理想の常連客」</strong>に直接届くのです。
                         </p>
 
-                        {/* ★★★ 修正箇所: LINE登録セクションをここに移動/ボタンをNext.js Image版に修正 ★★★ */}
+                        {/* ★★★ 修正箇所: LINEボタンをLPボタンに変更 ★★★ */}
                         <div className="mt-12 pt-8 border-t border-gray-200">
                             <h4 className="text-2xl font-black text-pink-800 mb-4 bg-yellow-100 px-6 py-3 rounded-xl border border-yellow-300 shadow-md inline-block">
-                                こちらが、地元ユーザーが利用してるアプリです。
+                                こちらが、地元ユーザーが利用してるアプリのランディングページです。
                             </h4>
                             <div className="flex flex-col items-center space-y-4">
                                 {/* 誘導テキスト */}
                                 <p className="text-xl font-bold text-gray-700">
-                                    最速3秒！LINEで友だち追加
+                                    アプリの機能を確認する
                                 </p>
-                                {/* LINEボタン: 公式LINE URLへ誘導。Next.js Imageタグを使用。 */}
+                                {/* LPボタン: minna-no-nasu-app.netlify.app/ へ誘導 */}
                                 <a 
-                                    href={lineUrl} 
+                                    href={landingPageUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="inline-block transition-transform transform hover:scale-105"
+                                    className="inline-block transition-transform transform hover:scale-105 bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3 px-8 rounded-lg shadow-lg text-lg"
                                 >
-                                    <Image 
-                                        src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" 
-                                        alt="LINE 友だち追加" 
-                                        width={140} // LINEボタンの標準的な幅
-                                        height={42} // LINEボタンの標準的な高さ
-                                        className="h-14 w-auto shadow-xl" 
-                                        unoptimized={true} // 外部画像のためunoptimizedをtrueに推奨
-                                    />
+                                    アプリのランディングページを見る
                                 </a>
+                                <p className="text-sm text-gray-500">※新規タブで開きます。</p>
                             </div>
                         </div>
                         {/* ★★★ 修正箇所ここまで ★★★ */}
@@ -437,7 +431,7 @@ const PartnerSignupPage: NextPage = () => {
 
 
                 {/* Registration Form Section - フォームのメッセージとボタンの変更 */}
-                <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10">
+                <section ref={registrationFormRef} id="registration-form" className="mt-20 pt-10 pb-20">
                     <div className="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-3xl mx-auto border border-gray-200">
                         <div className="text-center mb-10">
                             <h2 className="text-3xl font-bold text-center mb-2">パートナー無料登録</h2>
@@ -488,66 +482,56 @@ const PartnerSignupPage: NextPage = () => {
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認用）*</label>
                                     <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"/>
+                                    {email && confirmEmail && email !== confirmEmail && (
+                                        <p className="text-red-500 text-xs mt-1">メールアドレスが一致しません。</p>
+                                    )}
                                 </div>
                             </div>
                             
                             {/* エラーメッセージ */}
                             {error && (
-                                <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center">
-                                    {error}
+                                <div className="p-4 mt-4 bg-red-100 text-red-700 rounded-lg border border-red-300 text-center">
+                                    <p className="font-medium">{error}</p>
                                 </div>
                             )}
 
-                            <div className="pt-4">
-                                <label className="flex items-start">
-                                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} required className="mt-1 w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"/>
-                                    <span className="ml-3 text-sm text-gray-600">
-                                        <Link href="/terms-of-service" target="_blank" className="text-orange-600 hover:text-orange-700 font-medium underline">利用規約</Link>
-                                        と<Link href="/privacy-policy" target="_blank" className="text-orange-600 hover:text-orange-700 font-medium underline">プライバシーポリシー</Link>に同意する *
+                            {/* 規約同意と登録ボタン */}
+                            <div className="pt-6 border-t border-gray-200">
+                                <label className="flex items-start space-x-3 cursor-pointer">
+                                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 w-5 h-5 text-orange-500 rounded focus:ring-orange-400 border-gray-300"/>
+                                    <span className="text-gray-700 text-sm">
+                                        <a href="/terms/partner" target="_blank" className="text-orange-600 hover:text-orange-800 font-semibold underline">
+                                            利用規約とプライバシーポリシー
+                                        </a>
+                                        に同意します。
                                     </span>
                                 </label>
                             </div>
 
-                            <div className="pt-6">
-                                <button 
-                                    type="button" 
-                                    onClick={handleFreeSignup} 
-                                    disabled={!isFormValid || isLoading} 
-                                    className={`w-full text-white font-extrabold py-3 px-6 rounded-full text-xl shadow-lg transition-all duration-300 ${isFormValid && !isLoading 
-                                        ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 hover:shadow-xl transform hover:-translate-y-0.5' 
-                                        : 'bg-gray-400 cursor-not-allowed'}`}
-                                >
-                                    {getButtonText()}
-                                </button>
-                                {isFormValid && !isLoading && <p className="mt-2 text-sm text-center text-green-600 font-medium">クリックして無料登録を完了し、管理画面に進みます。</p>}
-                            </div>
+                            <button
+                                type="button" // form submissionを防止するため
+                                onClick={handleFreeSignup}
+                                disabled={!isFormValid || isLoading}
+                                className={`w-full py-4 rounded-lg text-lg font-extrabold transition-all duration-300 ${
+                                    isFormValid && !isLoading
+                                        ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-xl hover:shadow-2xl transform hover:-translate-y-1'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
+                            >
+                                {getButtonText()}
+                            </button>
+
+                            <p className="text-center text-sm text-gray-500 mt-4">
+                                登録後、自動でログインページに移動します。
+                            </p>
                         </form>
                     </div>
                 </section>
-
-
-                {/* Footer CTA (Registration) */}
-                <section className="text-center py-16">
-                    <h3 className="text-3xl font-extrabold">まずは無料でアプリ集客を体験しませんか？</h3>
-                    <p className="mt-4 text-lg text-gray-600">今すぐ登録して、先着100社の割引枠を確保しましょう！</p>
-                    <div className="mt-8">
-                        <button onClick={scrollToForm} className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
-                            無料で集客広告を出す
-                        </button>
-                    </div>
-                </section>
-
             </main>
 
-            {/* フッター */}
-            <footer className="mt-16 border-t bg-white py-8 text-center text-sm text-gray-500">
-                <p>&copy; {new Date().getFullYear()} 株式会社adtown. All rights reserved.</p>
-                <div className="mt-2 space-x-4">
-                    <Link href="/partner/login" className="hover:underline">パートナーログイン</Link>
-                    <Link href="/terms-of-service" className="hover:underline">利用規約</Link>
-                    <Link href="/privacy-policy" className="hover:underline">プライバシーポリシー</Link>
-                </div>
-            </footer>
+            {/* フッターやモーダルなどが必要であれば追加 */}
+            {/* <footer>...</footer> */}
+
         </div>
     );
 };
