@@ -1,23 +1,23 @@
+// pages/users/login.tsx (完全版 - ログイン状態記憶対応)
+
 import React, { useState, useEffect, Fragment } from 'react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 
-// --- ログ出力 0: ファイルのインポートが完了し、定義の直前 ---
-console.log("--- 0. login.tsx: ファイルのインポート/定義の直前 ---");
-
-// 【重要修正点】
-// 認証機能（getAuth, signInWith...など）は 'firebase/auth' からインポート
+// 【修正点 A】永続化設定に必要なものをインポートに追加
 import { 
     getAuth, 
     signInWithEmailAndPassword, 
     signInWithPopup, 
     GoogleAuthProvider, 
     onAuthStateChanged,
+    // ★ 1. 永続化に必要なインポートを追加
+    setPersistence, 
+    browserLocalPersistence,
 } from 'firebase/auth';
 
-// アプリケーション初期化機能（initializeApp, getApps, getApp）は 'firebase/app' からインポート
 import {
     initializeApp, 
     getApps, 
@@ -26,11 +26,11 @@ import {
 
 // --- アイコンライブラリ（lucide-reactまたは類似）からのインポートを仮定 ---
 import { 
-    AlertTriangle,    
-    Key,              
-    Loader2,          
-    Eye,              
-    EyeOff,           
+    AlertTriangle, 
+    Key, 
+    Loader2, 
+    Eye, 
+    EyeOff, 
 } from 'lucide-react'; 
 
 // --- Firebase の設定 ---
@@ -55,7 +55,7 @@ const EyeIcon = (props: React.SVGProps<SVGSVGElement>) => <Eye {...props} />;
 const EyeOffIcon = (props: React.SVGProps<SVGSVGElement>) => <EyeOff {...props} />;
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M22 12c0-1.12-1.07-2.73-2.9-3.92H12v3.83h5.3c-.23 1.15-1.18 2.39-2.9 3.49l-.02.01h3.76c2.2-1.78 3.46-4.08 3.46-6.41z"/><path d="M12 21c-3.72 0-6.84-2.22-8.32-5.4l.02-.01H6.7c1.3 2.76 4.09 4.67 7.3 4.67 2.2 0 4.08-.75 5.44-2.05l-3.76-2.9z"/><path d="M3.68 9.53a8.88 8.88 0 0 1 0-3.06L7.44 3.7l.02.01C5.83 5.09 4.7 7.15 4.7 9.5c0 1.25.26 2.45.75 3.52l-3.23 2.5z"/><path d="M12 3.67c1.88 0 3.53.64 4.88 1.99l3.47-3.47C18.66 1.48 15.53 0 12 0 8.04 0 4.54 2.1 2.87 5.25l3.54 2.73C6.73 6.13 9.17 4.67 12 4.67z"/>
+        <path d="M22 12c0-1.12-1.07-2.73-2.9-3.92H12v3.83h5.3c-.23 1.15-1.18 2.39-2.9 3.49l-.02.01h3.76c2.2-1.78 3.46-4.08 3.46-6.41z"/><path d="M12 21c-3.72 0-6.84-2.22-8.32-5.4l.02-.01H6.7c1.3 2.76 4.09 4.67 7.3 4.67 2.2 0 4.08-.75 5.44-2.05l-3.76-2.9z"/><path d="M3.68 9.53a8.88 8.88 0 0 1 0-3.06L7.44 3.7l-.02.01C5.83 5.09 4.7 7.15 4.7 9.5c0 1.25.26 2.45.75 3.52l-3.23 2.5z"/><path d="M12 3.67c1.88 0 3.53.64 4.88 1.99l3.47-3.47C18.66 1.48 15.53 0 12 0 8.04 0 4.54 2.1 2.87 5.25l3.54 2.73C6.73 6.13 9.17 4.67 12 4.67z"/>
     </svg>
 );
 
@@ -95,9 +95,6 @@ const getErrorMessage = (e: any): string => {
 // ------------------------------------------------
 
 const LoginPage: NextPage = () => {
-    // ★ ログ出力 1: コンポーネントがレンダリングを開始しました
-    console.log("--- 1. login.tsx: コンポーネントのレンダリングが開始されました ---");
-
     const router = useRouter();
     const firebaseAuth = auth;
 
@@ -110,17 +107,13 @@ const LoginPage: NextPage = () => {
 
     // ログイン状態の監視とリダイレクト
     useEffect(() => {
-        // ★ ログ出力 2: useEffect の処理が開始されました
-        console.log("--- 2. login.tsx: useEffect (onAuthStateChanged) の処理が開始されました ---");
-
         const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
             if (user) {
+                // 認証済みであればホームへリダイレクト
                 router.push('/home');
             }
         });
         return () => {
-            // ★ ログ出力 3: useEffect のクリーンアップが実行されました
-            console.log("--- 3. login.tsx: useEffect のクリーンアップが実行されました ---");
             unsubscribe();
         };
     }, [firebaseAuth, router]);
@@ -161,12 +154,14 @@ const LoginPage: NextPage = () => {
 
     // メール/パスワードログイン処理
     const handleEmailLogin = async (e: React.FormEvent) => {
-        // ... (既存のロジックは変更なし) ...
         e.preventDefault();
         setIsLoggingIn(true);
         setError(null);
 
         try {
+            // ★ 2. メール/パスワードログインの前に永続化を設定
+            await setPersistence(firebaseAuth, browserLocalPersistence); 
+            
             const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
             await createSession(userCredential.user);
         } catch (e: any) {
@@ -178,11 +173,13 @@ const LoginPage: NextPage = () => {
 
     // Googleログイン処理
     const handleGoogleLogin = async () => {
-        // ... (既存のロジックは変更なし) ...
         setIsLoggingIn(true);
         setError(null);
 
         try {
+            // ★ 3. Googleログインの前に永続化を設定
+            await setPersistence(firebaseAuth, browserLocalPersistence);
+
             const result = await signInWithPopup(firebaseAuth, googleProvider);
             await createSession(result.user);
         } catch (e: any) {
@@ -196,8 +193,7 @@ const LoginPage: NextPage = () => {
     // JSX (レンダリング)
     // ------------------------------------------------
     return (
-        // ★ ログ出力 4: JSX の描画が完了しました (ブラウザに表示されるはず)
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" onClick={() => console.log("--- 4. login.tsx: JSXがクリックされました ---")}>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <Head>
                 <title>ログイン - みんなの那須アプリ</title>
             </Head>
