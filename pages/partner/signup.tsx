@@ -170,7 +170,9 @@ const PartnerSignupPage: NextPage = () => {
         return '無料でダッシュボードに進む';
     };
 
-    const lineUrl = "https://lin.ee/your-line-id"; // LINE URLは適宜置き換えてください
+    // ★ 修正後のLINE URL定義: 元のエラーになっていたURLをここに設定
+    // 友だち追加リンク: https://lin.ee/gPZEi4C
+    const lineUrl = "https://lin.ee/gPZEi4C"; 
 
     return (
         <div className="bg-gray-50 text-gray-800 font-sans">
@@ -296,7 +298,7 @@ const PartnerSignupPage: NextPage = () => {
                             貴店の広告やクーポン、フードロスを、アプリ広告（集客マッチングAI）出し放題で、この<strong className="font-bold">爆発的に増え続ける「貴店に理想の常連客」</strong>に直接届くのです。
                         </p>
 
-                        {/* ★★★ 修正箇所: LINE登録セクションをここに移動 ★★★ */}
+                        {/* ★★★ 修正箇所: LINE登録セクションをここに移動/ボタンをNext.js Image版に修正 ★★★ */}
                         <div className="mt-12 pt-8 border-t border-gray-200">
                             <h4 className="text-2xl font-black text-pink-800 mb-4 bg-yellow-100 px-6 py-3 rounded-xl border border-yellow-300 shadow-md inline-block">
                                 こちらが、地元ユーザーが利用してるアプリです。
@@ -306,10 +308,21 @@ const PartnerSignupPage: NextPage = () => {
                                 <p className="text-xl font-bold text-gray-700">
                                     最速3秒！LINEで友だち追加
                                 </p>
-                                {/* LINEボタン: 公式LINE URLへ誘導 */}
-                                <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
+                                {/* LINEボタン: 公式LINE URLへ誘導。Next.js Imageタグを使用。 */}
+                                <a 
+                                    href={lineUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="inline-block transition-transform transform hover:scale-105"
+                                >
+                                    <Image 
+                                        src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" 
+                                        alt="LINE 友だち追加" 
+                                        width={140} // LINEボタンの標準的な幅
+                                        height={42} // LINEボタンの標準的な高さ
+                                        className="h-14 w-auto shadow-xl" 
+                                        unoptimized={true} // 外部画像のためunoptimizedをtrueに推奨
+                                    />
                                 </a>
                             </div>
                         </div>
@@ -487,64 +500,53 @@ const PartnerSignupPage: NextPage = () => {
 
                             <div className="pt-4">
                                 <label className="flex items-start">
-                                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-5 w-5 text-orange-600 focus:ring-orange-500 rounded"/>
+                                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} required className="mt-1 w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"/>
                                     <span className="ml-3 text-sm text-gray-600">
-                                        <button type="button" onClick={() => setShowTerms(true)}
-                                            className="text-orange-600 hover:text-orange-800 font-medium focus:outline-none">
-                                            利用規約
-                                        </button>
-                                        および
-                                        <button type="button" onClick={() => setShowTerms(true)}
-                                            className="text-orange-600 hover:text-orange-800 font-medium focus:outline-none">
-                                            プライバシーポリシー
-                                        </button>
-                                        に同意する。*
+                                        <Link href="/terms-of-service" target="_blank" className="text-orange-600 hover:text-orange-700 font-medium underline">利用規約</Link>
+                                        と<Link href="/privacy-policy" target="_blank" className="text-orange-600 hover:text-orange-700 font-medium underline">プライバシーポリシー</Link>に同意する *
                                     </span>
                                 </label>
                             </div>
 
                             <div className="pt-6">
-                                <button type="submit" onClick={handleFreeSignup} disabled={!isFormValid || isLoading} className={`w-full text-white font-extrabold py-4 rounded-full text-xl shadow-lg transition-all duration-300 ${!isFormValid || isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:shadow-2xl hover:from-teal-600 hover:to-cyan-600'}`}>
+                                <button 
+                                    type="button" 
+                                    onClick={handleFreeSignup} 
+                                    disabled={!isFormValid || isLoading} 
+                                    className={`w-full text-white font-extrabold py-3 px-6 rounded-full text-xl shadow-lg transition-all duration-300 ${isFormValid && !isLoading 
+                                        ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 hover:shadow-xl transform hover:-translate-y-0.5' 
+                                        : 'bg-gray-400 cursor-not-allowed'}`}
+                                >
                                     {getButtonText()}
                                 </button>
-                                <p className="mt-2 text-center text-sm text-gray-500">ご登録後、パートナー管理ダッシュボードに自動でログインします。</p>
+                                {isFormValid && !isLoading && <p className="mt-2 text-sm text-center text-green-600 font-medium">クリックして無料登録を完了し、管理画面に進みます。</p>}
                             </div>
                         </form>
                     </div>
                 </section>
 
 
-                {/* Modal for Terms (Simplified) */}
-                {showTerms && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-lg p-6 max-w-xl w-full max-h-full overflow-y-auto">
-                            <h3 className="text-2xl font-bold mb-4">利用規約 / プライバシーポリシー</h3>
-                            <div className="text-gray-700 space-y-4 text-sm h-96 overflow-y-auto border p-4">
-                                <p>ここに利用規約とプライバシーポリシーの全文が入ります。実際の環境では、外部ファイルへのリンクや詳細な内容を記載してください。</p>
-                                <p>利用規約の例：</p>
-                                <ul className="list-disc list-inside ml-4">
-                                    <li>本サービスは那須地域（那須塩原市、那須郡那須町、大田原市）の店舗様を対象としています。</li>
-                                    <li>無料登録で基本機能をご利用いただけますが、有料機能は別途お申込みが必要です。</li>
-                                    <li>パスワードは6文字以上で設定してください。</li>
-                                </ul>
-                                <p>プライバシーポリシーの例：</p>
-                                <ul className="list-disc list-inside ml-4">
-                                    <li>ご入力いただいた情報は、サービス運営およびお客様への連絡にのみ使用されます。</li>
-                                    <li>法令に基づく場合を除き、個人情報をご本人の同意なく第三者に提供することはありません。</li>
-                                </ul>
-                                {/* ... 実際の規約内容をここに追記 ... */}
-                                <p className="font-bold pt-4">（このテキストはダミーです。実際の内容に置き換えてください。）</p>
-                            </div>
-                            <button onClick={() => setShowTerms(false)} className="mt-6 w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition-colors">閉じる</button>
-                        </div>
+                {/* Footer CTA (Registration) */}
+                <section className="text-center py-16">
+                    <h3 className="text-3xl font-extrabold">まずは無料でアプリ集客を体験しませんか？</h3>
+                    <p className="mt-4 text-lg text-gray-600">今すぐ登録して、先着100社の割引枠を確保しましょう！</p>
+                    <div className="mt-8">
+                        <button onClick={scrollToForm} className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-extrabold py-4 px-10 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300">
+                            無料で集客広告を出す
+                        </button>
                     </div>
-                )}
-                
+                </section>
 
             </main>
 
-            <footer className="mt-12 py-10 bg-gray-900 text-white text-center">
-                <p className="text-sm">&copy; {new Date().getFullYear()} adtown Co., Ltd. All rights reserved.</p>
+            {/* フッター */}
+            <footer className="mt-16 border-t bg-white py-8 text-center text-sm text-gray-500">
+                <p>&copy; {new Date().getFullYear()} 株式会社adtown. All rights reserved.</p>
+                <div className="mt-2 space-x-4">
+                    <Link href="/partner/login" className="hover:underline">パートナーログイン</Link>
+                    <Link href="/terms-of-service" className="hover:underline">利用規約</Link>
+                    <Link href="/privacy-policy" className="hover:underline">プライバシーポリシー</Link>
+                </div>
             </footer>
         </div>
     );
