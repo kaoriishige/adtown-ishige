@@ -3,9 +3,9 @@
 // NOTE: Next.js specific imports are restored/adjusted to fix errors and ensure compatibility.
 
 import React, { useState, useEffect, useRef } from 'react';
-// import Link from 'next/link'; // Next.js環境の場合はコメントアウトを解除してください
-// import Image from 'next/image'; 
-// import Head from 'next/head'; 
+import Link from 'next/link'; 
+import Head from 'next/head'; 
+// import Image from 'next/image'; // 最適化が必要な場合は使用してください
 // import { useRouter } from 'next/router'; 
 import { NextPage } from 'next'; 
 import { User } from 'firebase/auth';
@@ -88,7 +88,6 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
   );
 };
 
-// Custom hook for persistent state using sessionStorage
 const usePersistentState = (key: string, defaultValue: any) => {
   const [state, setState] = useState(() => {
     if (typeof window === 'undefined') { return defaultValue; }
@@ -115,7 +114,6 @@ const usePersistentState = (key: string, defaultValue: any) => {
 };
 
 const RecruitSignupPage: NextPage = () => {
-  // Form state management
   const [companyName, setCompanyName] = usePersistentState('recruitForm_companyName', '');
   const [address, setAddress] = usePersistentState('recruitForm_address', '');
   const [area, setArea] = usePersistentState('recruitForm_area', '');
@@ -126,12 +124,9 @@ const RecruitSignupPage: NextPage = () => {
   const [password, setPassword] = usePersistentState('recruitForm_password', '');
   const [agreed, setAgreed] = usePersistentState('recruitForm_agreed', false);
 
-  // UI state management
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTerms, setShowTerms] = useState(false);
-
-  // 認証状態管理
   const [currentAuthUser, setCurrentAuthUser] = useState<User | null>(null);
   const [isDataLoading] = useState(false); 
   const [registeredCount] = useState(45); 
@@ -140,12 +135,10 @@ const RecruitSignupPage: NextPage = () => {
 
   const registrationFormRef = useRef<HTMLDivElement>(null);
 
-  // --- 認証ユーザーの確認 ---
   useEffect(() => {
     setCurrentAuthUser(null);
   }, []);
 
-  // Auto-detect area from address
   useEffect(() => {
     const match = address.match(/(那須塩原市|那須郡那須町|那須町|大田原市)/);
     if (match) {
@@ -159,7 +152,6 @@ const RecruitSignupPage: NextPage = () => {
     registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Check if form is complete
   const isPasswordRequired = !currentAuthUser;
   const isFormValid = !!(
     companyName &&
@@ -241,8 +233,10 @@ const RecruitSignupPage: NextPage = () => {
 
   return (
     <div className="bg-gray-50 text-gray-800 font-sans">
-      <title>{"AI求人パートナー無料登録(みんなの那須アプリ)"}</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+      <Head>
+        <title>AI求人パートナー無料登録(みんなの那須アプリ)</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+      </Head>
 
       <header className="bg-white shadow-md sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -330,7 +324,6 @@ const RecruitSignupPage: NextPage = () => {
           </div>
         </section>
 
-        {/* ★★★社会的証明セクション ★★★ */}
         <section className="mt-20 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-200">
           <div className="max-w-4xl mx-auto text-center">
             <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
@@ -340,8 +333,6 @@ const RecruitSignupPage: NextPage = () => {
               先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
               貴社の求人情報は、この<strong className="font-bold">爆発的に増え続ける「御社が求める求職者」</strong>に直接届くのです。
             </p>
-
-            {/* ★★★ 追加箇所：アプリランディングページへの誘導 ★★★ */}
             <div className="mt-12 p-6 bg-blue-50 rounded-xl border border-blue-100">
               <p className="text-lg font-bold text-gray-800 mb-4">
                 こちらが、地元ユーザーが利用してるアプリのランディングページです。<br />
@@ -360,7 +351,6 @@ const RecruitSignupPage: NextPage = () => {
           </div>
         </section>
 
-        {/* ★★★新規追加セクション: 1. 【無料プラン】 ★★★ */}
         <section className="mt-20">
           <div className="max-w-4xl mx-auto p-6 bg-green-700 text-white rounded-xl shadow-lg">
             <h3 className="text-2xl font-extrabold mb-4 border-b border-green-500 pb-2">
@@ -414,7 +404,6 @@ const RecruitSignupPage: NextPage = () => {
               </p>
             </div>
           </div>
-
           <div className="mt-12 text-center bg-green-50 border-t-4 border-green-400 p-6 rounded-lg">
             <p className="text-xl font-bold text-green-800">
               まずは無料登録から。有料機能は求人管理ページからいつでも開始・停止できます。<br />
@@ -461,121 +450,57 @@ const RecruitSignupPage: NextPage = () => {
         <section className="mt-24 mb-20" ref={registrationFormRef}>
           <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
             <div className="bg-gradient-to-r from-orange-500 to-red-600 px-8 py-6 text-center">
-              <h3 className="text-2xl md:text-3xl font-extrabold text-white">
-                今すぐ無料でアカウントを作成
-              </h3>
+              <h3 className="text-2xl md:text-3xl font-extrabold text-white">今すぐ無料でアカウントを作成</h3>
               <p className="text-orange-100 mt-2">
                 まずは無料プランで、地域の求職者にアピールしましょう。<br />
                 先着100社限定の割引枠も、今登録すれば確保されます。
               </p>
             </div>
-
             <form className="p-8 md:p-10 space-y-6">
               <div>
                 <label className="block text-gray-700 font-medium mb-2">企業名・店舗名 *</label>
-                <input
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                />
+                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500" />
               </div>
-
               <div>
                 <label className="block text-gray-700 font-medium mb-2">ご担当者名 *</label>
-                <input
-                  type="text"
-                  value={contactPerson}
-                  onChange={(e) => setContactPerson(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                />
+                <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500" />
               </div>
-
               <div>
                 <label className="block text-gray-700 font-medium mb-2">所在地 *</label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  required
-                  placeholder="例：栃木県那須塩原市共墾社108-2"
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                />
+                <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="例：栃木県那須塩原市共墾社108-2" className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500" />
                 {address && !area && (
                   <p className="text-sm text-red-500 mt-1">※那須地域（那須塩原市、那須町、大田原市）の住所を入力してください。</p>
                 )}
               </div>
-
               <div>
                 <label className="block text-gray-700 font-medium mb-2">電話番号 *</label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                />
+                <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500" />
               </div>
-
               <div>
                 <label className="block text-gray-700 font-medium mb-2">メールアドレス *</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500" />
               </div>
-
               <div>
                 <label className="block text-gray-700 font-medium mb-2">メールアドレス（確認） *</label>
-                <input
-                  type="email"
-                  value={confirmEmail}
-                  onChange={(e) => setConfirmEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                />
+                <input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} required className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500" />
                 {email && confirmEmail && email !== confirmEmail && (
                   <p className="text-sm text-red-500 mt-1">メールアドレスが一致しません。</p>
                 )}
               </div>
-
               {isPasswordRequired && (
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">パスワード（6文字以上） *</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                  />
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full px-4 py-2 border rounded-lg focus:ring-orange-500 focus:border-orange-500" />
                 </div>
               )}
-
               <div className="flex items-start mt-4">
                 <div className="flex items-center h-5">
-                  <input
-                    id="terms"
-                    type="checkbox"
-                    checked={agreed}
-                    onChange={(e) => setAgreed(e.target.checked)}
-                    className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-orange-300"
-                  />
+                  <input id="terms" type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-orange-300" />
                 </div>
                 <label htmlFor="terms" className="ml-2 text-sm font-medium text-gray-900">
-                  <button type="button" onClick={() => setShowTerms(!showTerms)} className="text-orange-600 hover:underline">
-                    利用規約
-                  </button>
-                  に同意する
+                  <button type="button" onClick={() => setShowTerms(!showTerms)} className="text-orange-600 hover:underline">利用規約</button>に同意する
                 </label>
               </div>
-
               {showTerms && (
                 <div className="mt-4 p-4 bg-gray-100 rounded-lg h-60 overflow-y-auto text-sm text-gray-700 border border-gray-300">
                   <h4 className="font-bold mb-2">利用規約</h4>
@@ -584,47 +509,34 @@ const RecruitSignupPage: NextPage = () => {
                     <p><strong>第2条（利用資格）</strong><br />本サービスは、当社が別途定める審査基準を満たした法人または個人事業主（以下「パートナー」といいます。）のみが利用できるものとします。</p>
                     <p><strong>第3条（利用料金）</strong><br />
                       1. 本サービスの基本機能（求人情報の登録・掲載）は**無料**です。<br />
-                      2. パートナーは、以下の**有料機能**を利用する場合、当社に対し、別途定める利用料金（月額<strong className="font-bold">8,800円</strong>（税込）、先着100社限定で6,600円）を支払うものとします。有料機能への申し込みは、ダッシュボード内で行えます。<br />
+                      2. パートナーは、以下の**有料機能**を利用する場合、当社に対し、別途定める利用料金（月額8,800円（税込）、先着100社限定で6,600円）を支払うものとします。有料機能への申し込みは、ダッシュボード内で行えます。<br />
                       (a) 求人マッチングAI（候補者の自動提案、スカウト機能）<br />
                       (b) 求人アドバイスAI（求人票の自動改善提案）<br />
-                      3. 支払い方法は、クレジットカード決済（月額）のみとします。<strong className="font-bold">年額支払いの設定はありません。</strong>
+                      3. 支払い方法は、クレジットカード決済（月額）のみとします。年額支払いの設定はありません。
                     </p>
                   </div>
                 </div>
               )}
-
               {error && (
                 <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center">
                   <XCircleIcon className="h-5 w-5 mr-3" />
                   <p className="text-sm">{error}</p>
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={handleFreeSignup}
-                disabled={isLoading || !isFormValid}
-                className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-              >
+              <button type="button" onClick={handleFreeSignup} disabled={isLoading || !isFormValid} className="w-full py-4 mt-4 text-white text-lg font-bold bg-gradient-to-r from-orange-500 to-red-500 rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                 {getButtonText()}
               </button>
-
-              <p className="text-sm text-center -mt-2 text-gray-500">
-                ご登録後、ログインして管理ページより有料AI機能をお申込みいただけます。
-              </p>
+              <p className="text-sm text-center -mt-2 text-gray-500">ご登録後、ログインして管理ページより有料AI機能をお申込みいただけます。</p>
             </form>
-
             <p className="text-sm text-center mt-6 mb-8">
               すでにご担当者アカウントをお持ちの方は
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-              <a href="/partner/login" className="text-orange-600 font-bold hover:underline ml-1">
+              <Link href="/partner/login" className="text-orange-600 font-bold hover:underline ml-1">
                 こちらからログイン
-              </a>
+              </Link>
             </p>
           </div>
         </section>
       </main>
-
       <footer className="bg-gray-800 text-white py-8 text-center">
         <p className="text-sm opacity-75">&copy; 2024 Adtown Co., Ltd. All rights reserved.</p>
       </footer>
