@@ -2,13 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    ignoreDuringBuilds: true, // ビルド時にeslintエラーで止めない
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true, // 型エラーでビルドを止めない
+    ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true, // ← ここが重要。Netlify で next/image の問題回避
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -37,7 +37,7 @@ const nextConfig = {
     };
     return config;
   },
-  output: 'standalone',
+  // output: 'export' は削除しました。これでAPIエラーが消えます。
 };
 
 module.exports = nextConfig;

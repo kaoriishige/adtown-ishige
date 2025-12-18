@@ -1,50 +1,68 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import { adminAuth } from "@/lib/firebase-admin";
-import nookies from "nookies";
+import { NextApiRequest, NextApiResponse } from 'next';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  try {
-    // 🔹 ID Tokenの取得ロジックは変更なし
-    const authHeader = req.headers.authorization;
-    let idToken: string | undefined;
-
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      idToken = authHeader.split("Bearer ")[1];
-    } else if (req.body?.idToken) {
-      idToken = req.body.idToken;
+    if (req.method !== 'POST') {
+        res.setHeader('Allow', ['POST']);
+        return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    if (!idToken) {
-      return res.status(400).json({ error: "Missing ID token" });
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    const { loginType } = req.body; 
+
+    if (!idToken || !loginType) {
+        return res.status(401).json({ error: 'Authorization token or login type is missing.' });
     }
 
-    // 🔹 セッションCookieを作成
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5日間
-    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
+    try {
+        // 1. IDトークンを検証
+        const decodedToken = await adminAuth.verifyIdToken(idToken);
+        const uid = decodedToken.uid;
 
-    // 🔹 Cookieに保存（httpOnly）
-    // ★★★ 最終修正: クッキー名を 'session' に戻します。
-    // ★★★ sameSiteは、エラー解消のため最も安全な 'none' を維持し、secure: true も固定します。
-    nookies.set({ res }, "session", sessionCookie, {
-      maxAge: expiresIn / 1000,
-      httpOnly: true,
-      secure: true, 
-      path: "/",
-      sameSite: "none", 
-    });
+        // 2. Firestoreでユーザーのロールとデータを検証
+        const userDocRef = adminDb.collection('users').doc(uid);
+        const userDoc = await userDocRef.get();
 
-    return res.status(200).json({ message: "Session created" });
-  } catch (error) {
-    console.error("Session creation failed:", error);
-    return res.status(401).json({ error: "Unauthorized" });
-  }
+        if (!userDoc.exists) {
+            // 登録がない場合は403エラーと特定の文字列を返す
+            return res.status(403).json({ error: 'user_data_missing' }); 
+        }
+
+        const userData = userDoc.data();
+        const requiredRole = loginType === 'recruit' ? 'recruit' : 'adver';
+
+        // ロールチェック
+        if (!userData?.roles || !userData.roles.includes(requiredRole)) {
+            return res.status(403).json({ error: 'permission_denied' }); 
+        }
+
+        // 3. セッションクッキーを作成
+        const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: 60 * 60 * 24 * 5 * 1000 });
+        
+        const isProduction = process.env.NODE_ENV === 'production';
+        const domain = process.env.NEXT_PUBLIC_APP_DOMAIN;
+        
+        const COOKIE_OPTIONS = [
+            `Max-Age=${60 * 60 * 24 * 5}`,
+            'HttpOnly',
+            'SameSite=Strict', 
+            'Path=/',
+            isProduction ? 'Secure' : '',
+            (isProduction && domain) ? `Domain=${domain}` : '',
+        ].filter(Boolean).join('; ');
+
+        res.setHeader('Set-Cookie', `__session=${sessionCookie}; ${COOKIE_OPTIONS}`);
+
+        // 4. 正しいリダイレクト先を返す（フロントがこれを見て移動します）
+        const redirectPath = loginType === 'recruit' ? '/recruit/dashboard' : '/partner/dashboard';
+
+        return res.status(200).json({ uid, redirect: redirectPath, message: 'ログインが完了しました。' });
+
+    } catch (error: any) {
+        console.error('Session Login API error:', error);
+        return res.status(401).json({ error: '認証に失敗しました。' }); 
+    }
 }
-
-
 
 
 
