@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where, orderBy, limit } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -18,8 +18,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// すべてのページで必要とされている関数をまとめてエクスポート
 export { 
   app, auth, db, storage,
-  collection, getDocs, addDoc, doc, updateDoc, deleteDoc 
+  collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where, orderBy, limit 
 };
