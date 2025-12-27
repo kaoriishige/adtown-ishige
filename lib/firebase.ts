@@ -1,8 +1,8 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
-// 環境変数が正しく設定されていることを前提とします
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,13 +12,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// サーバーサイドレンダリング(SSR)時の二重初期化を防ぐ
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// インスタンスを作成
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-// 名前付きエクスポート (Named Export)
-// pages/projects/[id].tsx 側の import { auth, db } ... に対応します
-export { app, auth, db };
+// すべてのページで必要とされている関数をまとめてエクスポート
+export { 
+  app, auth, db, storage,
+  collection, getDocs, addDoc, doc, updateDoc, deleteDoc 
+};
