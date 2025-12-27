@@ -10,60 +10,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const idToken = req.headers.authorization?.split('Bearer ')[1];
     const { loginType } = req.body; 
 
-    if (!idToken || !loginType) {
-        return res.status(401).json({ error: 'Authorization token or login type is missing.' });
+    if (!idToken) {
+        return res.status(401).json({ error: '認証トークンがありません。' });
     }
 
     try {
-        // 1. IDトークンを検証
+        // 1. トークン検証
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         const uid = decodedToken.uid;
 
-        // 2. Firestoreでユーザーのロールとデータを検証
-        const userDocRef = adminDb.collection('users').doc(uid);
-        const userDoc = await userDocRef.get();
-
+        // 2. ユーザー確認
+        const userDoc = await adminDb.collection('users').doc(uid).get();
         if (!userDoc.exists) {
-            // 登録がない場合は403エラーと特定の文字列を返す
             return res.status(403).json({ error: 'user_data_missing' }); 
         }
 
-        const userData = userDoc.data();
-        const requiredRole = loginType === 'recruit' ? 'recruit' : 'adver';
-
-        // ロールチェック
-        if (!userData?.roles || !userData.roles.includes(requiredRole)) {
-            return res.status(403).json({ error: 'permission_denied' }); 
-        }
-
-        // 3. セッションクッキーを作成
-        const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: 60 * 60 * 24 * 5 * 1000 });
+        // 3. セッションクッキー作成（有効期限5日間）
+        const expiresIn = 60 * 60 * 24 * 5 * 1000;
+        const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
         
         const isProduction = process.env.NODE_ENV === 'production';
-        const domain = process.env.NEXT_PUBLIC_APP_DOMAIN;
         
+        // ★重要：home.tsxが「session」という名前で探しているため、ここを「session」にする
+        const COOKIE_NAME = 'session';
         const COOKIE_OPTIONS = [
             `Max-Age=${60 * 60 * 24 * 5}`,
             'HttpOnly',
             'SameSite=Strict', 
             'Path=/',
             isProduction ? 'Secure' : '',
-            (isProduction && domain) ? `Domain=${domain}` : '',
         ].filter(Boolean).join('; ');
 
-        res.setHeader('Set-Cookie', `__session=${sessionCookie}; ${COOKIE_OPTIONS}`);
+        res.setHeader('Set-Cookie', `${COOKIE_NAME}=${sessionCookie}; ${COOKIE_OPTIONS}`);
 
-        // 4. 正しいリダイレクト先を返す（フロントがこれを見て移動します）
-        const redirectPath = loginType === 'recruit' ? '/recruit/dashboard' : '/partner/dashboard';
+        // 4. リダイレクト先の決定
+        let redirectPath = '/home';
+        if (loginType === 'recruit') redirectPath = '/recruit/dashboard';
+        if (loginType === 'adver') redirectPath = '/partner/dashboard';
 
-        return res.status(200).json({ uid, redirect: redirectPath, message: 'ログインが完了しました。' });
+        return res.status(200).json({ uid, redirect: redirectPath });
 
     } catch (error: any) {
         console.error('Session Login API error:', error);
         return res.status(401).json({ error: '認証に失敗しました。' }); 
     }
 }
-
-
 
 
