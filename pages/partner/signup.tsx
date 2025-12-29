@@ -183,7 +183,7 @@ const PartnerSignupPage: NextPage = () => {
                     <div className="max-w-4xl mx-auto text-center">
                         <UsersIcon className="w-12 h-12 mx-auto text-orange-500 mb-4" />
                         <h3 className="text-3xl font-extrabold leading-tight">第３の集客、なぜアプリ集客広告（集客マッチングAI）なのか？<br/>答えは「圧倒的な見込み客」です。</h3>
-                        <p className="mt-6 text-lg text-gray-600 leading-relaxed text-left">那須地域限定の『みんなのNasuアプリ』は、ほとんどの機能が無料で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。先行登録者はすでに3,000人を突破。口コミでその輪は確実に広がり、5,000人、10,000人の巨大なユーザーコミュニティへと成長します。貴店の広告やクーポン、フードロスを、アプリ広告出し放題で、この爆発的に増え続ける「貴店に理想の常連客」に直接届くのです。</p>
+                        <p className="mt-6 text-lg text-gray-600 leading-relaxed text-left">那須地域限定の『みんなのNasuアプリ』は、ほとんどの機能が無料で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。先行登録者はすでに1,000人を突破。口コミでその輪は確実に広がり、5,000人、10,000人の巨大なユーザーコミュニティへと成長します。貴店の広告やクーポン、フードロスを、アプリ広告出し放題で、この爆発的に増え続ける「貴店に理想の常連客」に直接届くのです。</p>
                         <div className="mt-12 pt-8 border-t border-gray-200">
                             <h4 className="text-2xl font-black text-pink-800 mb-4 bg-yellow-100 px-6 py-3 rounded-xl border border-yellow-300 shadow-md inline-block">こちらが、地元ユーザーが利用してるアプリのランディングページです。</h4>
                             <p className="text-lg font-bold text-gray-700 mb-6">アプリの機能を確認する</p>

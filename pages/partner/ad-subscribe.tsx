@@ -386,7 +386,7 @@ const PartnerSignupPage: NextPage = () => {
                         <h3 className="text-3xl font-extrabold">なぜ今、アプリ広告（集客マッチングAI）なのか？答えは「圧倒的な見込み客」です。</h3>
                         <p className="mt-6 text-lg text-gray-600 leading-relaxed">
                             『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。
-                            先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
+                            先行登録者はすでに<strong className="text-orange-600 font-bold">,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
                             貴店の広告やクーポン、フードロスを、アプリ広告（集客マッチングAI）出し放題で、この<strong className="font-bold">爆発的に増え続ける「未来の常連客」</strong>に直接届くのです。
                         </p>
                     </div>

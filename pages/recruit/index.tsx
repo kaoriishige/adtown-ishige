@@ -330,7 +330,7 @@ const RecruitSignupPage: NextPage = () => {
             <h3 className="text-3xl font-extrabold">第3の求人方法、それは「アプリ求人」、なぜアプリなのか? 答えは「圧倒的な地元の見込み客」です。</h3>
             <p className="mt-6 text-lg text-gray-600 leading-relaxed">
               那須地域限定の『みんなの那須アプリ』は、ほとんどの機能が<strong className="text-orange-600 font-bold">無料</strong>で使えるため、那須地域の住民にとって「ないと損」なアプリになりつつあります。
-              先行登録者はすでに<strong className="text-orange-600 font-bold">3,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
+              先行登録者はすでに<strong className="text-orange-600 font-bold">1,000人</strong>を突破。口コミでその輪は確実に広がり、<strong className="text-orange-600 font-bold">5,000人、10,000人</strong>の巨大なユーザーコミュニティへと成長します。
               貴社の求人情報は、この<strong className="font-bold">爆発的に増え続ける「御社が求める求職者」</strong>に直接届くのです。
             </p>
             <div className="mt-12 p-6 bg-blue-50 rounded-xl border border-blue-100">
