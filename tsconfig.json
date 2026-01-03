@@ -2,32 +2,35 @@
   "compilerOptions": {
     /* 必須設定 */
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "module": "esnext",
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
-
     /* 厳密なチェックを緩和 (エラーを減らすため) */
     "strict": false, // 一時的にfalseにします
     "noImplicitAny": false, // any型を許可しエラーを減らします
     "strictNullChecks": false, // null/undefinedチェックを緩和します
     "noUnusedLocals": false, // 未使用の変数があっても警告/エラーを出しません
-
     /* パスエイリアスの設定 */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
-  
   "include": [
     "next-env.d.ts",
     "**/*.ts",
@@ -37,4 +40,3 @@
     "node_modules"
   ]
 }
-
