@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, User } from 'firebase/auth';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { ShoppingCart, Flame, Loader2, ThumbsUp, ArrowLeft, Utensils, Zap, X } from 'lucide-react';
+import { ShoppingCart, Flame, Loader2, ThumbsUp, ArrowLeft, Utensils, Zap } from 'lucide-react';
+// import liff from '@line/liff'; <-- TS2307 エラーの原因となるため削除
 
 // --- 型定義 ---
 interface Recipe {
@@ -38,9 +39,10 @@ const initialAuthToken = getEnvVar('__initial_auth_token') || null;
 // Gemini API のエンドポイント
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
 
-// --- 店舗情報 ---
+// --- 店舗情報 (特殊文字を修正済み) ---
 const SALE_DATA_BY_AREA: { [area: string]: { [store: string]: { url: string } } } = {
     "那須塩原市": {
+        // 元々あった店舗
         "ザ・ビッグ 那須店": { url: "https://tokubai.co.jp/%E3%82%B6%E3%83%BB%E3%83%93%E3%83%83%E3%82%B0/12250" },
         "ヨークベニマル 上厚崎店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/170882" },
         "ヨークベニマル 那須塩原店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/9591" },
@@ -59,9 +61,11 @@ const SALE_DATA_BY_AREA: { [area: string]: { [store: string]: { url: string } } 
         "ヨークベニマル 西富山店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/227875" }
     },
     "大田原市": {
+        // 元々あった店舗
         "ヨークベニマル 大田原店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/9597" },
         "たいらや 大田原本町店": { url: "https://tokubai.co.jp/%E3%81%9F%E3%81%84%E3%82%89%E3%82%84/173987" },
         "ベイシア 大田原店": { url: "https://tokubai.co.jp/%E3%83%99%E3%82%A4%E3%82%B7%E3%82%A2/4068" },
+        // 追加された店舗
         "ヨークベニマル 大田原住吉店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/42986" },
         "たいらや 中田原店": { url: "https://tokubai.co.jp/%E3%81%9F%E3%81%84%E3%82%89%E3%82%84/264880" },
         "リオン・ドール 元町店": { url: "https://tokubai.co.jp/%E3%83%AA%E3%82%AA%E3%83%B3%E3%83%BB%E3%83%89%E3%83%BC%E3%83%AB/257631" },
@@ -74,7 +78,7 @@ const SALE_DATA_BY_AREA: { [area: string]: { [store: string]: { url: string } } 
     }
 };
 
-// --- JSONスキーマ定義 ---
+// --- JSONスキーマ定義 (特殊文字を修正済み) ---
 const RECIPE_SCHEMA = {
     type: "OBJECT",
     properties: {
@@ -87,11 +91,11 @@ const RECIPE_SCHEMA = {
                 type: "OBJECT",
                 properties: {
                     name: { type: "STRING", description: "料理名" },
-                    catchphrase: { type: "STRING", description: "キャッチコピー" },
-                    ingredients: { type: "ARRAY", items: { type: "STRING" }, description: "材料と分量" },
-                    steps: { type: "ARRAY", items: { type: "STRING" }, description: "調理手順" },
+                    catchphrase: { type: "STRING", description: "「ご飯が止まらない！」「レンジで簡単！」などの魅力的なキャッチコピー" },
+                    ingredients: { type: "ARRAY", items: { type: "STRING" }, description: "材料と正確な分量 (例: 豚こま肉 200g, 玉ねぎ 1個)" },
+                    steps: { type: "ARRAY", items: { type: "STRING" }, description: "初心者でも絶対に失敗しない、具体的で親切な調理手順" },
                     cookingTime: { type: "STRING" },
-                    tips: { type: "STRING", description: "プロのコツ" }
+                    tips: { type: "STRING", description: "プロの視点でのコツ（火入れの温度、香りの引き出し方など）" }
                 },
                 required: ["name", "catchphrase", "ingredients", "steps", "cookingTime", "tips"]
             }
@@ -114,27 +118,37 @@ const RECIPE_SCHEMA = {
         },
         shoppingList: {
             type: "ARRAY",
-            description: "買い足しリスト",
+            description: "在庫を考慮し、買い足す必要のある食材だけのリスト",
             items: { type: "STRING" }
         }
     },
     required: ["menuConcept", "totalSavings", "mainDishes", "sideDishes", "shoppingList"]
 };
 
+// --- 家族構成の選択肢 ---
 const FAMILY_SIZE_OPTIONS = [
-    "1人", "2人", "3人", "4人", "5人以上",
-    "大人2人, 子供1人", "大人2人, 子供2人", "大人2人, 子供3人", "大人3人, 子供1人",
+    "1人",
+    "2人",
+    "3人",
+    "4人",
+    "5人以上",
+    "大人2人, 子供1人",
+    "大人2人, 子供2人",
+    "大人2人, 子供3人",
+    "大人3人, 子供1人",
     "その他（詳細を要望欄へ）"
 ];
 
-// RecipeCard コンポーネント
+// RecipeCard コンポーネント定義
 const RecipeCard = ({ recipe, type, familySize }: { recipe: Recipe, type: 'main' | 'side', familySize: string }) => (
     <div className="border p-4 rounded-xl bg-white shadow-lg mb-4">
         <h3 className={`text-xl font-extrabold mb-2 ${type === 'main' ? 'text-red-700' : 'text-green-700'} flex items-center gap-2`}>
             {type === 'main' ? <Utensils className="w-5 h-5" /> : <Zap className="w-5 h-5" />} {recipe.name}
         </h3>
         <p className="text-sm italic text-gray-500 mb-3 border-l-2 border-gray-200 pl-2">&quot;{recipe.catchphrase}&quot;</p>
+        
         <div className="space-y-4 text-sm">
+            {/* 材料セクション */}
             <div className="p-3 bg-red-50 rounded-lg border border-red-100">
                 <h4 className="font-bold text-red-700 mb-1 flex items-center gap-1">
                     <ShoppingCart className="w-4 h-4" /> 材料 ({familySize})
@@ -143,6 +157,8 @@ const RecipeCard = ({ recipe, type, familySize }: { recipe: Recipe, type: 'main'
                     {recipe.ingredients.map((ing: string, i: number) => <li key={i}>{ing}</li>)}
                 </ul>
             </div>
+            
+            {/* 作り方セクション */}
             <div className="p-3 bg-green-50 rounded-lg border border-green-100">
                 <h4 className="font-bold text-green-700 mb-1 flex items-center gap-1">
                     <Flame className="w-4 h-4" /> 作り方 ({recipe.cookingTime})
@@ -151,6 +167,8 @@ const RecipeCard = ({ recipe, type, familySize }: { recipe: Recipe, type: 'main'
                     {recipe.steps.map((step: string, i: number) => <li key={i}>{step}</li>)}
                 </ol>
             </div>
+
+            {/* プロのコツ（ベネフィット）セクションを強調 */}
             <div className="p-3 bg-yellow-50 rounded-lg text-xs text-gray-700 border border-yellow-200 font-medium border-l-4 border-yellow-400">
                 💡 **プロのコツ**: <span className="font-bold text-gray-800">{recipe.tips}</span>
             </div>
@@ -158,10 +176,12 @@ const RecipeCard = ({ recipe, type, familySize }: { recipe: Recipe, type: 'main'
     </div>
 );
 
+
 // --- Main App Component ---
 const KondateApp = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // const [currentUser, setCurrentUser] = useState<User | null>(null); <-- TS6133 警告の原因となるため削除
 
     const [areas] = useState(Object.keys(SALE_DATA_BY_AREA));
     const [selectedArea, setSelectedArea] = useState(areas[0]);
@@ -181,11 +201,10 @@ const KondateApp = () => {
     const [uiMessage, setUiMessage] = useState('');
     const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
 
-    // モーダル用（UI維持のため残します）
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
+    // 認証と初期化
     useEffect(() => {
         document.title = "那須こんだて | 節約レシピ提案";
+        
         const initAuth = async () => {
             if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
                 setLoading(false);
@@ -194,7 +213,11 @@ const KondateApp = () => {
             try {
                 const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
                 const authService = getAuth(app);
+                
                 onAuthStateChanged(authService, async (user) => {
+                    // LIFFを使わないため、認証後のユーザー情報を保存する state は削除
+                    // setCurrentUser(user); 
+
                     if (!user) {
                         try {
                             if (initialAuthToken) { await signInWithCustomToken(authService, initialAuthToken as string); } 
@@ -212,6 +235,7 @@ const KondateApp = () => {
         initAuth();
     }, []);
 
+    // エリア変更時や初期ロード時の店舗選択ロジック
     useEffect(() => {
         if (storesInArea.length > 0) {
             const firstStore = storesInArea[0];
@@ -223,6 +247,7 @@ const KondateApp = () => {
         }
     }, [selectedArea, storesInArea]);
 
+    // API呼び出しヘルパー（指数バックオフ付き）
     const fetchWithBackoff = async (options: RequestInit, maxRetries = 3) => {
         const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || (window as any).__api_key;
         if (!apiKey) throw new Error("APIキーが見つかりません。");
@@ -233,7 +258,7 @@ const KondateApp = () => {
                 const response = await fetch(urlWithKey, options);
                 if (response.ok) return response;
                 if (response.status === 429 && attempt < maxRetries - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
+                    await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1))); // 指数バックオフ
                     continue;
                 }
                 const errText = await response.text();
@@ -246,6 +271,7 @@ const KondateApp = () => {
         throw new Error("Max retries reached");
     };
 
+    // 献立生成ロジック
     const generateMenu = async () => {
         setIsGenerating(true);
         setMenuResult(null);
@@ -258,11 +284,41 @@ const KondateApp = () => {
             return;
         }
 
-        const systemPrompt = `あなたは那須地域（${selectedArea}）の「一流レストラン出身の節約シェフ」です。提供された特売情報を活かした最高の節約献立を作成してください。`; 
+        const storeName = finalStoreSelection;
+        const servings = familySize.trim();
+        const areaName = selectedArea;
+        const inventory = fridgeInventory.trim() || '特になし';
+        const customPrompt = customIngredients.trim() || '特になし';
         
+        const systemPrompt = `あなたは那須地域（${areaName}）の「一流レストラン出身の節約シェフ」です。
+        ユーザーは「安く済ませたいが、家庭料理として最高の満足度と豊かな見た目を求めている」と思っています。
+        その願いを叶える、魔法のような献立を提案してください。
+
+        【今回のミッション】
+        1. **主菜3品** と **副菜3品** のレシピを提案すること。
+        2. **スーパー**: ${storeName} の特売品（コストパフォーマンスに優れた食材）をフル活用すること。
+        3. **在庫**: ${inventory} を優先的に使い切ること。
+        4. **人数**: ${servings}
+        5. **要望**: ${customPrompt}
+
+        【出力の必須条件 - クックパッドとの差別化】
+        - **ベネフィット（menuConcept）**: なぜこの献立なのか？どうしてお得なのか？**この献立を選ぶとクックパッドの一般的なレシピと比べて、プロの視点でこんなに美味しくなる**という点を熱く語ってください。
+        - **レシピ詳細**: 
+            - **分量**: 「適量」禁止。「小さじ1」「200g」など具体的に。
+            - **手順**: **プロが意識する「火入れのタイミング」「香りの引き出し方」「食感を残すコツ」**を盛り込み、初心者でも失敗しないよう具体的に描写してください。
+        - **コツ（tips）**: 「この工程を省くと不味くなる」「余ったらお弁当にできる」など、プロならではのアドバイスを入れてください。
+        
+        【節約効果の指示】
+        - **totalSavings**: 金額ではなく、**在庫消費による食費の抑制**や**安価な食材でのカサ増し**など、節約の論理的な根拠を具体的に説明してください。
+
+        出力は以下のJSONフォーマットに従ってください。
+        `;
+        
+        const userQuery = `最高の節約献立（主菜3品、副菜3品）とそのレシピ詳細、買い物リストをJSON形式で出力してください。`;
+
         try {
             const payload = {
-                contents: [{ parts: [{ text: `冷蔵庫の在庫: ${fridgeInventory}, 特売情報: ${customIngredients}, 家族構成: ${familySize}。最高の節約献立を出力してください。` }] }],
+                contents: [{ parts: [{ text: userQuery }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 generationConfig: {
                     responseMimeType: "application/json",
@@ -280,40 +336,68 @@ const KondateApp = () => {
             const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
             if (jsonText) {
-                const parsedJson = JSON.parse(jsonText);
-                setMenuResult(parsedJson);
-                setUiMessage('献立の提案が完了しました！');
+                try {
+                    const parsedJson = JSON.parse(jsonText);
+                    setMenuResult(parsedJson);
+                    setUiMessage('献立の提案が完了しました！');
+                } catch (e) {
+                    console.error("Failed to parse JSON response:", jsonText, e);
+                    setUiMessage('AIからの応答を解析できませんでした。再度お試しください。');
+                }
+            } else {
+                console.error("API response missing JSON text:", result);
+                setUiMessage('献立の生成に失敗しました。AIの応答がありませんでした。');
             }
+
         } catch (e: any) {
-            setUiMessage(`エラーが発生しました: ${e.message}`);
+            console.error("API call error:", e);
+            if (e.message.includes('APIキーが見つかりません')) {
+                setUiMessage('⚠️ 開発者向け: Gemini APIキーが環境変数にありません。AI機能が無効です。');
+            } else if (e.message.includes('403')) {
+                setUiMessage('❌ 認証エラー: APIキーが正しいか、制限がかかっていないか確認してください。');
+            } else {
+                setUiMessage(`献立生成中にエラーが発生しました: ${e.message}`);
+            }
         } finally {
             setIsGenerating(false);
         }
     };
     
+    // 買い物リストのチェックボックス切り替え
     const handleCheckToggle = useCallback((item: string) => {
-        setCheckedItems(prev => ({ ...prev, [item]: !prev[item] }));
+        setCheckedItems(prev => ({
+            ...prev,
+            [item]: !prev[item],
+        }));
     }, []);
     
+    // 店舗選択ハンドラ
     const handleStoreClick = (storeName: string) => {
         setActiveStore(storeName);
         setFinalStoreSelection(storeName); 
     };
 
+    // 戻るボタンのハンドラ (LIFF対応ロジックを削除し、標準の戻る機能に置換)
     const handleBack = () => {
         if (menuResult) {
+            // 献立結果画面から設定画面に戻る (アプリ内戻る)
             setMenuResult(null);
             setUiMessage('条件設定に戻りました。');
         } else if (typeof window !== 'undefined') {
+            // 標準ブラウザの場合: 履歴を戻る
+            // LIFFでの closeWindow() 処理は不要
             window.history.back();
         }
     };
-
-    // --- 別タブで開く。これで「閉じればこの画面」が維持されます ---
-    const openFlyerModal = (url: string) => {
-        // LINE内ブラウザ等で確実に別窓で開かせる。これでアプリ画面は裏に残ります。
-        window.open(url, '_blank', 'noopener,noreferrer');
+    
+    // チラシを開く処理を標準の window.open に置換
+    const openFlyer = (url: string) => {
+        if (typeof window !== 'undefined') {
+            // liff.openWindow の代わりに標準の window.open を使用
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
     };
+
 
     if (loading) return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 p-4">
@@ -326,21 +410,28 @@ const KondateApp = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+            {/* Tailwindカスタムカラー定義 */}
             <style jsx global>{`
                 .text-nasu-green { color: #38761D; }
                 .bg-nasu-green { background-color: #38761D; }
                 .bg-nasu-light { background-color: #F7FFF7; }
                 .border-nasu-green { border-color: #38761D; }
-                .shadow-nasu-green { box-shadow: 0 4px 6px -1px rgba(56, 118, 29, 0.3); }
+                .shadow-nasu-green { box-shadow: 0 4px 6px -1px rgba(56, 118, 29, 0.3), 0 2px 4px -1px rgba(56, 118, 29, 0.1); }
                 .active-store { background-color: #e0f2f1; border-color: #38761D; }
                 .sticky-top { position: sticky; top: 0; z-index: 20; }
             `}</style>
 
             <header className="bg-white shadow-md sticky-top p-4">
                 <div className="max-w-4xl mx-auto flex items-center gap-3">
-                    <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors focus:outline-none">
+                    {/* 戻るボタン (標準ブラウザ動作に修正済み) */}
+                    <button 
+                        onClick={handleBack}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors focus:outline-none"
+                        aria-label="戻る"
+                    >
                         <ArrowLeft size={24} className="text-gray-600" />
                     </button>
+
                     <h1 className="text-xl sm:text-2xl font-extrabold text-nasu-green tracking-tight">
                         💰 AI献立＆特売ナビ「那須こんだて」
                     </h1>
@@ -348,11 +439,16 @@ const KondateApp = () => {
             </header>
 
             <main className="max-w-4xl mx-auto p-4 sm:p-6">
+                
                 <div className="bg-nasu-light p-4 sm:p-6 rounded-xl border border-nasu-green/30 shadow-md mb-8">
-                    <p className="text-sm sm:text-base font-semibold text-nasu-green mb-2">一流シェフの技術を家庭へ！</p>
-                    <p className="text-gray-700 text-sm">冷蔵庫の在庫とあなたが入力した特売情報を分析し、お得な献立を提案します。</p>
+                    <p className="text-sm sm:text-base font-semibold text-nasu-green mb-2">
+                        一流シェフの技術を家庭へ！料理の悩みと食費の苦痛から解放！
+                    </p>
+                    <p className="text-gray-700 text-sm">
+                        冷蔵庫の在庫とあなたが入力した特売情報をAIが分析し、分量とレシピ手順まで考慮した、今日イチお得な献立（主菜3品・副菜3品）を提案します。
+                    </p>
                 </div>
-
+                
                 {uiMessage && (
                     <div className="fixed inset-x-0 bottom-0 mb-4 mx-auto p-3 max-w-sm bg-nasu-green text-white font-medium text-center rounded-lg shadow-xl z-30 animate-pulse">
                         {uiMessage}
@@ -361,62 +457,130 @@ const KondateApp = () => {
 
                 {!menuResult && (
                     <section className="mb-8 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200">
-                        <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">献立生成の条件設定</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">
+                            献立生成の条件設定
+                        </h2>
                         <div className="space-y-6">
+                            
+                            {/* 1. エリア選択 */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">1. エリアを選ぶ</label>
-                                <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-lg font-semibold">
-                                    {areas.map(area => <option key={area} value={area}>{area}</option>)}
+                                <label htmlFor="area-select" className="block text-sm font-bold text-gray-700 mb-1">1. エリアを選ぶ</label>
+                                <select
+                                    id="area-select"
+                                    value={selectedArea}
+                                    onChange={(e) => setSelectedArea(e.target.value)}
+                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-nasu-green focus:border-nasu-green bg-white text-lg font-semibold"
+                                >
+                                    {areas.map(area => (
+                                        <option key={area} value={area}>{area}</option>
+                                    ))}
                                 </select>
                             </div>
 
+                            {/* 2. スーパー選択 */}
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">2. スーパーを選ぶ (クリックでチラシ確認)</label>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                     {storesInArea.map(store => (
-                                        <button key={store} onClick={() => handleStoreClick(store)}
-                                            className={`p-2 text-sm text-center border-2 rounded-lg transition duration-150 ${store === finalStoreSelection ? 'bg-nasu-green text-white border-nasu-green font-bold shadow-md' : store === activeStore ? 'active-store font-semibold border-nasu-green/50' : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}>
+                                        <button
+                                            key={store}
+                                            onClick={() => handleStoreClick(store)}
+                                            className={`p-2 text-sm text-center border-2 rounded-lg transition duration-150 ${
+                                                store === finalStoreSelection ? 'bg-nasu-green text-white border-nasu-green font-bold shadow-md' : 
+                                                store === activeStore ? 'active-store font-semibold border-nasu-green/50' : 
+                                                'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
+                                            }`}
+                                        >
                                             {store}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
+                            {/* チラシリンク (選択時のみ表示) */}
                             {activeStore && SALE_DATA_BY_AREA[selectedArea][activeStore] && (
                                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                                    <h3 className="text-sm font-bold text-blue-800 mb-2">チラシ情報: {activeStore}</h3>
-                                    <button onClick={() => openFlyerModal(SALE_DATA_BY_AREA[selectedArea][activeStore].url)}
-                                        className="w-full py-2 text-base font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition shadow-md">
-                                        トクバイでチラシをチェック 📰
+                                    <h3 className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-1">
+                                        チラシ情報: {activeStore}
+                                    </h3>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            const url = SALE_DATA_BY_AREA[selectedArea][activeStore].url;
+                                            openFlyer(url); // LIFFに依存しない新しい関数を使用
+                                        }}
+                                        className="w-full py-2 text-base font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition block text-center shadow-md"
+                                    >
+                                        トクバイでチラシをチェック 📰 (新しいタブで開く)
                                     </button>
-                                    <p className="mt-3 text-xs text-blue-700 font-bold bg-blue-100 p-2 rounded text-center">
-                                        ※チラシ確認後、この画面に戻って特売品を入力してください。
+
+                                    <p className="mt-3 text-xs text-blue-700 font-bold bg-blue-100 p-2 rounded">
+                                        ※チラシは新しいタブで開きます。確認後、タブを閉じて元の画面に戻ってください。
                                     </p>
                                 </div>
                             )}
-
+                            
                             <div className="grid sm:grid-cols-2 gap-4">
+                                {/* 3. 人数選択 */}
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">3. 人数</label>
-                                    <select value={familySize} onChange={(e) => setFamilySize(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-base">
-                                        {FAMILY_SIZE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    <label htmlFor="family-size" className="block text-sm font-bold text-gray-700 mb-1">3. 人数</label>
+                                    <select
+                                        id="family-size"
+                                        value={familySize}
+                                        onChange={(e) => setFamilySize(e.target.value)}
+                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-nasu-green focus:border-nasu-green bg-white text-base"
+                                    >
+                                        {FAMILY_SIZE_OPTIONS.map((option) => (
+                                            <option key={option} value={option}>
+                                                {option}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
+                                {/* 4. 在庫入力 */}
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">4. 冷蔵庫の在庫</label>
-                                    <textarea value={fridgeInventory} onChange={(e) => setFridgeInventory(e.target.value)} rows={1} placeholder="例: 豚こま肉, 玉ねぎ" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                                    <label htmlFor="inventory" className="block text-sm font-bold text-gray-700 mb-1">4. 冷蔵庫の在庫</label>
+                                    <textarea
+                                        id="inventory"
+                                        value={fridgeInventory}
+                                        onChange={(e) => setFridgeInventory(e.target.value)}
+                                        rows={1}
+                                        placeholder="例: 豚こま肉, じゃがいも, 玉ねぎ"
+                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-nasu-green focus:border-nasu-green"
+                                    ></textarea>
                                 </div>
                             </div>
-
+                            
+                            {/* 5. 要望・特売品入力 */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">5. 特売・要望</label>
-                                <textarea value={customIngredients} onChange={(e) => setCustomIngredients(e.target.value)} placeholder="例: 鶏むね肉が激安だった" rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                                <p className="text-xs text-red-600 mt-1 font-bold">※チラシから見つけた特売品を必ずこの欄に入力してください。</p>
+                                <label htmlFor="custom-ingredients" className="block text-sm font-bold text-gray-700 mb-1">5. 特売・要望（AIに伝える情報）</label>
+                                <textarea
+                                    id="custom-ingredients"
+                                    value={customIngredients}
+                                    onChange={(e) => setCustomIngredients(e.target.value)}
+                                    placeholder="例: 鶏むね肉が激安だった、あっさり和食にしたい"
+                                    rows={2}
+                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-nasu-green focus:border-nasu-green"
+                                ></textarea>
+                                <p className="text-xs text-red-600 mt-1 font-bold">
+                                    ※チラシから見つけた特売品を必ずこの欄に入力してください。AIが節約レシピに反映します。
+                                </p>
                             </div>
-
-                            <button onClick={generateMenu} disabled={isGenerating || !finalStoreSelection}
-                                className="w-full py-3 px-4 rounded-lg shadow-nasu-green text-lg font-bold text-white bg-nasu-green hover:opacity-90 disabled:opacity-50 transition duration-150">
-                                {isGenerating ? <span className="flex items-center justify-center"><Loader2 className="animate-spin mr-3 h-5 w-5" />考案中...</span> : 'AIプロシェフに献立を提案してもらう'}
+                            
+                            {/* 献立生成ボタン */}
+                            <button
+                                onClick={generateMenu}
+                                disabled={isGenerating || !finalStoreSelection}
+                                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-nasu-green text-lg font-bold text-white bg-nasu-green hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nasu-green transition duration-150 ease-in-out disabled:opacity-50"
+                            >
+                                {isGenerating ? (
+                                    <span className="flex items-center">
+                                        <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                                        一流シェフが献立を考案中...
+                                    </span>
+                                ) : (
+                                    'AIプロシェフに献立を提案してもらう'
+                                )}
                             </button>
                         </div>
                     </section>
@@ -424,42 +588,90 @@ const KondateApp = () => {
 
                 {menuResult && (
                     <section>
+                        {/* 結果から設定に戻るボタン */}
                         <div className="flex justify-between items-center mb-4 sticky-top bg-gray-50 pt-4 pb-2">
                             <h2 className="text-2xl font-bold text-gray-800">提案結果</h2>
-                            <button onClick={() => setMenuResult(null)} className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-medium bg-white p-2 rounded-lg border shadow-sm">
-                                <ArrowLeft size={16} /> やり直す
+                            <button 
+                                onClick={() => setMenuResult(null)}
+                                className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-medium bg-white p-2 rounded-lg border shadow-sm"
+                            >
+                                <ArrowLeft size={16} /> 条件を変えてやり直す
                             </button>
                         </div>
                         
-                        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200">
+                        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200 min-h-32">
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                
+                                {/* 買い物リスト & コンセプト (左側のカラム) */}
                                 <div className="lg:col-span-1 border-b lg:border-r lg:border-b-0 lg:pr-6 pb-6 lg:pb-0">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">🛍️ 買い物リスト</h2>
-                                    <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg">
-                                        <h3 className="text-base font-extrabold text-yellow-800 mb-2 flex items-center gap-1"><ThumbsUp className="w-4 h-4" /> コンセプト</h3>
-                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">{menuResult.menuConcept}</p>
-                                        <p className="text-sm font-bold text-red-600 bg-red-100 p-1.5 rounded-md">✅ 節約効果: {menuResult.totalSavings}</p>
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        🛍️ 買い物リスト
+                                    </h2>
+                                    {/* 強調表示されたコンセプトセクション */}
+                                    <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg shadow-sm">
+                                        <h3 className="text-base font-extrabold text-yellow-800 flex items-center gap-1 mb-2">
+                                            <ThumbsUp className="w-4 h-4" /> シェフのコンセプト
+                                        </h3>
+                                        <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                                            {menuResult.menuConcept}
+                                        </p>
+                                        <p className="text-sm font-bold text-red-600 bg-red-100 p-1.5 rounded-md">
+                                            ✅ 節約効果: {menuResult.totalSavings}
+                                        </p>
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-800 mb-2">必須食材 ({finalStoreSelection})</h3>
+
+                                    {/* 買い物チェックリスト */}
+                                    <h3 className="text-lg font-bold text-gray-800 mb-2">
+                                        必須の買い足し食材 ({finalStoreSelection})
+                                    </h3>
                                     <ul className="space-y-2">
-                                        {menuResult.shoppingList.map((item, idx) => (
-                                            <li key={idx} onClick={() => handleCheckToggle(item)}
-                                                className={`flex items-center p-2 rounded-lg cursor-pointer border ${checkedItems[item] ? 'bg-green-100 line-through text-gray-500' : 'bg-gray-50 text-gray-800'}`}>
-                                                <input type="checkbox" checked={!!checkedItems[item]} readOnly className="mr-3 h-4 w-4 rounded border-gray-300 text-nasu-green focus:ring-nasu-green" />
-                                                <span className="text-sm font-medium">{item}</span>
+                                        {menuResult.shoppingList.length > 0 ? menuResult.shoppingList.map((item: string, index: number) => (
+                                            <li 
+                                                key={index} 
+                                                className={`flex items-center p-2 rounded-lg cursor-pointer transition duration-150 border border-gray-100 ${checkedItems[item] ? 'bg-green-100 line-through text-gray-500' : 'bg-gray-50 hover:bg-gray-100 text-gray-800'}`}
+                                                onClick={() => handleCheckToggle(item)}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checkedItems[item] || false}
+                                                    onChange={() => handleCheckToggle(item)}
+                                                    className={`form-checkbox h-5 w-5 rounded transition duration-150 ease-in-out border-gray-300 ${checkedItems[item] ? 'text-nasu-green bg-nasu-green' : 'text-gray-300'}`}
+                                                    readOnly 
+                                                />
+                                                <span className="ml-3 text-base font-medium">{item}</span>
                                             </li>
-                                        ))}
+                                        )) : (
+                                            <p className="text-base text-nasu-green font-bold p-2 bg-nasu-light rounded-lg">
+                                                🎉 冷蔵庫の在庫だけでOK！必要な買い物はありません！
+                                            </p>
+                                        )}
                                     </ul>
                                 </div>
+                                
+                                {/* レシピ詳細 (右側のカラム) */}
+                                <div className="lg:col-span-2 space-y-8">
+                                    <h2 className="text-2xl font-bold text-gray-800 border-b pb-2 mb-4">
+                                        🏠 週間献立（主菜3品・副菜3品）
+                                    </h2>
 
-                                <div className="lg:col-span-2 space-y-6">
-                                    <div>
-                                        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">🍳 メイン主菜</h2>
-                                        {menuResult.mainDishes.map((r, i) => <RecipeCard key={i} recipe={r} type="main" familySize={familySize} />)}
+                                    {/* 主菜セクション */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-xl font-extrabold text-red-700 bg-red-100 p-3 rounded-lg border-l-4 border-red-500 shadow-sm">
+                                            - 主菜 (メインディッシュ) -
+                                        </h3>
+                                        {menuResult.mainDishes.map((recipe, index) => (
+                                            <RecipeCard key={`main-${index}`} recipe={recipe} type="main" familySize={familySize} />
+                                        ))}
                                     </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">🥗 あと一品の副菜</h2>
-                                        {menuResult.sideDishes.map((r, i) => <RecipeCard key={i} recipe={r} type="side" familySize={familySize} />)}
+
+                                    {/* 副菜セクション */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-xl font-extrabold text-green-700 bg-green-100 p-3 rounded-lg border-l-4 border-green-500 shadow-sm">
+                                            - 副菜 (サイドメニュー) -
+                                        </h3>
+                                        {menuResult.sideDishes.map((recipe, index) => (
+                                            <RecipeCard key={`side-${index}`} recipe={recipe} type="side" familySize={familySize} />
+                                        ))}
                                     </div>
                                 </div>
                             </div>
