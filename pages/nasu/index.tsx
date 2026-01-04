@@ -1,19 +1,8 @@
 import React from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
 
 export default function NasuFlyerApp() {
-  const router = useRouter();
-
-  // LINEの「戻る」問題を解決する遷移ロジック
-  const handleOpen = (targetUrl: string) => {
-    // 履歴を2回積み増して、トクバイ側から「戻る」をした際の着地点を確保する
-    window.history.pushState(null, '', window.location.href);
-    window.history.pushState(null, '', window.location.href);
-    // 同じタブで開く（LINEブラウザで戻る機能を殺さないための鉄則）
-    window.location.href = targetUrl;
-  };
-
+  // すべての店舗データ
   const storeData = [
     { city: '那須塩原市・那須町', name: 'カワチ薬品 黒磯店', url: 'https://tokubai.co.jp/%E3%82%AB%E3%83%AF%E3%83%81%E8%96%AC%E5%93%81/76062' },
     { city: '那須塩原市・那須町', name: 'ウエルシア 那須塩原黒磯店', url: 'https://tokubai.co.jp/%E3%82%A6%E3%82%A8%E3%83%AB%E3%82%B7%E3%82%A2/297164' },
@@ -59,35 +48,36 @@ export default function NasuFlyerApp() {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
       </Head>
 
+      {/* ヘッダー：onClickを使わず、aタグの基本機能で/homeへ強制移動させる */}
       <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', borderBottom: '1px solid #eee', padding: '15px', display: 'flex', alignItems: 'center', zIndex: 10 }}>
-        <button onClick={() => router.push('/nasu')} style={{ border: 'none', background: 'none', color: '#007aff', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}>
+        <a 
+          href="/home" 
+          style={{ textDecoration: 'none', color: '#007aff', fontSize: '18px', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}
+        >
           ＜ 戻る
-        </button>
+        </a>
         <h1 style={{ margin: '0 0 0 15px', fontSize: '18px', fontWeight: 'bold' }}>チラシを見る</h1>
       </div>
 
       <div style={{ padding: '15px', maxWidth: '600px', margin: '0 auto' }}>
-        <div style={{ backgroundColor: '#f0f7ff', padding: '12px', borderRadius: '10px', marginBottom: '20px', fontSize: '13px', color: '#005bb7', fontWeight: 'bold' }}>
-          💡 見終わったらスマホの「戻る」操作で戻れます
-        </div>
-
         {Object.entries(grouped).map(([city, stores]: any) => (
           <div key={city} style={{ marginBottom: '30px' }}>
             <h2 style={{ fontSize: '14px', color: '#999', marginBottom: '10px', paddingLeft: '5px' }}>📍 {city}</h2>
             <div style={{ display: 'grid', gap: '8px' }}>
               {stores.map((s: any, i: number) => (
-                <button 
+                <a 
                   key={i} 
-                  onClick={() => handleOpen(s.url)}
+                  href={s.url}
                   style={{
-                    width: '100%', textAlign: 'left', padding: '20px', backgroundColor: '#fff',
-                    border: '2px solid #007aff', borderRadius: '15px', fontSize: '17px',
-                    fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
-                    boxShadow: '0 4px 0 #007aff', marginBottom: '4px', cursor: 'pointer'
+                    textDecoration: 'none', color: 'inherit', width: '100%', padding: '20px', 
+                    backgroundColor: '#fff', border: '2px solid #007aff', borderRadius: '15px', 
+                    fontSize: '17px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
+                    boxShadow: '0 4px 0 #007aff', marginBottom: '4px', boxSizing: 'border-box'
                   }}
                 >
-                  {s.name} <span style={{ color: '#007aff' }}>＞</span>
-                </button>
+                  <span style={{ flex: 1 }}>{s.name}</span>
+                  <span style={{ color: '#007aff', marginLeft: '10px' }}>＞</span>
+                </a>
               ))}
             </div>
           </div>
