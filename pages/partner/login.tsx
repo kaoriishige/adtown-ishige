@@ -1,7 +1,14 @@
 import Head from 'next/head';
 import React, { useState, useEffect } from 'react'; 
 import { useRouter } from 'next/router';
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'; 
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  onAuthStateChanged, 
+  setPersistence, 
+  browserLocalPersistence 
+} from 'firebase/auth'; 
 import { app } from '@/lib/firebase'; 
 import Link from 'next/link';
 
@@ -25,7 +32,9 @@ const LoginPage: React.FC = () => {
   const [passwordVisible, setPasswordVisible] = useState(false); 
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false); 
 
+  // --- 【重要】自動ログイン・エラー監視用 ---
   useEffect(() => {
+    // 1. URLクエリのエラー処理
     const queryError = router.query.error as string;
     if (queryError) {
       if (queryError === 'permission_denied') {
@@ -34,7 +43,31 @@ const LoginPage: React.FC = () => {
         setError('ユーザー登録が見つかりません。新規登録を行ってください。');
       }
     }
-  }, [router.query.error]);
+
+    // 2. 自動ログイン判定：Firebaseの認証状態を監視
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && !loading) {
+        // すでにログイン情報があれば、自動でバックエンドのセッションを再確立
+        console.log("既存のセッションを検出しました。自動遷移を試みます。");
+        try {
+          const idToken = await user.getIdToken();
+          const response = await fetch('/api/auth/sessionLogin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ loginType }), // 現在選択されているタイプで試行
+          });
+          const data = await response.json();
+          if (response.ok && data.redirect) {
+            router.push(data.redirect);
+          }
+        } catch (e) {
+          console.error("Auto login error:", e);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router.query.error, auth, loginType]);
 
   const handleStartPasswordReset = (e: React.MouseEvent) => {
     e.preventDefault(); 
@@ -89,11 +122,12 @@ const LoginPage: React.FC = () => {
     setSuccessMessage(null);
 
     try {
-      // 1. Firebase Authでの認証（存在しないメルアドでもここは通る場合がある）
+      // 明示的に保存期間を設定
+      await setPersistence(auth, browserLocalPersistence);
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
 
-      // 2. APIに飛ばしてFirestore側の実在・権限をチェック
       const response = await fetch('/api/auth/sessionLogin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
@@ -103,7 +137,6 @@ const LoginPage: React.FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        // ★API側ではじかれた場合はここでloadingを解除してエラーを出す
         setLoading(false);
         if (data.error === 'user_data_missing') {
           setError('このメールアドレスは登録されていません。');
@@ -115,17 +148,14 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      // 3. APIが返したリダイレクト先へ移動（成功）
       if (data.redirect) {
         router.push(data.redirect);
       } else {
-        // 万が一redirectプロパティがない場合の保険
         setLoading(false);
         router.push(loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard');
       }
 
     } catch (err: any) {
-      // ★エラー時は何があってもloadingを解除してフリーズを防ぐ
       setLoading(false); 
       let message = 'メールアドレスまたはパスワードが正しくありません。';
       
@@ -144,7 +174,6 @@ const LoginPage: React.FC = () => {
       <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md space-y-6">
         <h1 className="text-3xl font-bold text-gray-900 text-center">パートナーログイン</h1>
         
-        {/* パートナー選択 */}
         <div className="flex justify-center space-x-6">
           {['adver', 'recruit'].map((type) => (
             <label key={type} className="flex items-center space-x-2 cursor-pointer">
@@ -162,7 +191,6 @@ const LoginPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 通知エリア */}
           {error && (
             <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center animate-pulse">
               {error}

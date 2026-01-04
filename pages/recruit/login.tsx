@@ -1,7 +1,6 @@
-// pages/recruit/login.tsx
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 
 const RecruitLoginPage = () => {
@@ -9,15 +8,23 @@ const RecruitLoginPage = () => {
   const auth = getAuth(app);
 
   useEffect(() => {
-    // 既にログインしていればダッシュボードに飛ばす
-    if (auth.currentUser) {
-      router.replace('/recruit/dashboard');
-    }
+    // 【重要】auth.currentUserを直接見ず、監視関数を使う
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // ログイン状態が確認できたら自動でダッシュボードへ
+        console.log("ログイン中ユーザーを検出しました");
+        router.replace('/recruit/dashboard');
+      }
+    });
+    return () => unsubscribe();
   }, [auth, router]);
 
   const handleLogin = async () => {
     try {
-      // 仮ログイン：メールとパスワード固定（テスト用）
+      // ログイン情報をブラウザに記憶させる設定
+      await setPersistence(auth, browserLocalPersistence);
+      
+      // テストログイン
       await signInWithEmailAndPassword(auth, 'test@example.com', 'password');
       router.push('/recruit/dashboard');
     } catch (error) {
@@ -29,7 +36,7 @@ const RecruitLoginPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <button onClick={handleLogin} className="px-4 py-2 bg-blue-500 text-white rounded-md">
-        テストログイン
+        テストログイン（情報を記憶）
       </button>
     </div>
   );

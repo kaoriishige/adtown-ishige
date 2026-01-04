@@ -9,7 +9,8 @@ import {
     signInWithPopup, 
     GoogleAuthProvider, 
     setPersistence, 
-    browserLocalPersistence 
+    browserLocalPersistence,
+    onAuthStateChanged
 } from 'firebase/auth';
 import { initializeApp, getApps, getApp } from 'firebase/app'; 
 import { AlertTriangle, Key, Loader2, Eye, EyeOff } from 'lucide-react'; 
@@ -35,6 +36,18 @@ const LoginPage: NextPage = () => {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
+    // 【追加】ページを開いた瞬間に、前回のログインが生きていれば自動でホームへ飛ばす
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user && !isLoggingIn) {
+                // すでにログイン済みの場合は自動でセッションを確立して移動
+                console.log("既存のログインセッションを検出しました。自動遷移します。");
+                await handleLoginSuccess(user);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
     const handleLoginSuccess = async (user: any) => {
         try {
             const idToken = await user.getIdToken(true);
@@ -50,14 +63,15 @@ const LoginPage: NextPage = () => {
             const data = await response.json();
 
             if (!response.ok) {
-                if (data.error === 'user_data_missing') throw new Error("ユーザー登録がありません。先に新規登録をしてください。");
+                // 自動ログイン失敗時は何もしない（手動ログインを待つ）
+                if (data.error === 'user_data_missing') return; 
                 throw new Error(data.error || "ログイン処理に失敗しました。");
             }
 
-            // APIが指定したリダイレクト先（/home）へ移動
+            // 成功したら /home へ飛ばす
             window.location.href = data.redirect || "/home";
         } catch (e: any) {
-            setError(e.message);
+            console.error("Auto Login Error:", e.message);
             setIsLoggingIn(false);
         }
     };
