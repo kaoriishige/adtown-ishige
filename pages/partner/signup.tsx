@@ -247,13 +247,11 @@ const PartnerSignupPage: NextPage = () => {
                         </div>
                     </div>
 
-                    {/* 追加：紹介手数料シミュレーション図解 */}
                     <div className="mt-16 bg-gradient-to-br from-gray-900 to-gray-800 rounded-[2.5rem] p-8 md:p-12 shadow-2xl text-white border-2 border-orange-500/30">
                         <h4 className="text-2xl md:text-3xl font-black text-center mb-10 text-orange-400 uppercase tracking-widest">
                             紹介手数料 収益シミュレーション
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                            {/* 飲食店モデル */}
                             <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/10 relative group">
                                 <div className="absolute -top-4 -left-4 bg-teal-500 text-white px-4 py-1 rounded-lg font-bold text-sm shadow-lg">飲食店モデル</div>
                                 <p className="text-gray-300 text-sm mb-6 leading-relaxed">
@@ -274,7 +272,6 @@ const PartnerSignupPage: NextPage = () => {
                                     </div>
                                 </div>
                             </div>
-                            {/* 美容室モデル */}
                             <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/10 relative group">
                                 <div className="absolute -top-4 -left-4 bg-purple-500 text-white px-4 py-1 rounded-lg font-bold text-sm shadow-lg">美容室・サロン</div>
                                 <p className="text-gray-300 text-sm mb-6 leading-relaxed">
@@ -389,8 +386,26 @@ const PartnerSignupPage: NextPage = () => {
                     <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl text-sm">
                         <div className="p-6 border-b flex justify-between items-center bg-gray-50"><h3 className="text-xl font-bold">パートナー利用規約</h3><button onClick={() => setShowTerms(false)} className="text-gray-400 hover:text-gray-600"><XCircleIcon size={28} /></button></div>
                         <div className="p-8 overflow-y-auto space-y-6">
-                            <section><h4 className="font-bold mb-2">第1条（サービス内容）</h4><p>1. 無料プラン：店舗情報掲載、クーポン配信等は永続的に無料。 2. 有料プラン：AI広告、紹介料プログラムを提供。</p></section>
-                            <section><h4 className="font-bold mb-2">第2条（紹介手数料）</h4><p>有料会員費用の30%を貴店に支払うものとします。</p></section>
+                            <section>
+                                <h4 className="font-bold text-base mb-2">第1条（規約の適用）</h4>
+                                <p>本規約は、株式会社adtown（以下「当社」）が運営する「みんなのNasuアプリ」において、パートナーとして登録した事業者（以下「パートナー」）との間の全ての関係に適用されます。</p>
+                            </section>
+                            <section>
+                                <h4 className="font-bold text-base mb-2">第2条（本サービスの内容と費用）</h4>
+                                <p>1. 無料プラン：店舗基本情報の掲載、クーポン・フードロス情報の配信、ダッシュボードの利用を無料（永続的）で行うことができます。<br/>2. 有料プラン（パートナー制度）：月額費用を支払うことで、AIによるマッチング広告配信、紹介料プログラム、高度な分析機能を利用できます。</p>
+                            </section>
+                            <section>
+                                <h4 className="font-bold text-base mb-2">第3条（紹介料の支払い）</h4>
+                                <p>1. パートナーが発行した専用QRコード等を経由してユーザーが有料会員に登録した場合、当該ユーザーの月額会費（税別）の30%をパートナーに支払います。<br/>2. 支払いは、月末締め翌々月15日に、登録された銀行口座へ振り込みます。振込手数料はパートナーの負担とします。</p>
+                            </section>
+                            <section>
+                                <h4 className="font-bold text-base mb-2">第4条（禁止事項・情報の正確性）</h4>
+                                <p>1. 公序良俗に反する情報の掲載、虚偽のクーポン情報の配信を禁止します。<br/>2. パートナーは、自らが掲載する情報の正確性について一切の責任を負うものとし、第三者とのトラブルは自らの責任で解決するものとします。</p>
+                            </section>
+                            <section>
+                                <h4 className="font-bold text-base mb-2">第5条（契約の解除・停止）</h4>
+                                <p>1. パートナーはダッシュボードよりいつでも退会が可能です。<br/>2. 当社は、パートナーが本規約に違反した場合、事前の通知なく掲載停止またはアカウントの抹消を行うことができるものとします。</p>
+                            </section>
                         </div>
                         <div className="p-6 border-t text-center bg-gray-50"><button onClick={() => setShowTerms(false)} className="bg-orange-500 text-white px-12 py-3 rounded-full font-bold">閉じてフォームに戻る</button></div>
                     </div>
