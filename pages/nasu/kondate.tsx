@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, User } from 'firebase/auth';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { ShoppingCart, Flame, Loader2, ThumbsUp, ArrowLeft, Utensils, Zap } from 'lucide-react';
+import { ShoppingCart, Flame, Loader2, ThumbsUp, ArrowLeft, Utensils, Zap, Image as ImageIcon, X } from 'lucide-react';
 
 // --- 型定義 ---
 interface Recipe {
@@ -30,20 +30,19 @@ const getEnvVar = (name: string): any => {
     return undefined;
 };
 
-// Firebase設定
 const firebaseConfigRaw = process.env.NEXT_PUBLIC_FIREBASE_CONFIG || getEnvVar('__firebase_config');
 const firebaseConfig = firebaseConfigRaw ? (typeof firebaseConfigRaw === 'string' ? JSON.parse(firebaseConfigRaw) : firebaseConfigRaw) : {};
 const initialAuthToken = getEnvVar('__initial_auth_token') || null;
 
-// Gemini API のエンドポイント
+// 成功しているモデル名を使用
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
 
-// --- 店舗情報 ---
 const SALE_DATA_BY_AREA: { [area: string]: { [store: string]: { url: string } } } = {
     "那須塩原市": {
         "ザ・ビッグ 那須店": { url: "https://tokubai.co.jp/%E3%82%B6%E3%83%BB%E3%83%93%E3%83%83%E3%82%B0/12250" },
-        "ヨークベニマル 上厚崎店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/170882" },
+        "ヨークベニマル 上厚崎店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/170882" },      
         "ヨークベニマル 那須塩原店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/9591" },
+        "MEGAドン・キホーテ黒磯店": { url: "https://tokubai.co.jp/MEGA%E3%83%89%E3%83%B3%E3%83%BB%E3%82%AD%E3%83%9B%E3%83%BC%E3%83%86/5334" },
         "とりせん 黒磯店": { url: "https://tokubai.co.jp/%E3%81%A8%E3%82%8A%E3%81%9B%E3%82%93/5530" },
         "ベイシア 那須塩原店": { url: "https://tokubai.co.jp/%E3%83%99%E3%82%A4%E3%82%B7%E3%82%A2/3996" },
         "ヨークベニマル 黒磯店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/9593" },
@@ -70,19 +69,18 @@ const SALE_DATA_BY_AREA: { [area: string]: { [store: string]: { url: string } } 
         "ダイユー 黒羽店": { url: "https://tokubai.co.jp/%E3%83%80%E3%82%A4%E3%83%A6%E3%83%BC/257638" }
     },
     "那須町": {
-        "ザ・ビッグ 那須店": { url: "https://tokubai.co.jp/%E3%82%B6%E3%83%BB%E3%83%93%E3%83%83%E3%82%B0/12250" }
+        "ザ・ビッグ 那須店": { url: "https://tokubai.co.jp/%E3%82%B6%E3%83%BB%E3%83%93%E3%83%83%E3%82%B0/12250" },
+        "ダイユー 黒田原店": { url: "https://tokubai.co.jp/%E3%83%80%E3%82%A4%E3%83%A6%E3%83%BC/257637" },
     }
 };
 
-// --- JSONスキーマ定義 ---
 const RECIPE_SCHEMA = {
     type: "OBJECT",
     properties: {
-        menuConcept: { type: "STRING", description: "「なぜこの献立がお得で素晴らしいのか」を、プロの視点とメリットを交えて語る説明文。" },
-        totalSavings: { type: "STRING", description: "在庫消費による食費の抑制や、安価な食材でのカサ増しなど、節約の論理的な根拠。" },
+        menuConcept: { type: "STRING" },
+        totalSavings: { type: "STRING" },
         mainDishes: {
             type: "ARRAY",
-            description: "主菜3品",
             items: {
                 type: "OBJECT",
                 properties: {
@@ -98,7 +96,6 @@ const RECIPE_SCHEMA = {
         },
         sideDishes: {
             type: "ARRAY",
-            description: "副菜3品",
             items: {
                 type: "OBJECT",
                 properties: {
@@ -112,17 +109,13 @@ const RECIPE_SCHEMA = {
                 required: ["name", "catchphrase", "ingredients", "steps", "cookingTime", "tips"]
             }
         },
-        shoppingList: {
-            type: "ARRAY",
-            items: { type: "STRING" }
-        }
+        shoppingList: { type: "ARRAY", items: { type: "STRING" } }
     },
     required: ["menuConcept", "totalSavings", "mainDishes", "sideDishes", "shoppingList"]
 };
 
 const FAMILY_SIZE_OPTIONS = ["1人", "2人", "3人", "4人", "5人以上", "大人2人, 子供1人", "大人2人, 子供2人", "大人2人, 子供3人", "大人3人, 子供1人", "その他"];
 
-// --- UI Components ---
 const RecipeCard = ({ recipe, type, familySize }: { recipe: Recipe, type: 'main' | 'side', familySize: string }) => (
     <div className="border p-4 rounded-xl bg-white shadow-lg mb-4">
         <h3 className={`text-xl font-extrabold mb-2 ${type === 'main' ? 'text-red-700' : 'text-green-700'} flex items-center gap-2`}>
@@ -167,6 +160,9 @@ const KondateApp = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [uiMessage, setUiMessage] = useState('');
     const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
+    
+    // 画像保存用のState
+    const [imageFiles, setImageFiles] = useState<string[]>([]);
 
     const storesInArea = useMemo(() => SALE_DATA_BY_AREA[selectedArea] ? Object.keys(SALE_DATA_BY_AREA[selectedArea]) : [], [selectedArea]);
 
@@ -198,6 +194,19 @@ const KondateApp = () => {
         }
     }, [selectedArea, storesInArea]);
 
+    // ファイル選択時の処理
+    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageFiles(prev => [...prev, reader.result as string]);
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
     const fetchWithBackoff = async (options: RequestInit, maxRetries = 3) => {
         const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || (window as any).__api_key;
         if (!apiKey) throw new Error("APIキーが見つかりません。");
@@ -221,13 +230,24 @@ const KondateApp = () => {
 
     const generateMenu = async () => {
         setIsGenerating(true); setMenuResult(null); setUiMessage(''); setCheckedItems({});
-        const systemPrompt = `あなたは那須地域（${selectedArea}）の「一流レストラン出身の節約シェフ」です。スーパー「${finalStoreSelection}」の特売品を活用し、在庫「${fridgeInventory || 'なし'}」を使い切る、${familySize}用の主菜3品・副菜3品の最高に美味しく節約できる献立を提案してください。クックパッドよりもプロらしい火入れや香りのコツを重視し、論理的な節約根拠を示してください。`;
+        
+        const systemPrompt = `あなたは那須地域（${selectedArea}）の「一流レストラン出身の節約シェフ」です。スーパー「${finalStoreSelection}」の特売品（画像がある場合はその内容も含む）を活用し、在庫「${fridgeInventory || 'なし'}」を使い切る、${familySize}用の主菜3品・副菜3品の最高に美味しく節約できる献立を提案してください。もし商品が1点ずつ写った画像がある場合は、その商品の名前と価格を優先して献立に入れてください。`;
+        
+        // 成功しているリクエスト形式をベースに、画像がある場合のみ inline_data を追加
+        const parts: any[] = [{ text: "最高の節約献立をJSONで出力してください。" }];
+        
+        imageFiles.forEach(dataUrl => {
+            const [mimeInfo, base64Data] = dataUrl.split(',');
+            const mimeType = mimeInfo.split(':')[1].split(';')[0];
+            parts.push({ inline_data: { mime_type: mimeType, data: base64Data } });
+        });
+
         try {
             const response = await fetchWithBackoff({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: "最高の節約献立をJSONで出力してください。" }] }],
+                    contents: [{ parts }],
                     systemInstruction: { parts: [{ text: systemPrompt }] },
                     generationConfig: { responseMimeType: "application/json", responseSchema: RECIPE_SCHEMA }
                 })
@@ -247,10 +267,8 @@ const KondateApp = () => {
         else if (typeof window !== 'undefined') window.history.back();
     };
 
-    // --- 【成功コード】履歴を積み、同一タブで遷移することでブラウザの「戻る」を殺さない ---
     const openFlyer = (url: string) => {
         if (typeof window !== 'undefined') {
-            // 現在のURLを履歴に積み、同一ウィンドウで遷移
             window.history.pushState(null, '', window.location.href);
             window.location.href = url;
         }
@@ -267,69 +285,90 @@ const KondateApp = () => {
                 .bg-nasu-light { background-color: #F7FFF7; }
                 .border-nasu-green { border-color: #38761D; }
                 .shadow-nasu-green { box-shadow: 0 4px 6px -1px rgba(56, 118, 29, 0.3); }
-                .sticky-top { position: sticky; top: 0; z-index: 20; }
             `}</style>
 
-            <header className="bg-white shadow-md sticky-top p-4">
+            <header className="bg-white shadow-md sticky top-0 z-20 p-4">
                 <div className="max-w-4xl mx-auto flex items-center gap-3">
                     <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft size={24} className="text-gray-600" /></button>
-                    <h1 className="text-xl sm:text-2xl font-extrabold text-nasu-green">💰 AI献立＆特売ナビ「那須こんだて」</h1>
+                    <h1 className="text-xl sm:text-2xl font-extrabold text-nasu-green">💰 AI献立＆特売ナビ</h1>
                 </div>
             </header>
 
             <main className="max-w-4xl mx-auto p-4 sm:p-6">
+                {/* 追加1: ヘッダーメッセージ */}
                 <div className="bg-nasu-light p-4 rounded-xl border border-nasu-green/30 shadow-md mb-8">
                     <p className="font-semibold text-nasu-green mb-1">一流シェフの技術を家庭へ！</p>
                     <p className="text-gray-700 text-sm">特売情報をAIが分析し、今日イチお得な献立を提案します。</p>
                 </div>
 
                 {!menuResult ? (
-                    <section className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200">
-                        <h2 className="text-xl font-bold mb-4 border-b pb-2">献立生成の条件設定</h2>
-                        <div className="space-y-6">
+                    <section className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200 space-y-6">
+                        <h2 className="text-xl font-bold border-b pb-2">献立生成の条件設定</h2>
+                        
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">1. エリアを選ぶ</label>
+                            <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white font-semibold">
+                                {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">2. スーパーを選ぶ (クリックでチラシ確認)</label>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+                                {storesInArea.map(s => (
+                                    <button key={s} onClick={() => { setActiveStore(s); setFinalStoreSelection(s); }} className={`p-2 text-xs border rounded-lg ${s === finalStoreSelection ? 'bg-nasu-green text-white font-bold' : 'bg-gray-50 border-gray-300'}`}>{s}</button>
+                                ))}
+                            </div>
+                            {activeStore && (
+                                <div className="space-y-2">
+                                    <button onClick={() => openFlyer(SALE_DATA_BY_AREA[selectedArea][activeStore].url)} className="w-full py-2 bg-blue-600 text-white font-bold rounded-lg text-sm">トクバイでチラシをチェック 📰</button>
+                                    <p className="text-[13px] font-bold text-gray-600 text-center leading-relaxed">特売チラシの商品名、量、１品ずつの画像の入力または手入力で献立を作ります。</p>
+                                    {/* 追加2 & 変更: 注釈の追加とテキスト変更 */}
+                                    <p className="mt-1 text-[10px] text-blue-700 text-center">※チラシサイトへ移動します。ブラウザの「く」でここへ戻れます。</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 写真入力欄 */}
+                        <div className="p-4 bg-nasu-light border border-nasu-green/30 rounded-lg">
+                            <label className="block text-sm font-bold text-nasu-green mb-2">3. 特売品の商品名、量の写真をいれる（1点ずつ大きく撮ったもの）</label>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {imageFiles.map((src, i) => (
+                                    <div key={i} className="relative w-16 h-16 border rounded bg-white">
+                                        <img src={src} className="w-full h-full object-cover rounded" alt="upload-preview" />
+                                        <button onClick={() => setImageFiles(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"><X size={12} /></button>
+                                    </div>
+                                ))}
+                                <label className="w-16 h-16 flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded cursor-pointer hover:bg-gray-100">
+                                    <ImageIcon size={20} className="text-gray-400" />
+                                    <span className="text-[10px] text-gray-500">選択</span>
+                                    <input type="file" accept="image/*" multiple onChange={onFileChange} className="hidden" />
+                                </label>
+                            </div>
+                            <p className="text-[10px] text-gray-500 leading-tight">※スマホで撮った「特売商品名と価格、量」のアップ写真を複数枚入れると、AIが正確に献立へ反映します。</p>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">1. エリアを選ぶ</label>
-                                <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white text-lg font-semibold">
-                                    {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                                <label className="block text-sm font-bold text-gray-700 mb-1">4. 人数</label>
+                                <select value={familySize} onChange={(e) => setFamilySize(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white">
+                                    {FAMILY_SIZE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">2. スーパーを選ぶ (クリックでチラシ確認)</label>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                    {storesInArea.map(s => (
-                                        <button key={s} onClick={() => { setActiveStore(s); setFinalStoreSelection(s); }} className={`p-2 text-sm border-2 rounded-lg ${s === finalStoreSelection ? 'bg-nasu-green text-white border-nasu-green font-bold' : 'bg-gray-50 border-gray-300'}`}>{s}</button>
-                                    ))}
-                                </div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">5. 冷蔵庫の在庫</label>
+                                <textarea value={fridgeInventory} onChange={(e) => setFridgeInventory(e.target.value)} rows={1} placeholder="例: 豚肉, 玉ねぎ" className="w-full px-3 py-2 border rounded-lg"></textarea>
                             </div>
-
-                            {activeStore && (
-                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                                    <h3 className="text-sm font-bold text-blue-800 mb-2">チラシ情報: {activeStore}</h3>
-                                    <button onClick={() => openFlyer(SALE_DATA_BY_AREA[selectedArea][activeStore].url)} className="w-full py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md">トクバイでチラシをチェック 📰</button>
-                                    <p className="mt-2 text-[10px] text-blue-700">※チラシサイトへ移動します。ブラウザの「戻る」でここへ戻れます。</p>
-                                </div>
-                            )}
-
-                            <div className="grid sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">3. 人数</label>
-                                    <select value={familySize} onChange={(e) => setFamilySize(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white">
-                                        {FAMILY_SIZE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">4. 在庫</label>
-                                    <textarea value={fridgeInventory} onChange={(e) => setFridgeInventory(e.target.value)} rows={1} placeholder="例: 豚肉, 玉ねぎ" className="w-full px-3 py-2 border rounded-lg"></textarea>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">5. 特売・要望</label>
-                                <textarea value={customIngredients} onChange={(e) => setCustomIngredients(e.target.value)} rows={2} placeholder="例: 鶏肉が激安だった" className="w-full px-3 py-2 border rounded-lg"></textarea>
-                            </div>
-                            <button onClick={generateMenu} disabled={isGenerating} className="w-full py-3 bg-nasu-green text-white text-lg font-bold rounded-lg shadow-nasu-green disabled:opacity-50">
-                                {isGenerating ? <span className="flex items-center justify-center"><Loader2 className="animate-spin mr-2" />考案中...</span> : 'AIプロシェフに献立を提案してもらう'}
-                            </button>
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">6. 特売品の名前と量を入力</label>
+                            <textarea value={customIngredients} onChange={(e) => setCustomIngredients(e.target.value)} rows={1} placeholder="例: 鶏肉メインで" className="w-full px-3 py-2 border rounded-lg"></textarea>
+                        </div>
+
+                        <button onClick={generateMenu} disabled={isGenerating} className="w-full py-4 bg-nasu-green text-white text-lg font-bold rounded-lg shadow-md disabled:opacity-50">
+                            {isGenerating ? <span className="flex items-center justify-center"><Loader2 className="animate-spin mr-2" />考案中...</span> : 'AIプロシェフに献立を提案してもらう'}
+                        </button>
                     </section>
                 ) : (
                     <section className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200">
@@ -340,26 +379,22 @@ const KondateApp = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <div className="lg:col-span-1 border-r pr-6">
                                 <h2 className="text-xl font-bold mb-4">🛍️ 買い物リスト</h2>
-                                <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg">
-                                    <h3 className="text-sm font-extrabold flex items-center gap-1 mb-1"><ThumbsUp size={14} /> シェフの狙い</h3>
-                                    <p className="text-xs text-gray-700 mb-2">{menuResult.menuConcept}</p>
-                                    <p className="text-xs font-bold text-red-600">✅ 節約根拠: {menuResult.totalSavings}</p>
+                                <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg text-xs">
+                                    <h3 className="font-extrabold flex items-center gap-1 mb-1"><ThumbsUp size={14} /> シェフの狙い</h3>
+                                    <p className="mb-2">{menuResult.menuConcept}</p>
+                                    <p className="font-bold text-red-600">✅ 節約根拠: {menuResult.totalSavings}</p>
                                 </div>
                                 <ul className="space-y-2">
                                     {menuResult.shoppingList.map((item, i) => (
-                                        <li key={i} onClick={() => setCheckedItems(prev => ({...prev, [item]: !prev[item]}))} className={`p-2 rounded border cursor-pointer ${checkedItems[item] ? 'bg-green-100 line-through text-gray-400' : 'bg-gray-50'}`}>{item}</li>
+                                        <li key={i} onClick={() => setCheckedItems(prev => ({...prev, [item]: !prev[item]}))} className={`p-2 rounded border cursor-pointer text-sm ${checkedItems[item] ? 'bg-green-100 line-through text-gray-400' : 'bg-gray-50'}`}>{item}</li>
                                     ))}
                                 </ul>
                             </div>
                             <div className="lg:col-span-2 space-y-6">
-                                <div>
-                                    <h2 className="text-xl font-extrabold text-red-700 mb-4 border-b-2 border-red-100 pb-1">メインディッシュ (主菜)</h2>
-                                    {menuResult.mainDishes.map((r, i) => <RecipeCard key={i} recipe={r} type="main" familySize={familySize} />)}
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-extrabold text-green-700 mb-4 border-b-2 border-green-100 pb-1">ヘルシーサイド (副菜)</h2>
-                                    {menuResult.sideDishes.map((r, i) => <RecipeCard key={i} recipe={r} type="side" familySize={familySize} />)}
-                                </div>
+                                <h2 className="text-xl font-extrabold text-red-700 border-b-2 border-red-100 pb-1">主菜・副菜</h2>
+                                {[...menuResult.mainDishes, ...menuResult.sideDishes].map((r, i) => (
+                                    <RecipeCard key={i} recipe={r} type={i < 3 ? 'main' : 'side'} familySize={familySize} />
+                                ))}
                             </div>
                         </div>
                     </section>
