@@ -291,7 +291,7 @@ const PremiumLandingPage: NextPage<LPProps> = ({ uid }) => {
                             紹介報酬について
                         </h4>
                         <p className="text-[11px] font-bold text-[#8C8479] leading-relaxed">
-                            マイページに表示される専用QRコード・専用URLからご紹介いただいた場合、利用が確認でき次第、20%を銀行振込でお支払いします。
+                            マイページに表示される専用QRコード・専用URLからご紹介いただいた場合、有料課金が確認でき次第、20%を銀行振込でお支払いします。
                         </p>
                         <div className="bg-white/50 p-4 rounded-xl text-[10px] font-black text-[#A89F94]">
                             月末締め／翌月15日振込<br />

@@ -4,8 +4,8 @@ import Image from 'next/image';
 import nookies from 'nookies';
 import Head from 'next/head';
 
-// Firebase Admin SDK
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+// Firebase Admin SDK (srcなし構成のため相対パスを修正)
+import { adminAuth, adminDb } from '../lib/firebase-admin';
 
 // React Icons
 import {
@@ -23,7 +23,7 @@ import { IoSparklesSharp } from 'react-icons/io5';
 
 // Firebase Client
 import { getAuth, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase-client';
+import { app } from '../lib/firebase-client';
 
 interface HomePageProps {
     user: { uid: string; email: string | null; };
@@ -155,12 +155,16 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                             ))}
                         </section>
 
+                        {/* 修正箇所: 有料プランボタンを有効化 */}
                         <section className="bg-gradient-to-br from-white to-yellow-50 p-6 rounded-2xl shadow-md border-2 border-yellow-400 text-center">
                             <h2 className="text-xl font-black text-gray-800 mb-2 leading-tight">
                                 限定機能で、年間<span className="text-red-600 underline decoration-4 underline-offset-4">9.3万円</span>以上がお得に！
                             </h2>
-                            <button disabled className="w-full p-4 rounded-xl bg-gray-200 text-gray-500 font-bold italic text-sm shadow-inner">
-                                月額480円プラン (準備中)
+                            <button
+                                onClick={() => { window.location.href = '/premium'; }}
+                                className="w-full p-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold text-lg shadow-md active:scale-95 transition-all duration-200"
+                            >
+                                月額480円プランを確認してみる
                             </button>
                         </section>
 
@@ -197,6 +201,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                         </footer>
                     </main>
 
+                    {/* モーダル等は省略せずそのまま保持 */}
                     {isEmergencyModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                             <div className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
@@ -237,6 +242,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         if (!sessionCookie) return { redirect: { destination: '/users/login', permanent: false } };
         const token = await adminAuth.verifySessionCookie(sessionCookie, true);
         const userDoc = await adminDb.collection('users').doc(token.uid).get();
+        // 既に480円プランの場合はマイページへ
         if (userDoc.data()?.plan === 'paid_480') return { redirect: { destination: '/mypage', permanent: false } };
         return { props: { user: { uid: token.uid, email: token.email || null } } };
     } catch (err) {
