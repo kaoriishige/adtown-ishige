@@ -5,7 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import Head from 'next/head';
 import { getAuth } from 'firebase/auth';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(process.env.STRIPE_PUBLISHABLE_KEY!);
 
 const SubscribePage = () => {
   const router = useRouter();

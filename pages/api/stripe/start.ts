@@ -34,8 +34,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const priceId = process.env.STRIPE_PRICE_ID;
     if (!priceId) return res.status(500).json({ error: "STRIPE_PRICE_ID not configured" });
 
-    const successUrl = (process.env.NEXT_PUBLIC_STRIPE_SUCCESS_URL || `${req.headers.origin}/?success=true`) + "&session_id={CHECKOUT_SESSION_ID}";
-    const cancelUrl = process.env.NEXT_PUBLIC_STRIPE_CANCEL_URL || `${req.headers.origin}/?canceled=true`;
+    const successUrl = (process.env.STRIPE_SUCCESS_URL || `${req.headers.origin}/?success=true`) + "&session_id={CHECKOUT_SESSION_ID}";
+    const cancelUrl = process.env.STRIPE_CANCEL_URL || `${req.headers.origin}/?canceled=true`;
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",

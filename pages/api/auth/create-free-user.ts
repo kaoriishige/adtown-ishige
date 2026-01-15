@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { uid, email, referrerId } = req.body || {};
+  const { uid, email, referrerId, name, address, phoneNumber } = req.body || {};
 
   if (!uid || !email) {
     return res.status(400).json({ error: 'ユーザーUIDとメールアドレスが必要です。' });
@@ -27,6 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       role: 'user',
       roles: ['user'],
       referrerId: referrerId || null,
+      name: name || null,
+      address: address || null,
+      phoneNumber: phoneNumber || null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
 

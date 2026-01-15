@@ -4,12 +4,15 @@ import getStripeAdmin from '@/lib/stripe-admin';
 import Stripe from 'stripe';
 import * as admin from 'firebase-admin';
 
+// 環境変数チェック
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 const stripe = getStripeAdmin();
 
 export const config = { api: { bodyParser: false } };
 
-// --- StripeのリクエストボディをBufferで読む ---
+/**
+ * StripeのリクエストボディをBufferで取得
+ */
 async function buffer(readable: NextApiRequest): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of readable) {
@@ -18,7 +21,9 @@ async function buffer(readable: NextApiRequest): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-// --- FirestoreとAuthを更新する共通関数 ---
+/**
+ * 有料プラン更新・紹介報酬計算ロジック
+ */
 async function handleSubscriptionUpdate(
   uid: string,
   subscriptionId: string | null,
@@ -26,156 +31,161 @@ async function handleSubscriptionUpdate(
   status: 'active' | 'canceled' | 'pending_invoice',
   serviceType: string
 ) {
-  if (!uid || !serviceType) return;
+  if (!uid || !serviceType) {
+    console.error('❌ UIDまたはServiceTypeが欠如しています');
+    return;
+  }
 
   const userDocRef = adminDb.collection('users').doc(uid);
-  const serviceRole = serviceType === 'adver' ? 'adver' : 'recruit';
   const isActive = status === 'active';
 
-  // --- Firestore更新 ---
-  await userDocRef.set(
-    {
-      stripeCustomerId: customerId,
-      stripeSubscriptionId: subscriptionId, // ← ここが重要！
-      isPaid: isActive,
-      [`${serviceType}SubscriptionStatus`]: status,
-      subscriptionStatus: status,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
+  // --- 1. Firestore 基本情報更新 ---
+  const updateData: any = {
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscriptionId,
+    isPaid: isActive,
+    [`${serviceType}SubscriptionStatus`]: status,
+    subscriptionStatus: status,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
 
-  // --- AuthのCustomClaims更新 ---
-  const user = await adminAuth.getUser(uid);
-  const currentClaims = user.customClaims || {};
-  let roles = Array.isArray(currentClaims.roles) ? [...currentClaims.roles] : [];
-
-  if (isActive) {
-    if (!roles.includes(serviceRole)) roles.push(serviceRole);
-  } else if (status === 'canceled') {
-    roles = roles.filter((r) => r !== serviceRole);
-    await adminAuth.revokeRefreshTokens(uid);
+  // 480円プランの場合、専用のplanフィールドを更新
+  if (serviceType === 'paid_480' && isActive) {
+    updateData.plan = 'paid_480';
   }
 
-  await adminAuth.setCustomUserClaims(uid, {
-    ...currentClaims,
-    roles,
-    isPaid: isActive,
-    [`${serviceType}Status`]: status,
-    subscriptionStatus: status,
-  });
+  await userDocRef.set(updateData, { merge: true });
 
-  console.log(`✅ Firestore & Auth 更新完了: ${uid}, 状態=${status}, subscriptionId=${subscriptionId}`);
+  // --- 2. 紹介報酬(20%)の計算と付与ロジック ---
+  // 決済成功時のみ実行
+  if (isActive) {
+    try {
+      const userDoc = await userDocRef.get();
+      const userData = userDoc.data();
+      const referredBy = userData?.referredBy; // 紹介者のUID
+
+      if (referredBy) {
+        let commission = 0;
+        let statKey = '';
+
+        // プランごとの報酬計算
+        if (serviceType === 'paid_480') {
+          commission = 480 * 0.2; // 96円
+          statKey = 'stats_user';
+        } else if (serviceType === 'adver') {
+          // 広告パートナー決済（例: 月額料金の20%）
+          // 仮に5000円なら1000円など。ここでは金額に応じた20%を計算。
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId!);
+          const amount = subscription.items.data[0].plan.amount || 0;
+          commission = amount * 0.2;
+          statKey = 'stats_adver';
+        } else if (serviceType === 'recruit') {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId!);
+          const amount = subscription.items.data[0].plan.amount || 0;
+          commission = amount * 0.2;
+          statKey = 'stats_recruit';
+        }
+
+        if (commission > 0) {
+          const referrerRef = adminDb.collection('users').doc(referredBy);
+          await referrerRef.update({
+            earned: admin.firestore.FieldValue.increment(commission),
+            [`${statKey}.conversions`]: admin.firestore.FieldValue.increment(1),
+            [`${statKey}.earned`]: admin.firestore.FieldValue.increment(commission),
+            lastCommissionAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          console.log(`✅ 報酬付与完了: 紹介者 ${referredBy} へ ${commission}円 (${serviceType})`);
+        }
+      }
+    } catch (refErr) {
+      console.error(`❌ 報酬加算エラー:`, refErr);
+    }
+  }
+
+  // --- 3. Firebase Auth CustomClaims (権限) 更新 ---
+  try {
+    const user = await adminAuth.getUser(uid);
+    const currentClaims = user.customClaims || {};
+
+    if (serviceType === 'adver' || serviceType === 'recruit') {
+      const serviceRole = serviceType === 'adver' ? 'adver' : 'recruit';
+      let roles = Array.isArray(currentClaims.roles) ? [...currentClaims.roles] : [];
+      if (isActive) {
+        if (!roles.includes(serviceRole)) roles.push(serviceRole);
+      } else if (status === 'canceled') {
+        roles = roles.filter((r) => r !== serviceRole);
+      }
+      await adminAuth.setCustomUserClaims(uid, { ...currentClaims, roles, isPaid: isActive });
+    } else if (serviceType === 'paid_480') {
+      await adminAuth.setCustomUserClaims(uid, {
+        ...currentClaims,
+        isPremium: isActive,
+        plan: isActive ? 'paid_480' : 'free'
+      });
+    }
+  } catch (authErr) {
+    console.error(`❌ Auth Claims更新失敗:`, authErr);
+  }
 }
 
-// --- Webhookメインハンドラ ---
+/**
+ * Webhookメインハンドラ
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).end('Method Not Allowed');
-  }
+  if (req.method !== 'POST') return res.status(405).end();
 
-  let event: Stripe.Event | undefined;
-
+  let event: Stripe.Event;
   try {
     const buf = await buffer(req);
-    const sig = req.headers['stripe-signature'];
-    if (!webhookSecret) throw new Error('STRIPE_WEBHOOK_SECRET not configured');
-
-    event = stripe.webhooks.constructEvent(buf.toString(), sig!, webhookSecret);
+    const sig = req.headers['stripe-signature']!;
+    event = stripe.webhooks.constructEvent(buf.toString(), sig, webhookSecret);
   } catch (err: any) {
-    console.error('❌ Webhook 検証エラー:', err.message);
+    console.error(`❌ Webhook Signature Error: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (!event) {
-    return res.status(400).send('Invalid event');
+  const data = event.data.object as any;
+
+  // メタデータからUIDとサービスタイプを抽出
+  let firebaseUid = data.client_reference_id || data.metadata?.firebaseUid || data.subscription_details?.metadata?.firebaseUid;
+  let serviceType = data.metadata?.serviceType || data.subscription_details?.metadata?.serviceType;
+
+  const subscriptionId = data.subscription || (event.type.startsWith('customer.subscription.') ? data.id : null);
+  const customerId = data.customer || null;
+
+  // UIDが欠落している場合の補完
+  if (!firebaseUid && customerId) {
+    const userQuery = await adminDb.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
+    if (!userQuery.empty) firebaseUid = userQuery.docs[0].id;
   }
 
+  // 480円プランの場合はデフォルト値を設定
+  if (!serviceType && (data.amount_total === 480 || data.amount === 480)) {
+    serviceType = 'paid_480';
+  }
+
+  if (!firebaseUid) return res.status(200).json({ received: true });
+
   try {
-    const data = event.data.object as any;
-    let firebaseUid =
-      data.metadata?.firebaseUid ||
-      data.subscription_metadata?.firebaseUid ||
-      data.customer_metadata?.firebaseUid;
-
-    let serviceType =
-      data.metadata?.serviceType ||
-      data.subscription_metadata?.serviceType ||
-      'adver';
-
-    // --- 1️⃣ subscriptionIdの特定 ---
-    let subscriptionId: string | null = data.subscription || null;
-    let customerId: string | null = data.customer || null;
-
-    // イベント別に補完（これが超重要！）
-    if (!subscriptionId) {
-      if (event.type === 'checkout.session.completed') {
-        subscriptionId = data.subscription || data.object?.subscription || null;
-      } else if (event.type.startsWith('invoice.') && data.subscription) {
-        subscriptionId = data.subscription;
-      } else if (event.type.startsWith('customer.subscription.')) {
-        subscriptionId = data.id; // subscription.created / updated 用
-      }
-    }
-
-    // --- 2️⃣ UIDの特定 ---
-    if (subscriptionId && !firebaseUid) {
-      const sub = await stripe.subscriptions.retrieve(subscriptionId);
-      firebaseUid = sub.metadata.firebaseUid || firebaseUid;
-      serviceType = sub.metadata.serviceType || serviceType;
-      customerId = sub.customer as string;
-    }
-
-    if (!firebaseUid && customerId) {
-      const userQuery = await adminDb
-        .collection('users')
-        .where('stripeCustomerId', '==', customerId)
-        .limit(1)
-        .get();
-      if (!userQuery.empty) {
-        firebaseUid = userQuery.docs[0].id;
-      }
-    }
-
-    if (!firebaseUid) {
-      console.warn('⚠ firebaseUid 特定不可。イベント:', event.type);
-      return res.status(200).json({ received: true });
-    }
-
-    // --- 3️⃣ イベント別処理 ---
     switch (event.type) {
       case 'checkout.session.completed':
       case 'invoice.payment_succeeded':
-      case 'payment_intent.succeeded':
-      case 'customer.subscription.updated':
-      case 'customer.subscription.created': {
-        await handleSubscriptionUpdate(firebaseUid, subscriptionId, customerId, 'active', serviceType);
-        console.log(`💰 サブスクリプション登録/更新成功: ${event.type} → UID=${firebaseUid}`);
+        // 支払い成功・購読開始
+        await handleSubscriptionUpdate(firebaseUid, subscriptionId, customerId, 'active', serviceType || 'paid_480');
         break;
-      }
-
-      case 'invoice.paid': {
-        await handleSubscriptionUpdate(firebaseUid, subscriptionId, customerId, 'active', serviceType);
-        console.log(`🧾 請求書支払い完了: UID=${firebaseUid}`);
+      case 'customer.subscription.deleted':
+        // 解約
+        await handleSubscriptionUpdate(firebaseUid, subscriptionId, customerId, 'canceled', serviceType || 'paid_480');
         break;
-      }
-
-      case 'customer.subscription.deleted': {
-        await handleSubscriptionUpdate(firebaseUid, subscriptionId, customerId, 'canceled', serviceType);
-        console.log(`🟥 サブスクリプション解約: UID=${firebaseUid}`);
+      case 'invoice.payment_failed':
+        // 支払い失敗
+        await handleSubscriptionUpdate(firebaseUid, subscriptionId, customerId, 'pending_invoice', serviceType || 'paid_480');
         break;
-      }
-
-      default:
-        console.log(`ℹ 未対応イベント: ${event.type}`);
     }
-
-    return res.status(200).json({ received: true });
   } catch (err: any) {
-    console.error('Webhook処理中のエラー:', err);
-    return res.status(500).json({ error: err.message });
+    console.error('❌ Webhook Execution Error:', err.message);
+    return res.status(500).json({ error: 'Internal Processing Error' });
   }
+
+  return res.status(200).json({ received: true });
 }
-
-

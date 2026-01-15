@@ -651,7 +651,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
 
 
                 <section>
-                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. 求人管理（複数の求人掲載無料・待ちの無料プラン）</h2>
+                    <h2 className="text-2xl font-bold mb-6 border-b pb-2">2. 求人管理（複数の求人掲載）</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <DashboardCard
                             href="/recruit/profile"
@@ -692,7 +692,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
 
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">
-                        3. 応募者管理・マッチング (基本機能・待ちの無料プラン)
+                        3. 応募者管理・マッチング (基本機能)
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
@@ -718,14 +718,14 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                 
                 <section>
                     <h2 className="text-2xl font-bold mb-6 border-b pb-2">
-                        4. 高度機能：攻めの採用 (有料AIプラン)
+                        4. 高度機能：攻めの採用 
                     </h2>
                     {/* isPaid が true になるため、このバナーは表示されなくなる */}
                     {!isPaid && (
                         <div className="mb-6 p-4 bg-gray-100 border-l-4 border-red-600 text-gray-800 rounded-md">
-                            <p className="font-extrabold mb-1 text-red-700">【有料AIプラン限定】</p>
+                            <p className="font-extrabold mb-1 text-red-700">【有料AIプラン】</p>
                             <p className="text-base font-semibold">
-                                無料の「待ちの採用」では不十分な場合、**有料プランで*AIが厳選した潜在候補者へ能動的にアプローチ**し、採用成功率を飛躍的に向上させます。
+                            「待ちの採用」では不十分な場合、**AIが厳選した潜在候補者へ能動的にアプローチ**し、採用成功率を飛躍的に向上させます。
                             </p>
                             <Link href="/recruit/subscribe_plan" className="inline-block mt-3 px-4 py-2 bg-red-600 text-white rounded-md font-bold hover:bg-red-700 transition">
                                 有料AIプランの詳細を見る
@@ -737,7 +737,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                             href="/recruit/ai_scout_list"  /* ★★★ 修正箇所 ★★★ */
                             icon={<RiBrainLine size={28} />}
                             title="AIスカウト候補者リスト"
-                            description="無料では出会えないAI厳選の潜在候補者リストを閲覧し、ヘッドハンティングを開始します"
+                            description="AI厳選の潜在候補者リストを閲覧し、ヘッドハンティングを開始します"
                             color="red"
                             isPro={true}
                             isPaid={isPaid}

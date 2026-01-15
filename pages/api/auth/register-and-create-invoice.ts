@@ -101,26 +101,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const cancelUrl =
       serviceType === 'recruit'
         ? `${BASE_URL}/recruit/dashboard?payment_status=cancel`
-        : `${BASE_URL}/partner/dashboard?payment_status=cancel`;
+        : `${BASE_URL}/partner/subscribe_plan`;
 
     // --- 4. クレジットカード決済 ---
     if (paymentMethod === 'card') {
-      const session = await stripe.checkout.sessions.create({
-        mode: 'subscription',
+      // 価格情報の取得とモード判定
+      const priceObj = await stripe.prices.retrieve(priceId);
+      const isRecurring = priceObj.type === 'recurring';
+      const mode = isRecurring ? 'subscription' : 'payment';
+
+      const sessionData: any = {
+        mode: mode,
         payment_method_types: ['card'],
         customer: customerId,
         line_items: [
-  {
-    price: priceId,
-    quantity: 1,
-  },
-],
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: { firebaseUid, serviceType, billingCycle },
-        subscription_data: { metadata: { firebaseUid, serviceType, billingCycle } },
         locale: 'ja',
-      });
+      };
+
+      // サブスクリプションの場合のみ subscription_data を追加
+      if (isRecurring) {
+        sessionData.subscription_data = {
+          metadata: { firebaseUid, serviceType, billingCycle },
+        };
+      } else {
+        // ワンタイム決済(payment)の場合、invoice_creation を有効化すると領収書が発行されやすい(任意)
+        sessionData.invoice_creation = {
+          enabled: true,
+        };
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionData);
 
       await userRef.set(
         {
@@ -136,68 +154,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // --- 5. 銀行振込（請求書） ---
-if (paymentMethod === 'invoice') {
-  // 既存のアクティブサブスクリプションをキャンセル
-  const activeSubs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
-  if (activeSubs.data.length > 0) {
-    await stripe.subscriptions.cancel(activeSubs.data[0].id);
-  }
+    if (paymentMethod === 'invoice') {
+      // 既存のアクティブサブスクリプションをキャンセル
+      const activeSubs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
+      if (activeSubs.data.length > 0) {
+        await stripe.subscriptions.cancel(activeSubs.data[0].id);
+      }
 
-  // サービス別に金額設定
-  const amountYen = serviceType === 'adver' ? 39600 : 69600;
-  const description =
-    serviceType === 'adver'
-      ? '広告パートナー 年額プラン（銀行振込）'
-      : '求人パートナー 年額プラン（銀行振込）';
+      // サービス別に金額設定
+      const amountYen = serviceType === 'adver' ? 39600 : 69600;
+      const description =
+        serviceType === 'adver'
+          ? '広告パートナー 年額プラン（銀行振込）'
+          : '求人パートナー 年額プラン（銀行振込）';
 
-  // 請求アイテムを追加（priceId不要）
-  await stripe.invoiceItems.create({
-    customer: customerId,
-    amount: amountYen, 
-    currency: 'jpy',
-    description,
-    metadata: {
-      firebaseUid,
-      serviceType,
-      billingCycle: 'annual_invoice',
-    },
-  });
+      // 請求アイテムを追加（priceId不要）
+      await stripe.invoiceItems.create({
+        customer: customerId,
+        amount: amountYen,
+        currency: 'jpy',
+        description,
+        metadata: {
+          firebaseUid,
+          serviceType,
+          billingCycle: 'annual_invoice',
+        },
+      });
 
-  // 🟢 請求書を作成（pending_invoice_items_behavior: 'include' を追加）
-  const draftInvoice = await stripe.invoices.create({
-    customer: customerId,
-    collection_method: 'send_invoice',
-    days_until_due: 30,
-    auto_advance: false,
-    pending_invoice_items_behavior: 'include', // ← ★ これを追加！
-    metadata: {
-      firebaseUid,
-      serviceType,
-      billingCycle: 'annual_invoice',
-    },
-    footer: BANK_TRANSFER_DETAILS_JAPANESE,
-  });
+      // 🟢 請求書を作成（pending_invoice_items_behavior: 'include' を追加）
+      const draftInvoice = await stripe.invoices.create({
+        customer: customerId,
+        collection_method: 'send_invoice',
+        days_until_due: 30,
+        auto_advance: false,
+        pending_invoice_items_behavior: 'include', // ← ★ これを追加！
+        metadata: {
+          firebaseUid,
+          serviceType,
+          billingCycle: 'annual_invoice',
+        },
+        footer: BANK_TRANSFER_DETAILS_JAPANESE,
+      });
 
-  // 確定してPDF取得
-  const finalizedInvoice = await stripe.invoices.finalizeInvoice(draftInvoice.id);
+      // 確定してPDF取得
+      const finalizedInvoice = await stripe.invoices.finalizeInvoice(draftInvoice.id);
 
-  // Firestore更新
-  await userRef.set(
-    {
-      stripeSubscriptionId: null,
-      stripeInvoiceId: finalizedInvoice.id,
-      [`${serviceType}SubscriptionStatus`]: 'pending_invoice',
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
+      // Firestore更新
+      await userRef.set(
+        {
+          stripeSubscriptionId: null,
+          stripeInvoiceId: finalizedInvoice.id,
+          [`${serviceType}SubscriptionStatus`]: 'pending_invoice',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-  return res.status(200).json({
-    success: true,
-    pdfUrl: finalizedInvoice.invoice_pdf,
-    bankDetails: BANK_TRANSFER_DETAILS_JAPANESE,
-  });
-}
+      return res.status(200).json({
+        success: true,
+        pdfUrl: finalizedInvoice.invoice_pdf,
+        bankDetails: BANK_TRANSFER_DETAILS_JAPANESE,
+      });
+    }
 
     return res.status(400).json({ error: '無効な支払い方法が指定されました。' });
   } catch (e: any) {

@@ -3,17 +3,17 @@ import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
-import { 
-    getAuth, 
-    signInWithEmailAndPassword, 
-    signInWithPopup, 
-    GoogleAuthProvider, 
-    setPersistence, 
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
+    setPersistence,
     browserLocalPersistence,
     onAuthStateChanged
 } from 'firebase/auth';
-import { initializeApp, getApps, getApp } from 'firebase/app'; 
-import { AlertTriangle, Key, Loader2, Eye, EyeOff } from 'lucide-react'; 
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDtTt0fWthsU6Baq1fJwUx8CgSakoZnMXY",
@@ -36,42 +36,33 @@ const LoginPage: NextPage = () => {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    // 【追加】ページを開いた瞬間に、前回のログインが生きていれば自動でホームへ飛ばす
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user && !isLoggingIn) {
-                // すでにログイン済みの場合は自動でセッションを確立して移動
-                console.log("既存のログインセッションを検出しました。自動遷移します。");
-                await handleLoginSuccess(user);
-            }
-        });
-        return () => unsubscribe();
-    }, []);
-
+    // ログイン成功時の処理：APIの返却値を「強制」実行する
     const handleLoginSuccess = async (user: any) => {
         try {
             const idToken = await user.getIdToken(true);
             const response = await fetch("/api/auth/sessionLogin", {
                 method: "POST",
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "Authorization": `Bearer ${idToken}` 
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${idToken}`
                 },
                 body: JSON.stringify({ loginType: "user" }),
             });
 
             const data = await response.json();
 
-            if (!response.ok) {
-                // 自動ログイン失敗時は何もしない（手動ログインを待つ）
-                if (data.error === 'user_data_missing') return; 
-                throw new Error(data.error || "ログイン処理に失敗しました。");
-            }
+            if (response.ok && data.redirect) {
+                // キャッシュを回避するためにタイムスタンプを付与して強制遷移
+                const targetPath = data.redirect;
+                console.log("Redirecting to:", targetPath);
 
-            // 成功したら /home へ飛ばす
-            window.location.href = data.redirect || "/home";
+                // router.pushではなく、ブラウザレベルで強制リロード遷移させる
+                window.location.replace(targetPath);
+            } else {
+                setIsLoggingIn(false);
+            }
         } catch (e: any) {
-            console.error("Auto Login Error:", e.message);
+            console.error("Login Error:", e.message);
             setIsLoggingIn(false);
         }
     };
@@ -128,9 +119,6 @@ const LoginPage: NextPage = () => {
                 <button onClick={handleGoogleLogin} disabled={isLoggingIn} className="w-full py-3 border rounded-md flex justify-center items-center hover:bg-gray-50">
                     Googleでログイン
                 </button>
-                <div className="text-center text-sm text-blue-600">
-                    <Link href="/users/signup">新規登録はこちら</Link>
-                </div>
             </div>
         </div>
     );

@@ -9,23 +9,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const cookies = nookies.get({ req });
-    // ★修正: cookies.token を cookies.session に戻す
+    
+    // 【修正】セッションがない場合は401を返さず、role: null で正常終了させる
     if (!cookies.session) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(200).json({ 
+        role: null, 
+        roles: [], 
+        plan: null,
+        authenticated: false 
+      });
     }
 
-    // ★修正: cookies.token を cookies.session に戻す
+    // セッションクッキーの検証
     const token = await adminAuth.verifySessionCookie(cookies.session, true);
     
-    // 🔹 トークンから role と一緒に plan も取得 (ロジックは維持)
     const role = token.role || 'user';
-    const plan = token.plan || 'free'; // planクレイムがなければ'free'を返す
+    const plan = token.plan || 'free'; 
+    const roles = token.roles || [role];
 
-    // 🔹 両方の情報をクライアントに返す (ロジックは維持)
-    res.status(200).json({ role, plan });
+    console.log(`[GetRole] User: ${token.uid}, Role: ${role}, Plan: ${plan}`);
+
+    res.status(200).json({ 
+      role, 
+      roles,
+      plan,
+      uid: token.uid,
+      authenticated: true
+    });
 
   } catch (error) {
+    // 【修正】トークンエラー時もリダイレクトループを防ぐため200でゲスト扱いにする
     console.error("Error fetching user data:", error);
-    res.status(401).json({ error: 'Invalid token' });
+    res.status(200).json({ 
+      role: null, 
+      roles: [], 
+      plan: null,
+      authenticated: false,
+      error: 'Invalid session'
+    });
   }
 }

@@ -1,352 +1,220 @@
-// Lucideアイコンのインポート（ユーザーの既存のReactプロジェクトに合わせる）
-import { QrCode, Lock, Unlock, Loader2, Link, Download, Clipboard, ToggleLeft, ToggleRight } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-
-// Firebaseのインポート
-import { initializeApp, FirebaseApp } from "firebase/app";
+import { GetServerSideProps, NextPage } from 'next';
+import Head from 'next/head';
+import Link from 'next/link';
+import nookies from 'nookies';
 import { 
-  getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, Auth 
-} from "firebase/auth";
-import { 
-  getFirestore, doc, setDoc, onSnapshot, Firestore 
-} from "firebase/firestore";
+  QrCode, Lock, Unlock, Loader2, Download, 
+  Clipboard, ToggleLeft, ToggleRight, ArrowLeft,
+  Link as LinkIcon // 1. ここに別名で追加
+} from 'lucide-react';
 
-// --- 型宣言の修正 (ESLint no-var 警告を解消) ---
-// Canvas環境のグローバル変数に対するAmbient Declarations
-// これらは、実行環境によって外部から提供される変数です。
-declare const __firebase_config: string;
-declare const __app_id: string;
-declare const __initial_auth_token: string;
-// ----------------------------------------------------
+// Firebase Admin SDK (サーバーサイド用)
+import { adminAuth, adminDb } from '../lib/firebase-admin';
 
-// グローバル変数を使用してFirebase設定を取得
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
-  : null;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// Firebase Client SDK
+import { initializeApp, getApp, getApps } from "firebase/app";
+import { getFirestore, doc, setDoc, onSnapshot } from "firebase/firestore";
 
-// Firestoreインスタンスと認証インスタンスの保持
-let appInstance: FirebaseApp | undefined;
-let dbInstance: Firestore | undefined;
-let authInstance: Auth | undefined;
+// --- クライアントサイド用Firebase初期化 ---
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+};
 
-if (firebaseConfig) {
-  try {
-    appInstance = initializeApp(firebaseConfig);
-    dbInstance = getFirestore(appInstance);
-    authInstance = getAuth(appInstance);
-  } catch (e) {
-    console.error("Firebase Initialization Failed:", e);
-    // 初期化に失敗した場合でも続行し、コンポーネント内でエラーを表示
-  }
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const db = getFirestore(app);
+
+// --- 型定義 ---
+interface ReferralDashboardProps {
+  userId: string;
+  email: string;
 }
 
-// ストアの紹介プラン状態ドキュメントの参照を取得 (パブリックパスを使用)
-// パブリックパス: /artifacts/{appId}/public/data/store_status/referral_plan
-const getReferralPlanDocRef = (db: Firestore) => {
-  return doc(db, `/artifacts/${appId}/public/data/store_status`, 'referral_plan');
-};
-
-// QRコードのモック（外部ライブラリがないためCanvasで描画）
-const QRCodeMock = ({ value }: { value: string }) => {
-  // 実際のプロジェクトでは、'qrcode.react' などのライブラリを使用します。
-  return (
-    <div className="p-4 bg-white rounded-lg shadow-inner text-center">
-      <div 
-        className="mx-auto w-48 h-48 flex items-center justify-center border-4 border-dashed rounded-lg border-gray-300 bg-white"
-      >
-        <QrCode className="w-16 h-16 text-gray-400" />
-      </div>
-      <p className="mt-3 text-sm font-mono text-gray-700 break-words max-w-full overflow-hidden whitespace-nowrap text-ellipsis">
-        {value.length > 60 ? value.substring(0, 57) + '...' : value}
-      </p>
-      <p className="text-xs text-gray-500 mt-1">
-        （注: QRコードのデータがここに表示されています）
-      </p>
+// QRコードモック
+const QRCodeMock = ({ value }: { value: string }) => (
+  <div className="p-4 bg-white rounded-2xl shadow-inner text-center">
+    <div className="mx-auto w-48 h-48 flex items-center justify-center border-4 border-dashed rounded-3xl border-gray-200 bg-gray-50">
+      <QrCode className="w-16 h-16 text-gray-300" />
     </div>
-  );
-};
+    <p className="mt-4 text-[10px] font-mono text-gray-400 break-all px-4 italic">{value}</p>
+  </div>
+);
 
-// メインコンポーネント
-const ReferralDashboard = () => {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isReferralPlanActive, setIsReferralPlanActive] = useState(false); 
+const ReferralDashboard: NextPage<ReferralDashboardProps> = ({ userId, email }) => {
+  const [isReferralPlanActive, setIsReferralPlanActive] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // 1. Firebaseの認証処理
+  const referralUrl = `https://your-app-landing-page.com/?ref=${userId}`;
+
+  // 1. 紹介プランの状態をリアルタイム取得
   useEffect(() => {
-    if (!authInstance) {
-      setError("Firebase Authが初期化されていません。設定を確認してください。");
-      setIsLoading(false);
-      return;
-    }
-
-    // 認証リスナーの設定
-    const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
-      if (!user) {
-        try {
-          // Canvas環境での認証処理
-          // __initial_auth_token の存在チェック
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            // authInstanceの型をAuthとしてアサート
-            await signInWithCustomToken(authInstance as Auth, __initial_auth_token); 
-          } else {
-            await signInAnonymously(authInstance as Auth);
-          }
-        } catch (e: any) {
-          console.error("Firebase Sign-In Failed:", e);
-          setError("認証に失敗しました。コンソールを確認してください。");
-        }
+    if (!userId) return;
+    const docRef = doc(db, 'store_status', 'referral_plan');
+    
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setIsReferralPlanActive(!!docSnap.data().isReferralPlanActive);
+      } else {
+        setDoc(docRef, { isReferralPlanActive: false, updatedAt: Date.now() }, { merge: true });
       }
-      // 認証後、ユーザーIDを設定
-      setUserId(authInstance.currentUser?.uid || 'anonymous');
-      setIsLoading(false);
+    }, (e) => {
+      setError("ステータスの取得に失敗しました。");
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [userId]);
 
-  // 2. 紹介プランの状態リスニング
-  useEffect(() => {
-    if (!dbInstance || !userId || isLoading) return;
-
-    setError(null);
-    // dbInstanceの型をFirestoreとしてアサート
-    const subDocRef = getReferralPlanDocRef(dbInstance as Firestore);
-
-    // リアルタイムリスナーの設定
-    const unsubscribeSub = onSnapshot(subDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setIsReferralPlanActive(!!data.isReferralPlanActive); 
-      } else {
-        // ドキュメントがない場合は無効と判断し、初期状態を書き込む
-        setIsReferralPlanActive(false);
-        setDoc(subDocRef, { isReferralPlanActive: false, updatedAt: Date.now() }, { merge: true }).catch(console.error);
-      }
-    }, (e) => {
-      console.error("Firestore Referral Plan Snapshot Error:", e);
-      setError("紹介プラン情報の取得中にエラーが発生しました。");
-    });
-
-    return () => unsubscribeSub();
-  }, [userId, isLoading]);
-
-  // 3. 紹介プランの有効化/無効化（管理者承認をシミュレート）
+  // 2. ステータス切り替えロジック
   const toggleReferralPlan = async () => {
-    if (!dbInstance || isUpdatingStatus) return;
-
-    // TODO: 実際のアプリでは、カスタムモーダルUIに置き換える
-    // window.confirm() の使用は避けるべきですが、デモ動作として残します。
-    const confirmation = window.confirm(`本当に紹介報酬発生を${isReferralPlanActive ? '無効化' : '有効化'}しますか？\n(これは、システム上の設定を切り替える操作です)`);
-    if (!confirmation) return;
+    if (isUpdatingStatus) return;
+    if (!window.confirm(`紹介報酬の発生設定を切り替えますか？`)) return;
 
     setIsUpdatingStatus(true);
-    
     try {
-      // dbInstanceの型をFirestoreとしてアサート
-      const subDocRef = getReferralPlanDocRef(dbInstance as Firestore); 
-      const newStatus = !isReferralPlanActive;
-
-      await setDoc(subDocRef, { 
-        isReferralPlanActive: newStatus,
-        updatedAt: Date.now(),
-      }, { merge: true }); 
-
+      const docRef = doc(db, 'store_status', 'referral_plan');
+      await setDoc(docRef, { 
+        isReferralPlanActive: !isReferralPlanActive,
+        updatedAt: Date.now() 
+      }, { merge: true });
     } catch (e) {
-      console.error("Error toggling referral plan: ", e);
-      setError("紹介プランの状態更新に失敗しました。");
+      setError("更新に失敗しました。");
     } finally {
       setIsUpdatingStatus(false);
     }
   };
 
-  // 4. URL生成とコピー
-  const referralUrl = userId ? `https://your-app-landing-page.com/?ref=${userId}` : 'URL生成中...';
-
   const handleCopy = () => {
-    // 実際のTSX環境ではnavigator.clipboard.writeTextを使用できますが、
-    // Canvas環境の制約を考慮し、最も安全な方法を維持します。
-    try {
-      const tempInput = document.createElement('textarea');
-      tempInput.value = referralUrl;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      // document.execCommand('copy') は非推奨ですが、iframe環境では信頼性が高い
-      document.execCommand('copy'); 
-      document.body.removeChild(tempInput);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
-      console.error("Copy failed:", e);
-      // alertの代わりにカスタムメッセージボックスを使用
-      console.log("コピーに失敗しました。URLを直接選択してコピーしてください。");
-    }
+    navigator.clipboard.writeText(referralUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
-
-  // 5. QRコードダウンロードのモック
-  const handleDownload = () => {
-    // 実際のコードでは、HTML Canvasの内容をBlobとしてダウンロードする処理が入ります。
-    console.log("QRコードのダウンロード機能はデモです。");
-    // TODO: alert()の代わりにカスタムメッセージボックスを使用することが推奨
-    // window.confirm() の使用は避けるべきですが、デモ動作として残します。
-    window.confirm("ダウンロード機能はデモです。コンソールを確認してください。"); 
-  };
-  
-  // ロード中/未認証
-  if (isLoading || !userId || !dbInstance) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-        <p className="ml-3 text-gray-600">認証とデータを読み込み中...</p>
-      </div>
-    );
-  }
-
-  // UIステータスの決定
-  const planLabel = isReferralPlanActive 
-    ? { icon: <Unlock className="w-5 h-5 text-indigo-600" />, text: '有効化済み', style: 'bg-indigo-500 text-white' }
-    : { icon: <Lock className="w-5 h-5 text-gray-600" />, text: '保留中/無効', style: 'bg-gray-500 text-white' };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans p-4 sm:p-8">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-800 border-b pb-3 flex items-center">
-            <QrCode className="w-7 h-7 mr-2 text-indigo-600" />
-            紹介報酬発生用コード発行
-          </h1>
-          <p className="text-sm text-gray-500 mt-2">
-            パートナーID: <span className="font-mono text-xs p-1 bg-gray-200 rounded">{userId}</span>
-          </p>
+    <div className="min-h-screen bg-gray-50 pb-12 font-sans">
+      <Head><title>紹介ダッシュボード | プレミアム限定</title></Head>
+
+      <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl border-x">
+        <header className="p-6 border-b bg-white sticky top-0 z-20 flex items-center justify-between">
+          <Link href="/mypage" className="p-2 hover:bg-gray-100 rounded-full transition">
+            <ArrowLeft className="w-6 h-6 text-gray-600" />
+          </Link>
+          <h1 className="text-lg font-black text-gray-800">報酬発生管理</h1>
+          <div className="w-10"></div>
         </header>
 
-        {/* ---------------------------------------------------- */}
-        {/* ステータス表示と管理者トグル (切り分けロジックの中心) */}
-        {/* ---------------------------------------------------- */}
-        <div className={`p-6 rounded-xl shadow-lg border-4 ${isReferralPlanActive ? 'border-indigo-500 bg-indigo-50' : 'border-red-500 bg-red-50'}`}>
-          <div className="flex items-center justify-between mb-4 flex-wrap">
-            <div className="flex items-center">
-              {planLabel.icon}
-              <span className="ml-3 font-bold text-xl text-gray-800">
-                紹介報酬発生ステータス
+        <main className="p-6 space-y-6">
+          <div className="flex items-center justify-between text-xs font-bold text-gray-400 px-1">
+            <span>USER ID: {userId.substring(0, 8)}...</span>
+            <span className="text-indigo-500 uppercase tracking-widest">Premium Member</span>
+          </div>
+
+          {/* ステータスカード */}
+          <div className={`p-6 rounded-[2rem] border-2 transition-all duration-500 ${
+            isReferralPlanActive ? 'border-indigo-500 bg-indigo-50/50' : 'border-gray-200 bg-gray-50'
+          }`}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                {isReferralPlanActive ? <Unlock className="text-indigo-600" /> : <Lock className="text-gray-400" />}
+                <span className="font-black text-xl text-gray-800">報酬発生設定</span>
+              </div>
+              <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm ${
+                isReferralPlanActive ? 'bg-indigo-600 text-white' : 'bg-gray-400 text-white'
+              }`}>
+                {isReferralPlanActive ? 'ACTIVE' : 'LOCKED'}
               </span>
             </div>
-            <span className={`px-3 py-1 rounded-full text-sm font-bold ${planLabel.style} mt-2 sm:mt-0`}>
-                {planLabel.text}
-            </span>
-          </div>
 
-          <p className="text-gray-700 mb-4 text-sm font-bold">
-            下記のボタンを押して、紹介システムをご利用ください。
-          </p>
-          
-          <button
+            <button
               onClick={toggleReferralPlan}
               disabled={isUpdatingStatus}
-              className={`w-full py-3 px-4 text-sm font-bold rounded-lg transition duration-150 flex items-center justify-center ${
-                  isReferralPlanActive 
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              } disabled:opacity-50 shadow-md`}
-          >
-              {isUpdatingStatus ? (
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              ) : isReferralPlanActive ? (
-                  <ToggleRight className="w-6 h-6 mr-1" />
+              className={`w-full py-5 rounded-2xl font-black text-lg transition shadow-xl active:scale-95 flex items-center justify-center ${
+                isReferralPlanActive ? 'bg-white text-red-500 border-2 border-red-100' : 'bg-indigo-600 text-white shadow-indigo-200'
+              } disabled:opacity-50`}
+            >
+              {isUpdatingStatus ? <Loader2 className="animate-spin" /> : isReferralPlanActive ? (
+                <><ToggleRight className="mr-2 w-8 h-8" /> システム停止</>
               ) : (
-                  <ToggleLeft className="w-6 h-6 mr-1" />
+                <><ToggleLeft className="mr-2 w-8 h-8" /> システム開始</>
               )}
-              {isReferralPlanActive ? '報酬発生ステータスを無効にする' : '報酬発生ステータスを有効にする'}
-          </button>
-        </div>
-
-        {error && (
-          <div className="mt-4 p-3 bg-red-100 text-red-700 border border-red-400 rounded-lg">
-            エラー: {error}
+            </button>
           </div>
-        )}
 
-        <div className="mt-8">
-            {isReferralPlanActive ? (
-                /* ---------------------------------------------------- */
-                /* 有効化された機能エリア */
-                /* ---------------------------------------------------- */
-                <div className="bg-white p-8 rounded-xl shadow-2xl text-center">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">紹介報酬発生コードが有効です！</h2>
-                    <p className="mt-2 text-gray-600 mb-8">
-                        このURLまたはQRコードからお客様が有料アプリに登録すると、あなたに紹介報酬が支払われます。
-                    </p>
+          {error && <div className="p-4 bg-red-100 text-red-600 rounded-xl text-xs font-bold">{error}</div>}
 
-                    <div className="space-y-8">
-                        {/* URL表示 */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 text-left mb-1">紹介用URL</label>
-                            <div className="mt-1 flex rounded-lg shadow-sm">
-                                <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
-                                    <Link className="w-5 h-5" />
-                                </span>
-                                <input 
-                                    type="text" 
-                                    readOnly 
-                                    value={referralUrl} 
-                                    className="flex-1 block w-full sm:text-sm border-gray-300 bg-gray-100 p-3" 
-                                />
-                                <button 
-                                    onClick={handleCopy} 
-                                    type="button" 
-                                    className="w-32 -ml-px relative inline-flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-r-lg text-white bg-indigo-600 hover:bg-indigo-700 transition"
-                                >
-                                    <Clipboard className="w-4 h-4" />
-                                    <span>{copied ? 'コピー済み！' : 'コピー'}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* QRコード表示 */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 text-left mb-3">紹介用QRコード</label>
-                            <div className="flex justify-center p-6 border rounded-xl bg-gray-50">
-                                <QRCodeMock value={referralUrl} />
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2">お客様のスマートフォンで読み取ってもらってください。</p>
-                        </div>
-                    </div>
-                    
-                    {/* ダウンロードボタン */}
-                    <div className="mt-8">
-                        <button 
-                            onClick={handleDownload} 
-                            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-colors shadow-lg flex items-center justify-center mx-auto"
-                        >
-                            <Download className="w-5 h-5 mr-2" />
-                            QRコードをダウンロード (デモ)
-                        </button>
-                    </div>
+          {/* メインエリア */}
+          {isReferralPlanActive ? (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-white p-6 rounded-[2rem] border-2 border-gray-100 space-y-4 shadow-sm">
+                <h2 className="font-black text-gray-800 flex items-center italic">
+                  {/* 2. ここを LinkIcon に変更 */}
+                  <LinkIcon className="mr-2 w-5 h-5 text-indigo-500" /> YOUR REFERRAL LINK
+                </h2>
+                <div className="relative group">
+                  <input 
+                    type="text" readOnly value={referralUrl}
+                    className="w-full p-4 bg-gray-50 border-none rounded-xl text-xs font-mono text-gray-500 pr-24"
+                  />
+                  <button 
+                    onClick={handleCopy}
+                    className="absolute right-2 top-2 bottom-2 px-4 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition"
+                  >
+                    {copied ? 'OK' : 'COPY'}
+                  </button>
                 </div>
-
-            ) : (
-                /* ---------------------------------------------------- */
-                /* 無効化された機能エリア */
-                /* ---------------------------------------------------- */
-                <div className="bg-white p-12 rounded-xl shadow-2xl text-center border-2 border-red-300">
-                    <Lock className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">紹介報酬発生コードは発行待ちです</h2>
-                    <p className="text-gray-600">
-                        現在、システムの設定により紹介報酬発生が無効（保留）になっています。
-                    </p>
-                    <p className="text-sm font-semibold text-red-500 mt-4">
-                        有効化されると、この画面でコード発行が可能になり、振り込み口座の登録が可能になります。
-                    </p>
-                </div>
-            )}
-        </div>
+                <QRCodeMock value={referralUrl} />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white p-10 rounded-[2rem] border-2 border-dashed border-gray-200 text-center space-y-4">
+              <Lock className="w-16 h-16 text-gray-200 mx-auto" />
+              <p className="text-gray-400 text-sm font-bold leading-relaxed px-4">
+                紹介報酬機能は現在停止されています。<br/>
+                上のボタンから有効化してください。
+              </p>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
+};
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  try {
+    const cookies = nookies.get(context);
+    const sessionCookie = cookies.session || '';
+
+    if (!sessionCookie) return { redirect: { destination: '/users/login', permanent: false } };
+
+    const token = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const userDoc = await adminDb.collection('users').doc(token.uid).get();
+    const userData = userDoc.data();
+
+    if (!userData || userData.plan !== 'paid_480') {
+      return {
+        redirect: {
+          destination: '/home',
+          permanent: false,
+        },
+      };
+    }
+
+    return {
+      props: {
+        userId: token.uid,
+        email: token.email || '',
+      },
+    };
+  } catch (err) {
+    return { redirect: { destination: '/users/login', permanent: false } };
+  }
 };
 
 export default ReferralDashboard;

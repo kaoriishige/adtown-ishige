@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/router'; 
+import { useRouter } from 'next/router';
 import Link from 'next/link'; // <-- 【重要】Linkコンポーネントをインポートしました
 import {
     ShieldCheck,
@@ -58,7 +58,18 @@ interface LandingData {
     finalTagline1?: string;
     finalTagline2?: string;
 }
+import { useAffiliateTracker } from '@/lib/affiliate-tracker';
 
+const LandingPage = () => {
+    // フックを呼び出すだけで、URLの ?ref=xxx を自動で取得して保存します
+    useAffiliateTracker('user');
+
+    return (
+        <div>
+            {/* LPのコンテンツ */}
+        </div>
+    );
+};
 // -------------------------
 // Helper: safeHTML
 // -------------------------
@@ -73,10 +84,10 @@ const IndexPage = () => {
     // ---------------------------------------------------------
     // 紹介システム連動ロジック 
     // ---------------------------------------------------------
-    
+
     // 基本となるLINE公式アカウントのURL
     const BASE_LINE_URL = "https://lin.ee/N4x90pv";
-    
+
     // 実際にボタンに設定されるURL（初期値は基本URL）
     const [lineUrl, setLineUrl] = useState(BASE_LINE_URL);
 
@@ -88,14 +99,14 @@ const IndexPage = () => {
         if (typeof window === 'undefined') {
             return;
         }
-        
+
         // 1. ページタイトル設定
         document.title = "みんなのNasuアプリ | 公式";
 
         // 2. URLパラメータから紹介ID (ref) を取得
         try {
             const searchParams = new URLSearchParams(window.location.search);
-            const referralId = searchParams.get('ref'); 
+            const referralId = searchParams.get('ref');
 
             if (referralId) {
                 // IDがある場合、LINEのURLに ?ref=ID を追加
@@ -250,29 +261,29 @@ const IndexPage = () => {
 
     // アイコン定義
     const freePlanIcons = [
-        Sparkles, 
-        ShoppingCart, 
-        HeartPulse, 
-        Smile, 
-        Lightbulb, 
-        Rocket, 
-        Users, 
+        Sparkles,
+        ShoppingCart,
+        HeartPulse,
+        Smile,
+        Lightbulb,
+        Rocket,
+        Users,
     ];
 
     // 有料プラン用アイコン
     const premiumPlanIcons = [
-        Building2, 
-        Briefcase, 
-        ShoppingCart, 
-        HeartHandshake, 
-        Ticket, 
-        HeartPulse, 
-        Coins, 
-        Zap, 
-        Gift, 
-        Crown, 
-        Star, 
-        Infinity 
+        Building2,
+        Briefcase,
+        ShoppingCart,
+        HeartHandshake,
+        Ticket,
+        HeartPulse,
+        Coins,
+        Zap,
+        Gift,
+        Crown,
+        Star,
+        Infinity
     ];
 
     // パートナー企業ロゴリスト
@@ -296,10 +307,10 @@ const IndexPage = () => {
 
     return (
         <div className="bg-white text-gray-800 font-sans">
-            
+
             {/* Hero Section: 画像ヘッダー */}
             <header className="relative bg-white overflow-hidden shadow-lg">
-                
+
                 <div className="relative w-full aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6] mx-auto">
                     <Image
                         src="/images/minna_nasu.png"
@@ -385,7 +396,7 @@ const IndexPage = () => {
                                 </div>
                             ))}
                         </div>
-                        
+
                     </div>
                 </section>
 
@@ -446,7 +457,7 @@ const IndexPage = () => {
                                 </div>
                                 <h3 className="font-bold text-xl mb-3 text-gray-900">
                                     {data.solutionBenefit4_Title}
-                                </h3> 
+                                </h3>
                                 <div className="text-gray-600 space-y-2">
                                     <SafeHTML html={data.solutionBenefit4_Desc} />
                                 </div>
@@ -489,7 +500,7 @@ const IndexPage = () => {
                         <p className="mt-10 text-center text-xl font-bold text-pink-700">
                             {data.freePlanConclusion}
                         </p>
-                        
+
                     </div>
                 </section>
 
@@ -562,10 +573,10 @@ const IndexPage = () => {
                                 ))}
                             </h2>
                             <p className="mt-4 text-pink-200">{data.finalCtaSubtext}</p>
-                            
+
                             {/* LINE Button Only */}
                             <div className="mt-10 flex flex-col items-center justify-center space-y-6">
-                                
+
                                 <div className="flex flex-col items-center space-y-2">
                                     <p className="text-lg font-bold text-pink-100">
                                         最速！LINEで友だち追加

@@ -3,7 +3,8 @@ import Stripe from 'stripe';
 import nookies from 'nookies';
 import { getAuth } from 'firebase-admin/auth';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: '2023-10-16' as any });
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -42,10 +43,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       ],
       customer_email: user.email || undefined,
-      // 決済後の移動先を合言葉(session_id)付きでマイページに設定します
-      success_url: `${req.headers.origin}/mypage?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/subscribe`,
+      success_url: `${req.headers.origin}/premium?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.origin}/premium`,
     });
+
 
     return res.status(200).json({ url: session.url });
   } catch (err) {

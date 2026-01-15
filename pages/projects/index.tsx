@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { 
-  Plus, 
-  MapPin, 
-  User, 
-  Loader2, 
-  Layout, 
+import {
+  Plus,
+  MapPin,
+  User,
+  Loader2,
+  Layout,
   AlertCircle,
   Calendar
 } from 'lucide-react';
 
-import { auth, db } from '../../lib/firebase'; 
+import { auth, db } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -52,8 +52,8 @@ const DEMO_PROJECTS = [
 
 export default function ProjectsIndex() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null); 
-  
+  const [user, setUser] = useState<any>(null);
+
   // Firestoreのデータ + デモデータを管理
   const [realProjects, setRealProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,22 +73,22 @@ export default function ProjectsIndex() {
   useEffect(() => {
     // ログインに関わらず読み込みを試みる（ゲスト閲覧用）
     const q = query(collection(db, 'projects'));
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
         ...doc.data(),
         // Firestoreデータ用の表示フォーマット調整
-        category: '新規プロジェクト', 
+        category: '新規プロジェクト',
         tags: ['募集中'],
         location: '場所未定',
         organizer: '匿名ユーザー',
         isDemo: false
       }));
-      
+
       // 新しい順にソート
       data.sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-      
+
       setRealProjects(data);
       setLoading(false);
     }, (err) => {
@@ -114,7 +114,7 @@ export default function ProjectsIndex() {
       const docRef = await addDoc(collection(db, 'projects'), {
         name: '新しい活動の募集',
         createdAt: serverTimestamp(),
-        createdBy: user.uid 
+        createdBy: user.uid
       });
       router.push(`/projects/${docRef.id}`);
     } catch (e) {
@@ -142,7 +142,7 @@ export default function ProjectsIndex() {
             <span className="text-gray-300">/</span>
             <span>地域活動ボード</span>
           </div>
-          <button 
+          <button
             onClick={handleCreateNew}
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full flex items-center gap-2 text-sm font-bold transition-colors shadow-sm"
           >
@@ -153,18 +153,17 @@ export default function ProjectsIndex() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6">
-        
+
         {/* タブフィルター */}
         <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto pb-2">
           {TABS.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === tab 
-                  ? 'bg-gray-800 text-white' 
+              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab
+                  ? 'bg-gray-800 text-white'
                   : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -194,18 +193,18 @@ export default function ProjectsIndex() {
         ) : (
           <div className="space-y-4">
             {allProjects.map((project) => (
-              <Link 
-                key={project.id} 
+              <Link
+                key={project.id}
                 href={`/projects/${project.id}`}
                 className="block bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-blue-300 transition-all group"
               >
                 <div className="flex justify-between items-start mb-3">
                   <span className={`
                     px-2 py-1 rounded text-xs font-bold 
-                    ${project.category === 'ボランティア・清掃' ? 'bg-green-100 text-green-700' : 
+                    ${project.category === 'ボランティア・清掃' ? 'bg-green-100 text-green-700' :
                       project.category === '交流・文化・趣味' ? 'bg-orange-100 text-orange-700' :
-                      project.category === '防災・緊急支援' ? 'bg-red-100 text-red-700' :
-                      'bg-blue-100 text-blue-700'}
+                        project.category === '防災・緊急支援' ? 'bg-red-100 text-red-700' :
+                          'bg-blue-100 text-blue-700'}
                   `}>
                     {project.category || '未分類'}
                   </span>
