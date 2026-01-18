@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { db, auth } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { RiExchangeLine, RiCameraFill, RiMapPin2Fill, RiCalendarCheckLine, RiMoneyDollarCircleLine, RiHashtag, RiArrowLeftSLine } from 'react-icons/ri';
+import { RiExchangeLine, RiCameraFill, RiArrowLeftSLine, RiHashtag } from 'react-icons/ri';
 import Link from 'next/link';
 
-const NASU_AREAS = ["那須塩原(黒磯)", "那須塩原(西那須野)", "那須塩原(塩原)", "大田原市", "那須町"];
+// エラーの元となっていた定数名を統一
+const NASU_AREAS = ["那須塩原市", "大田原市", "那須町"];
 const TEMPLATES = ["子供が使わなくなりました", "1回だけ使いました", "引越しで片付け中です"];
 
 export default function RentalCreatePage() {
@@ -13,13 +14,14 @@ export default function RentalCreatePage() {
     const [loading, setLoading] = useState(false);
     const [itemName, setItemName] = useState("");
     const [content, setContent] = useState("");
+    // 初期値を NASU_AREAS[0] に設定
     const [area, setArea] = useState(NASU_AREAS[0]);
-    const [period, setPeriod] = useState(""); // 貸せる期間 (例: 1/10~1/12)
-    const [returnDate, setReturnDate] = useState(""); // 返却日
-    const [price, setPrice] = useState(""); // 料金 (無料or金額)
-    const [place, setPlace] = useState(""); // 受け渡し場所
+    const [period, setPeriod] = useState("");
+    const [returnDate, setReturnDate] = useState("");
+    const [price, setPrice] = useState("");
+    const [place, setPlace] = useState("");
     const [lineId, setLineId] = useState("");
-    const [imageUrl, setImageUrl] = useState("https://placehold.jp/24/cccccc/ffffff/400x300.png?text=No%20Image"); // 本来はstorageへ
+    const [imageUrl, setImageUrl] = useState("https://placehold.jp/24/cccccc/ffffff/400x300.png?text=No%20Image");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,13 +30,15 @@ export default function RentalCreatePage() {
         setLoading(true);
         try {
             const user = auth.currentUser;
-            const userDoc = await getDoc(doc(db, "users", user!.uid));
+            if (!user) throw new Error("ログインが必要です");
+
+            const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
 
             await addDoc(collection(db, "rental_posts"), {
-                uid: user!.uid,
+                uid: user.uid,
                 userName: userData?.name || "匿名",
-                rentalCount: userData?.rentalCount || 0, // 利用回数バッジ
+                rentalCount: userData?.rentalCount || 0,
                 itemName,
                 content,
                 area,
@@ -49,6 +53,7 @@ export default function RentalCreatePage() {
             });
             router.push('/premium/rental');
         } catch (error) {
+            console.error(error);
             alert("エラーが発生しました");
         } finally {
             setLoading(false);
@@ -58,26 +63,30 @@ export default function RentalCreatePage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-12">
             <header className="bg-white p-4 border-b flex items-center gap-4 sticky top-0 z-10">
-                <Link href="/premium/rental" className="p-2 bg-gray-50 rounded-full"><RiArrowLeftSLine size={24}/></Link>
+                <Link href="/premium/rental" className="p-2 bg-gray-50 rounded-full">
+                    <RiArrowLeftSLine size={24}/>
+                </Link>
                 <h1 className="font-black text-gray-800 flex items-center gap-2">
                     <RiExchangeLine className="text-blue-600" /> 使ってない貸します
                 </h1>
             </header>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5 max-w-lg mx-auto">
-                {/* 写真 (PDF P.5 必須) */}
+                {/* 写真 */}
                 <div className="aspect-video w-full bg-gray-200 rounded-[2rem] flex flex-col items-center justify-center border-4 border-dashed border-gray-300 overflow-hidden relative">
                     <RiCameraFill size={40} className="text-gray-400" />
                     <p className="text-[10px] font-black text-gray-400 mt-2">写真1枚 (必須)</p>
-                    <img src={imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-50" alt="" />
+                    {imageUrl && <img src={imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-50" alt="" />}
                 </div>
 
+                {/* 物の名前 */}
                 <div>
                     <label className="text-[10px] font-black text-gray-400 ml-2">物の名前 (必須)</label>
                     <input required className="w-full p-4 bg-white rounded-2xl font-bold shadow-sm" 
                         value={itemName} onChange={(e)=>setItemName(e.target.value)} placeholder="例：ベビーカー" />
                 </div>
 
+                {/* 一言コメント */}
                 <div>
                     <label className="text-[10px] font-black text-gray-400 ml-2 mb-2 block tracking-widest">一言コメント</label>
                     <div className="flex flex-wrap gap-2 mb-3">
@@ -94,6 +103,7 @@ export default function RentalCreatePage() {
                         <label className="text-[10px] font-black text-gray-400 ml-2">地域</label>
                         <select className="w-full p-4 bg-white rounded-2xl font-bold shadow-sm appearance-none" 
                             value={area} onChange={(e)=>setArea(e.target.value)}>
+                            {/* NASU_AREAS を参照するように修正 */}
                             {NASU_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
                     </div>

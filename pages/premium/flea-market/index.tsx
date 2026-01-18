@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { db, auth } from '@/lib/firebase';
+import React, { useState, useEffect } from 'react'; // useStateを追加
+import { db, auth } from '../../../lib/firebase'; // パスを調整
 import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import {
     RiShoppingBag3Fill,
@@ -12,7 +12,8 @@ import {
     RiCheckboxCircleFill,
     RiSearch2Fill,
     RiInformationLine,
-    RiHeartFill
+    RiHeartFill,
+    RiInboxArchiveLine
 } from 'react-icons/ri';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -40,6 +41,7 @@ export default function FleaMarketPage() {
     const [posts, setPosts] = useState<FurimaPost[]>([]);
     const [selectedPost, setSelectedPost] = useState<FurimaPost | null>(null);
     const [isPaidUser, setIsPaidUser] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const checkUser = async () => {
@@ -52,10 +54,15 @@ export default function FleaMarketPage() {
         };
         checkUser();
 
+        // コレクション名: furima_posts を監視
         const q = query(collection(db, "furima_posts"), orderBy("createdAt", "desc"));
         const unsubscribe = onSnapshot(q, (snap) => {
             const postData = snap.docs.map(d => ({ id: d.id, ...d.data() } as FurimaPost));
             setPosts(postData.filter(p => p.status === 'active'));
+            setLoading(false);
+        }, (err) => {
+            console.error(err);
+            setLoading(false);
         });
         return () => unsubscribe();
     }, []);
@@ -88,10 +95,10 @@ export default function FleaMarketPage() {
                     <p className="text-[11px] font-bold text-[#A89F94]">那須塩原・大田原・那須町の掲示板</p>
                 </div>
 
-                <div className="w-full max-w-sm space-y-6 animate-in slide-in-from-bottom-8 duration-1000">
+                <div className="w-full max-w-sm space-y-6 animate-in slide-in-from-bottom-8 duration-1000 text-center">
                     <Link href={isPaidUser ? "/premium/flea-market/create" : "/premium"} className="block group">
-                        <button className="w-full py-12 bg-[#4A3B3B] text-white rounded-[3rem] font-black text-2xl shadow-2xl flex flex-col items-center gap-2 group-hover:scale-105 transition-all">
-                            <span className="text-[10px] opacity-60 flex items-center gap-1">
+                        <button className="w-full py-10 bg-[#4A3B3B] text-white rounded-[3rem] font-black text-2xl shadow-2xl flex flex-col items-center gap-2 group-hover:scale-105 transition-all">
+                            <span className="text-[10px] opacity-60 flex items-center gap-1 uppercase tracking-widest font-bold">
                                 <RiAddLine /> 不要品を近所の人に
                             </span>
                             売ります
@@ -100,9 +107,9 @@ export default function FleaMarketPage() {
 
                     <button
                         onClick={() => setView('list')}
-                        className="w-full py-12 bg-pink-500 text-white rounded-[3rem] font-black text-2xl shadow-2xl shadow-pink-100 flex flex-col items-center gap-2 hover:scale-105 transition-all"
+                        className="w-full py-10 bg-pink-500 text-white rounded-[3rem] font-black text-2xl shadow-2xl shadow-pink-100 flex flex-col items-center gap-2 hover:scale-105 transition-all"
                     >
-                        <span className="text-[10px] opacity-70 flex items-center gap-1">
+                        <span className="text-[10px] opacity-70 flex items-center gap-1 uppercase tracking-widest font-bold">
                             <RiSearch2Fill /> 掘り出し物を探す
                         </span>
                         探してます
@@ -118,7 +125,7 @@ export default function FleaMarketPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#FDFCFD] pb-32 font-sans text-[#4A3B3B]">
+        <div className="min-h-screen bg-[#FDFCFD] pb-32 font-sans text-[#4A3B3B] text-left">
             <Head><title>商品一覧 | みんなのNasuフリマ</title></Head>
 
             <header className="bg-white/80 backdrop-blur-xl border-b border-[#E8E2D9] px-6 py-4 sticky top-0 z-50">
@@ -128,7 +135,7 @@ export default function FleaMarketPage() {
                     </button>
                     <div className="text-center">
                         <span className="text-[10px] tracking-[0.2em] uppercase text-[#A89F94] block font-bold">Listings</span>
-                        <h1 className="text-sm font-black italic">みんなのNasuフリマ</h1>
+                        <h1 className="text-sm font-black italic leading-none">みんなのNasuフリマ</h1>
                     </div>
                     <Link href="/premium/flea-market/create" className="text-pink-500 bg-pink-50 p-2 rounded-full active:scale-95 transition-all">
                         <RiAddLine size={24} />
@@ -136,37 +143,54 @@ export default function FleaMarketPage() {
                 </div>
             </header>
 
-            <div className="max-w-xl mx-auto p-6 grid grid-cols-2 gap-5 animate-in fade-in duration-700">
-                {posts.map(post => (
-                    <div key={post.id} onClick={() => setSelectedPost(post)} className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-[#F3F0EC] active:scale-95 transition group">
-                        <div className="aspect-square bg-[#FDFCFD] relative">
-                            <img src={post.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                            <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{post.area}</div>
-                            {post.category && (
-                                <div className="absolute bottom-2 left-2 bg-white/80 backdrop-blur-md text-pink-600 text-[8px] font-black px-2 py-0.5 rounded-full border border-pink-100">
-                                    {post.category}
+            <div className="max-w-xl mx-auto p-6">
+                {loading ? (
+                    <div className="py-20 text-center font-black text-pink-200 animate-pulse italic uppercase tracking-widest">Loading Items...</div>
+                ) : posts.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-5 animate-in fade-in duration-700">
+                        {posts.map(post => (
+                            <div key={post.id} onClick={() => setSelectedPost(post)} className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-[#F3F0EC] active:scale-95 transition group cursor-pointer">
+                                <div className="aspect-square bg-[#FDFCFD] relative">
+                                    <img src={post.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
+                                    <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{post.area}</div>
+                                    {post.category && (
+                                        <div className="absolute bottom-2 left-2 bg-white/80 backdrop-blur-md text-pink-600 text-[8px] font-black px-2 py-0.5 rounded-full border border-pink-100">
+                                            {post.category}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                        <div className="p-4 space-y-1">
-                            <p className="text-pink-500 font-black text-base">
-                                {Number(post.price) === 0 ? "無料" : `¥${Number(post.price).toLocaleString()}`}
-                            </p>
-                            <h3 className="text-[11px] font-black text-[#4A3B3B] line-clamp-1">{post.title}</h3>
-                            <div className="flex items-center justify-between pt-1">
-                                <span className="text-[9px] font-bold text-[#A89F94] italic">{post.userName}</span>
-                                <span className="text-[8px] font-black text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                    利用{post.userUsageCount}回
-                                </span>
+                                <div className="p-4 space-y-1">
+                                    <p className="text-pink-500 font-black text-base leading-none">
+                                        {Number(post.price) === 0 ? "無料" : `¥${Number(post.price).toLocaleString()}`}
+                                    </p>
+                                    <h3 className="text-[11px] font-black text-[#4A3B3B] line-clamp-1">{post.title}</h3>
+                                    <div className="flex items-center justify-between pt-1">
+                                        <span className="text-[9px] font-bold text-[#A89F94] italic">{post.userName}</span>
+                                        <span className="text-[8px] font-black text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                            利用{post.userUsageCount || 0}回
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        ))}
                     </div>
-                ))}
+                ) : (
+                    // ★投稿がゼロの時の表示
+                    <div className="py-24 px-6 text-center bg-white rounded-[3rem] border-2 border-dashed border-[#F3F0EC]">
+                        <RiInboxArchiveLine className="mx-auto text-pink-100 mb-4" size={60} />
+                        <p className="text-[#4A3B3B] font-black mb-2 leading-relaxed">まだ掘り出し物はありません</p>
+                        <p className="text-[10px] text-[#A89F94] font-bold mt-2 uppercase tracking-[0.2em]">Be the first to list an item!</p>
+                        <Link href="/premium/flea-market/create" className="inline-block mt-8 px-8 py-3 bg-pink-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                            不要品を投稿する
+                        </Link>
+                    </div>
+                )}
             </div>
 
+            {/* モーダル表示部分（selectedPostがある場合） */}
             {selectedPost && (
-                <div className="fixed inset-0 bg-[#4A3B3B]/40 backdrop-blur-sm flex items-end z-50 animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-xl mx-auto rounded-t-[3rem] p-8 pb-12 shadow-2xl max-h-[95vh] overflow-y-auto animate-in slide-in-from-bottom duration-500 scrollbar-hide">
+                <div className="fixed inset-0 bg-[#4A3B3B]/40 backdrop-blur-sm flex items-end z-[60] animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-xl mx-auto rounded-t-[3rem] p-8 pb-12 shadow-2xl max-h-[95vh] overflow-y-auto animate-in slide-in-from-bottom duration-500 scrollbar-hide text-left">
                         <div className="flex justify-between items-start mb-6">
                             <div className="space-y-1">
                                 <span className="text-[10px] font-black text-pink-500 bg-pink-50 px-3 py-1 rounded-full uppercase tracking-widest leading-none block w-fit mb-2">
@@ -197,7 +221,7 @@ export default function FleaMarketPage() {
                                 <p className="text-[10px] font-black text-[#A89F94] flex items-center gap-2 mt-0.5">
                                     <span className="text-emerald-500 font-black flex items-center gap-0.5"><RiShieldCheckFill /> 本人確認済み</span>
                                     <span>・</span>
-                                    <span>実績 {selectedPost.userUsageCount}回</span>
+                                    <span>実績 {selectedPost.userUsageCount || 0}回</span>
                                 </p>
                             </div>
                         </div>
@@ -241,7 +265,7 @@ export default function FleaMarketPage() {
                                 )}
                             </div>
                         ) : (
-                            <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-10 rounded-[3rem] text-center shadow-2xl shadow-pink-100 animate-pulse-slow">
+                            <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-10 rounded-[3rem] text-center shadow-2xl shadow-pink-100">
                                 <RiVipCrownFill className="mx-auto text-yellow-300 mb-6" size={60} />
                                 <h3 className="text-white font-black text-xl mb-3 leading-tight">この商品を買うには<br />有料会員登録が必要です</h3>
                                 <p className="text-white/70 text-[10px] font-bold mb-8 uppercase tracking-widest">Only for Premium Members</p>
@@ -259,34 +283,9 @@ export default function FleaMarketPage() {
                                 <span className="text-xs font-black uppercase tracking-widest">Nasu Furima Rules</span>
                             </div>
                             <div className="space-y-4">
-                                <RuleItem
-                                    title="1. 個人間取引・自己責任です"
-                                    description="本サービスは掲示板です。取引・トラブル対応はすべて当事者同士で行ってください。運営は一切関与しません。"
-                                />
-                                <RuleItem
-                                    title="2. 直接の受け渡し限定"
-                                    description="発送トラブル防止のため対面限定です。人目の多い公共の場所で待ち合わせをしてください。"
-                                />
-                                <RuleItem
-                                    title="3. その場で商品を確認"
-                                    description="代金を支払う前に必ず状態を確認してください。「後からの不備」によるトラブルを防ぐためです。"
-                                />
-                                <RuleItem
-                                    title="4. 支払いはその場で直接"
-                                    description="事前の振込・送金は絶対にしないでください。商品と引き換えに、その場の決済のみとしてください。"
-                                />
-                                <RuleItem
-                                    title="5. 返品・クレーム不可"
-                                    description="個人間取引のため、返品や返金はできません。納得した上で取引を完了してください。"
-                                />
-                                <RuleItem
-                                    title="6. 会員同士のマナー"
-                                    description="ドタキャン等は通報対象です。ニックネーム提示により責任ある行動をお願いします。"
-                                />
-                                <RuleItem
-                                    title="7. 安全のために"
-                                    description="自宅への招待や夜間の取引は避けてください。不安を感じた場合は取引を中止してください。"
-                                />
+                                <RuleItem title="1. 個人間取引・自己責任です" description="本サービスは掲示板です。取引・トラブル対応はすべて当事者同士で行ってください。" />
+                                <RuleItem title="2. 直接の受け渡し限定" description="発送トラブル防止のため対面限定です。人目の多い公共の場所で待ち合わせをしてください。" />
+                                <RuleItem title="3. 代金は商品と引き換え" description="事前の振込は絶対にしないでください。その場で物を確認してから支払ってください。" />
                             </div>
                         </div>
                     </div>
@@ -297,9 +296,9 @@ export default function FleaMarketPage() {
 }
 
 const RuleItem = ({ title, description }: { title: string, description: string }) => (
-    <div className="space-y-1">
+    <div className="space-y-1 text-left">
         <p className="text-[10px] font-black text-[#4A3B3B] flex items-center gap-2">
-            <span className="w-1 h-1 bg-pink-500 rounded-full"></span>
+            <span className="w-1.5 h-1.5 bg-pink-500 rounded-full"></span>
             {title}
         </p>
         <p className="text-[9px] font-bold text-[#8C8479] leading-relaxed pl-3 italic">
