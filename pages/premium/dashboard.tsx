@@ -4,6 +4,9 @@ import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { app, db } from '../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import {
+    Users, Store, Building2,
+} from 'lucide-react';
+import {
     RiBankCardFill, RiShieldCheckFill, RiHistoryFill,
     RiShoppingBagFill, RiAddCircleFill, RiSettings4Fill, RiLogoutBoxRLine,
     RiPlantFill, RiFlashlightFill, RiHandHeartFill, RiExchangeBoxFill,
@@ -16,7 +19,7 @@ import Link from 'next/link';
 export default function PremiumDashboard() {
     const router = useRouter();
     const auth = getAuth(app);
-    const [stripeId, setStripeId] = useState<string | null>(null);
+    // const [stripeId, setStripeId] = useState<string | null>(null); // Removed Stripe logic
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
@@ -24,9 +27,9 @@ export default function PremiumDashboard() {
         const unsubscribe = onAuthStateChanged(auth, async (u) => {
             if (u) {
                 setUser(u);
-                onSnapshot(doc(db, 'users', u.uid), (s) => {
-                    setStripeId(s.data()?.stripeConnectId || null);
-                });
+                // onSnapshot(doc(db, 'users', u.uid), (s) => {
+                //     setStripeId(s.data()?.stripeConnectId || null);
+                // });
                 setLoading(false);
             } else {
                 router.push('/users/login');
@@ -35,11 +38,7 @@ export default function PremiumDashboard() {
         return () => unsubscribe();
     }, [auth, router]);
 
-    const handleStripeLink = async () => {
-        const res = await fetch('/api/stripe/connect');
-        const data = await res.json();
-        if (data.url) window.location.href = data.url;
-    };
+    // const handleStripeLink = async () => { ... } // Removed Stripe logic
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -72,33 +71,63 @@ export default function PremiumDashboard() {
             </header>
 
             <main className="max-w-4xl mx-auto p-6">
-                {/* LINE登録の案内 */}
-                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-100 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="font-black text-gray-700">ログインはLINE登録でおこなってください。</p>
-                    <a href="https://lin.ee/fwvipcZ" target="_blank" rel="noopener noreferrer" className="shrink-0 active:scale-95 transition-transform">
-                        <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" />
-                    </a>
-                </div>
 
-                {/* 1. 収益・売上管理 */}
-                <section className="bg-gray-900 rounded-[32px] p-8 text-white shadow-xl mb-10 relative overflow-hidden">
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <p className="text-emerald-400 text-[10px] font-bold mb-1 tracking-widest uppercase">My Earnings</p>
-                                <h2 className="text-5xl font-black tracking-tighter italic">¥0</h2>
+                {/* 1. 全体ステータス (Database Stats) */}
+                <section className="mb-10">
+                    <h3 className="font-black text-gray-400 text-sm mb-6 px-2 tracking-widest uppercase flex items-center gap-2">
+                        <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
+                        紹介データ
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* ユーザー数 */}
+                        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between h-40">
+                            <div className="flex items-center gap-3 text-gray-400">
+                                <Users size={20} />
+                                <span className="text-[10px] font-black tracking-widest uppercase">Users</span>
                             </div>
-                            <div className={`p-3 rounded-2xl ${stripeId ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/10 text-white/20'}`}>
-                                <RiBankCardFill size={32} />
+                            <p className="text-3xl font-black text-gray-800 tracking-tighter">
+                                0<span className="text-sm text-gray-400 ml-1">人</span>
+                            </p>
+                        </div>
+
+                        {/* 店舗数 */}
+                        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between h-40">
+                            <div className="flex items-center gap-3 text-gray-400">
+                                <Store size={20} />
+                                <span className="text-[10px] font-black tracking-widest uppercase">Shops</span>
+                            </div>
+                            <p className="text-3xl font-black text-gray-800 tracking-tighter">
+                                0<span className="text-sm text-gray-400 ml-1">店舗</span>
+                            </p>
+                        </div>
+
+                        {/* 企業数 */}
+                        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between h-40">
+                            <div className="flex items-center gap-3 text-gray-400">
+                                <Building2 size={20} />
+                                <span className="text-[10px] font-black tracking-widest uppercase">Companies</span>
+                            </div>
+                            <p className="text-3xl font-black text-gray-800 tracking-tighter">
+                                0<span className="text-sm text-gray-400 ml-1">社</span>
+                            </p>
+                        </div>
+
+                        {/* 金額・流通額 */}
+                        <div className="bg-gray-900 p-6 rounded-[2rem] shadow-xl text-white flex flex-col justify-between h-40 relative overflow-hidden">
+                            <div className="relative z-10 flex items-center gap-3 text-emerald-400">
+                                <RiBankCardFill size={20} />
+                                <span className="text-[10px] font-black tracking-widest uppercase">Total</span>
+                            </div>
+                            <div className="relative z-10">
+                                <p className="text-2xl font-black tracking-tighter">
+                                    ¥0
+                                </p>
+                            </div>
+                            {/* Decorative bg */}
+                            <div className="absolute -right-4 -bottom-4 text-white/5">
+                                <RiBankCardFill size={100} />
                             </div>
                         </div>
-                        <button
-                            onClick={handleStripeLink}
-                            className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${stripeId ? 'bg-white text-gray-900 hover:bg-gray-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
-                        >
-                            <RiBankCardFill size={20} />
-                            {stripeId ? 'Stripe売上管理・振込設定' : '振込先口座を連携して販売を開始'}
-                        </button>
                     </div>
                 </section>
 
@@ -201,18 +230,12 @@ export default function PremiumDashboard() {
                     </div>
                 </section>
 
-                {/* 3. 管理・設定 */}
-                <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => router.push('/premium/history')} className="bg-white p-6 rounded-[2rem] shadow-sm text-left group border border-gray-50 hover:border-emerald-200 transition-all">
-                        <RiHistoryFill className="text-gray-300 group-hover:text-emerald-500 mb-2 transition-colors" size={24} />
-                        <p className="font-black text-[11px] text-gray-500 tracking-widest uppercase">History</p>
-                        <p className="font-black text-gray-800">取引・販売の履歴</p>
-                    </button>
-                    <button onClick={() => router.push('/premium/settings')} className="bg-white p-6 rounded-[2rem] shadow-sm text-left group border border-gray-50 hover:border-emerald-200 transition-all">
-                        <RiSettings4Fill className="text-gray-300 group-hover:text-emerald-500 mb-2 transition-colors" size={24} />
-                        <p className="font-black text-[11px] text-gray-500 tracking-widest uppercase">Config</p>
-                        <p className="font-black text-gray-800">プロフィールの設定</p>
-                    </button>
+                {/* LINE登録の案内 (Bottom) */}
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-emerald-100 mt-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p className="font-black text-gray-700">ログインはLINEからなので、必ず登録をおこなってください。</p>
+                    <a href="https://lin.ee/fwvipcZ" target="_blank" rel="noopener noreferrer" className="shrink-0 active:scale-95 transition-transform">
+                        <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" />
+                    </a>
                 </div>
             </main>
         </div>
