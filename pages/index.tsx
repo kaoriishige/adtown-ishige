@@ -5,26 +5,66 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import Link from 'next/link'; // <-- 【重要】Linkコンポーネントをインポートしました
 import {
-    ShieldCheck,
-    HeartPulse,
-    ShoppingCart,
-    Briefcase,
-    Ticket,
-    Lightbulb,
-    Users,
-    Building2,
-    Rocket,
-    Star,
-    Coins,
-    Sparkles,
-    Smile,
-    Clock,
-    Zap,
-    Gift,
-    Crown,
-    Infinity,
-    HeartHandshake
+    ShieldCheck, HeartPulse, ShoppingCart, Briefcase, Ticket, Lightbulb, Users, Building2, Rocket, Star, Coins, Sparkles, Smile, Clock, Zap, Gift, Crown, Infinity, HeartHandshake,
+    Store, Brain, Utensils, Droplet, Gamepad, User, Shield, TrendingUp, ArrowLeft, Target, Shirt, Mail, Sun, WashingMachine, Home, LayoutGrid, Award, Filter, Fuel, Heart
 } from 'lucide-react';
+import {
+    RiBankCardFill, RiShieldCheckFill, RiHistoryFill, RiShoppingBagFill, RiAddCircleFill, RiSettings4Fill, RiLogoutBoxRLine, RiPlantFill, RiFlashlightFill, RiHandHeartFill, RiExchangeBoxFill, RiArrowRightSLine, RiGiftFill, RiHeartFill, RiLightbulbFlashLine, RiHome4Line, RiLeafLine, RiExchangeFundsLine
+} from 'react-icons/ri';
+
+type IconType = React.FC<React.SVGProps<SVGSVGElement>>;
+
+interface AppItem {
+    title: string;
+    category: string;
+    description: string;
+    href: string;
+    Icon: any;
+    disabled: boolean;
+}
+
+const FREE_APP_LIST: AppItem[] = [
+    { title: "最安ガソリン＆価格投稿", category: '生活情報', description: '地域の最安ガソリン価格ランキングと価格投稿', href: '/apps/AIGasPriceTracker', Icon: Fuel, disabled: false },
+    { title: "アレどこ (Aredoko)", category: '収納・片付け', description: 'たまにしか使わない大事なモノの「しまった場所」を記録・検索', href: '/apps/Aredoko', Icon: Filter, disabled: false },
+    { title: "AIクローゼットスリム化診断", category: '収納・片付け', description: '衣類の断捨離をAIが質問でサポートし、意思決定を支援', href: '/apps/ClosetSlimmerAI', Icon: WashingMachine, disabled: false },
+    { title: "知っ得！生活の裏技AI", category: '生活情報', description: '時短、掃除、収納などの役立つ裏技をAIが提案', href: '/apps/LifeHacksAI', Icon: Lightbulb, disabled: false },
+    { title: "AIファッション診断", category: '生活情報', description: '用途と体型に基づき最適なコーディネートを提案', href: '/apps/FashionAI', Icon: Shirt, disabled: false },
+    { title: "引越し手続きAIナビ", category: '生活情報', description: '転入/転出に必要な手続きリストをAIが生成', href: '/apps/MovingHelperAI', Icon: Mail, disabled: false },
+    { title: "体重記録＆BMI計算", category: '健康支援', description: '日々の体重とBMIを記録・管理', href: '/apps/BodyMassTracker', Icon: Heart, disabled: false },
+    { title: "育児記録ワンタッチログ", category: '子育て', description: '授乳・オムツ・睡眠の時刻を簡単記録', href: '/apps/BabyLog', Icon: Gift, disabled: false },
+    { title: "子育て支援情報ナビ", category: '子育て', description: '各市町の子育て・教育情報リンク集', href: '/apps/ParentingInfo', Icon: User, disabled: false },
+    { title: "賢人の子育て指針 Wisdom Guide", category: '子育て', description: 'AIと著名人の知恵の言葉から、子育ての羅針盤を見つける', href: '/apps/WisdomGuide', Icon: Award, disabled: false },
+    { title: "スーパー特売チラシ＆AI献立ナビ", category: '節約・特売', description: '地域のチラシ確認とプロの節約レシピを提案', href: '/nasu/kondate', Icon: Utensils, disabled: false },
+    { title: "ドラッグストアチラシ", category: '節約・特売', description: 'ドラッグストアの特売情報', href: '/nasu', Icon: Store, disabled: false },
+    { title: "直感！脳力診断", category: 'エンタメ', description: '心理テストと脳トレ雑学で頭を活性化', href: '/apps/BrainTest', Icon: Brain, disabled: false },
+    { title: "那須地区マスターズクイズ", category: 'エンタメ', description: '那須地域の歴史・観光クイズに挑戦', href: '/apps/QuizGame', Icon: Gamepad, disabled: false },
+    { title: "地域防災情報ナビ", category: '防災・安全', description: '各市町の防災情報・ハザードマップリンク集', href: '/apps/DisasterInfo', Icon: Shield, disabled: false },
+    { title: "今日の運勢占い", category: '診断・運勢', description: '生年月日による今日の運勢診断', href: '/apps/DailyFortune', Icon: Droplet, disabled: false },
+    { title: "適職＆性格診断", category: '診断・運勢', description: 'あなたの強みと適職（在宅ワーク含む）を診断', href: '/apps/AptitudeTest', Icon: Target, disabled: false },
+    { title: "朝の褒め言葉AI", category: '診断・運勢', description: 'AIが今日のモチベーションを高めるメッセージを提案', href: '/apps/MorningComplimentAI', Icon: Sun, disabled: false },
+    { title: "AI手相鑑定", category: '診断・運勢', description: 'カメラで手相を撮影するだけで、AIが本格鑑定', href: '/apps/Palmistry', Icon: Sparkles, disabled: false },
+    { title: "苦手な人攻略ヒント", category: '人間関係', description: '相手のタイプから接し方とストレス対策を診断', href: '/apps/RelationshipHint', Icon: Users, disabled: false },
+    { title: "スキル学習時間トラッカー", category: 'スキルアップ・キャリア', description: '収益化スキル（ライティング等）の目標時間を管理', href: '/apps/SkillTimeTracker', Icon: TrendingUp, disabled: false },
+    { title: "わたしの気分ログ", category: '趣味・文化', description: '毎日の気分と感情の傾向を記録・分析', href: '/apps/MoodTracker', Icon: Smile, disabled: false },
+];
+
+const FREE_CATEGORIES: string[] = [
+    '収納・片付け', '生活情報', '健康支援', '子育て', '節約・特売', 'エンタメ', '防災・安全', 'スキルアップ・キャリア', '診断・運勢', '人間関係', '趣味・文化'
+];
+
+function MenuButton({ href, icon, title, label, color }: any) {
+    return (
+        <div className="group relative bg-white p-6 rounded-[2.2rem] shadow-sm border border-gray-100 flex items-center gap-5">
+            <div className={`w-16 h-16 flex items-center justify-center bg-gradient-to-br ${color} rounded-2xl text-white shadow-lg shrink-0`}>
+                {icon}
+            </div>
+            <div className="flex-1 text-left">
+                <h3 className="font-black text-xl tracking-tighter text-gray-800">{title}</h3>
+                <p className="text-[11px] font-medium text-gray-500 mt-1 leading-relaxed">{label}</p>
+            </div>
+        </div>
+    );
+}
 
 // -------------------------
 // Type definitions
@@ -60,13 +100,11 @@ interface LandingData {
 }
 import { useAffiliateTracker } from '@/lib/affiliate-tracker';
 
-const LandingPage = () => {
-    // フックを呼び出すだけで、URLの ?ref=xxx を自動で取得して保存します
-    useAffiliateTracker('user');
-
+const LandingPageFallback = () => {
     return (
-        <div>
-            {/* LPのコンテンツ */}
+        <div className="p-10 text-center">
+            <h1 className="text-2xl font-bold">Landing Page</h1>
+            <p className="mt-4">Please see the main IndexPage below.</p>
         </div>
     );
 };
@@ -123,168 +161,34 @@ const IndexPage = () => {
     // ---------------------------------------------------------
     // データ定義
     // ---------------------------------------------------------
-    const data: LandingData = {
-        mainTitle: 'みんなのNasuアプリ',
-        areaDescription: '那須塩原・大田原・那須町のママたちへ。地域密着型の暮らし応援アプリ。',
+    const [selectedCategory, setSelectedCategory] = useState('すべて');
 
-        heroHeadline: '【完全無料】\n毎日がんばるあなたへ。\nその貴重な時間、\n**“探して・比べて・悩むこと”に使いますか？**',
-        heroSubheadline: '献立も、お買い得情報も、困った時の相談も。\nこれからは全部、アプリに頼ってください。\n**登録はたったの30秒。ずっと0円で使い放題です。**',
+    const getCategoryAppList = (category: string): AppItem[] => {
+        const list = FREE_APP_LIST.filter(app => app.category === category);
+        if (list.length === 0) {
+            return [{
+                title: "アプリ準備中",
+                description: "現在、このカテゴリのアプリを開発中です。",
+                Icon: Zap,
+                disabled: true,
+                href: '#',
+                category: category,
+            }];
+        }
+        return list.reduce((acc, current) => {
+            const isDuplicate = acc.some(item => item.title === current.title && item.href === current.href);
+            if (!isDuplicate) acc.push(current);
+            return acc;
+        }, [] as AppItem[]);
+    }
 
-        // ベネフィット
-        solutionBenefit1_Title: '1. 「今日の献立、どうしよう...」\nその悩み、0円で解決します。',
-        solutionBenefit1_Desc: `
-            <ul class="list-disc list-inside space-y-1">
-                <li>**冷蔵庫在庫管理**：食材を無駄にしない。これだけで食費が浮きます。</li>
-                <li>**AI献立ナビ**：在庫からプロのレシピを自動提案。あなたは選ぶだけ。</li>
-                <li>**生活の裏技AI**：頑固な汚れも収納も、AIに聞けば3秒で解決。</li>
-            </ul>
-            <p class="mt-3 font-semibold text-pink-700">毎日の「名もなき家事」をAIにお任せ。**無料で、あなたの自由時間を取り戻します。**</p>
-        `,
+    const allUniqueApps: AppItem[] = FREE_APP_LIST.reduce((acc, current) => {
+        const isDuplicate = acc.some(item => item.title === current.title && item.href === current.href);
+        if (!isDuplicate) acc.push(current);
+        return acc;
+    }, [] as AppItem[]);
 
-        solutionBenefit2_Title: '2. 知っている人だけが得をする。\n地域の「お得」を無料でゲット。',
-        solutionBenefit2_Desc: `
-            <ul class="list-disc list-inside space-y-1">
-                <li>**スーパー・ドラッグストアチラシ**：地域の特売情報をスマホで一括チェック。</li>
-                <li>**地域防災情報**：いざという時の避難所・ハザードマップを網羅。</li>
-                <li>**子育て支援ナビ**：申請しないともらえない助成金情報もキャッチ。</li>
-                <li>**ガス代追跡**：地域内のガス価格を自動で追跡し、適正価格を表示。</li>
-            </ul>
-            <p class="mt-3 font-semibold text-pink-700">情報は「家計の味方」です。**タダで手に入る「安心」と「節約」**を、みすみす逃すのはもったいないですよね。</p>
-        `,
-
-        solutionBenefit3_Title: '3. 「私ばっかり大変...」\nそんな時は、AIに吐き出してください。',
-        solutionBenefit3_Desc: `
-            <ul class="list-disc list-inside space-y-1">
-                <li>**朝の褒め言葉AI**：「今日もえらい！」誰よりもあなたを肯定してくれます。</li>
-                <li>**AI手相鑑定**：カメラで撮るだけ。「那須の母」が優しく背中を押します。</li>
-                <li>**気分ログ・診断**：モヤモヤした気持ちを整理して、心を軽く。</li>
-            </ul>
-            <p class="mt-3 font-semibold text-pink-700">家族にも友達にも言えない悩み、AIなら24時間いつでも聞いてくれます。**カウンセリング代わりなのに、もちろん無料です。**</p>
-        `,
-
-        solutionBenefit4_Title: '4. 那須での暮らしが、\nもっと楽しく、もっと大好きになる。',
-        solutionBenefit4_Desc: `
-            <ul class="list-disc list-inside space-y-1">
-                <li>**引越し手続きAI**：面倒な役所手続きリストを一瞬で作成。</li>
-                <li>**AIファッション診断**：手持ちの服で「今日のコーデ」が決まる。</li>
-                <li>**ご当地クイズ**：家族みんなで楽しめる、地元の話題作り。</li>
-            </ul>
-            <p class="mt-3 font-semibold text-pink-700">日常の「ちょっと困った」も「ちょっと楽しい」も。**那須での生活に必要なもの、全部無料で詰め込みました。**</p>
-        `,
-
-        // フリープラン
-        freePlanTitle: '【信じられないかもしれませんが】\nこれら全部、**一生無料**です。',
-        freePlanSubTitle: '「あとで課金されるんじゃ...？」そんな心配は無用です。基本機能はずっと0円でお使いいただけます。',
-        freePlanFeatures: [
-            '📸 AI手相鑑定 (本格プロンプト搭載)',
-            '🍳 冷蔵庫管理＆AI献立提案',
-            '🛒 地域スーパー・ドラッグストアチラシ',
-            '🌞 朝の褒め言葉AI＆性格診断',
-            '👶 育児記録＆子育て支援情報',
-            '👗 AIファッション診断',
-            '🏠 引越し手続きナビ＆防災情報',
-        ],
-        freePlanConclusion:
-            '→ **無料で使い倒すのが、賢い那須ライフの正解です。\n登録しない理由が、見つかりません。**',
-
-        // 有料プラン
-        premiumPlanHeadline:
-            '**さらに上を目指す方へ**\n月480円で「もっと豊かな時間」を買う。',
-        premiumPlanDesc:
-            '無料プランでも十分すぎるほど便利ですが、プレミアムプランなら**制限なしで全機能を開放**。アプリを「最強のパートナー」に進化させます。（※現在は準備中）',
-
-        premiumPlanTitle:
-            '【月480円プレミアム】那須ライフを極める',
-        // 項目定義
-        premiumPlanFeatures: [
-            {
-                title: '店舗マッチングAI',
-                desc: 'あなたの好みを学習し、隠れた名店や穴場スポットを自動提案します。',
-            },
-            {
-                title: '求人マッチングAI',
-                desc: '条件に合う「本当に働きたい職場」をAIが探し出し、通知します。',
-            },
-            {
-                title: '地域フリマ出品・購入',
-                desc: '地元での手渡し取引なら送料0円。不用品がすぐにお金に変わります。',
-            },
-            {
-                title: 'ご近所助け合い掲示板',
-                desc: '「ちょっと手伝って」を投稿したり、誰かを助けて報酬を得たり。',
-            },
-            {
-                title: '限定クーポン使い放題',
-                desc: 'プレミアム会員だけの高割引率クーポン。月額以上の元はすぐ取れます。',
-            },
-            {
-                title: 'プレミアムAIカウンセラー',
-                desc: 'より深く、専門的な悩み相談が可能に。24時間あなたに寄り添います。',
-            },
-            {
-                title: '高度な家計簿・節約AI',
-                desc: 'レシート読み込みから節約プランの提案まで、お金の管理を自動化。',
-            },
-            {
-                title: '優先サポート＆広告非表示',
-                desc: 'ストレスフリーな操作感と、困った時の優先対応をお約束します。',
-            },
-            {
-                title: '会員限定イベント参加権',
-                desc: '那須地域の限定イベントやセミナーへの招待が届きます。',
-            },
-            {
-                title: '紹介報酬システム',
-                desc: 'お友達を紹介すると報酬GET。使えば使うほど得する仕組みです。',
-            },
-            {
-                title: '新機能の先行利用権',
-                desc: '今後追加される便利な機能を、誰よりも早く体験できます。',
-            },
-            {
-                title: 'データ保存容量アップ',
-                desc: '写真や記録の保存容量が無制限に。思い出をずっと残せます。',
-            }
-        ],
-        premiumPlanConclusion:
-            'まずは無料で始めて、**必要になったら**検討してください。',
-
-        freeReasonTitle: '**「どうして無料なの？」**\n**怪しくないですか？**',
-        freeReasonDesc:
-            'ご安心ください。これは地域の企業様が**「那須に住むあなたを応援したい」**という想いでスポンサーになってくれているからです。<br class="my-2">**だから、あなたは遠慮なく、堂々と無料で使い倒してください。**<br>あなたが便利に暮らすことが、地域の元気につながるのです。',
-
-        finalCtaTitle: '**迷う必要はありません。**\nだって、**完全無料**なんですから。',
-        finalCtaSubtext: '● 追加課金なし ● 解約も自由',
-        finalTagline1: 'このボタンを押すだけで、',
-        finalTagline2: 'あなたの毎日は、もっとやさしく、もっと楽になります。',
-    };
-
-    // アイコン定義
-    const freePlanIcons = [
-        Sparkles,
-        ShoppingCart,
-        HeartPulse,
-        Smile,
-        Lightbulb,
-        Rocket,
-        Users,
-    ];
-
-    // 有料プラン用アイコン
-    const premiumPlanIcons = [
-        Building2,
-        Briefcase,
-        ShoppingCart,
-        HeartHandshake,
-        Ticket,
-        HeartPulse,
-        Coins,
-        Zap,
-        Gift,
-        Crown,
-        Star,
-        Infinity
-    ];
+    const filteredApps = selectedCategory === 'すべて' ? allUniqueApps : getCategoryAppList(selectedCategory);
 
     // パートナー企業ロゴリスト
     const partnerLogos = [
@@ -304,6 +208,8 @@ const IndexPage = () => {
         '/images/partner-koharu.png',
         '/images/partner-yamakiya.png',
     ];
+
+    useAffiliateTracker('user');
 
     return (
         <div className="bg-white text-gray-800 font-sans">
@@ -329,7 +235,7 @@ const IndexPage = () => {
                         <div className="flex flex-col items-center space-y-4">
                             {/* 誘導テキスト */}
                             <p className="text-xl font-black text-pink-800 bg-yellow-100 px-6 py-2 rounded-full border border-yellow-300 shadow-md">
-                                最速3秒！LINEで友だち追加
+                                最速30秒！LINE友だち追加で無料登録
                             </p>
                             {/* LINEボタン: 紹介ID付きのURL (lineUrl) に動的に変わる */}
                             <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
@@ -400,153 +306,261 @@ const IndexPage = () => {
                     </div>
                 </section>
 
-                {/* Features */}
-                <section className="py-20 bg-pink-50">
-                    <div className="container mx-auto px-6">
-                        <div className="max-w-3xl mx-auto mb-12 text-center">
-                            <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
-                                アプリの主な機能（すべて無料）
-                            </h2>
-                            <p className="mt-2 text-pink-600 font-bold">これら全部、追加料金なしで使い放題です。</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                            {/* 1 */}
-                            <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 text-left transform hover:-translate-y-1 transition-transform">
-                                <div className="p-4 bg-pink-100 inline-block rounded-full mb-4">
-                                    <Clock className="w-8 h-8 text-pink-600" />
-                                </div>
-                                <h3 className="font-bold text-xl mb-3 text-gray-900">
-                                    {data.solutionBenefit1_Title}
-                                </h3>
-                                <div className="text-gray-600 space-y-2">
-                                    <SafeHTML html={data.solutionBenefit1_Desc} />
-                                </div>
-                            </div>
-
-                            {/* 2 */}
-                            <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 text-left transform hover:-translate-y-1 transition-transform">
-                                <div className="p-4 bg-pink-100 inline-block rounded-full mb-4">
-                                    <Coins className="w-8 h-8 text-pink-600" />
-                                </div>
-                                <h3 className="font-bold text-xl mb-3 text-gray-900">
-                                    {data.solutionBenefit2_Title}
-                                </h3>
-                                <div className="text-gray-600 space-y-2">
-                                    <SafeHTML html={data.solutionBenefit2_Desc} />
-                                </div>
-                            </div>
-
-                            {/* 3 */}
-                            <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 text-left transform hover:-translate-y-1 transition-transform">
-                                <div className="p-4 bg-pink-100 inline-block rounded-full mb-4">
-                                    <HeartPulse className="w-8 h-8 text-pink-600" />
-                                </div>
-                                <h3 className="font-bold text-xl mb-3 text-gray-900">
-                                    {data.solutionBenefit3_Title}
-                                </h3>
-                                <div className="text-gray-600 space-y-2">
-                                    <SafeHTML html={data.solutionBenefit3_Desc} />
-                                </div>
-                            </div>
-
-                            {/* 4 */}
-                            <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200 text-left transform hover:-translate-y-1 transition-transform">
-                                <div className="p-4 bg-pink-100 inline-block rounded-full mb-4">
-                                    <ShieldCheck className="w-8 h-8 text-pink-600" />
-                                </div>
-                                <h3 className="font-bold text-xl mb-3 text-gray-900">
-                                    {data.solutionBenefit4_Title}
-                                </h3>
-                                <div className="text-gray-600 space-y-2">
-                                    <SafeHTML html={data.solutionBenefit4_Desc} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Free Plan */}
+                {/* Free Apps Section */}
                 <section className="py-20 bg-white">
-                    <div className="container mx-auto px-6 max-w-4xl">
-                        <div className="text-center mb-10">
-                            <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
-                                {data.freePlanTitle}
+                    <div className="container mx-auto px-4 max-w-4xl">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl md:text-5xl font-black text-gray-800 mb-4 tracking-tighter italic">
+                                <Sparkles className="inline-block w-8 h-8 text-green-500 mr-2 mb-2" />
+                                FREE APPS
                             </h2>
-                            <p className="mt-4 text-lg text-gray-600">
-                                {data.freePlanSubTitle}
+                            <p className="text-lg text-gray-600 font-bold">
+                                地域の暮らしを便利にする「完全無料」アプリ一覧
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {data.freePlanFeatures?.map((feature, index) => {
-                                const Icon = freePlanIcons[index % freePlanIcons.length];
-                                return (
-                                    <div
-                                        key={index}
-                                        className="flex items-center space-x-3 bg-gray-50 p-4 rounded-lg border border-gray-100"
-                                    >
-                                        <span className="text-2xl">
-                                            <Icon className="text-pink-500 w-6 h-6" />
-                                        </span>
-                                        <span className="font-semibold text-gray-700">
-                                            {feature}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                        {/* 代表例（Featured Apps） */}
+                        <div className="space-y-12 mb-20">
+                            {/* 1. 那須こんだて */}
+                            <FeaturedAppCard
+                                title="那須こんだて｜AI献立＆特売ナビ"
+                                description={<>那須地域の特売チラシ × 冷蔵庫の在庫から、<br className="hidden md:block" />AIが“今いちばんお得で美味しい献立”を自動提案。</>}
+                                detail="那須塩原市・大田原市・那須町のスーパー特売をまとめて分析し、家族構成に合わせた分量・レシピ・買い物リストまで一気に作ります。"
+                                features={[
+                                    "那須地域のスーパー特売に完全対応",
+                                    "写真 or 入力だけで特売を読み取り",
+                                    "冷蔵庫の在庫をムダなく使い切り",
+                                    "家族人数に合わせた献立と分量を自動調整",
+                                    "買い物リストをそのまま使える"
+                                ]}
+                                recommend={[
+                                    "毎日の献立に悩みたくない",
+                                    "特売は見るけど、何を作るか決められない",
+                                    "食費は抑えたいけど、味は妥協したくない"
+                                ]}
+                                oneWord="考えるのはAI。あなたは、作るだけ。"
+                                color="bg-orange-50 border-orange-100"
+                                badge="AI × 特売"
+                                badgeColor="bg-orange-100 text-orange-600"
+                            />
+
+                            {/* 2. 最安ガソリン */}
+                            <FeaturedAppCard
+                                title="最安ガソリン｜ガソリン価格比較"
+                                description={<>那須地域のガソリン価格をまとめて比較。<br className="hidden md:block" />今いちばん安いスタンドが、ひと目でわかる。</>}
+                                detail="那須塩原市・大田原市・那須町の最新価格情報を地域別に表示。外部の公式価格データと、投稿情報をあわせてチェックできます。"
+                                features={[
+                                    "地域別にガソリン価格を比較",
+                                    "最新の価格ランキングを確認",
+                                    "価格を見たまま投稿して共有",
+                                    "外部価格サイトもアプリ内で表示"
+                                ]}
+                                recommend={[
+                                    "ガソリン代を少しでも節約したい",
+                                    "どのスタンドが安いか毎回迷う",
+                                    "車移動が多い那須・大田原エリアの方"
+                                ]}
+                                oneWord="知らないだけで、毎月損している。"
+                                color="bg-red-50 border-red-100"
+                                badge="地域最安"
+                                badgeColor="bg-red-100 text-red-600"
+                            />
+
+                            {/* 3. ドラッグストア特売ナビ */}
+                            <FeaturedAppCard
+                                title="ドラッグストア特売ナビ"
+                                description={<>那須地域のドラッグストア特売をまとめてチェック。<br className="hidden md:block" />日用品・薬を、いちばん安い店で。</>}
+                                detail="那須塩原市・大田原市・那須町のドラッグストア特売チラシを一覧表示。店舗ごとに探さず、「今どこが安いか」だけを素早く確認できます。"
+                                features={[
+                                    "地域別に特売チラシをまとめて表示",
+                                    "主要ドラッグストアに対応",
+                                    "公式チラシをそのまま確認",
+                                    "比較に迷わないシンプル設計"
+                                ]}
+                                recommend={[
+                                    "日用品・薬を少しでも安く買いたい",
+                                    "チラシアプリを何個も使いたくない",
+                                    "那須地域の情報だけを見たい"
+                                ]}
+                                oneWord="見る店を迷う時間が、ゼロになる。"
+                                color="bg-blue-50 border-blue-100"
+                                badge="日用品・薬"
+                                badgeColor="bg-blue-100 text-blue-600"
+                            />
                         </div>
 
-                        <p className="mt-10 text-center text-xl font-bold text-pink-700">
-                            {data.freePlanConclusion}
-                        </p>
+                        {/* ジャンル選択 */}
+                        <div className="mb-10 p-6 bg-green-50 rounded-[2rem] shadow-sm border border-green-100">
+                            <h3 className="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">
+                                <LayoutGrid className="w-5 h-5" /> ジャンルで選ぶ
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => setSelectedCategory('すべて')}
+                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedCategory === 'すべて'
+                                        ? 'bg-gray-800 text-white border-gray-800 shadow-lg'
+                                        : 'bg-white text-green-700 border-green-200 hover:bg-green-100'
+                                        }`}
+                                >
+                                    すべて
+                                </button>
+                                {FREE_CATEGORIES.map(category => (
+                                    <button
+                                        key={category}
+                                        onClick={() => setSelectedCategory(category)}
+                                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedCategory === category
+                                            ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                                            : 'bg-white text-green-700 border-green-200 hover:bg-green-100'
+                                            }`}
+                                    >
+                                        {category}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
+                        {/* アプリリスト */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {filteredApps.map(app => (
+                                <div
+                                    key={`${app.title}-${app.category}`}
+                                    className={`block p-5 rounded-[2rem] shadow-sm border ${app.disabled ? 'bg-gray-100 text-gray-500 opacity-80 border-gray-300' : 'bg-white border-gray-100'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-3 rounded-2xl ${app.disabled ? 'bg-gray-300' : 'bg-green-100 text-green-600'}`}>
+                                            <app.Icon className="w-6 h-6" />
+                                        </div>
+                                        <div className="text-left">
+                                            <h3 className={`font-black text-lg tracking-tight ${app.disabled ? 'text-gray-500' : 'text-gray-800'}`}>{app.title}</h3>
+                                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">{app.description}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-12 p-8 bg-pink-50 rounded-[2.5rem] border border-pink-100 text-center">
+                            <p className="text-2xl font-black text-pink-700 italic tracking-tighter">
+                                これらすべて、一生無料。
+                            </p>
+                            <p className="mt-2 text-gray-600 font-bold">
+                                登録しない理由が、見つかりません。
+                            </p>
+                            <div className="mt-8 flex flex-col items-center space-y-2">
+                                <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-12 w-auto shadow-md" />
+                                </a>
+                                <p className="text-xs font-bold text-gray-400">
+                                    ※完全無料登録・いつでも解約可能
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
-                {/* Premium Plan (機能充実版) */}
-                <section className="py-20 bg-gray-100 text-gray-800">
-                    <div className="container mx-auto px-6 text-center">
-                        <div className="max-w-5xl mx-auto">
-                            <Star className="w-12 h-12 text-yellow-500 mb-6 mx-auto fill-current" />
-                            <h2 className="text-3xl md:text-4xl font-black text-gray-800">
-                                {data.premiumPlanHeadline}
+                {/* Paid Apps Section */}
+                <section className="py-20 bg-gray-50">
+                    <div className="container mx-auto px-4 max-w-4xl">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl md:text-5xl font-black text-gray-800 mb-4 tracking-tighter italic">
+                                <RiShieldCheckFill className="inline-block w-8 h-8 text-emerald-500 mr-2 mb-2" />
+                                PREMIUM SERVICES
                             </h2>
-                            <div className="mt-6 text-lg text-gray-600 leading-relaxed">
-                                <SafeHTML html={data.premiumPlanDesc} />
-                            </div>
+                            <p className="text-lg text-gray-600 font-bold">
+                                さらに豊かな那須ライフを。月額480円課金で全機能開放
+                            </p>
+                        </div>
 
-                            <div className="bg-white text-gray-800 rounded-xl shadow-md p-8 md:p-10 my-10 text-left border border-gray-200">
-                                <h3 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-8">
-                                    {data.premiumPlanTitle}
-                                </h3>
+                        <div className="grid grid-cols-1 gap-4">
+                            <MenuButton
+                                href="/premium/referral"
+                                icon={<RiGiftFill size={28} />}
+                                title="紹介プログラム"
+                                label="アプリや各サービスを友人・知人に紹介することで、報酬や特典がもらえる仕組み。地域のお店・個人の紹介がそのまま収益につながります。"
+                                color="from-amber-400 to-orange-600"
+                            />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {data.premiumPlanFeatures?.map((feature, index) => {
-                                        const Icon =
-                                            premiumPlanIcons[index % premiumPlanIcons.length];
-                                        return (
-                                            <div key={index} className="flex items-start space-x-4 p-2">
-                                                <span className="text-3xl p-3 bg-yellow-100 text-yellow-600 rounded-full mt-1 inline-flex items-center justify-center flex-shrink-0">
-                                                    <Icon className="w-6 h-6" />
-                                                </span>
-                                                <div>
-                                                    <h4 className="font-bold text-lg text-gray-900">
-                                                        {feature.title}
-                                                    </h4>
-                                                    <p className="text-sm text-gray-600 mt-1">{feature.desc}</p>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                            <MenuButton
+                                href="/premium/skill"
+                                icon={<RiExchangeFundsLine size={28} />}
+                                title="那須スキル交換所"
+                                label="「できること」と「困っていること」を地域内でマッチング。専門資格がなくても、日常スキルや経験を価値に変えられます。"
+                                color="from-blue-700 to-indigo-950"
+                            />
 
-                            <div className="mt-8 text-center text-gray-600 max-w-xl mx-auto">
-                                <div className="text-lg font-semibold">
-                                    <SafeHTML html={data.premiumPlanConclusion} />
-                                </div>
-                            </div>
+                            <MenuButton
+                                href="/premium/akihata"
+                                icon={<RiLeafLine size={28} />}
+                                title="那須あき畑速報"
+                                label="使われていない畑・農地の最新情報をまとめて確認。貸したい人と使いたい人をつなぐ、那須地域限定の畑マッチング速報です。"
+                                color="from-emerald-700 to-emerald-900"
+                            />
+
+                            <MenuButton
+                                href="/premium/akiya"
+                                icon={<RiHome4Line size={28} />}
+                                title="那須あき家速報"
+                                label="空き家・空き店舗の新着情報をいち早くチェック。移住・開業・利活用を考えている人向けの地域特化情報サービス。"
+                                color="from-slate-700 to-slate-900"
+                            />
+
+                            <MenuButton
+                                href="/premium/tasukeai"
+                                icon={<RiLightbulbFlashLine size={28} />}
+                                title="那須たすけあい速報"
+                                label="「ちょっと困った」「誰か手を貸してほしい」をすぐ共有。高齢者・子育て世帯・単身者の“ご近所助け合い”を支える速報機能です。"
+                                color="from-orange-400 to-yellow-500"
+                            />
+
+                            <MenuButton
+                                href="/premium/osuso"
+                                icon={<RiPlantFill size={28} />}
+                                title="おすそわけ畑"
+                                label="家庭菜園や畑で余った野菜・果物を地域でシェア。捨てない・無駄にしない・つながるを実現するご近所おすそわけ。"
+                                color="from-emerald-500 to-green-600"
+                            />
+
+                            <MenuButton
+                                href="/premium/half-price/create"
+                                icon={<RiFlashlightFill size={28} />}
+                                title="爆安セール速報"
+                                label="地元スーパー・小売店の「本当に安い」情報だけを厳選配信。見逃しがちなタイムセールや数量限定情報もまとめて確認できます。"
+                                color="from-orange-500 to-red-500"
+                            />
+
+                            <MenuButton
+                                href="/premium/flea-market"
+                                icon={<RiShoppingBagFill size={28} />}
+                                title="Nasuフリマ"
+                                label="那須地域限定のフリーマーケット掲示板。送料なし・近場取引で、安心・手軽に売買ができます。"
+                                color="from-pink-500 to-rose-500"
+                            />
+
+                            <MenuButton
+                                href="/premium/helper"
+                                icon={<RiHandHeartFill size={28} />}
+                                title="ちょい手伝い"
+                                label="草刈り・雪かき・荷物運びなど、短時間のお手伝い募集。「少しだけ助けてほしい」と「空いた時間に稼ぎたい」をつなぎます。"
+                                color="from-teal-500 to-cyan-500"
+                            />
+
+                            <MenuButton
+                                href="/premium/rental"
+                                icon={<RiExchangeBoxFill size={28} />}
+                                title="使ってない貸します"
+                                label="使っていない道具・機材・スペースを必要な人へ。買わずに借りる、地域内シェアで無駄を減らします。"
+                                color="from-blue-500 to-indigo-500"
+                            />
+
+                            <MenuButton
+                                href="/premium/pet-board/create"
+                                icon={<RiHeartFill size={28} />}
+                                title="ペット掲示板"
+                                label="里親募集・迷子情報・ペットに関する地域掲示板。那須エリア限定だからこそ、すぐに動けて安心です。"
+                                color="from-purple-500 to-indigo-500"
+                            />
                         </div>
                     </div>
                 </section>
@@ -555,10 +569,12 @@ const IndexPage = () => {
                 <section className="py-20 bg-white">
                     <div className="container mx-auto px-6 text-center max-w-3xl">
                         <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
-                            {data.freeReasonTitle}
+                            「どうして無料なの？」<br />怪しくないですか？
                         </h2>
                         <div className="mt-6 text-gray-600 leading-relaxed text-lg">
-                            <SafeHTML html={data.freeReasonDesc} />
+                            ご安心ください。これは地域の企業様が「那須に住むあなたを応援したい」という想いでスポンサーになってくれているからです。<br className="my-2" />
+                            <strong>だから、あなたは遠慮なく、堂々と無料で使い倒してください。</strong><br />
+                            あなたが便利に暮らすことが、地域の元気につながるのです。
                         </div>
                     </div>
                 </section>
@@ -568,11 +584,10 @@ const IndexPage = () => {
                     <div className="container mx-auto px-6 py-20 text-center">
                         <div className="max-w-3xl mx-auto">
                             <h2 className="text-3xl md:text-4xl font-bold">
-                                {data.finalCtaTitle?.split('\n').map((line, i) => (
-                                    <span key={i} className="block" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<span>$1</span>') }} />
-                                ))}
+                                迷う必要はありません。<br />
+                                だって、<span>完全無料</span>なんですから。
                             </h2>
-                            <p className="mt-4 text-pink-200">{data.finalCtaSubtext}</p>
+                            <p className="mt-4 text-pink-200">● 追加課金なし ● 解約も自由</p>
 
                             {/* LINE Button Only */}
                             <div className="mt-10 flex flex-col items-center justify-center space-y-6">
@@ -592,8 +607,8 @@ const IndexPage = () => {
 
                             {/* Tagline below buttons */}
                             <div className="mt-10 text-pink-300 text-sm md:text-base">
-                                <p>{data.finalTagline1}</p>
-                                <p>{data.finalTagline2}</p>
+                                <p>このボタンを押すだけで、</p>
+                                <p>あなたの毎日は、もっとやさしく、もっと楽になります。</p>
                             </div>
 
                         </div>
@@ -617,5 +632,82 @@ const IndexPage = () => {
         </div>
     );
 };
+
+// Featured App Component
+const FeaturedAppCard = ({
+    title,
+    description,
+    detail,
+    features,
+    recommend,
+    oneWord,
+    color,
+    badge,
+    badgeColor
+}: {
+    title: string;
+    description: React.ReactNode;
+    detail: string;
+    features: string[];
+    recommend: string[];
+    oneWord: string;
+    color: string;
+    badge: string;
+    badgeColor: string;
+}) => (
+    <div className={`p-8 rounded-[2.5rem] border ${color} relative overflow-hidden`}>
+        <div className="relative z-10">
+            <div className="flex flex-col md:flex-row gap-6 md:items-start">
+                <div className="flex-1 space-y-4">
+                    <div className="space-y-2">
+                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${badgeColor}`}>
+                            {badge}
+                        </span>
+                        <h3 className="text-2xl font-black text-gray-800 leading-tight">
+                            {title}
+                        </h3>
+                    </div>
+                    <p className="text-lg font-bold text-gray-700 leading-relaxed">
+                        {description}
+                    </p>
+                    <p className="text-sm text-gray-500 leading-relaxed">
+                        {detail}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white/60 rounded-2xl p-5">
+                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">できること</h4>
+                    <ul className="space-y-2">
+                        {features.map((f, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm font-bold text-gray-600">
+                                <span className="text-green-500 mt-0.5">✔</span>
+                                {f}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="bg-white/60 rounded-2xl p-5">
+                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">こんな人に</h4>
+                    <ul className="space-y-2">
+                        {recommend.map((r, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm font-bold text-gray-600">
+                                <span className="text-pink-400 mt-0.5">●</span>
+                                {r}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200/50 text-center">
+                <p className="text-xl font-black italic text-gray-800">
+                    "{oneWord}"
+                </p>
+            </div>
+        </div>
+    </div>
+);
 
 export default IndexPage;
