@@ -4,7 +4,7 @@ import Image from 'next/image';
 import nookies from 'nookies';
 import Head from 'next/head';
 
-// Firebase Admin SDK (srcなし構成のため相対パスを修正)
+// Firebase Admin SDK (srcなし構成のため相対パス修正)
 import { adminAuth, adminDb } from '../lib/firebase-admin';
 
 // React Icons
