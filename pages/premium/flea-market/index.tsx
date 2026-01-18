@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'; // useStateを追加
-import { db, auth } from '../../../lib/firebase'; // パスを調整
+import React, { useState, useEffect } from 'react';
+import { db, auth } from '../../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import {
     RiShoppingBag3Fill,
@@ -13,10 +13,12 @@ import {
     RiSearch2Fill,
     RiInformationLine,
     RiHeartFill,
-    RiInboxArchiveLine
+    RiInboxArchiveLine,
+    RiArrowLeftLine // 追加
 } from 'react-icons/ri';
 import Link from 'next/link';
 import Head from 'next/head';
+import { useRouter } from 'next/router'; // useRouterをインポート
 
 interface FurimaPost {
     id: string;
@@ -37,6 +39,7 @@ interface FurimaPost {
 }
 
 export default function FleaMarketPage() {
+    const router = useRouter(); // routerの初期化
     const [view, setView] = useState<'top' | 'list'>('top');
     const [posts, setPosts] = useState<FurimaPost[]>([]);
     const [selectedPost, setSelectedPost] = useState<FurimaPost | null>(null);
@@ -54,7 +57,6 @@ export default function FleaMarketPage() {
         };
         checkUser();
 
-        // コレクション名: furima_posts を監視
         const q = query(collection(db, "furima_posts"), orderBy("createdAt", "desc"));
         const unsubscribe = onSnapshot(q, (snap) => {
             const postData = snap.docs.map(d => ({ id: d.id, ...d.data() } as FurimaPost));
@@ -83,8 +85,18 @@ export default function FleaMarketPage() {
 
     if (view === 'top') {
         return (
-            <div className="min-h-screen bg-[#FDFCFD] flex flex-col items-center justify-center p-8 gap-8 font-sans transition-all duration-500">
+            <div className="min-h-screen bg-[#FDFCFD] flex flex-col items-center justify-center p-8 gap-8 font-sans transition-all duration-500 relative">
                 <Head><title>みんなのNasuフリマ</title></Head>
+
+                {/* ダッシュボードへ戻るボタンを左上に配置 */}
+                <div className="absolute top-6 left-6">
+                    <button
+                        onClick={() => router.push('/premium/dashboard')}
+                        className="w-12 h-12 flex items-center justify-center rounded-full bg-white border border-[#E8E2D9] text-[#4A3B3B] shadow-sm active:scale-90 transition-all hover:bg-gray-50"
+                    >
+                        <RiArrowLeftLine size={24} />
+                    </button>
+                </div>
 
                 <div className="text-center space-y-2 mb-4 animate-in fade-in zoom-in duration-700">
                     <div className="w-20 h-20 bg-pink-500 rounded-[2.5rem] flex items-center justify-center text-white mx-auto shadow-xl shadow-pink-100 mb-6">
@@ -149,7 +161,7 @@ export default function FleaMarketPage() {
                 ) : posts.length > 0 ? (
                     <div className="grid grid-cols-2 gap-5 animate-in fade-in duration-700">
                         {posts.map(post => (
-                            <div key={post.id} onClick={() => setSelectedPost(post)} className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-[#F3F0EC] active:scale-95 transition group cursor-pointer">
+                            <div key={post.id} onClick={() => setSelectedPost(post)} className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-[#F3F0EC] active:scale-95 transition group cursor-pointer text-left">
                                 <div className="aspect-square bg-[#FDFCFD] relative">
                                     <img src={post.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
                                     <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">{post.area}</div>
@@ -175,7 +187,6 @@ export default function FleaMarketPage() {
                         ))}
                     </div>
                 ) : (
-                    // ★投稿がゼロの時の表示
                     <div className="py-24 px-6 text-center bg-white rounded-[3rem] border-2 border-dashed border-[#F3F0EC]">
                         <RiInboxArchiveLine className="mx-auto text-pink-100 mb-4" size={60} />
                         <p className="text-[#4A3B3B] font-black mb-2 leading-relaxed">まだ掘り出し物はありません</p>
@@ -187,16 +198,15 @@ export default function FleaMarketPage() {
                 )}
             </div>
 
-            {/* モーダル表示部分（selectedPostがある場合） */}
             {selectedPost && (
                 <div className="fixed inset-0 bg-[#4A3B3B]/40 backdrop-blur-sm flex items-end z-[60] animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-xl mx-auto rounded-t-[3rem] p-8 pb-12 shadow-2xl max-h-[95vh] overflow-y-auto animate-in slide-in-from-bottom duration-500 scrollbar-hide text-left">
                         <div className="flex justify-between items-start mb-6">
-                            <div className="space-y-1">
+                            <div className="space-y-1 text-left">
                                 <span className="text-[10px] font-black text-pink-500 bg-pink-50 px-3 py-1 rounded-full uppercase tracking-widest leading-none block w-fit mb-2">
                                     {selectedPost.category}
                                 </span>
-                                <h2 className="text-2xl font-black text-[#4A3B3B] leading-tight">{selectedPost.title}</h2>
+                                <h2 className="text-2xl font-black text-[#4A3B3B] leading-tight text-left">{selectedPost.title}</h2>
                             </div>
                             <button onClick={() => setSelectedPost(null)} className="p-3 bg-[#FDFCFD] border border-[#E8E2D9] rounded-full text-[#A89F94] active:scale-90 transition-all shadow-sm">
                                 <RiCloseLine size={24} />
@@ -216,7 +226,7 @@ export default function FleaMarketPage() {
                             <div className="w-12 h-12 bg-pink-100 rounded-2xl flex items-center justify-center text-pink-500 shadow-inner">
                                 <RiHeartFill size={24} />
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 text-left">
                                 <p className="text-sm font-black text-[#4A3B3B]">{selectedPost.userName}</p>
                                 <p className="text-[10px] font-black text-[#A89F94] flex items-center gap-2 mt-0.5">
                                     <span className="text-emerald-500 font-black flex items-center gap-0.5"><RiShieldCheckFill /> 本人確認済み</span>
@@ -233,11 +243,11 @@ export default function FleaMarketPage() {
                                     {Number(selectedPost.price) === 0 ? "無料" : `¥${Number(selectedPost.price).toLocaleString()}`}
                                 </span>
                             </div>
-                            <div className="flex flex-col gap-2 border-b border-[#F3F0EC] pb-4">
+                            <div className="flex flex-col gap-2 border-b border-[#F3F0EC] pb-4 text-left">
                                 <span className="text-xs font-black text-[#A89F94] uppercase tracking-widest italic">受け渡し場所</span>
                                 <span className="font-black text-[#4A3B3B] text-lg bg-[#F3F0EC]/30 p-2 rounded-lg">{selectedPost.location}</span>
                             </div>
-                            <div className="py-4">
+                            <div className="py-4 text-left">
                                 <span className="text-xs font-black text-[#A89F94] uppercase tracking-widest italic block mb-3">商品説明</span>
                                 <p className="text-sm font-bold text-[#8C8479] leading-relaxed whitespace-pre-wrap">{selectedPost.description}</p>
                             </div>

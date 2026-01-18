@@ -7,7 +7,8 @@ import {
     RiExchangeFundsLine,
     RiMapPinLine,
     RiLineLine,
-    RiCheckboxCircleLine
+    RiCheckboxCircleLine,
+    RiArrowLeftSLine
 } from 'react-icons/ri';
 
 const AREAS = {
@@ -97,6 +98,13 @@ export default function SkillCreate() {
                 className="max-w-2xl mx-auto space-y-10 bg-white p-10 rounded-3xl shadow-sm border border-slate-200"
             >
                 <header className="border-b border-slate-100 pb-6">
+                    <button
+                        type="button"
+                        onClick={() => router.push('/premium/skill')}
+                        className="flex items-center gap-2 text-slate-400 font-bold mb-4 hover:text-slate-600 transition-colors"
+                    >
+                        <RiArrowLeftSLine /> premium/skillに戻る
+                    </button>
                     <h1 className="text-2xl font-black italic flex items-center gap-2">
                         <RiFileList3Line /> 那須スキル交換所：新規掲載
                     </h1>

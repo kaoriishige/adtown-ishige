@@ -6,7 +6,7 @@ import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'fireba
 import {
     RiArrowLeftLine, RiNotification3Line, RiMapPinRangeLine,
     RiPlantLine, RiUserHeartLine, RiLightbulbFlashLine, RiCalendarCheckLine,
-    RiImageLine, RiTimeLine, RiAddLine // RiAddLineを追加
+    RiImageLine, RiTimeLine, RiAddLine
 } from 'react-icons/ri';
 
 const CATEGORIES = [
@@ -75,15 +75,15 @@ export default function TasukeaiIndex() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8F9FA] pb-32 font-sans">
+        <div className="min-h-screen bg-[#F8F9FA] pb-32 font-sans text-left">
             <Head><title>那須たすけあい速報 | PREMIUM</title></Head>
 
-            <header className="bg-white/90 backdrop-blur-md border-b px-6 py-4 sticky top-0 z-50">
+            <header className="bg-white/90 backdrop-blur-md border-b px-6 py-4 sticky top-0 z-50 text-left">
                 <div className="flex items-center justify-between mb-4 max-w-2xl mx-auto">
-                    <button onClick={() => router.back()} className="text-gray-400 p-2 hover:bg-gray-50 rounded-full transition-all">
+                    <button onClick={() => router.push('/premium/dashboard')} className="text-gray-400 p-2 hover:bg-gray-50 rounded-full transition-all">
                         <RiArrowLeftLine size={24} />
                     </button>
-                    <h1 className="text-lg font-black text-gray-800 tracking-tighter italic">那須たすけあい速報</h1>
+                    <h1 className="text-lg font-black text-gray-800 tracking-tighter italic leading-none">那須たすけあい速報</h1>
                     <div className="bg-orange-500 p-2 rounded-full text-white shadow-lg shadow-orange-100 animate-pulse">
                         <RiNotification3Line size={20} />
                     </div>
@@ -95,8 +95,8 @@ export default function TasukeaiIndex() {
                             key={cat.id}
                             onClick={() => setActiveTab(cat.id)}
                             className={`flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-[11px] font-black transition-all shrink-0 uppercase tracking-wider ${activeTab === cat.id
-                                    ? 'bg-gray-900 text-white shadow-xl scale-105'
-                                    : 'bg-white text-gray-400 border border-gray-100 shadow-sm'
+                                ? 'bg-gray-900 text-white shadow-xl scale-105'
+                                : 'bg-white text-gray-400 border border-gray-100 shadow-sm'
                                 }`}
                         >
                             {cat.id !== 'all' && <span className="opacity-70">{cat.icon}</span>}
@@ -149,14 +149,14 @@ export default function TasukeaiIndex() {
                                 <div className="p-6">
                                     <div className="flex items-center gap-2 mb-3">
                                         <div className={`w-2 h-2 rounded-full ${alert.category === 'food' ? 'bg-emerald-400' :
-                                                alert.category === 'child' ? 'bg-pink-400' :
-                                                    alert.category === 'admin' ? 'bg-purple-400' : 'bg-orange-400'
+                                            alert.category === 'child' ? 'bg-pink-400' :
+                                                alert.category === 'admin' ? 'bg-purple-400' : 'bg-orange-400'
                                             }`} />
                                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                                             {CATEGORIES.find(c => c.id === alert.category)?.name}
                                         </span>
                                     </div>
-                                    <h3 className="text-xl font-black text-gray-800 leading-tight mb-3 group-hover:text-orange-600 transition-colors">
+                                    <h3 className="text-xl font-black text-gray-800 leading-tight mb-3 group-hover:text-orange-600 transition-colors italic tracking-tighter">
                                         {alert.title}
                                     </h3>
                                     <p className="text-sm text-gray-500 leading-relaxed mb-6 line-clamp-2 font-medium italic">
@@ -179,16 +179,18 @@ export default function TasukeaiIndex() {
                                 </div>
                             </div>
                         );
-                    }) // ← ここに閉じるための ) が不足していました
+                    })
                 )}
             </main>
 
-            <div className="fixed bottom-8 right-8 z-[60]">
+            {/* ＋ アイコンから 登録 ボタンへ変更 */}
+            <div className="fixed bottom-10 right-6 z-[60]">
                 <button
                     onClick={() => router.push('/premium/tasukeai/create')}
-                    className="w-16 h-16 bg-orange-500 text-white rounded-full shadow-[0_20px_50px_rgba(249,115,22,0.3)] flex items-center justify-center active:scale-90 transition-all border-4 border-white group"
+                    className="flex items-center gap-2 px-6 py-4 bg-orange-500 text-white rounded-full shadow-[0_15px_35px_rgba(249,115,22,0.4)] active:scale-95 transition-all border-2 border-white/20 group"
                 >
-                    <RiAddLine size={32} className="group-hover:rotate-90 transition-transform duration-500" />
+                    <RiAddLine size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                    <span className="text-sm font-black tracking-widest">登録する</span>
                 </button>
             </div>
         </div>

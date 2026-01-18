@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { RiShieldCheckFill, RiMapPin2Fill, RiAddLine, RiTimeLine } from 'react-icons/ri';
+import { RiShieldCheckFill, RiMapPin2Fill, RiAddLine, RiTimeLine, RiArrowLeftLine } from 'react-icons/ri'; // RiArrowLeftLineを追加
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
@@ -22,12 +22,11 @@ export default function PublicPetBoard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // パブリック公開なので誰でも取得可能
         const q = query(collection(db, "pet_posts"), orderBy("createdAt", "desc"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const postData = snapshot.docs.map(doc => ({ 
-                id: doc.id, 
-                ...doc.data() 
+            const postData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
             })) as PetPost[];
             setPosts(postData);
             setLoading(false);
@@ -35,7 +34,6 @@ export default function PublicPetBoard() {
         return () => unsubscribe();
     }, []);
 
-    // 日付フォーマット関数
     const formatTime = (timestamp: any) => {
         if (!timestamp) return '';
         try {
@@ -48,18 +46,29 @@ export default function PublicPetBoard() {
 
     return (
         <div className="min-h-screen bg-[#FDFCFD] pb-32 font-sans text-gray-800">
-            {/* ヘッダー：親しみやすさと透明性 */}
-            <header className="bg-white/90 backdrop-blur-md px-6 py-5 border-b border-gray-100 sticky top-0 z-40">
+            {/* ヘッダー */}
+            <header className="bg-white/90 backdrop-blur-md px-6 py-5 border-b border-gray-100 sticky top-0 z-40 shadow-sm">
                 <div className="max-w-md mx-auto flex justify-between items-center">
-                    <div>
-                        <h1 className="text-xl font-black text-gray-900 italic tracking-tighter">
-                            Nasu <span className="text-emerald-600">ペット掲示板</span>
-                        </h1>
-                        <p className="text-[10px] font-bold text-gray-400">地域で支え合う、ペットとの暮らし</p>
+                    <div className="flex items-center gap-3">
+                        {/* 戻るボタン */}
+                        <Link href="/premium/dashboard" className="text-gray-400 hover:text-gray-900 transition-colors p-1">
+                            <RiArrowLeftLine size={24} />
+                        </Link>
+                        <div>
+                            <h1 className="text-xl font-black text-gray-900 italic tracking-tighter">
+                                Nasu <span className="text-emerald-600">ペット掲示板</span>
+                            </h1>
+                            <p className="text-[10px] font-bold text-gray-400">地域で支え合う、ペットとの暮らし</p>
+                        </div>
                     </div>
-                    {/* プレミアム会員のみが信頼性の高い投稿(本人確認済み)として目立つ仕組み */}
-                    <Link href="/premium/pet-board/create" className="bg-emerald-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-emerald-100 active:scale-95 transition-all">
-                        <RiAddLine size={24} />
+
+                    {/* 登録ボタン */}
+                    <Link
+                        href="/premium/pet-board/create"
+                        className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-1 shadow-lg shadow-emerald-100 active:scale-95 transition-all"
+                    >
+                        <RiAddLine size={18} />
+                        <span className="text-sm font-black tracking-tighter">登録</span>
                     </Link>
                 </div>
             </header>
@@ -73,18 +82,17 @@ export default function PublicPetBoard() {
                     </div>
                 ) : (
                     posts.map((post) => (
-                        <Link 
-                            key={post.id} 
-                            href={`/pet-board/${post.id}`} 
+                        <Link
+                            key={post.id}
+                            href={`/pet-board/${post.id}`}
                             className="block bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm active:scale-[0.98] transition-all hover:border-emerald-100"
                         >
                             <div className="flex">
-                                {/* 画像セクション */}
                                 <div className="w-32 h-32 shrink-0 relative bg-gray-100">
-                                    <img 
-                                        src={post.imageUrl || '/images/pet-placeholder.jpg'} 
-                                        className="w-full h-full object-cover" 
-                                        alt="pet" 
+                                    <img
+                                        src={post.imageUrl || '/images/pet-placeholder.jpg'}
+                                        className="w-full h-full object-cover"
+                                        alt="pet"
                                         loading="lazy"
                                     />
                                     {post.isPaid && (
@@ -93,15 +101,13 @@ export default function PublicPetBoard() {
                                         </div>
                                     )}
                                 </div>
-                                
-                                {/* コンテンツセクション */}
+
                                 <div className="p-4 flex-1 flex flex-col justify-between">
                                     <div>
                                         <div className="flex justify-between items-start mb-1.5">
-                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${
-                                                post.category === '里親募集' ? 'bg-orange-50 text-orange-600' :
+                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${post.category === '里親募集' ? 'bg-orange-50 text-orange-600' :
                                                 post.category === '迷子情報' ? 'bg-rose-50 text-rose-600' : 'bg-gray-100 text-gray-500'
-                                            }`}>
+                                                }`}>
                                                 {post.category}
                                             </span>
                                             <div className="flex items-center gap-2">
@@ -114,7 +120,7 @@ export default function PublicPetBoard() {
                                             {post.description}
                                         </p>
                                     </div>
-                                    
+
                                     <div className="mt-2 flex items-center justify-between">
                                         <div className="flex items-center gap-1.5 text-gray-400 font-black">
                                             <span className="text-[10px]">
@@ -134,8 +140,7 @@ export default function PublicPetBoard() {
                     ))
                 )}
             </main>
-            
-            {/* 誘導フッター（無料ユーザーへのプレミアム案内など） */}
+
             <div className="max-w-md mx-auto px-6 mt-4">
                 <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
                     <p className="text-[10px] font-bold text-emerald-700 leading-relaxed text-center italic">

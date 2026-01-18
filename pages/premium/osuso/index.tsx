@@ -66,18 +66,23 @@ export default function OsusoPage() {
             {/* Header */}
             <header className="bg-white/80 backdrop-blur-xl border-b border-[#E8E2D9] px-6 py-4 sticky top-0 z-50">
                 <div className="max-w-xl mx-auto flex items-center justify-between">
-                    <button 
-                        onClick={() => router.push('/premium/dashboard')} 
+                    <button
+                        onClick={() => router.push('/premium/dashboard')}
                         className="w-10 h-10 flex items-center justify-center rounded-full bg-[#FDFCFD] border border-[#E8E2D9] text-[#A89F94] active:scale-90 transition-all"
                     >
                         <RiArrowLeftSLine size={24} />
                     </button>
                     <div className="text-center">
                         <span className="text-[10px] tracking-[0.2em] uppercase text-emerald-500 block font-black">Nasu Osusowake</span>
-                        <h1 className="text-sm font-black italic text-emerald-600">おすそわけ畑</h1>
+                        <h1 className="text-sm font-black italic text-emerald-600 leading-none">おすそわけ畑</h1>
                     </div>
-                    <Link href="/premium/osuso/post" className="text-emerald-500 bg-emerald-50 p-2 rounded-full active:scale-95 transition-all">
-                        <RiAddLine size={24} />
+                    {/* ＋ アイコンから 登録 ボタンへ変更 */}
+                    <Link
+                        href="/premium/osuso/post"
+                        className="flex items-center gap-1 bg-emerald-500 text-white px-4 py-2 rounded-full active:scale-95 transition-all shadow-lg shadow-emerald-100 border border-emerald-400/20"
+                    >
+                        <RiAddLine size={18} />
+                        <span className="text-[11px] font-black tracking-widest">登録</span>
                     </Link>
                 </div>
             </header>
@@ -88,12 +93,12 @@ export default function OsusoPage() {
                     <div className="absolute top-0 right-0 p-6 opacity-20 rotate-12">
                         <RiPlantLine size={120} />
                     </div>
-                    <div className="relative z-10 space-y-4">
+                    <div className="relative z-10 space-y-4 text-left">
                         <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20">
                             <RiHeartFill className="text-rose-300" />
                             <span className="text-[10px] font-black italic tracking-wider">出逢いだけ、つなぎます。</span>
                         </div>
-                        <div className="space-y-1 text-left">
+                        <div className="space-y-1">
                             <h2 className="text-2xl font-black italic leading-tight">那須の畑と、<br />台所をつなぐ。</h2>
                             <p className="text-xs font-bold opacity-90 leading-relaxed">
                                 余った野菜、とれすぎた果物。<br />
@@ -120,19 +125,19 @@ export default function OsusoPage() {
                             className="bg-white rounded-[3.5rem] overflow-hidden border border-[#F3F0EC] shadow-sm active:scale-[0.98] transition-all group flex flex-col"
                         >
                             <div className="aspect-[16/11] bg-[#F3F0EC] relative overflow-hidden">
-                                <img 
-                                    src={post.imageUrl || '/images/placeholder-osuso.jpg'} 
-                                    alt="おすそわけ" 
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                                <img
+                                    src={post.imageUrl || '/images/placeholder-osuso.jpg'}
+                                    alt="おすそわけ"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                                 />
                                 <div className="absolute top-4 left-4">
-                                    <span className="bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black shadow-lg">
+                                    <span className="bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black shadow-lg uppercase tracking-widest">
                                         {post.userType}
                                     </span>
                                 </div>
                             </div>
                             <div className="p-8 space-y-6 text-left">
-                                <h3 className="text-xl font-black text-[#4A3B3B] line-clamp-2 leading-snug">
+                                <h3 className="text-xl font-black text-[#4A3B3B] line-clamp-2 leading-snug italic tracking-tighter">
                                     {post.comment}
                                 </h3>
 
@@ -167,8 +172,8 @@ export default function OsusoPage() {
             {selectedPost && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#4A3B3B]/60 backdrop-blur-md animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[4rem] shadow-2xl relative animate-in zoom-in slide-in-from-bottom-10 duration-500">
-                        <button 
-                            onClick={() => setSelectedPost(null)} 
+                        <button
+                            onClick={() => setSelectedPost(null)}
                             className="absolute top-6 right-6 w-10 h-10 bg-white/90 backdrop-blur-md text-[#A89F94] rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-all z-10"
                         >
                             <RiCloseLine size={24} />
@@ -188,14 +193,14 @@ export default function OsusoPage() {
                                         {selectedPost.area}
                                     </span>
                                 </div>
-                                <h2 className="text-2xl md:text-3xl font-black tracking-tighter leading-tight text-[#4A3B3B]">
+                                <h2 className="text-2xl md:text-3xl font-black tracking-tighter leading-tight text-[#4A3B3B] italic">
                                     {selectedPost.comment}
                                 </h2>
                             </div>
 
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-[#A89F94] uppercase tracking-[0.2em] block italic">受け渡し方法</label>
-                                <div className="bg-[#FDFCFD] p-8 rounded-[2.5rem] border border-[#E8E2D9] relative overflow-hidden">
+                                <div className="bg-[#FDFCFD] p-8 rounded-[2.5rem] border border-[#E8E2D9] relative overflow-hidden text-left">
                                     <RiMapPin2Fill className="absolute -top-2 -right-2 text-emerald-50/50" size={100} />
                                     <p className="text-sm font-bold text-[#8C8479] leading-relaxed relative z-10 whitespace-pre-wrap">{selectedPost.method}</p>
                                 </div>
@@ -210,7 +215,7 @@ export default function OsusoPage() {
                                         </div>
                                     )}
                                 </div>
-                                <div>
+                                <div className="text-left">
                                     <p className="text-base font-black text-[#4A3B3B]">{selectedPost.nickname}</p>
                                     <p className="text-[10px] font-black text-[#A89F94] mt-1 flex items-center gap-2">
                                         <span>那須おすそわけ実績</span>
@@ -232,7 +237,7 @@ export default function OsusoPage() {
                                         <RiInformationLine size={18} />
                                         <span className="text-[10px] font-black uppercase tracking-widest">おすそわけの基本ルール</span>
                                     </div>
-                                    <ul className="text-[10px] font-bold text-rose-700/60 leading-relaxed italic space-y-1 list-disc pl-4">
+                                    <ul className="text-[10px] font-bold text-rose-700/60 leading-relaxed italic space-y-1 list-disc pl-4 text-left">
                                         <li>お礼や金額の有無は、LINEで直接話し合ってください。</li>
                                         <li>受け渡しの場所は、人目の多い公共の場をお勧めします。</li>
                                         <li>運営は、マッチング後のやり取りに一切責任を負いません。</li>
