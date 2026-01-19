@@ -1,151 +1,144 @@
-import React, { useState, useEffect } from 'react';
+"use client";
+
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { RiShieldCheckFill, RiMapPin2Fill, RiAddLine, RiTimeLine, RiArrowLeftLine } from 'react-icons/ri'; // RiArrowLeftLineを追加
-import { formatDistanceToNow } from 'date-fns';
-import { ja } from 'date-fns/locale';
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { RiMailLine, RiLockPasswordLine, RiStore2Line, RiUserLine, RiMapPinLine, RiErrorWarningLine } from 'react-icons/ri';
 
-interface PetPost {
-    id: string;
-    category: string;
-    imageUrl: string;
-    description: string;
-    area: string;
-    nickname: string;
-    isPaid: boolean;
-    createdAt: any;
-}
+export default function SignupPage() {
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-export default function PublicPetBoard() {
-    const [posts, setPosts] = useState<PetPost[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [formData, setFormData] = useState({
+        storeName: '',
+        contactPerson: '',
+        address: '',
+        email: '',
+        password: '',
+    });
 
-    useEffect(() => {
-        const q = query(collection(db, "pet_posts"), orderBy("createdAt", "desc"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const postData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as PetPost[];
-            setPosts(postData);
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
+    const handleSignup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
 
-    const formatTime = (timestamp: any) => {
-        if (!timestamp) return '';
         try {
-            const date = timestamp.toDate();
-            return formatDistanceToNow(date, { addSuffix: true, locale: ja });
-        } catch (e) {
-            return '';
+            // --- 1. 二重アドレスチェック (重複確認) ---
+            const usersRef = collection(db, "partners"); // または "users"
+            const q = query(usersRef, where("email", "==", formData.email));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                throw new Error("このメールアドレスは既に登録されています。");
+            }
+
+            // --- 2. 新規登録処理 ---
+            await addDoc(collection(db, "partners"), {
+                ...formData,
+                role: 'partner',
+                status: 'pending',
+                createdAt: serverTimestamp(),
+            });
+
+            alert("登録が完了しました。");
+            router.push('/login'); // ログイン画面へ
+
+        } catch (err: any) {
+            console.error("Signup Error:", err);
+            setError(err.message || "登録中にエラーが発生しました。");
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFCFD] pb-32 font-sans text-gray-800">
-            {/* ヘッダー */}
-            <header className="bg-white/90 backdrop-blur-md px-6 py-5 border-b border-gray-100 sticky top-0 z-40 shadow-sm">
-                <div className="max-w-md mx-auto flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        {/* 戻るボタン */}
-                        <Link href="/premium/dashboard" className="text-gray-400 hover:text-gray-900 transition-colors p-1">
-                            <RiArrowLeftLine size={24} />
-                        </Link>
-                        <div>
-                            <h1 className="text-xl font-black text-gray-900 italic tracking-tighter">
-                                Nasu <span className="text-emerald-600">ペット掲示板</span>
-                            </h1>
-                            <p className="text-[10px] font-bold text-gray-400">地域で支え合う、ペットとの暮らし</p>
-                        </div>
-                    </div>
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden font-sans">
+            {/* 背景装飾 */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-orange-600/10 rounded-full blur-[120px]" />
 
-                    {/* 登録ボタン */}
-                    <Link
-                        href="/premium/pet-board/create"
-                        className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-1 shadow-lg shadow-emerald-100 active:scale-95 transition-all"
-                    >
-                        <RiAddLine size={18} />
-                        <span className="text-sm font-black tracking-tighter">登録</span>
-                    </Link>
+            <div className="max-w-md w-full relative z-10">
+                <div className="text-center mb-10">
+                    <h1 className="text-4xl font-black italic text-white tracking-tighter">
+                        JOIN <span className="text-orange-600">NASU</span> PARTNER
+                    </h1>
+                    <p className="text-slate-500 text-xs font-bold mt-2 tracking-widest uppercase">新規パートナーアカウント作成</p>
                 </div>
-            </header>
 
-            <main className="max-w-md mx-auto p-4 space-y-4">
-                {loading ? (
-                    <div className="text-center py-20 text-gray-400 animate-pulse font-bold italic">読み込み中...</div>
-                ) : posts.length === 0 ? (
-                    <div className="text-center py-20 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100">
-                        <p className="text-gray-400 font-bold italic text-sm">現在、投稿はありません</p>
-                    </div>
-                ) : (
-                    posts.map((post) => (
-                        <Link
-                            key={post.id}
-                            href={`/pet-board/${post.id}`}
-                            className="block bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm active:scale-[0.98] transition-all hover:border-emerald-100"
+                <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl">
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl flex items-center gap-3 text-red-500 text-sm font-bold">
+                            <RiErrorWarningLine size={20} />
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSignup} className="space-y-5">
+                        {/* 店舗名 */}
+                        <div className="relative">
+                            <RiStore2Line className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input
+                                type="text"
+                                placeholder="店舗名・企業名"
+                                required
+                                className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-4 pl-12 pr-4 text-white font-bold outline-none focus:border-orange-600 transition-all"
+                                onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                            />
+                        </div>
+
+                        {/* 所在地 */}
+                        <div className="relative">
+                            <RiMapPinLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input
+                                type="text"
+                                placeholder="那須エリアの所在地"
+                                required
+                                className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-4 pl-12 pr-4 text-white font-bold outline-none focus:border-orange-600 transition-all"
+                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                            />
+                        </div>
+
+                        {/* メールアドレス（重複チェック対象） */}
+                        <div className="relative">
+                            <RiMailLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input
+                                type="email"
+                                placeholder="メールアドレス"
+                                required
+                                className={`w-full bg-slate-900/50 border border-slate-800 rounded-xl py-4 pl-12 pr-4 text-white font-bold outline-none focus:border-orange-600 transition-all ${error?.includes('アドレス') ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : ''}`}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            />
+                        </div>
+
+                        {/* パスワード */}
+                        <div className="relative">
+                            <RiLockPasswordLine className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input
+                                type="password"
+                                placeholder="パスワード（8文字以上）"
+                                required
+                                minLength={8}
+                                className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-4 pl-12 pr-4 text-white font-bold outline-none focus:border-orange-600 transition-all"
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-5 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-xl shadow-xl transition-all active:scale-95 disabled:opacity-50 italic text-lg"
                         >
-                            <div className="flex">
-                                <div className="w-32 h-32 shrink-0 relative bg-gray-100">
-                                    <img
-                                        src={post.imageUrl || '/images/pet-placeholder.jpg'}
-                                        className="w-full h-full object-cover"
-                                        alt="pet"
-                                        loading="lazy"
-                                    />
-                                    {post.isPaid && (
-                                        <div className="absolute top-2 left-2 bg-blue-500 rounded-full p-1 shadow-md">
-                                            <RiShieldCheckFill className="text-white" size={12} />
-                                        </div>
-                                    )}
-                                </div>
+                            {loading ? 'CHECKING...' : 'CREATE ACCOUNT'}
+                        </button>
+                    </form>
 
-                                <div className="p-4 flex-1 flex flex-col justify-between">
-                                    <div>
-                                        <div className="flex justify-between items-start mb-1.5">
-                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${post.category === '里親募集' ? 'bg-orange-50 text-orange-600' :
-                                                post.category === '迷子情報' ? 'bg-rose-50 text-rose-600' : 'bg-gray-100 text-gray-500'
-                                                }`}>
-                                                {post.category}
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] text-gray-400 font-bold flex items-center gap-0.5">
-                                                    <RiMapPin2Fill size={10} /> {post.area}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <p className="text-sm font-bold text-gray-700 line-clamp-2 leading-snug">
-                                            {post.description}
-                                        </p>
-                                    </div>
-
-                                    <div className="mt-2 flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5 text-gray-400 font-black">
-                                            <span className="text-[10px]">
-                                                {post.isPaid ? post.nickname : '匿名ユーザー'}
-                                            </span>
-                                            {post.isPaid && (
-                                                <span className="text-[8px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded-full">本人確認済</span>
-                                            )}
-                                        </div>
-                                        <span className="text-[9px] text-gray-300 font-bold flex items-center gap-0.5 italic">
-                                            <RiTimeLine size={10} /> {formatTime(post.createdAt)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                    <div className="mt-8 text-center border-t border-white/5 pt-6">
+                        <Link href="/login" className="text-slate-500 hover:text-white text-sm font-bold transition-colors">
+                            既にアカウントをお持ちの方はこちら
                         </Link>
-                    ))
-                )}
-            </main>
-
-            <div className="max-w-md mx-auto px-6 mt-4">
-                <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
-                    <p className="text-[10px] font-bold text-emerald-700 leading-relaxed text-center italic">
-                        ※ 本人確認済みの投稿は信頼性が高く、安心してやり取りいただけます。
-                    </p>
+                    </div>
                 </div>
             </div>
         </div>

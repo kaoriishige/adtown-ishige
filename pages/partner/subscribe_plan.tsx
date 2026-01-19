@@ -33,9 +33,9 @@ const PRICE_ID_ANNUAL_INVOICE =
   process.env.STRIPE_AD_ANNUAL_INVOICE_PRICE_ID ||
   'missing_annual_invoice_id';
 
-const MONTHLY_PRICE_DISPLAY = 3850; // 税込
-const ANNUAL_PRICE_DISPLAY = 39600; // 税込
-const ANNUAL_SAVINGS = 52800 - 39600; // 割引額 (定価 52,800円からの割引)
+const MONTHLY_PRICE_DISPLAY = 5500; // 税込
+const ANNUAL_PRICE_DISPLAY = 49500; // 税込
+const ANNUAL_SAVINGS = 66000 - 49500; // 割引額 (定価66000円からの割引)
 
 const CheckCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -329,7 +329,7 @@ const PartnerSubscribePage: React.FC = () => {
           <PriceCard
             title="月額プラン（クレカ）"
             price={MONTHLY_PRICE_DISPLAY}
-            originalPrice={4400}
+            originalPrice={8800}
             billingCycle="monthly"
             priceId={PRICE_ID_MONTHLY}
             features={['クレカ決済で毎月自動更新', '月単位で解約可能', 'まずはお試しに最適', '集客AI', '紹介料収入プログラム', 'LINEでお客様とAIマッチング']}
@@ -340,7 +340,7 @@ const PartnerSubscribePage: React.FC = () => {
           <PriceCard
             title="年額プラン（クレカ）"
             price={ANNUAL_PRICE_DISPLAY}
-            originalPrice={52800}
+            originalPrice={66000}
             billingCycle="annual"
             priceId={PRICE_ID_ANNUAL} // 柔軟な参照変数
             features={['年1回払いでお得', `年間¥${ANNUAL_SAVINGS.toLocaleString()}割引`, '長期利用向け', '集客AI', '紹介料収入プログラム', 'LINEでお客様とAIマッチング']}
@@ -351,7 +351,7 @@ const PartnerSubscribePage: React.FC = () => {
           <PriceCard
             title="年額プラン（請求書）"
             price={ANNUAL_PRICE_DISPLAY}
-            originalPrice={52800}
+            originalPrice={66000}
             billingCycle="annual_invoice"
             priceId={PRICE_ID_ANNUAL_INVOICE} // 柔軟な参照変数
             features={['銀行振込による前払い', '経理処理に対応した請求書発行', '法人利用に最適', '集客AI', '紹介料収入プログラム', 'LINEでお客様とAIマッチング']}

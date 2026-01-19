@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { auth, db } from '@/lib/firebase';
+import {
+    signInWithEmailAndPassword,
+    signOut,
+    setPersistence,
+    browserLocalPersistence
+} from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import {
     RiLoginCircleLine,
     RiMailLine,
@@ -9,85 +16,135 @@ import {
     RiGiftFill,
     RiEyeLine,
     RiEyeOffLine,
-    RiArrowRightLine
+    RiErrorWarningLine
 } from 'react-icons/ri';
 
-const SpecialLoginPage = () => {
+export default function SpecialLoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [loginData, setLoginData] = useState({
         email: '',
         password: '',
     });
 
+    // 初期化：既存セッションのクリア
+    useEffect(() => {
+        const init = async () => {
+            await signOut(auth);
+            try {
+                await setPersistence(auth, browserLocalPersistence);
+            } catch (e) {
+                console.error("Persistence error", e);
+            }
+        };
+        init();
+    }, []);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
 
         try {
-            // ここに認証処理（Firebase Auth / API等）を記述
-            console.log("Login Attempt:", loginData);
+            // 1. Firebase Authentication 認証
+            const userCredential = await signInWithEmailAndPassword(
+                auth,
+                loginData.email.trim(),
+                loginData.password
+            );
 
-            // 成功時のリダイレクト例
-            // router.push('/special-dashboard');
-        } catch (error) {
-            alert('ログインに失敗しました。メールアドレスまたはパスワードを確認してください。');
+            // 2. Firestore special_partners コレクションの確認
+            const q = query(
+                collection(db, "special_partners"),
+                where("email", "==", loginData.email.trim())
+            );
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                setError("認証されましたが、特別パートナーとして登録されていません。");
+                await signOut(auth);
+                setLoading(false);
+                return;
+            }
+
+            // 成功：パートナーフラグを保存
+            const partnerDoc = querySnapshot.docs[0];
+            localStorage.setItem('is_special_partner', 'true');
+            localStorage.setItem('partner_doc_id', partnerDoc.id);
+
+            // 3. リダイレクト先を /premium/dashboard に変更
+            // 確実に認証状態を反映させるため window.location を使用
+            window.location.href = '/premium/dashboard';
+
+        } catch (err: any) {
+            console.error("Login Error Code:", err.code);
+
+            // 日本語エラーメッセージ
+            switch (err.code) {
+                case 'auth/invalid-credential':
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                    setError("メールアドレスまたはパスワードが正しくありません。");
+                    break;
+                case 'auth/too-many-requests':
+                    setError("短時間に何度も失敗したためブロックされました。時間を置いてお試しください。");
+                    break;
+                default:
+                    setError("ログインに失敗しました。アカウントがAuthenticationに登録されているか確認してください。");
+            }
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFCFD] font-sans text-[#4A3B3B] flex flex-col justify-center py-12 px-6">
+        <div className="min-h-screen bg-[#FDFCFD] flex flex-col justify-center py-12 px-6 font-sans">
             <Head><title>特別パートナーログイン</title></Head>
 
             <div className="max-w-md w-full mx-auto space-y-8">
-                {/* ヘッダー部分 */}
                 <div className="text-center">
                     <RiGiftFill size={48} className="mx-auto text-pink-500 mb-4" />
-                    <h1 className="text-2xl font-black italic">特別パートナーログイン</h1>
-                    <p className="text-[10px] text-[#A89F94] mt-2 font-bold tracking-widest uppercase">Affiliate Partner Login</p>
+                    <h1 className="text-2xl font-black italic text-[#4A3B3B]">特別パートナーログイン</h1>
+                    <p className="text-[10px] text-[#A89F94] mt-2 font-bold tracking-widest uppercase">Affiliate Access</p>
                 </div>
 
-                {/* ログインフォーム */}
+                {error && (
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-xs font-bold text-red-600 animate-in fade-in duration-300">
+                        <RiErrorWarningLine size={20} className="shrink-0" />
+                        <span>{error}</span>
+                    </div>
+                )}
+
                 <div className="bg-white border border-[#E8E2D9] rounded-[2.5rem] p-8 shadow-sm">
                     <form onSubmit={handleLogin} className="space-y-6">
-
-                        {/* メールアドレス */}
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-[10px] font-black text-[#A89F94] px-2 uppercase tracking-widest">
-                                <RiMailLine className="text-pink-500" size={14} />
-                                メールアドレス
-                            </label>
+                            <label className="text-[10px] font-black text-[#A89F94] px-2 tracking-widest uppercase italic">メールアドレス</label>
                             <input
                                 required
                                 type="email"
-                                className="w-full p-4 bg-white border border-[#E8E2D9] rounded-2xl text-sm font-bold placeholder-[#D1C9BF] outline-none focus:ring-2 focus:ring-pink-200 transition-all"
-                                placeholder="nasu@example.com"
+                                className="w-full p-4 bg-[#F9F7F5] border border-[#E8E2D9] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-pink-200 transition-all"
+                                placeholder="example@nasu.com"
                                 value={loginData.email}
                                 onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                             />
                         </div>
 
-                        {/* パスワード */}
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-[10px] font-black text-[#A89F94] px-2 uppercase tracking-widest">
-                                <RiLockPasswordLine className="text-pink-500" size={14} />
-                                パスワード
-                            </label>
+                            <label className="text-[10px] font-black text-[#A89F94] px-2 tracking-widest uppercase italic">パスワード</label>
                             <div className="relative">
                                 <input
                                     required
                                     type={showPassword ? "text" : "password"}
-                                    className="w-full p-4 bg-white border border-[#E8E2D9] rounded-2xl text-sm font-bold placeholder-[#D1C9BF] outline-none focus:ring-2 focus:ring-pink-200 transition-all"
+                                    className="w-full p-4 bg-[#F9F7F5] border border-[#E8E2D9] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-pink-200 transition-all"
                                     placeholder="••••••••"
                                     value={loginData.password}
                                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                                 />
                                 <button
                                     type="button"
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#D1C9BF] hover:text-pink-500 transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#D1C9BF]"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
                                     {showPassword ? <RiEyeOffLine size={20} /> : <RiEyeLine size={20} />}
@@ -95,55 +152,21 @@ const SpecialLoginPage = () => {
                             </div>
                         </div>
 
-                        {/* パスワード忘れ */}
-                        <div className="text-right">
-                            <Link href="/forgot-password">
-                                <span className="text-[10px] font-bold text-[#A89F94] hover:text-pink-500 underline underline-offset-4 cursor-pointer">
-                                    パスワードをお忘れですか？
-                                </span>
-                            </Link>
-                        </div>
-
-                        {/* ログインボタン */}
                         <button
                             disabled={loading}
                             type="submit"
-                            className="w-full py-5 bg-[#4A3B3B] text-white rounded-full font-black text-lg shadow-xl hover:bg-[#3d3131] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="w-full py-5 bg-[#4A3B3B] text-white rounded-full font-black text-lg shadow-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            {loading ? (
-                                'ログイン中...'
-                            ) : (
+                            {loading ? '認証中...' : (
                                 <>
                                     <RiLoginCircleLine size={24} />
-                                    ログインする
+                                    ログインしてダッシュボードへ
                                 </>
                             )}
                         </button>
                     </form>
                 </div>
-
-                {/* 新規登録への誘導 */}
-                <div className="text-center space-y-4">
-                    <p className="text-xs font-bold text-[#6B5D5D]">
-                        まだパートナー登録がお済みでない方
-                    </p>
-                    <Link href="/special-signup">
-                        <span className="inline-flex items-center gap-2 px-8 py-3 bg-white border-2 border-pink-500 text-pink-500 rounded-full font-black text-sm hover:bg-pink-50 transition-all cursor-pointer group">
-                            新規パートナー登録はこちら
-                            <RiArrowRightLine className="group-hover:translate-x-1 transition-transform" />
-                        </span>
-                    </Link>
-                </div>
             </div>
-
-            {/* フッター */}
-            <footer className="mt-12 text-center">
-                <p className="text-[10px] font-bold text-[#D1C9BF]">
-                    © {new Date().getFullYear()} 株式会社adtown / みんなの那須アプリ
-                </p>
-            </footer>
         </div>
     );
-};
-
-export default SpecialLoginPage;
+}

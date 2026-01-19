@@ -7,15 +7,13 @@
  * 3. 動的なバリデーションとエラー表示
  * 4. レスポンシブなモダンUI（Tailwind CSS）
  * 5. 先着100社カウントダウン表示
+ * 6. 【追加】みんなのNasuアプリ登録促進セクション（登録LPボタン付き）
  */
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
 import { NextPage } from 'next';
-import { User } from 'firebase/auth';
-// カスタムフック（必要に応じてパスを調整してください）
-// import { useAffiliateTracker } from '@/lib/affiliate-tracker';
 
 // --- 画像パス・定数定義 ---
 const PARTNER_LOGOS = [
@@ -25,6 +23,8 @@ const PARTNER_LOGOS = [
   '/images/partner-poppo.png', '/images/partner-sekiguchi02.png', '/images/partner-training_farm.png',
   '/images/partner-transunet.png', '/images/partner-koharu.png', '/images/partner-yamakiya.png'
 ];
+
+const NASU_APP_LP_URL = 'https://minna-no-nasu-app.netlify.app/';
 
 // --- アイコンコンポーネント ---
 const UsersIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -255,6 +255,70 @@ const RecruitSignupPage: NextPage = () => {
           </div>
         </section>
 
+        {/* --- 追加: みんなのNasuアプリ登録促進（登録LPボタン付き） --- */}
+        <section className="container mx-auto px-4 mb-20">
+          <div className="rounded-3xl p-1 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-xl">
+            <div className="bg-white rounded-[1.4rem] p-8 md:p-12">
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+                    <UsersIcon className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
+                      みんなのNasuアプリ、登録者が伸びています。
+                    </h3>
+                    <p className="mt-2 text-slate-600 leading-relaxed">
+                      すでに先行で<strong className="text-slate-900">1,000人が登録済</strong>。さらに、那須地域に向けて発信している
+                      <strong className="text-slate-900">合計約100,000人のフォロワー</strong>を持つインフルエンサーが、アプリ登録への情報発信を実施中です。
+                      今後も<strong className="text-slate-900">5,000人、10,000人</strong>と登録者増が見込めます。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                    <p className="text-xs font-bold tracking-widest text-slate-500">先行登録</p>
+                    <p className="mt-2 text-3xl font-black text-slate-900">1,000<span className="text-base font-bold">人</span></p>
+                    <p className="mt-1 text-sm text-slate-600">すでに利用開始</p>
+                  </div>
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                    <p className="text-xs font-bold tracking-widest text-slate-500">発信規模</p>
+                    <p className="mt-2 text-3xl font-black text-slate-900">約100,000<span className="text-base font-bold">人</span></p>
+                    <p className="mt-1 text-sm text-slate-600">那須向けフォロワー合計</p>
+                  </div>
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                    <p className="text-xs font-bold tracking-widest text-slate-500">今後の見込み</p>
+                    <p className="mt-2 text-3xl font-black text-slate-900">5,000〜10,000<span className="text-base font-bold">人</span></p>
+                    <p className="mt-1 text-sm text-slate-600">登録者の増加期待</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+                  <a
+                    href={NASU_APP_LP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full md:w-auto text-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-lg px-10 py-4 rounded-2xl shadow-lg shadow-blue-100 transition-all transform hover:-translate-y-1 active:translate-y-0"
+                  >
+                    みんなのNasuアプリに登録する（LPへ）
+                  </a>
+                  <button
+                    onClick={scrollToForm}
+                    className="w-full md:w-auto text-center bg-white border-2 border-slate-200 hover:border-orange-400 text-slate-900 font-black text-lg px-10 py-4 rounded-2xl shadow-sm transition-all active:scale-95"
+                  >
+                    企業の無料掲載登録に進む
+                  </button>
+                </div>
+
+                <p className="mt-4 text-center text-xs text-slate-500">
+                  ※ボタンを押すと、別タブで登録用ランディングページが開きます。
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* --- 悩み・解決セクション --- */}
         <section className="py-20 bg-slate-900 text-white">
           <div className="container mx-auto px-4">
@@ -321,7 +385,7 @@ const RecruitSignupPage: NextPage = () => {
             <h3 className="text-3xl font-black text-center mb-12 italic">Q & A</h3>
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-200">
               <FAQItem question="本当に無料で掲載できますか？">
-                はい、求人情報の作成・掲載、そして「待ち」の応募受付は**永続的に無料**です。
+                はい、求人情報の作成・掲載、そして「待ち」の応募受付は<strong>永続的に無料</strong>です。
                 「AIマッチング」や「AIアドバイス」などの高度な機能を使いたい場合のみ、有料プランへの切り替えが可能です。
               </FAQItem>
               <FAQItem question="成功報酬は発生しますか？">

@@ -1,18 +1,25 @@
-import React, { useState } from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import {
     RiUserAddLine,
     RiBankCardFill,
     RiGiftFill,
     RiFileTextLine,
-    RiDownloadLine
+    RiDownloadLine,
+    RiErrorWarningLine,
+    RiCheckboxCircleLine
 } from 'react-icons/ri';
 
 const SpecialSignupPage = () => {
-    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [agreed, setAgreed] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [docId, setDocId] = useState<string | null>(null);
+
     const [profileData, setProfileData] = useState({
         realName: '',
         email: '',
@@ -27,28 +34,90 @@ const SpecialSignupPage = () => {
         accountHolder: '',
     });
 
+    // ページ読み込み時に登録済みIDがあるか確認し、あればデータを取得する
+    useEffect(() => {
+        const savedId = localStorage.getItem('partner_doc_id');
+        if (savedId) {
+            setDocId(savedId);
+            const fetchData = async () => {
+                try {
+                    const docRef = doc(db, "special_partners", savedId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        setProfileData(docSnap.data() as any);
+                    }
+                } catch (err) {
+                    console.error("データの読み込みに失敗しました");
+                }
+            };
+            fetchData();
+        }
+    }, []);
+
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!agreed) {
             alert('アフィリエイト契約書の内容を確認し、同意してください。');
             return;
         }
+
         setLoading(true);
-        // ここに登録APIなどの処理を記述
-        console.log("Submit Data:", profileData);
-        setLoading(false);
+        setError(null);
+
+        try {
+            if (docId) {
+                // 上書き更新
+                const docRef = doc(db, "special_partners", docId);
+                await updateDoc(docRef, {
+                    ...profileData,
+                    updatedAt: serverTimestamp(),
+                });
+                alert('登録情報を更新しました。');
+            } else {
+                // 新規登録
+                const res = await addDoc(collection(db, "special_partners"), {
+                    ...profileData,
+                    status: 'pending',
+                    role: 'special_partner',
+                    agreedAt: serverTimestamp(),
+                    createdAt: serverTimestamp(),
+                });
+                setDocId(res.id);
+                localStorage.setItem('partner_doc_id', res.id);
+                alert('パートナー登録が完了しました。');
+            }
+        } catch (err: any) {
+            setError("データの保存に失敗しました。接続を確認してください。");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <div className="min-h-screen bg-[#FDFCFD] pb-20 font-sans text-[#4A3B3B]">
-            <Head><title>特別パートナー新規登録</title></Head>
+            <Head><title>{docId ? '登録情報の編集' : '特別パートナー新規登録'}</title></Head>
 
             <header className="bg-white border-b border-[#E8E2D9] px-6 py-8 text-center">
                 <RiGiftFill size={40} className="mx-auto text-pink-500 mb-2" />
-                <h1 className="text-xl font-black italic">特別パートナー新規登録</h1>
+                <h1 className="text-xl font-black italic">
+                    {docId ? '特別パートナー情報編集' : '特別パートナー新規登録'}
+                </h1>
+                {docId && (
+                    <p className="text-[10px] text-green-600 font-bold mt-2 flex items-center justify-center gap-1">
+                        <RiCheckboxCircleLine /> すでに登録されている情報を編集しています
+                    </p>
+                )}
             </header>
 
             <main className="max-w-xl mx-auto px-6 pt-10">
+                {error && (
+                    <div className="mb-8 p-4 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 text-sm font-bold border border-red-100">
+                        <RiErrorWarningLine size={20} />
+                        {error}
+                    </div>
+                )}
+
                 <form onSubmit={handleSignup} className="space-y-10">
 
                     {/* 1. アカウント情報の入力 */}
@@ -101,19 +170,18 @@ const SpecialSignupPage = () => {
                         </div>
 
                         <a
-                            href="/みんなの那須アプリ アフィリエイト契約書 (1).pdf"
-                            download
+                            href="/affiliate-contract.pdf"
+                            download="みんなの那須アプリ_アフィリエイト契約書.pdf"
                             className="flex items-center justify-center gap-3 w-full py-4 bg-pink-500 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-pink-600 transition-all active:scale-[0.98]"
                         >
                             <RiDownloadLine size={20} /> 契約書(PDF)をダウンロード
                         </a>
 
+                        {/* 閲覧用契約書（15条まで省略なし） */}
                         <div className="w-full h-96 overflow-y-scroll bg-white border border-[#E8E2D9] rounded-[2rem] p-8 text-[11px] leading-[1.8] text-[#6B5D5D] shadow-inner custom-scrollbar">
-                            <div className="space-y-6">
+                            <div className="space-y-8">
                                 <div className="text-center mb-8">
-                                    <h2 className="text-sm font-black text-[#4A3B3B]">
-                                        みんなの那須アプリ アフィリエイト契約書
-                                    </h2>
+                                    <h2 className="text-sm font-black text-[#4A3B3B]">みんなの那須アプリ アフィリエイト契約書</h2>
                                 </div>
 
                                 <p>本契約は、みんなの那須アプリ運営(以下「運営者」)と、株式会社adtown(以下「支払会社」)と、アフィリエイト契約を締結したパートナー(以下「アフィリエイター」)との間で締結される。</p>
@@ -210,7 +278,7 @@ const SpecialSignupPage = () => {
 
                                 <div className="mt-10 pt-6 border-t border-dashed border-[#E8E2D9] text-[10px]">
                                     <p>以上、本契約の内容を確認し、同意の上で契約を締結する。</p>
-                                    <p className="mt-4 font-bold">契約日：登録日<br />株式会社adtown<br />アフィリエイター</p>
+                                    <p className="mt-4 font-bold">契約日：登録日当日<br />株式会社adtown<br />アフィリエイター</p>
                                 </div>
                             </div>
                         </div>
@@ -225,10 +293,11 @@ const SpecialSignupPage = () => {
                     </section>
 
                     <button
+                        type="submit"
                         disabled={loading || !agreed}
                         className="w-full py-5 bg-[#4A3B3B] text-white rounded-full font-black text-lg shadow-xl active:scale-[0.98] transition-all disabled:opacity-50 disabled:bg-[#D1C9BF]"
                     >
-                        {loading ? '登録中...' : '同意してパートナー登録する'}
+                        {loading ? '保存中...' : docId ? '登録情報を更新する' : '同意してパートナー登録する'}
                     </button>
                 </form>
             </main>

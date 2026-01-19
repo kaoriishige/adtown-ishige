@@ -1,56 +1,58 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 
-export default async function registerPartnerHandler(req: NextApiRequest, res: NextApiResponse) {
+// Firebase Adminの二重初期化を防止
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        // 改行コードの処理を含めて秘密鍵を読み込む
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
+    });
+  } catch (error) {
+    console.error('Firebase admin initialization error', error);
+  }
+}
+
+const db = admin.firestore();
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const {
-    uid, // フロントエンドの Firebase Auth で作成したUID
-    storeName,
-    contactPerson,
-    address,
-    phoneNumber,
-    email,
-    serviceType = 'adver'
-  } = req.body;
+  const { uid, storeName, contactPerson, address, phoneNumber, email, serviceType } = req.body;
 
-  if (!uid || !email || !storeName) {
-    return res.status(400).json({ error: '必須項目が不足しています。' });
+  // バリデーション
+  if (!uid || !email) {
+    return res.status(400).json({ error: '必須項目（UID/Email）が不足しています' });
   }
 
   try {
-    const userDocRef = adminDb.collection('users').doc(uid);
+    // usersコレクションの参照
+    const userRef = db.collection('users').doc(uid);
 
-    // LPの入力内容をFirestoreに保存
-    const partnerData = {
-      uid,
-      email,
-      storeName, // LPの項目名に合わせる
-      companyName: storeName, // 既存システムとの互換性のため
-      contactPerson,
-      address,
-      phoneNumber,
-      roles: admin.firestore.FieldValue.arrayUnion(serviceType),
-      isPaid: false, // 決済前なのでfalse
-      [`${serviceType}SubscriptionStatus`]: 'pending', // 決済待ち状態
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    // merge: true を指定して、既存のデータを保持したまま新しい属性を追加
+    await userRef.set({
+      storeName: storeName || "",
+      contactPerson: contactPerson || "",
+      address: address || "",
+      phoneNumber: phoneNumber || "",
+      email: email,
+      // 権限管理用のフラグをセット
+      roles: {
+        [serviceType]: true, 
+        isPartner: true
+      },
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
+    }, { merge: true });
 
-    await userDocRef.set(partnerData, { merge: true });
-
-    // カスタムクレームの設定（ロール付与）
-    await adminAuth.setCustomUserClaims(uid, {
-      roles: [serviceType],
-      paid: false
-    });
-
-    return res.status(200).json({ message: 'Success', uid });
+    return res.status(200).json({ message: 'Success' });
   } catch (error: any) {
-    console.error('Firestore registration error:', error);
-    return res.status(500).json({ error: error.message });
+    console.error('Firestore Admin Error:', error);
+    return res.status(500).json({ error: 'データベースの更新に失敗しました: ' + error.message });
   }
 }
