@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NextPage } from 'next';
-import { useRouter } from 'next/router';
-import Link from 'next/link';
 import Head from 'next/head';
 import {
     getAuth,
@@ -28,14 +26,13 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 const LoginPage: NextPage = () => {
-    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    // ログイン成功時の処理
+    // ログイン成功時の処理：大至急 pages/home.tsx へ飛ばす
     const handleLoginSuccess = async (user: any) => {
         try {
             const idToken = await user.getIdToken(true);
@@ -48,13 +45,12 @@ const LoginPage: NextPage = () => {
                 body: JSON.stringify({ loginType: "user" }),
             });
 
-            const data = await response.json();
-
-            if (response.ok && data.redirect) {
-                // 指定されたパス（/homeなど）へブラウザレベルで強制遷移
-                window.location.replace(data.redirect);
+            if (response.ok) {
+                // 絶対に pages/home.tsx へ強制遷移させる
+                window.location.replace("/home");
             } else {
                 setIsLoggingIn(false);
+                setError("セッションの作成に失敗しました。");
             }
         } catch (e: any) {
             console.error("Login Error:", e.message);
@@ -93,7 +89,7 @@ const LoginPage: NextPage = () => {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <Head><title>ログイン - みんなの那須アプリ</title></Head>
             <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg space-y-6">
-                <h1 className="text-2xl font-bold text-center">ログイン</h1>
+                <h1 className="text-2xl font-bold text-center text-gray-800">ログイン</h1>
 
                 {error && (
                     <div className="p-3 bg-red-50 border-l-4 border-red-400 text-red-700 text-sm flex items-center">
@@ -108,7 +104,7 @@ const LoginPage: NextPage = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="w-full p-3 border rounded-md outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full p-3 border rounded-md outline-none focus:ring-2 focus:ring-orange-500 font-medium"
                     />
 
                     <div className="relative">
@@ -118,7 +114,7 @@ const LoginPage: NextPage = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="w-full p-3 border rounded-md outline-none focus:ring-2 focus:ring-orange-500"
+                            className="w-full p-3 border rounded-md outline-none focus:ring-2 focus:ring-orange-500 font-medium"
                         />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400">
                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -143,16 +139,10 @@ const LoginPage: NextPage = () => {
                 <button
                     onClick={handleGoogleLogin}
                     disabled={isLoggingIn}
-                    className="w-full py-3 border rounded-md flex justify-center items-center hover:bg-gray-50 active:scale-95 transition font-bold text-gray-600"
+                    className="w-full py-3 border border-gray-200 rounded-md flex justify-center items-center hover:bg-gray-50 active:scale-95 transition font-bold text-gray-600"
                 >
                     Googleでログイン
                 </button>
-
-                <div className="text-center pt-4 border-t border-gray-50">
-                    <Link href="/signup" className="text-sm text-orange-600 font-bold hover:underline">
-                        新規アカウント作成はこちら
-                    </Link>
-                </div>
             </div>
         </div>
     );
