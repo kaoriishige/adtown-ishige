@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { NextPage, GetServerSideProps } from 'next';
 import Image from 'next/image';
 import nookies from 'nookies';
 import Head from 'next/head';
 
-// Firebase Admin SDK (srcなし構成のため相対パス修正)
+// Firebase Admin SDK
 import { adminAuth, adminDb } from '../lib/firebase-admin';
 
 // React Icons
@@ -18,11 +18,12 @@ import {
     RiCloseCircleLine,
     RiGasStationLine,
     RiArrowGoBackLine,
+    RiArrowRightSLine,
 } from 'react-icons/ri';
 import { IoSparklesSharp } from 'react-icons/io5';
 
 // Firebase Client
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
 import { app } from '../lib/firebase-client';
 
 interface HomePageProps {
@@ -46,9 +47,20 @@ interface NavButton {
 }
 
 const HomePage: NextPage<HomePageProps> = ({ user }) => {
+    // --- 状態管理 ---
     const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [selectedSponsorUrl, setSelectedSponsorUrl] = useState<string | null>(null);
+
+    // --- フリーズ対策（認証状態の確認を非同期で行う） ---
+    useEffect(() => {
+        const auth = getAuth(app);
+        const unsubscribe = onAuthStateChanged(auth, (clientUser) => {
+            // クライアントサイドでの認証チェック（必要に応じて）
+        });
+        return () => unsubscribe();
+    }, []);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -62,23 +74,13 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
         }
     };
 
-    const handleCancelSubscription = async () => {
-        try {
-            alert('解約処理を実行しました。アカウントはまもなく削除されます。');
-            setIsCancelModalOpen(false);
-            await handleLogout();
-        } catch (error) {
-            setIsCancelModalOpen(false);
-        }
-    };
-
     const emergencyContacts: EmergencyContact[] = useMemo(() => [
-        { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/', },
         { name: '救急安心センター', number: '#7119', description: '急な病気やケガで救急車を呼ぶか迷った時', url: 'https://www.fdma.go.jp/publication/portal/post2.html', },
-        { name: '那須塩原市の休日当番医', description: '那須塩原市の休日・夜間の急病', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/kyukyu_kyumei/1/3340.html', },
-        { name: '大田原市の休日当番医', description: '大田原市の休日・夜間の急病', url: 'https://www.city.ohtawara.tochigi.jp/docs/2013082771612/', },
-        { name: '那須町の休日当番医', description: '那須町の休日・夜間の急病', url: 'https://www.town.nasu.lg.jp/0130/info-0000003505-1.html', },
-        { name: '水道のトラブル 緊急対応 (有)クリプトン', number: '090-2463-6638', description: '地元で40年 有限会社クリプトン', url: 'https://xn--bbkyao7065bpyck41as89d.com/emergency/', },
+        { name: '那須塩原市の休日当番医', description: '那須塩原市の休日・夜間の急病対応', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/kyukyu_kyumei/1/3340.html', },
+        { name: '大田原市の休日当番医', description: '大田原市の休日・夜間の急病対応', url: 'https://www.city.ohtawara.tochigi.jp/docs/2013082771612/', },
+        { name: '那須町の休日当番医', description: '那須町の休日・夜間の急病対応', url: 'https://www.town.nasu.lg.jp/0130/info-0000003505-1.html', },
+        { name: '水道のトラブル (有)クリプトン', number: '090-2463-6638', description: '地元で40年。那須エリアの水道修理・緊急対応', url: 'https://xn--bbkyao7065bpyck41as89d.com/emergency/', },
+        { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル相談', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/', },
     ], []);
 
     const mainNavButtons: NavButton[] = useMemo(() => [
@@ -109,19 +111,29 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                         <h1 className="text-3xl font-bold text-gray-800 tracking-tight italic">
                             みんなのNasuアプリ
                         </h1>
-                        <p className="text-gray-400 mt-2 text-xs font-bold uppercase tracking-widest text-center">
-                            {user.email}
+                        <p className="text-gray-400 mt-2 text-[10px] font-bold uppercase tracking-widest text-center">
+                            ログイン中: {user.email}
                         </p>
                     </header>
 
                     <main className="p-4 space-y-6">
-                        <button
-                            onClick={() => setIsEmergencyModalOpen(true)}
-                            className="w-full flex items-center justify-center text-red-600 font-bold py-4 rounded-2xl bg-red-50 border border-red-100 shadow-sm active:scale-95 transition"
-                        >
-                            <RiAlarmWarningLine size={24} className="mr-2" />
-                            緊急連絡先を確認
-                        </button>
+                        {/* 緊急連絡先セクション（説明文追加） */}
+                        <section>
+                            <button
+                                onClick={() => setIsEmergencyModalOpen(true)}
+                                className="w-full flex items-center justify-center text-red-600 font-bold py-4 rounded-2xl bg-red-50 border border-red-100 shadow-sm active:scale-95 transition"
+                            >
+                                <RiAlarmWarningLine size={24} className="mr-2" />
+                                緊急連絡先を確認
+                            </button>
+                            <div className="mt-3 px-2 flex items-center justify-between text-gray-500">
+                                <p className="text-[11px] font-medium leading-relaxed">
+                                    休日当番医・夜間診療・水道のトラブルなど<br />
+                                    地域の「困った」にすぐ対応。
+                                </p>
+                                <RiArrowRightSLine className="text-gray-300" />
+                            </div>
+                        </section>
 
                         <section className="grid gap-4">
                             {mainNavButtons.map((item) => (
@@ -155,7 +167,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                             ))}
                         </section>
 
-                        {/* 修正箇所: 有料プランボタンを有効化 */}
+                        {/* 有料プラン案内 */}
                         <section className="bg-gradient-to-br from-white to-yellow-50 p-6 rounded-2xl shadow-md border-2 border-yellow-400 text-center">
                             <h2 className="text-xl font-black text-gray-800 mb-2 leading-tight">
                                 限定機能で、年間<span className="text-red-600 underline decoration-4 underline-offset-4">9.3万円</span>以上がお得に！
@@ -168,23 +180,44 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                             </button>
                         </section>
 
+                        {/* 地域の協賛企業セクション（アプリ内に留める矢印付き） */}
+                        {/* --- 地域の協賛企業セクション（ロゴを中央に配置） --- */}
                         <section className="pt-4 border-t border-gray-100">
-                            <h3 className="text-[10px] font-bold text-gray-400 text-center mb-4 tracking-widest uppercase">
+                            <h3 className="text-[10px] font-bold text-gray-400 text-center mb-4 tracking-widest uppercase italic">
                                 地域の協賛企業
                             </h3>
-                            <div className="space-y-3">
+                            <div className="space-y-3 px-2">
                                 {sponsors.map((sponsor) => (
-                                    <a
+                                    <button
                                         key={sponsor.name}
-                                        href={sponsor.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-full block bg-gray-50 rounded-xl border border-gray-100 p-2 hover:shadow-sm transition active:scale-95"
+                                        onClick={() => setSelectedSponsorUrl(sponsor.url)}
+                                        className="w-full flex items-center bg-white rounded-2xl border border-gray-100 p-3 shadow-sm active:scale-95 transition-all group"
                                     >
-                                        <div className="relative w-full h-12">
-                                            <Image src={sponsor.image} alt={sponsor.name} fill className="object-contain" unoptimized />
+                                        {/* 左：戻るをイメージさせるアイコン（固定幅） */}
+                                        <div className="w-10 flex justify-start">
+                                            <div className="bg-gray-50 p-2 rounded-full text-gray-300 group-hover:text-blue-500 transition-colors">
+                                                <RiArrowGoBackLine size={16} />
+                                            </div>
                                         </div>
-                                    </a>
+
+                                        {/* 中央：ロゴ画像（中央寄せ） */}
+                                        <div className="flex-1 flex justify-center">
+                                            <div className="relative w-32 h-10">
+                                                <Image
+                                                    src={sponsor.image}
+                                                    alt={sponsor.name}
+                                                    fill
+                                                    className="object-contain"
+                                                    unoptimized
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* 右：進むアイコン（固定幅） */}
+                                        <div className="w-10 flex justify-end text-gray-200 group-hover:text-gray-400 transition-colors">
+                                            <RiArrowRightSLine size={24} />
+                                        </div>
+                                    </button>
                                 ))}
                             </div>
                         </section>
@@ -201,7 +234,7 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                         </footer>
                     </main>
 
-                    {/* モーダル等は省略せずそのまま保持 */}
+                    {/* 緊急連絡先モーダル */}
                     {isEmergencyModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                             <div className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
@@ -229,6 +262,31 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                             </div>
                         </div>
                     )}
+
+                    {/* 外部サイト閲覧用モーダル（戻る矢印付き） */}
+                    {selectedSponsorUrl && (
+                        <div className="fixed inset-0 z-[60] flex flex-col bg-white">
+                            <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0">
+                                <button
+                                    onClick={() => setSelectedSponsorUrl(null)}
+                                    className="flex items-center text-blue-600 font-bold gap-1 active:opacity-50"
+                                >
+                                    <RiArrowGoBackLine size={20} />
+                                    <span>アプリに戻る</span>
+                                </button>
+                                <button onClick={() => setSelectedSponsorUrl(null)} className="text-gray-300">
+                                    <RiCloseCircleLine size={32} />
+                                </button>
+                            </div>
+                            <div className="flex-1 bg-gray-100 overflow-hidden">
+                                <iframe
+                                    src={selectedSponsorUrl}
+                                    className="w-full h-full border-none"
+                                    title="Sponsor Site"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </>
@@ -242,7 +300,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         if (!sessionCookie) return { redirect: { destination: '/users/login', permanent: false } };
         const token = await adminAuth.verifySessionCookie(sessionCookie, true);
         const userDoc = await adminDb.collection('users').doc(token.uid).get();
-        // 既に480円プランの場合はマイページへ
         if (userDoc.data()?.plan === 'paid_480') return { redirect: { destination: '/mypage', permanent: false } };
         return { props: { user: { uid: token.uid, email: token.email || null } } };
     } catch (err) {

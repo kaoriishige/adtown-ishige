@@ -40,7 +40,7 @@ const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-
 const SALE_DATA_BY_AREA: { [area: string]: { [store: string]: { url: string } } } = {
     "那須塩原市": {
         "ザ・ビッグ 那須店": { url: "https://tokubai.co.jp/%E3%82%B6%E3%83%BB%E3%83%93%E3%83%83%E3%82%B0/12250" },
-        "ヨークベニマル 上厚崎店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/170882" },      
+        "ヨークベニマル 上厚崎店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/170882" },
         "ヨークベニマル 那須塩原店": { url: "https://tokubai.co.jp/%E3%83%A8%E3%83%BC%E3%82%AF%E3%83%99%E3%83%8B%E3%83%9E%E3%83%AB/9591" },
         "MEGAドン・キホーテ黒磯店": { url: "https://tokubai.co.jp/MEGA%E3%83%89%E3%83%B3%E3%83%BB%E3%82%AD%E3%83%9B%E3%83%BC%E3%83%86/5334" },
         "とりせん 黒磯店": { url: "https://tokubai.co.jp/%E3%81%A8%E3%82%8A%E3%81%9B%E3%82%93/5530" },
@@ -159,8 +159,8 @@ const KondateApp = () => {
     const [menuResult, setMenuResult] = useState<MenuResult | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [uiMessage, setUiMessage] = useState('');
-    const [checkedItems, setCheckedItems] = useState<{[key: string]: boolean}>({});
-    
+    const [checkedItems, setCheckedItems] = useState<{ [key: string]: boolean }>({});
+
     // 画像保存用のState
     const [imageFiles, setImageFiles] = useState<string[]>([]);
 
@@ -230,12 +230,22 @@ const KondateApp = () => {
 
     const generateMenu = async () => {
         setIsGenerating(true); setMenuResult(null); setUiMessage(''); setCheckedItems({});
-        
-        const systemPrompt = `あなたは那須地域（${selectedArea}）の「一流レストラン出身の節約シェフ」です。スーパー「${finalStoreSelection}」の特売品（画像がある場合はその内容も含む）を活用し、在庫「${fridgeInventory || 'なし'}」を使い切る、${familySize}用の主菜3品・副菜3品の最高に美味しく節約できる献立を提案してください。もし商品が1点ずつ写った画像がある場合は、その商品の名前と価格を優先して献立に入れてください。`;
-        
-        // 成功しているリクエスト形式をベースに、画像がある場合のみ inline_data を追加
-        const parts: any[] = [{ text: "最高の節約献立をJSONで出力してください。" }];
-        
+
+        // --- AIプロンプトの強化版 (調味料・手順の具体化) ---
+        const systemPrompt = `あなたは那須地域（${selectedArea}）の「一流レストラン出身の節約シェフ」です。
+スーパー「${finalStoreSelection}」の特売品（画像がある場合はその内容も含む）を活用し、在庫「${fridgeInventory || 'なし'}」を使い切る、${familySize}用の主菜3品・副菜3品の最高に美味しく節約できる献立を提案してください。
+
+【レシピ作成の黄金ルール（絶対遵守）】
+1. 調味料の分量を完全に数値化せよ: 「だし汁、醤油、みりん」のような羅列は禁止。「醤油：大さじ2」「みりん：大さじ1」「だし汁：200ml」のように、必ず具体的な数値と単位を付けてください。
+2. 初心者でも迷わない手順: 「煮込む」だけでなく「中火で沸騰させた後、弱火で落とし蓋をして12分煮込む」のように、火加減と時間を明記してください。
+3. 材料リストの最適化: 「肉：1枚」ではなく「鶏むね肉：約300g」のように重量を記載。買い物リストは家族${familySize}が満足しつつ余らない分量で計算してください。
+4. プロの論理的なコツ: 「tips」には「塩を振って5分置くことで臭みが取れます」といった, 科学的・料理学的な根拠を必ず添えてください。
+5. 特売の反映: 画像や入力にある特売品 "${customIngredients}" を優先的に使い、通常の献立よりいくらお得かを計算して「totalSavings」に反映してください。
+// プロンプトの「絶対遵守」ルールに追加すべき一文
+6. 言行一致の徹底: 「節約根拠（totalSavings）」や「コンセプト」で言及した特売品や在庫食材は、必ず「材料リスト」および「買い物リスト」と100%一致させてください。特売品として「豚小間」を挙げた場合は、買い物リストに「豚ひき肉」などの異なる部位を記載することを厳禁します。`;
+
+        const parts: any[] = [{ text: "以上のプロンプト条件を100%満たし、全ての調味料に数値を付けてJSONで出力してください。" }];
+
         imageFiles.forEach(dataUrl => {
             const [mimeInfo, base64Data] = dataUrl.split(',');
             const mimeType = mimeInfo.split(':')[1].split(';')[0];
@@ -295,7 +305,6 @@ const KondateApp = () => {
             </header>
 
             <main className="max-w-4xl mx-auto p-4 sm:p-6">
-                {/* 追加1: ヘッダーメッセージ */}
                 <div className="bg-nasu-light p-4 rounded-xl border border-nasu-green/30 shadow-md mb-8">
                     <p className="font-semibold text-nasu-green mb-1">一流シェフの技術を家庭へ！</p>
                     <p className="text-gray-700 text-sm">特売情報をAIが分析し、今日イチお得な献立を提案します。</p>
@@ -304,7 +313,7 @@ const KondateApp = () => {
                 {!menuResult ? (
                     <section className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200 space-y-6">
                         <h2 className="text-xl font-bold border-b pb-2">献立生成の条件設定</h2>
-                        
+
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">1. エリアを選ぶ</label>
                             <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white font-semibold">
@@ -323,13 +332,11 @@ const KondateApp = () => {
                                 <div className="space-y-2">
                                     <button onClick={() => openFlyer(SALE_DATA_BY_AREA[selectedArea][activeStore].url)} className="w-full py-2 bg-blue-600 text-white font-bold rounded-lg text-sm">トクバイでチラシをチェック 📰</button>
                                     <p className="text-[13px] font-bold text-gray-600 text-center leading-relaxed">特売チラシの商品名、量、１品ずつの画像の入力または手入力で献立を作ります。</p>
-                                    {/* 追加2 & 変更: 注釈の追加とテキスト変更 */}
                                     <p className="mt-1 text-[10px] text-blue-700 text-center">※チラシサイトへ移動します。ブラウザの「く」でここへ戻れます。</p>
                                 </div>
                             )}
                         </div>
 
-                        {/* 写真入力欄 */}
                         <div className="p-4 bg-nasu-light border border-nasu-green/30 rounded-lg">
                             <label className="block text-sm font-bold text-nasu-green mb-2">3. 特売品の商品名、量の写真をいれる（1点ずつ大きく撮ったもの）</label>
                             <div className="flex flex-wrap gap-2 mb-2">
@@ -386,7 +393,7 @@ const KondateApp = () => {
                                 </div>
                                 <ul className="space-y-2">
                                     {menuResult.shoppingList.map((item, i) => (
-                                        <li key={i} onClick={() => setCheckedItems(prev => ({...prev, [item]: !prev[item]}))} className={`p-2 rounded border cursor-pointer text-sm ${checkedItems[item] ? 'bg-green-100 line-through text-gray-400' : 'bg-gray-50'}`}>{item}</li>
+                                        <li key={i} onClick={() => setCheckedItems(prev => ({ ...prev, [item]: !prev[item] }))} className={`p-2 rounded border cursor-pointer text-sm ${checkedItems[item] ? 'bg-green-100 line-through text-gray-400' : 'bg-gray-50'}`}>{item}</li>
                                     ))}
                                 </ul>
                             </div>
