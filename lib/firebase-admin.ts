@@ -1,17 +1,19 @@
 import * as admin from "firebase-admin";
 
-// 型定義のみエクスポート
-export type { admin };
+// 型の定義
+export type { admin as AdminType };
 
-// サーバーサイドでのみ初期化を実行
 const initializeFirebaseAdmin = () => {
+    // サーバーサイドでのみ実行
+    if (typeof window !== "undefined") return null;
+
     if (!admin.apps.length) {
         const projectId = process.env.FIREBASE_PROJECT_ID;
         const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
         const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
         if (!projectId || !clientEmail || !privateKey) {
-            console.error("❌ Firebase Admin credentials missing.");
+            console.error("❌ Firebase Admin credentials missing in environment variables.");
             return null;
         }
 
@@ -24,28 +26,23 @@ const initializeFirebaseAdmin = () => {
                 }),
             });
         } catch (err) {
-            console.error("🔥 Initialization failed:", err);
+            console.error("🔥 Firebase Admin SDK initialization failed:", err);
             return null;
         }
     }
     return admin.app();
 };
 
-// サーバーサイドでのみ有効なインスタンスを取得する関数
-const getAdminInstances = () => {
-    if (typeof window !== "undefined") {
-        // クライアントサイドで呼ばれた場合はエラーを投げるか、プロキシでガードする
-        return { adminDb: null as any, adminAuth: null as any };
-    }
+// 初期化を実行
+initializeFirebaseAdmin();
 
-    initializeFirebaseAdmin();
-    return {
-        adminDb: admin.firestore(),
-        adminAuth: admin.auth(),
-    };
-};
+// 各インスタンスと、admin本体をエクスポート
+// クライアントサイドでは proxy を使って、未定義メソッド呼び出しによるフリーズを防ぐ
+const isServer = typeof window === "undefined";
 
-export const { adminDb, adminAuth } = getAdminInstances();
+export const adminDb = isServer ? admin.firestore() : {} as admin.firestore.Firestore;
+export const adminAuth = isServer ? admin.auth() : {} as admin.auth.Auth;
+export { admin }; // これを忘れていたためビルドエラーが出ていました
 
 
 
