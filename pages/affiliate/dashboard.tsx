@@ -82,7 +82,7 @@ const AffiliateDashboard: NextPage<DashboardProps> = ({ uid, stats }) => {
         recruit: `${PRODUCTION_DOMAIN}/recruit?ref=${uid}`
     };
 
-    // 内部プレビュー用パス（開発環境でLPを確認するため）
+    // 内部プレビュー用パス（履歴が残るSPA遷移用）
     const internalPaths = {
         user: `/?ref=${uid}`,
         adver: `/partner/signup?ref=${uid}`,
@@ -154,7 +154,6 @@ const AffiliateDashboard: NextPage<DashboardProps> = ({ uid, stats }) => {
 
             <main className="max-w-4xl mx-auto px-6 py-8">
 
-                {/* 上部LINEボタン */}
                 <LineAddFriendButton />
 
                 <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-4 text-center md:text-left">紹介実績データ</h2>
@@ -224,9 +223,9 @@ const AffiliateDashboard: NextPage<DashboardProps> = ({ uid, stats }) => {
                     </div>
                 </div>
 
-                {/* 下部LINEボタン */}
                 <LineAddFriendButton />
 
+                {/* ✅ ここに解約ボタンを完全復活させました */}
                 <div className="mt-20 pt-8 border-t border-gray-100 flex justify-center">
                     <button
                         onClick={handleDeleteAccount}
