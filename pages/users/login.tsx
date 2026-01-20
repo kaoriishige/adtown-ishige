@@ -11,6 +11,8 @@ import {
     onAuthStateChanged
 } from 'firebase/auth';
 
+import { AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
+
 const googleProvider = new GoogleAuthProvider();
 
 const LoginPage: NextPage = () => {
