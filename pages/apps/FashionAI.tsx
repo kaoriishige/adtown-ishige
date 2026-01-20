@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { ArrowLeft, Sparkles, AlertTriangle, Loader2, Users, Lightbulb, User, LogOut, Shirt, Zap, MessageSquare, ExternalLink, X, Calendar } from 'lucide-react'; 
+import { ArrowLeft, Sparkles, AlertTriangle, Loader2, Users, Lightbulb, User, LogOut, Shirt, Zap, MessageSquare, ExternalLink, X, Calendar } from 'lucide-react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -53,12 +53,12 @@ export default function FashionAIApp() {
     const [user, setUser] = useState<any>(null);
 
     const OCCASIONS = [
-        'カジュアルなママ友ランチ', '公園遊び・外遊び', '近所の買い物', 
+        'カジュアルなママ友ランチ', '公園遊び・外遊び', '近所の買い物',
         '仕事復帰/通勤', 'フォーマルな保護者会', 'デート・ディナー', 'その他（自由に記入）' // ★修正: その他を追加
     ];
     const COLORS = ['明るい色', 'ベーシックカラー (黒・白・グレー)', 'アースカラー (ベージュ・カーキ)', 'パステルカラー'];
     const BODY_TYPES = ['特に指定なし', '体型カバーを重視', '背を高く見せたい', '脚長効果を重視'];
-    
+
     // 自由入力の判定
     const isCustomOccasion = occasion === 'その他（自由に記入）';
     const [customOccasionInput, setCustomOccasionInput] = useState('');
@@ -72,15 +72,15 @@ export default function FashionAIApp() {
                 const firebaseConfig = JSON.parse(firebaseConfigRaw);
                 const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
                 const auth = getAuth(app);
-                signInAnonymously(auth); 
+                signInAnonymously(auth);
                 onAuthStateChanged(auth, (currentUser) => {
                     setUser(currentUser);
                 });
             }
         } catch (e: any) {
-             console.error("Firebase Initialization Error:", e);
+            console.error("Firebase Initialization Error:", e);
         }
-    }, []); 
+    }, []);
 
     // API呼び出し関数
     const fetchOutfit = async () => {
@@ -94,7 +94,7 @@ export default function FashionAIApp() {
             setIsGenerating(false);
             return;
         }
-        
+
         const finalOccasion = isCustomOccasion && customOccasionInput.trim()
             ? customOccasionInput.trim()
             : occasion;
@@ -107,7 +107,7 @@ export default function FashionAIApp() {
 
         // ★修正: 季節と場所のコンテキストをプロンプトに追加
         const context = `場所: 栃木県北エリア、日付: ${date} (AIはこの日の気候を考慮してください)。`;
-        
+
         const systemPrompt = `あなたは、日本の主婦・女性層をターゲットとした、パーソナルスタイリストAIです。以下の条件に基づいて、実用的でおしゃれなコーディネートを提案してください。
 
         【重要】
@@ -115,7 +115,7 @@ export default function FashionAIApp() {
         2. トーンは親しみやすく、ファッショナブルな言葉遣いを心がけてください。
         3. 提案は、動きやすさ、トレンド、体型カバーの要素を考慮し、特に「${context}」の気候に合うよう防寒/薄着を調整してください。
         `;
-        
+
         const userQuery = `用途: ${finalOccasion}、希望の色: ${colorPreference}、体型要望: ${bodyType}。${context}で快適に過ごせる、今すぐ試せるコーディネートを提案してください。`;
 
         try {
@@ -151,9 +151,9 @@ export default function FashionAIApp() {
             setIsGenerating(false);
         }
     };
-    
+
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
     const handleLogout = () => {
@@ -176,12 +176,12 @@ export default function FashionAIApp() {
                     <button onClick={handleGoCategories} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
-                    
+
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <Shirt className="w-6 h-6 text-pink-500" />
                         AIファッション診断
                     </h1>
-                    
+
                     {user ? (
                         <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-500">
                             <LogOut className="w-5 h-5" />
@@ -193,20 +193,20 @@ export default function FashionAIApp() {
             </header>
 
             <main className="max-w-xl mx-auto p-4 sm:p-6">
-                
+
                 {uiMessage && (
                     <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{uiMessage}</div>
                 )}
-                
+
                 {/* 1. コーデ条件フォーム */}
                 {!outfitResult && (
                     <section className="mb-8 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                         <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
                             <User size={20} /> 診断条件を入力 (栃木県北エリア)
                         </h2>
-                        
+
                         <div className="space-y-4">
-                            
+
                             {/* 日付/季節の入力 (新規追加) */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
@@ -220,7 +220,7 @@ export default function FashionAIApp() {
                                     className="w-full p-3 border border-gray-300 rounded-lg"
                                 />
                             </div>
-                            
+
                             {/* 用途選択 */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">2. コーデの用途</label>
@@ -235,7 +235,7 @@ export default function FashionAIApp() {
                                     {OCCASIONS.map(o => <option key={o} value={o}>{o}</option>)}
                                 </select>
                             </div>
-                            
+
                             {/* 自由入力欄 (その他が選択された場合) */}
                             {isCustomOccasion && (
                                 <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -277,7 +277,7 @@ export default function FashionAIApp() {
                                 </select>
                             </div>
                         </div>
-                        
+
                         <button
                             onClick={fetchOutfit}
                             disabled={isGenerating || (isCustomOccasion && !customOccasionInput.trim())}
@@ -296,7 +296,7 @@ export default function FashionAIApp() {
                             <Sparkles className="w-6 h-6 text-yellow-500" />
                             提案コーディネート
                         </h2>
-                        
+
                         {/* スタイル概要 */}
                         <div className="mb-4 p-3 bg-pink-50 border-l-4 border-pink-500 rounded-lg">
                             <h3 className="font-bold text-pink-800 text-base mb-1">
@@ -320,7 +320,7 @@ export default function FashionAIApp() {
                                 </div>
                             ))}
                         </div>
-                        
+
                         {/* アクセサリーと総合アドバイス */}
                         <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
                             <h3 className="font-bold text-yellow-800 mb-2">
@@ -333,7 +333,7 @@ export default function FashionAIApp() {
                                 総合アドバイス: {outfitResult.overallAdvice}
                             </p>
                         </div>
-                        
+
                         <button
                             onClick={() => setOutfitResult(null)}
                             className="w-full mt-4 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition-colors"
@@ -353,7 +353,7 @@ export default function FashionAIApp() {
                 )}
 
             </main>
-            
+
             <footer className="text-center py-6 text-xs text-gray-400">
                 © 2025 みんなの那須アプリ
             </footer>

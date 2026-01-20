@@ -94,9 +94,9 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
     ], []);
 
     const sponsors = useMemo(() => [
-        { name: '株式会社おまかせオート', image: '/images/partner-omakaseauto.png', url: 'https://www.omakase-auto.jp/', },
-        { name: '株式会社大輪', image: '/images/partner-dairin.png', url: 'https://jp-dairin.jp/', },
-        { name: '社会福祉法人 小春福祉会', image: '/images/partner-koharu.png', url: 'https://koharu-fukushikai.com/wp-content/themes/koharu/images/careplace/careplace_pamphlet.pdf', },
+        { name: '株式会社おまかせオート', image: '/images/partner-omakaseauto.png', url: 'https://www.omakase-auto.jp/' },
+        { name: '株式会社大輪', image: '/images/partner-dairin.png', url: 'https://www.jp-dairin.jp/' },
+        { name: '社会福祉法人 小春福祉会', image: '/images/partner-koharu.png', url: 'https://koharu-fukushikai.com/' },
     ], []);
 
     return (
@@ -167,21 +167,24 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                             ))}
                         </section>
 
-                        {/* 有料プラン案内 */}
+                        {/* 有料プラン（プレミアム会員）専用ログイン案内 */}
                         <section className="bg-gradient-to-br from-white to-yellow-50 p-6 rounded-2xl shadow-md border-2 border-yellow-400 text-center">
                             <h2 className="text-xl font-black text-gray-800 mb-2 leading-tight">
-                                限定機能で、年間<span className="text-red-600 underline decoration-4 underline-offset-4">9.3万円</span>以上がお得に！
+                                有料プラン（プレミアム会員）<br />
+                                <span className="text-red-600 underline decoration-4 underline-offset-4">専用ログイン</span>
                             </h2>
+                            <p className="text-xs text-gray-500 mb-4 font-bold">
+                                特典の利用・管理はこちらから
+                            </p>
                             <button
-                                onClick={() => { window.location.href = '/premium'; }}
+                                onClick={() => { window.location.href = '/special-login'; }}
                                 className="w-full p-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold text-lg shadow-md active:scale-95 transition-all duration-200"
                             >
-                                月額480円プランを確認してみる
+                                有料プラン ログイン
                             </button>
                         </section>
 
-                        {/* 地域の協賛企業セクション（アプリ内に留める矢印付き） */}
-                        {/* --- 地域の協賛企業セクション（ロゴを中央に配置） --- */}
+                        {/* 地域の協賛企業セクション */}
                         <section className="pt-4 border-t border-gray-100">
                             <h3 className="text-[10px] font-bold text-gray-400 text-center mb-4 tracking-widest uppercase italic">
                                 地域の協賛企業
@@ -193,27 +196,27 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                                         onClick={() => setSelectedSponsorUrl(sponsor.url)}
                                         className="w-full flex items-center bg-white rounded-2xl border border-gray-100 p-3 shadow-sm active:scale-95 transition-all group"
                                     >
-                                        {/* 左：戻るをイメージさせるアイコン（固定幅） */}
                                         <div className="w-10 flex justify-start">
                                             <div className="bg-gray-50 p-2 rounded-full text-gray-300 group-hover:text-blue-500 transition-colors">
                                                 <RiArrowGoBackLine size={16} />
                                             </div>
                                         </div>
-
-                                        {/* 中央：ロゴ画像（中央寄せ） */}
                                         <div className="flex-1 flex justify-center">
-                                            <div className="relative w-32 h-10">
-                                                <Image
+                                            <div className="relative h-8 flex items-center justify-center">
+                                                <img
                                                     src={sponsor.image}
                                                     alt={sponsor.name}
-                                                    fill
-                                                    className="object-contain"
-                                                    unoptimized
+                                                    className="h-full object-contain max-w-[150px] opacity-90 transition-opacity hover:opacity-100"
+                                                    onError={(e) => {
+                                                        const target = e.currentTarget as HTMLImageElement;
+                                                        target.style.display = 'none';
+                                                        const next = target.nextElementSibling as HTMLElement;
+                                                        if (next) next.classList.remove('hidden');
+                                                    }}
                                                 />
+                                                <span className="hidden text-sm font-black text-gray-400 tracking-tighter uppercase italic">{sponsor.name}</span>
                                             </div>
                                         </div>
-
-                                        {/* 右：進むアイコン（固定幅） */}
                                         <div className="w-10 flex justify-end text-gray-200 group-hover:text-gray-400 transition-colors">
                                             <RiArrowRightSLine size={24} />
                                         </div>
@@ -263,27 +266,18 @@ const HomePage: NextPage<HomePageProps> = ({ user }) => {
                         </div>
                     )}
 
-                    {/* 外部サイト閲覧用モーダル（戻る矢印付き） */}
+                    {/* 外部サイト閲覧用モーダル */}
                     {selectedSponsorUrl && (
                         <div className="fixed inset-0 z-[60] flex flex-col bg-white">
                             <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0">
-                                <button
-                                    onClick={() => setSelectedSponsorUrl(null)}
-                                    className="flex items-center text-blue-600 font-bold gap-1 active:opacity-50"
-                                >
+                                <button onClick={() => setSelectedSponsorUrl(null)} className="flex items-center text-blue-600 font-bold gap-1 active:opacity-50">
                                     <RiArrowGoBackLine size={20} />
                                     <span>アプリに戻る</span>
                                 </button>
-                                <button onClick={() => setSelectedSponsorUrl(null)} className="text-gray-300">
-                                    <RiCloseCircleLine size={32} />
-                                </button>
+                                <button onClick={() => setSelectedSponsorUrl(null)} className="text-gray-300"><RiCloseCircleLine size={32} /></button>
                             </div>
                             <div className="flex-1 bg-gray-100 overflow-hidden">
-                                <iframe
-                                    src={selectedSponsorUrl}
-                                    className="w-full h-full border-none"
-                                    title="Sponsor Site"
-                                />
+                                <iframe src={selectedSponsorUrl} className="w-full h-full border-none" title="Sponsor Site" />
                             </div>
                         </div>
                     )}

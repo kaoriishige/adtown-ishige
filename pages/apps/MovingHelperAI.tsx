@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 // ★修正: Check をインポートリストに追加
-import { ArrowLeft, Sparkles, AlertTriangle, Loader2, Home, User, LogOut, ListTodo, Zap, Mail, Check } from 'lucide-react'; 
+import { ArrowLeft, Sparkles, AlertTriangle, Loader2, Home, User, LogOut, ListTodo, Zap, Mail, Check } from 'lucide-react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -20,20 +20,20 @@ const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-
 const PROCESS_SCHEMA = {
     type: "OBJECT",
     properties: {
-        adminProcedures: { 
-            type: "ARRAY", 
-            description: "行政への手続きリスト (転入届、マイナンバーなど)", 
-            items: { type: "STRING" } 
+        adminProcedures: {
+            type: "ARRAY",
+            description: "行政への手続きリスト (転入届、マイナンバーなど)",
+            items: { type: "STRING" }
         },
-        utilityProcedures: { 
-            type: "ARRAY", 
-            description: "ライフラインの手続きリスト (電気、ガス、水道、インターネット)", 
-            items: { type: "STRING" } 
+        utilityProcedures: {
+            type: "ARRAY",
+            description: "ライフラインの手続きリスト (電気、ガス、水道、インターネット)",
+            items: { type: "STRING" }
         },
-        otherTasks: { 
-            type: "ARRAY", 
-            description: "その他必要な手続きやタスク (郵便転送、保険、銀行など)", 
-            items: { type: "STRING" } 
+        otherTasks: {
+            type: "ARRAY",
+            description: "その他必要な手続きやタスク (郵便転送、保険、銀行など)",
+            items: { type: "STRING" }
         }
     },
     required: ["adminProcedures", "utilityProcedures", "otherTasks"]
@@ -58,15 +58,15 @@ export default function MovingHelperApp() {
                 const firebaseConfig = JSON.parse(firebaseConfigRaw);
                 const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
                 const auth = getAuth(app);
-                signInAnonymously(auth); 
+                signInAnonymously(auth);
                 onAuthStateChanged(auth, (currentUser) => {
                     setUser(currentUser);
                 });
             }
         } catch (e: any) {
-             console.error("Firebase Initialization Error:", e);
+            console.error("Firebase Initialization Error:", e);
         }
-    }, []); 
+    }, []);
 
     // API呼び出し関数
     const fetchProcedures = async () => {
@@ -80,7 +80,7 @@ export default function MovingHelperApp() {
             setIsGenerating(false);
             return;
         }
-        
+
         if (!movingMonth) {
             setUiMessage("引越し月を入力してください。");
             setIsGenerating(false);
@@ -97,7 +97,7 @@ export default function MovingHelperApp() {
         4. 地域: 栃木県北エリア（那須塩原市、大田原市、那須町）の行政手続きを想定してください。
         5. リストは具体的かつ詳細に、JSON形式で出力してください。
         `;
-        
+
         const userQuery = `上記の条件に基づき、行政手続き、ライフラインの手続き、その他雑務を完全に網羅したチェックリストを生成してください。`;
 
         try {
@@ -133,9 +133,9 @@ export default function MovingHelperApp() {
             setIsGenerating(false);
         }
     };
-    
+
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
     const handleLogout = () => {
@@ -158,12 +158,12 @@ export default function MovingHelperApp() {
                     <button onClick={handleGoCategories} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
-                    
+
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <Mail className="w-6 h-6 text-indigo-500" />
                         引越し手続きAIナビ
                     </h1>
-                    
+
                     {user ? (
                         <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-500">
                             <LogOut className="w-5 h-5" />
@@ -175,29 +175,29 @@ export default function MovingHelperApp() {
             </header>
 
             <main className="max-w-xl mx-auto p-4 sm:p-6">
-                
+
                 {uiMessage && (
                     <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{uiMessage}</div>
                 )}
-                
+
                 {/* 1. 条件フォーム */}
                 {!result && (
                     <section className="mb-8 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                         <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
                             <User size={20} /> 引越しの条件を入力 (栃木県北)
                         </h2>
-                        
+
                         <div className="space-y-4">
-                            
+
                             {/* 転入/転出 */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">1. 引越しの種類</label>
                                 <div className="flex space-x-4">
                                     <label className="inline-flex items-center">
-                                        <input 
-                                            type="radio" 
-                                            name="moveType" 
-                                            value="in" 
+                                        <input
+                                            type="radio"
+                                            name="moveType"
+                                            value="in"
                                             checked={moveType === 'in'}
                                             onChange={() => setMoveType('in')}
                                             className="form-radio text-indigo-600 h-4 w-4"
@@ -205,10 +205,10 @@ export default function MovingHelperApp() {
                                         <span className="ml-2 text-sm text-gray-700">栃木県北へ**転入**</span>
                                     </label>
                                     <label className="inline-flex items-center">
-                                        <input 
-                                            type="radio" 
-                                            name="moveType" 
-                                            value="out" 
+                                        <input
+                                            type="radio"
+                                            name="moveType"
+                                            value="out"
                                             checked={moveType === 'out'}
                                             onChange={() => setMoveType('out')}
                                             className="form-radio text-indigo-600 h-4 w-4"
@@ -245,7 +245,7 @@ export default function MovingHelperApp() {
                                 />
                             </div>
                         </div>
-                        
+
                         <button
                             onClick={fetchProcedures}
                             disabled={isGenerating || !movingMonth || !familySize}
@@ -264,7 +264,7 @@ export default function MovingHelperApp() {
                             <Check className="w-6 h-6 text-green-600" />
                             引越し手続きチェックリスト
                         </h2>
-                        
+
                         {/* 概要 */}
                         <div className="mb-6 p-3 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg">
                             <h3 className="font-bold text-indigo-800 text-base mb-1">
@@ -286,7 +286,7 @@ export default function MovingHelperApp() {
                                 ))}
                             </ul>
                         </div>
-                        
+
                         {/* ライフライン */}
                         <div className="mb-6">
                             <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-1 flex items-center gap-2">
@@ -310,7 +310,7 @@ export default function MovingHelperApp() {
                                 ))}
                             </ul>
                         </div>
-                        
+
                         <button
                             onClick={() => setResult(null)}
                             className="w-full mt-4 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition-colors"
@@ -330,7 +330,7 @@ export default function MovingHelperApp() {
                 )}
 
             </main>
-            
+
             <footer className="text-center py-6 text-xs text-gray-400">
                 © 2025 みんなの那須アプリ
             </footer>

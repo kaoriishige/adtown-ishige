@@ -41,15 +41,15 @@ export default function MorningComplimentAIApp() {
                 const firebaseConfig = JSON.parse(firebaseConfigRaw);
                 const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
                 const auth = getAuth(app);
-                signInAnonymously(auth); 
+                signInAnonymously(auth);
                 onAuthStateChanged(auth, (currentUser) => {
                     setUser(currentUser);
                 });
             }
         } catch (e: any) {
-             console.error("Firebase Initialization Error:", e);
+            console.error("Firebase Initialization Error:", e);
         }
-    }, []); 
+    }, []);
 
     // API呼び出し関数
     const fetchCompliment = async () => {
@@ -63,9 +63,9 @@ export default function MorningComplimentAIApp() {
             setIsGenerating(false);
             return;
         }
-        
+
         const systemPrompt = `あなたは、日本の主婦・女性層に特化した、自己肯定感を高めるポジティブなコーチングAIです。ユーザーが今日一日を最高に過ごせるよう、優しさと共感を持って、励ましのメッセージと具体的な行動テーマを提案してください。`;
-        
+
         const userQuery = `私の今日のモチベーションを高めるための、ポジティブで心に響くメッセージと、達成すべき行動テーマをJSON形式で提案してください。`;
 
         try {
@@ -101,9 +101,9 @@ export default function MorningComplimentAIApp() {
             setIsGenerating(false);
         }
     };
-    
+
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
     const handleLogout = () => {
@@ -126,12 +126,12 @@ export default function MorningComplimentAIApp() {
                     <button onClick={handleGoCategories} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
-                    
+
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <Sun className="w-6 h-6 text-yellow-500" />
                         朝の褒め言葉AI
                     </h1>
-                    
+
                     {user ? (
                         <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-500">
                             <LogOut className="w-5 h-5" />
@@ -143,14 +143,14 @@ export default function MorningComplimentAIApp() {
             </header>
 
             <main className="max-w-xl mx-auto p-4 sm:p-6">
-                
+
                 {uiMessage && (
                     <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm flex items-center gap-2">
                         <AlertTriangle className="w-5 h-5" />
                         {uiMessage}
                     </div>
                 )}
-                
+
                 {/* 1. 実行ボタン */}
                 {!result && (
                     <section className="mb-8 bg-white p-6 rounded-xl shadow-lg border border-gray-200 text-center">
@@ -160,7 +160,7 @@ export default function MorningComplimentAIApp() {
                         <p className="text-gray-600 mb-6">
                             ボタンを押して、AIからあなたへの**今日の褒め言葉**を受け取りましょう。
                         </p>
-                        
+
                         <button
                             onClick={fetchCompliment}
                             disabled={isGenerating}
@@ -182,7 +182,7 @@ export default function MorningComplimentAIApp() {
                             </h2>
                             <p className="text-sm text-gray-500">今日あなたに贈られるテーマです</p>
                         </div>
-                        
+
                         {/* 褒め言葉（メイン） */}
                         <div className="mb-6 p-5 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
                             <h3 className="text-xl font-bold text-gray-800 mb-2">
@@ -203,7 +203,7 @@ export default function MorningComplimentAIApp() {
                                 {result.advice}
                             </p>
                         </div>
-                        
+
                         <button
                             onClick={() => setResult(null)}
                             className="w-full mt-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition-colors"
@@ -214,7 +214,7 @@ export default function MorningComplimentAIApp() {
                 )}
 
             </main>
-            
+
             <footer className="text-center py-6 text-xs text-gray-400">
                 © 2025 みんなの那須アプリ
             </footer>

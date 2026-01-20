@@ -334,7 +334,7 @@ const CustomModal = ({
       <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-all scale-100">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-bold flex items-center gap-2 text-orange-600">
-             <CheckCircle className="w-6 h-6" /> {title}
+            <CheckCircle className="w-6 h-6" /> {title}
           </h2>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
             <X className="w-6 h-6 text-gray-500" />
@@ -409,8 +409,8 @@ const canonicalize = (raw: string) => {
 // =========================
 export default function QuickRecipesPage() {
   // 初期値を「レンジ」に設定
-  const [selectedCategory, setSelectedCategory] = useState('レンジ'); 
-  const [searchTerm, setSearchTerm] = useState('豚小間300g、鶏もも300g、キャベツ1個、もやし1袋、だいこん1本'); 
+  const [selectedCategory, setSelectedCategory] = useState('レンジ');
+  const [searchTerm, setSearchTerm] = useState('豚小間300g、鶏もも300g、キャベツ1個、もやし1袋、だいこん1本');
   const [servings, setServings] = useState(2);
 
   const [suggestionStarted, setSuggestionStarted] = useState(false);
@@ -447,7 +447,7 @@ export default function QuickRecipesPage() {
 
     // 1. カテゴリでフィルタリング (選択されたカテゴリーでフィルタリング)
     list = list.filter(r => r.category === selectedCategory);
-    
+
 
     // 検索語が空の場合はカテゴリでフィルタリングされた全件を返す
     if (inputTerms.length === 0) return list;
@@ -459,10 +459,10 @@ export default function QuickRecipesPage() {
       // レシピの各材料についてチェック
       return recipe.ingredients.every(rawIng => {
         const canIng = canonicalize(rawIng);
-        
+
         // 1. 入力に含まれているか？
         if (inputCanonicals.has(canIng)) return true;
-        
+
         // 2. 常備品リストに含まれているか？ (常備品は正規化前の文字列またはカノニカル化された文字列でチェック)
         if (PANTRY_ITEMS.has(rawIng) || PANTRY_ITEMS.has(canIng)) return true;
 
@@ -477,7 +477,7 @@ export default function QuickRecipesPage() {
   // ==== レシピ提案ロジック (3件の確実な選出ロジックを強化) ====
   const suggestRecipes = (retry = false) => {
     const list = matchedRecipes;
-    
+
     // retryがfalse（初回提案または条件リセット後の提案）の場合は履歴をリセット
     const currentRecipesTried = retry ? recipesTried : [];
 
@@ -518,7 +518,7 @@ export default function QuickRecipesPage() {
       const j = Math.floor(Math.random() * copiedPool.length);
       // そのインデックスのレシピを選出し、プールから削除
       const r = copiedPool.splice(j, 1)[0];
-      
+
       picks.push(r);
       // 提案リストに追加
       if (!newTriedIds.includes(r.id)) {
@@ -562,14 +562,14 @@ export default function QuickRecipesPage() {
   const RecipeDetailContent = ({ recipe }: { recipe: Recipe }) => {
     // 現在の人数に基づいて材料の目安量を計算（表示はしないがコメントとして残す）
     // const multiplier = servings / 2;
-    
+
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
-            <Clock className="w-6 h-6 text-orange-600" />
-            <span className="font-semibold text-lg text-orange-700">調理時間: {recipe.time}分</span>
+          <Clock className="w-6 h-6 text-orange-600" />
+          <span className="font-semibold text-lg text-orange-700">調理時間: {recipe.time}分</span>
         </div>
-        
+
         <h3 className="text-lg font-bold border-b pb-1 text-gray-700">必要な材料（{servings}人分）</h3>
         <ul className="list-disc list-inside space-y-1 ml-2 text-gray-700">
           {recipe.ingredients.map((ing, index) => (
@@ -579,9 +579,9 @@ export default function QuickRecipesPage() {
           ))}
         </ul>
         <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg mt-2 font-bold">
-            ※ 上記は2人分の材料例です。{servings}人分の目安量は、主材料をご自身の判断で調整してください。
+          ※ 上記は2人分の材料例です。{servings}人分の目安量は、主材料をご自身の判断で調整してください。
         </p>
-        
+
 
         <h3 className="text-lg font-bold border-b pb-1 text-gray-700 pt-3">作り方（手順）</h3>
         <ol className="list-decimal list-inside space-y-2 ml-2 text-gray-700">
@@ -610,10 +610,10 @@ export default function QuickRecipesPage() {
       <p className="text-sm text-gray-600 mb-2">{recipe.description}</p>
       <div className="flex flex-wrap gap-1 mb-3">
         {recipe.ingredients.map(i => (
-            <span key={i} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-              {i}
-            </span>
-          )
+          <span key={i} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+            {i}
+          </span>
+        )
         )}
       </div>
 
@@ -634,6 +634,7 @@ export default function QuickRecipesPage() {
       <header className="bg-white p-4 shadow sticky top-0 z-20">
         <div className="flex items-center gap-3 max-w-xl mx-auto">
           <button
+            onClick={() => window.location.href = '/premium/dashboard'}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="戻る"
           >
@@ -679,11 +680,10 @@ export default function QuickRecipesPage() {
               <button
                 key={t.name}
                 onClick={() => handleCategoryChange(t.name)}
-                className={`px-4 py-2 rounded-full border text-sm flex items-center gap-1 transition-all active:scale-95 ${
-                  selectedCategory === t.name
+                className={`px-4 py-2 rounded-full border text-sm flex items-center gap-1 transition-all active:scale-95 ${selectedCategory === t.name
                     ? 'bg-orange-500 text-white border-orange-600 font-bold'
                     : 'bg-white text-gray-600 border-gray-200 hover:bg-orange-50'
-                }`}
+                  }`}
               >
                 <t.icon className="w-4 h-4" />
                 {t.name}
@@ -700,12 +700,11 @@ export default function QuickRecipesPage() {
           <button
             onClick={() => suggestRecipes(false)}
             // ヒット数が0件の場合はボタンを無効化
-            disabled={matchedRecipes.length === 0} 
-            className={`font-bold py-4 w-full rounded-xl text-lg shadow-lg transform transition-all active:scale-[0.98] ${
-                matchedRecipes.length === 0 
-                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+            disabled={matchedRecipes.length === 0}
+            className={`font-bold py-4 w-full rounded-xl text-lg shadow-lg transform transition-all active:scale-[0.98] ${matchedRecipes.length === 0
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                 : 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:shadow-orange-200'
-            }`}
+              }`}
           >
             <div className="flex items-center justify-center gap-2">
               <Zap className="w-6 h-6 fill-current" /> 時短料理を3つ提案する
@@ -731,9 +730,8 @@ export default function QuickRecipesPage() {
             <div className="pt-4 space-y-3">
               <button
                 onClick={() => suggestRecipes(true)}
-                className={`bg-blue-500 hover:bg-blue-600 text-white w-full py-3 rounded-lg font-bold shadow-md transition-colors ${
-                    remainingRecipesCount > 0 ? '' : 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
-                }`}
+                className={`bg-blue-500 hover:bg-blue-600 text-white w-full py-3 rounded-lg font-bold shadow-md transition-colors ${remainingRecipesCount > 0 ? '' : 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
+                  }`}
                 disabled={remainingRecipesCount === 0}
               >
                 別のレシピを見る ({remainingRecipesCount}件残り)

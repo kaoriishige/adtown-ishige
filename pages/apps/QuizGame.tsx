@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 // ★修正: signOut関数を分離
-import { getAuth, signInAnonymously, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth'; 
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'; 
-import { IoReloadOutline } from 'react-icons/io5'; 
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { IoReloadOutline } from 'react-icons/io5';
 // ★修正: 未使用アイコンを削除
-import { ArrowLeft, AlertTriangle, Loader2, Gamepad, Zap, LogOut, MessageSquare, Trophy, Brain } from 'lucide-react'; 
+import { ArrowLeft, AlertTriangle, Loader2, Gamepad, Zap, LogOut, MessageSquare, Trophy, Brain } from 'lucide-react';
 
 // --- 型定義 ---
 interface Question {
@@ -80,9 +80,9 @@ const fetchWithApiKey = async (systemPrompt: string, userQuery: string) => {
 
     const result = await response.json();
     const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    
+
     if (!jsonText) throw new Error("AIから有効なJSONが返されませんでした。");
-    
+
     return JSON.parse(jsonText).quiz;
 };
 
@@ -91,18 +91,18 @@ export default function QuizGameApp() {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [score, setScore] = useState(0);
-    const [gameState, setGameState] = useState<'loading' | 'playing' | 'finished'>('loading');
+    const [gameState, setGameState] = useState<'loading' | 'initial' | 'playing' | 'finished'>('initial');
     const [currentAnswer, setCurrentAnswer] = useState<string | null>(null); // ユーザーの選択
     const [showAnswer, setShowAnswer] = useState(false);
     const [uiMessage, setUiMessage] = useState('');
-    
+
     const [user, setUser] = useState<any>(null); // 認証情報保持
     const [userStats, setUserStats] = useState<UserStats>({ bestScore: 0, lastPlayedDate: '' });
-    
+
     // Firebaseインスタンス
     const [db, setDb] = useState<ReturnType<typeof getFirestore> | null>(null);
     const appId = 'nasu-quiz-app';
-    
+
     // 今日の日付を YYYY-MM-DD 形式で取得
     const todayDateString = useMemo(() => {
         return new Date().toISOString().substring(0, 10);
@@ -119,7 +119,7 @@ export default function QuizGameApp() {
                 authService = getAuth(app);
                 setDb(getFirestore(app));
                 firebaseSignOut(authService); // 前回セッションをクリア
-                signInAnonymously(authService); 
+                signInAnonymously(authService);
             } else {
                 return; // Firebase設定がなければ処理を中断
             }
@@ -127,13 +127,13 @@ export default function QuizGameApp() {
             console.error("Firebase init error:", e);
             return;
         }
-        
+
         const unsubscribe = onAuthStateChanged(authService, (currentUser) => {
             setUser(currentUser);
         });
         return () => unsubscribe();
     }, []);
-    
+
     // ユーザーの統計情報をFirestoreからロード
     useEffect(() => {
         if (!user || !db) return;
@@ -143,7 +143,7 @@ export default function QuizGameApp() {
                 // Path: /artifacts/{appId}/users/{userId}/stats/quiz
                 const statsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'stats', 'quiz');
                 const statsSnap = await getDoc(statsRef);
-                
+
                 if (statsSnap.exists()) {
                     const data = statsSnap.data() as UserStats;
                     setUserStats({
@@ -187,30 +187,30 @@ export default function QuizGameApp() {
         } catch (e: any) {
             console.error("Quiz fetch failed:", e);
             setUiMessage(`クイズの生成に失敗しました: ${e.message}. 再試行してください。`);
-            setGameState('finished'); 
+            setGameState('finished');
         }
     };
-    
-    // 初回ロード
+
+    // Initial load: Prepare UI without blocking on API
     useEffect(() => {
-        fetchQuiz();
-    }, [userStats.lastPlayedDate]); // 統計情報がロードされた後に実行
+        setUiMessage('クイズの準備ができました');
+    }, []);
 
     // ユーザーの統計情報を更新
     const updateStats = async (finalScore: number) => {
         if (!user || !db) return;
-        
+
         const statsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'stats', 'quiz');
         const currentBest = userStats.bestScore;
 
         if (finalScore > currentBest) {
-             // ベストスコアを更新
-             await setDoc(statsRef, {
-                 bestScore: finalScore,
-                 lastPlayedDate: todayDateString,
-             }, { merge: true });
-             setUserStats({ bestScore: finalScore, lastPlayedDate: todayDateString });
-             setUiMessage(`🎉 新記録達成！ベストスコアを ${finalScore} 点に更新しました！`);
+            // ベストスコアを更新
+            await setDoc(statsRef, {
+                bestScore: finalScore,
+                lastPlayedDate: todayDateString,
+            }, { merge: true });
+            setUserStats({ bestScore: finalScore, lastPlayedDate: todayDateString });
+            setUiMessage(`🎉 新記録達成！ベストスコアを ${finalScore} 点に更新しました！`);
         } else {
             // スコアを更新せず、最終プレイ日のみ更新
             await setDoc(statsRef, { lastPlayedDate: todayDateString }, { merge: true });
@@ -249,10 +249,10 @@ export default function QuizGameApp() {
 
     const currentQuestion = questions[currentQuestionIndex];
     const totalQuestions = questions.length;
-    
+
     // リンクの代わりにボタンを使用し、window.locationで遷移させる
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
     return (
@@ -265,15 +265,15 @@ export default function QuizGameApp() {
                     <button onClick={handleGoCategories} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
-                    
+
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <Gamepad className="w-6 h-6 text-indigo-500" />
                         那須地区マスターズクイズ
                     </h1>
-                    
+
                     <div className="flex items-center gap-4 text-sm font-semibold text-gray-600">
                         <div className="text-right">
-                           ベスト: <Trophy className="w-4 h-4 inline text-yellow-600" /> <span className="font-bold text-lg text-yellow-700">{userStats.bestScore}</span>
+                            ベスト: <Trophy className="w-4 h-4 inline text-yellow-600" /> <span className="font-bold text-lg text-yellow-700">{userStats.bestScore}</span>
                         </div>
                         <div>
                             現在スコア: <span className="font-bold text-lg text-pink-500">{score}</span>
@@ -283,7 +283,7 @@ export default function QuizGameApp() {
             </header>
 
             <main className="max-w-xl mx-auto p-4 sm:p-6">
-                
+
                 {/* 制限表示セクション */}
                 {userStats.lastPlayedDate === todayDateString && gameState !== 'playing' && (
                     <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-800 rounded-lg shadow-md">
@@ -299,10 +299,25 @@ export default function QuizGameApp() {
                         </button>
                     </div>
                 )}
-                
+
                 {/* メインゲームエリア */}
                 <section className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                    
+
+                    {gameState === 'initial' && (
+                        <div className="text-center py-20">
+                            <Gamepad className="w-16 h-16 text-indigo-300 mx-auto mb-4" />
+                            <h2 className="text-2xl font-bold text-gray-800 mb-2">那須地区マスターズクイズ</h2>
+                            <p className="text-gray-600 mb-6">那須に関する雑学に答えて、那須マスターを目指しましょう！</p>
+                            <button
+                                onClick={() => fetchQuiz()}
+                                className="w-full max-w-xs mt-4 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 flex items-center justify-center gap-2 mx-auto"
+                            >
+                                <Zap className="w-5 h-5" />
+                                挑戦をはじめる！
+                            </button>
+                        </div>
+                    )}
+
                     {gameState === 'loading' && (
                         <div className="text-center py-20">
                             <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3" />
@@ -327,9 +342,9 @@ export default function QuizGameApp() {
                                 {currentQuestion.options.map((option, index) => {
                                     const isCorrect = showAnswer && option === currentQuestion.answer;
                                     const isSelected = option === currentAnswer;
-                                    
+
                                     let buttonClass = "bg-gray-100 hover:bg-gray-200 text-gray-800";
-                                    
+
                                     if (showAnswer) {
                                         if (isCorrect) {
                                             buttonClass = "bg-green-500 text-white shadow-lg border-green-700";
@@ -359,7 +374,7 @@ export default function QuizGameApp() {
                                     <h3 className={`text-lg font-bold mb-3 ${currentAnswer === currentQuestion.answer ? 'text-green-600' : 'text-red-600'}`}>
                                         {currentAnswer === currentQuestion.answer ? '🎉 正解です！' : '❌ 不正解...'}
                                     </h3>
-                                    
+
                                     <div className="p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg">
                                         <p className="text-sm text-gray-700 font-semibold mb-1">解説:</p>
                                         <p className="text-sm text-gray-600">{currentQuestion.explanation}</p>
@@ -384,7 +399,7 @@ export default function QuizGameApp() {
                             <p className="text-xl font-bold text-gray-800 mb-3">
                                 最終スコア: <span className="text-pink-500">{score}</span> / {totalQuestions} 問正解
                             </p>
-                            
+
                             <button
                                 onClick={() => fetchQuiz(true)}
                                 className="w-full mt-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 flex items-center justify-center gap-2"
@@ -395,7 +410,7 @@ export default function QuizGameApp() {
                         </div>
                     )}
                 </section>
-                
+
                 {/* エラーメッセージ */}
                 {gameState !== 'loading' && uiMessage && (
                     <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm flex items-center gap-2">
@@ -404,7 +419,7 @@ export default function QuizGameApp() {
                     </div>
                 )}
             </main>
-            
+
             <footer className="text-center py-6 text-xs text-gray-400">
                 © 2025 みんなの那須アプリ
             </footer>

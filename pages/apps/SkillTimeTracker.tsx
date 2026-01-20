@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 // ★修正: Firestoreの必要なメソッドを追加
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, serverTimestamp, addDoc, orderBy, deleteDoc } from 'firebase/firestore'; 
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, serverTimestamp, addDoc, orderBy, deleteDoc } from 'firebase/firestore';
 import { ArrowLeft, BookOpen, AlertTriangle, Loader2, Zap, CheckCircle, Clock, Trash2, User, Target, TrendingUp, BarChart, Plus, LogOut } from 'lucide-react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -37,10 +37,10 @@ export default function SkillTimeTrackerApp() {
     const [user, setUser] = useState<any>(null);
     const [logs, setLogs] = useState<StudyLog[]>([]);
     const [config, setConfig] = useState<UserConfig>({ targetMinutesPerDay: 60, currentSkill: 'Webライティング' });
-    
+
     const [newMinutes, setNewMinutes] = useState('');
     const [currentDate, setCurrentDate] = useState(new Date().toISOString().substring(0, 10));
-    
+
     const [loading, setLoading] = useState(true);
     const [isAuthReady, setIsAuthReady] = useState(false);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -49,7 +49,31 @@ export default function SkillTimeTrackerApp() {
     // 1. Firebase初期化とAuthセットアップ
     useEffect(() => {
         const firebaseConfigRaw = getEnvVar('__firebase_config');
-        if (!firebaseConfigRaw) {
+        const initialAuthToken = getEnvVar('__initial_auth_token') || null;
+        const appId = getEnvVar('__app_id') || 'default-app-id';
+
+        let firebaseConfig;
+        if (firebaseConfigRaw) {
+            try {
+                firebaseConfig = JSON.parse(firebaseConfigRaw);
+            } catch (e) {
+                console.error("Failed to parse __firebase_config", e);
+            }
+        }
+
+        // Fallback to environment variables if window config is missing or invalid
+        if (!firebaseConfig || !firebaseConfig.apiKey) {
+            firebaseConfig = {
+                apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+                authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+                projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+                storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+                messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+                appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+            };
+        }
+
+        if (!firebaseConfig.apiKey) {
             setGlobalError("Firebase configuration not found.");
             setIsAuthReady(true);
             setLoading(false);
@@ -57,13 +81,12 @@ export default function SkillTimeTrackerApp() {
         }
 
         try {
-            const firebaseConfig = JSON.parse(firebaseConfigRaw);
             const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
             const auth = getAuth(app);
             const db = getFirestore(app);
             setFirebase({ auth, db, appId: getEnvVar('__app_id') || 'skill-tracker-app' });
 
-            signInAnonymously(auth); 
+            signInAnonymously(auth);
             onAuthStateChanged(auth, (currentUser) => {
                 setUser(currentUser);
                 setIsAuthReady(true);
@@ -88,9 +111,9 @@ export default function SkillTimeTrackerApp() {
         const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
             const fetchedLogs: StudyLog[] = snapshot.docs.map(doc => ({
                 id: doc.id,
-                ...(doc.data() as Omit<StudyLog, 'id'>), 
+                ...(doc.data() as Omit<StudyLog, 'id'>),
             } as StudyLog));
-            
+
             setLogs(fetchedLogs);
             setLoading(false);
         });
@@ -125,7 +148,7 @@ export default function SkillTimeTrackerApp() {
         e.preventDefault();
         const { db, appId } = firebase;
         // targetPagesPerDay -> targetMinutesPerDay に変更
-        const target = parseInt(config.targetMinutesPerDay.toString()); 
+        const target = parseInt(config.targetMinutesPerDay.toString());
 
         if (isNaN(target) || target <= 0 || !user || !db || !config.currentSkill.trim()) {
             setGlobalError("目標時間とスキル名を正しく入力してください。");
@@ -133,7 +156,7 @@ export default function SkillTimeTrackerApp() {
         }
 
         const configRef = doc(db, 'artifacts', appId, 'users', user.uid, 'config', 'userSettings');
-        
+
         try {
             await setDoc(configRef, {
                 targetMinutesPerDay: target,
@@ -179,7 +202,7 @@ export default function SkillTimeTrackerApp() {
                 await addDoc(collection(db!, 'artifacts', appId, 'users', user.uid, 'studyLogs'), logData);
             }
             // ★修正: setNewPages -> setNewMinutes に修正
-            setNewMinutes(''); 
+            setNewMinutes('');
         } catch (error) {
             console.error("Log error:", error);
             setGlobalError("記録の追加に失敗しました。");
@@ -187,7 +210,7 @@ export default function SkillTimeTrackerApp() {
             setLoading(false);
         }
     };
-    
+
     const handleDeleteLog = async (logId: string) => {
         const { db, appId } = firebase;
         if (!user || !db) return;
@@ -206,18 +229,18 @@ export default function SkillTimeTrackerApp() {
                 <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
                 <h1 className="text-xl font-bold text-gray-800 mb-2">システムエラー</h1>
                 <p className="text-gray-600 mb-4 text-center max-w-md">{globalError}</p>
-                <button 
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mt-4"
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mt-4"
                 >
-                再読み込み
+                    再読み込み
                 </button>
             </div>
         );
     }
 
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
 
@@ -231,12 +254,12 @@ export default function SkillTimeTrackerApp() {
                     <button onClick={handleGoCategories} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
-                    
+
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <TrendingUp className="w-6 h-6 text-indigo-600" />
                         学習時間トラッカー
                     </h1>
-                    
+
                     {user && firebase.auth ? (
                         <button onClick={() => signOut(firebase.auth!)} className="text-sm text-gray-500 hover:text-red-500">
                             <LogOut size={20} />
@@ -248,7 +271,7 @@ export default function SkillTimeTrackerApp() {
             </header>
 
             <main className="max-w-xl mx-auto p-4 sm:p-6">
-                
+
                 {/* 進行状況と目標 */}
                 <section className="mb-8 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <div className="flex justify-between items-start mb-4">
@@ -268,16 +291,16 @@ export default function SkillTimeTrackerApp() {
 
                     {/* プログレスバー */}
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div 
-                            className={`h-3 rounded-full transition-all duration-500 ${isGoalMet ? 'bg-green-500' : 'bg-indigo-500'}`} 
+                        <div
+                            className={`h-3 rounded-full transition-all duration-500 ${isGoalMet ? 'bg-green-500' : 'bg-indigo-500'}`}
                             style={{ width: `${progress}%` }}
                         ></div>
                     </div>
-                    
+
                     <p className={`mt-2 text-sm font-bold ${isGoalMet ? 'text-green-600' : 'text-gray-600'} text-right`}>
                         {isGoalMet ? '目標達成！' : `${progress.toFixed(0)}% 完了`} (目標: {config.targetMinutesPerDay}分)
                     </p>
-                    
+
                     <div className="mt-4 pt-4 border-t border-gray-100">
                         <p className="text-sm text-gray-600">総学習時間: <span className="font-bold text-indigo-600">{totalHours} 時間</span></p>
                     </div>
@@ -320,7 +343,7 @@ export default function SkillTimeTrackerApp() {
                     <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                         <BarChart size={20} /> 記録履歴
                     </h2>
-                    
+
                     {logs.length === 0 ? (
                         <div className="p-8 text-center bg-white rounded-xl border border-dashed border-gray-300">
                             <p className="text-gray-500">まだ記録がありません。</p>
@@ -328,8 +351,8 @@ export default function SkillTimeTrackerApp() {
                     ) : (
                         <div className="space-y-3">
                             {logs.map(log => (
-                                <div 
-                                    key={log.id} 
+                                <div
+                                    key={log.id}
                                     className={`p-4 bg-white rounded-xl shadow-sm border ${log.date === todayLog?.date ? 'border-indigo-400' : 'border-gray-200'} flex justify-between items-center`}
                                 >
                                     <div className="flex flex-col flex-1 min-w-0">
@@ -338,7 +361,7 @@ export default function SkillTimeTrackerApp() {
                                             {log.minutesStudied} <span className="text-sm font-normal">分</span>
                                         </p>
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => handleDeleteLog(log.id)}
                                         title="記録を削除"
                                         className="p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-red-500 hover:text-white transition"
@@ -352,13 +375,13 @@ export default function SkillTimeTrackerApp() {
                 </section>
 
             </main>
-            
+
             {/* 設定モーダル */}
             {isConfigOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
                     <form onSubmit={handleConfigSave} className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 space-y-4">
                         <h2 className="text-xl font-bold text-gray-800 border-b pb-2">学習目標設定</h2>
-                        
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">現在のスキル名 (例: Webライティング)</label>
                             <input
@@ -368,7 +391,7 @@ export default function SkillTimeTrackerApp() {
                                 className="w-full p-3 border rounded-lg"
                             />
                         </div>
-                        
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">目標学習時間 (分/日)</label>
                             <input
@@ -399,7 +422,7 @@ export default function SkillTimeTrackerApp() {
                     </form>
                 </div>
             )}
-            
+
             <footer className="text-center py-6 text-xs text-gray-400">
                 © 2025 みんなの那須アプリ
             </footer>

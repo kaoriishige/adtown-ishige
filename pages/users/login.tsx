@@ -13,6 +13,7 @@ import {
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 
+// --- Firebase設定 ---
 const firebaseConfig = {
     apiKey: "AIzaSyDtTt0fWthsU6Baq1fJwUx8CgSakoZnMXY",
     authDomain: "minna-no-nasu-app.firebaseapp.com",
@@ -30,24 +31,23 @@ const LoginPage: NextPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [isLoggingIn, setIsLoggingIn] = useState(true); // 初期状態を読み込み中にする
+    const [isLoggingIn, setIsLoggingIn] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
 
-    // --- ★ 自動ログインチェック ---
+    // --- 自動ログインチェック ---
     useEffect(() => {
-        // Firebaseの認証状態を監視
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // すでにログイン情報がブラウザに残っている場合、そのままログイン処理へ
-                console.log("既ログインユーザーを検知:", user.email);
+                // すでにログインしている場合は自動でトップへ
                 await handleLoginSuccess(user);
             } else {
-                setIsLoggingIn(false); // ログインしていない場合はフォームを表示
+                setIsLoggingIn(false);
             }
         });
         return () => unsubscribe();
     }, []);
 
+    // --- ログイン成功時の処理（ここで行き先を指定） ---
     const handleLoginSuccess = async (user: any) => {
         try {
             const idToken = await user.getIdToken(true);
@@ -61,7 +61,7 @@ const LoginPage: NextPage = () => {
             });
 
             if (response.ok) {
-                // リダイレクト先を /premium/dashboard に変更
+                // ✅ ログイン後は必ずプレミアムダッシュボードへ飛ばす
                 window.location.replace("/premium/dashboard");
             } else {
                 setIsLoggingIn(false);
@@ -78,7 +78,6 @@ const LoginPage: NextPage = () => {
         setIsLoggingIn(true);
         setError(null);
         try {
-            // browserLocalPersistence を設定することで、ブラウザを閉じてもログインを記憶
             await setPersistence(auth, browserLocalPersistence);
             const result = await signInWithEmailAndPassword(auth, email, password);
             await handleLoginSuccess(result.user);
@@ -101,7 +100,6 @@ const LoginPage: NextPage = () => {
         }
     };
 
-    // ログインチェック中（画面読み込み時）の表示
     if (isLoggingIn && !error) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
@@ -135,7 +133,6 @@ const LoginPage: NextPage = () => {
                         required
                         className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition-all"
                     />
-
                     <div className="relative">
                         <input
                             type={showPassword ? "text" : "password"}
@@ -149,11 +146,10 @@ const LoginPage: NextPage = () => {
                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                     </div>
-
                     <button
                         type="submit"
                         disabled={isLoggingIn}
-                        className="w-full py-4 bg-orange-500 text-white font-black rounded-xl shadow-lg shadow-orange-100 active:scale-95 transition-all"
+                        className="w-full py-4 bg-orange-500 text-white font-black rounded-xl shadow-lg active:scale-95 transition-all"
                     >
                         ログイン
                     </button>

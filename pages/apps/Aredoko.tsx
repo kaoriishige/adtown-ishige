@@ -23,12 +23,12 @@ type GroupedItems = {
 const groupItemsByLocation = (items: Item[]): GroupedItems => {
   return items.reduce((acc, item) => {
     // locationがない場合は「場所未定」として分類
-    const location = item.location.trim() || '場所未定'; 
+    const location = item.location.trim() || '場所未定';
     if (!acc[location]) {
       acc[location] = [];
     }
     // 最新登録順に表示するため、ここでは単に追加
-    acc[location].push(item); 
+    acc[location].push(item);
     return acc;
   }, {} as GroupedItems);
 };
@@ -36,16 +36,16 @@ const groupItemsByLocation = (items: Item[]): GroupedItems => {
 // --- アイコンコンポーネント ---
 // 📜 カテゴリ/リストアイコン
 const CategoryIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4m-4 2h4m2 10h4m-4-4h4m-6-4h.01"></path>
-    </svg>
+  <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4m-4 2h4m2 10h4m-4-4h4m-6-4h.01"></path>
+  </svg>
 );
 
 // ⬅️ 戻る矢印アイコン
 const BackArrowIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-    </svg>
+  <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+  </svg>
 );
 
 // --- メインコンポーネント ---
@@ -54,8 +54,8 @@ export default function Aredoko() {
   const [items, setItems] = useState<Item[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   // activeTabの型を 'list' | 'add' | '' に変更
-  const [activeTab, setActiveTab] = useState<'list' | 'add' | ''>('list'); 
-  
+  const [activeTab, setActiveTab] = useState<'list' | 'add' | ''>('list');
+
   // フォーム用ステート
   const [newName, setNewName] = useState('');
   const [newLocation, setNewLocation] = useState('');
@@ -91,36 +91,36 @@ export default function Aredoko() {
     if (items.length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } else {
-      localStorage.removeItem(STORAGE_KEY); 
+      localStorage.removeItem(STORAGE_KEY);
     }
   }, [items]);
 
   // アプリ内でのリスト復帰アクション（検索クリアなど）
   const handleGoToList = () => {
-      setSearchQuery(''); 
+    setSearchQuery('');
 
-      const messageBox = document.getElementById('message-box');
-      if (messageBox) {
-          messageBox.classList.remove('opacity-100', 'scale-100');
-          messageBox.classList.add('opacity-0', 'scale-90', 'hidden');
-      }
+    const messageBox = document.getElementById('message-box');
+    if (messageBox) {
+      messageBox.classList.remove('opacity-100', 'scale-100');
+      messageBox.classList.add('opacity-0', 'scale-90', 'hidden');
+    }
 
-      if (activeTab === 'list' && searchQuery === '') {
-        return;
-      }
-      
-      setActiveTab('');
-      setTimeout(() => {
-          setActiveTab('list'); 
-      }, 0);
+    if (activeTab === 'list' && searchQuery === '') {
+      return;
+    }
+
+    setActiveTab('');
+    setTimeout(() => {
+      setActiveTab('list');
+    }, 0);
   };
-    
+
   // 追加処理
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newLocation) {
-        console.error("Name and Location are required.");
-        return;
+      console.error("Name and Location are required.");
+      return;
     }
 
     const newItem: Item = {
@@ -133,26 +133,26 @@ export default function Aredoko() {
     };
 
     setItems((prev) => [newItem, ...prev]);
-    
+
     setNewName('');
     setNewLocation('');
     setNewTags('');
     setNewNote('');
-    
-    handleGoToList(); 
-    
+
+    handleGoToList();
+
     const messageBox = document.getElementById('message-box');
     if (messageBox) {
-        messageBox.textContent = '「' + newItem.name + '」を記録しました！';
-        messageBox.classList.remove('opacity-0', 'scale-90', 'hidden', 'bg-red-500');
-        messageBox.classList.add('opacity-100', 'scale-100', 'bg-indigo-600'); 
+      messageBox.textContent = '「' + newItem.name + '」を記録しました！';
+      messageBox.classList.remove('opacity-0', 'scale-90', 'hidden', 'bg-red-500');
+      messageBox.classList.add('opacity-100', 'scale-100', 'bg-indigo-600');
+      setTimeout(() => {
+        messageBox.classList.remove('opacity-100', 'scale-100');
+        messageBox.classList.add('opacity-0', 'scale-90');
         setTimeout(() => {
-            messageBox.classList.remove('opacity-100', 'scale-100');
-            messageBox.classList.add('opacity-0', 'scale-90');
-            setTimeout(() => {
-                messageBox.classList.add('hidden');
-            }, 300);
-        }, 2000);
+          messageBox.classList.add('hidden');
+        }, 300);
+      }, 2000);
     }
   };
 
@@ -165,23 +165,23 @@ export default function Aredoko() {
   // 削除実行
   const confirmDelete = () => {
     if (itemToDelete) {
-        const deletedItemName = itemToDelete.name;
-        const newItems = items.filter((item) => item.id !== itemToDelete.id);
-        setItems(newItems);
-        
-        const messageBox = document.getElementById('message-box');
-        if (messageBox) {
-            messageBox.textContent = '「' + deletedItemName + '」の記録を削除しました。';
-            messageBox.classList.remove('opacity-0', 'scale-90', 'hidden', 'bg-indigo-600');
-            messageBox.classList.add('opacity-100', 'scale-100', 'bg-red-500');
-            setTimeout(() => {
-                messageBox.classList.remove('opacity-100', 'scale-100');
-                messageBox.classList.add('opacity-0', 'scale-90');
-                setTimeout(() => {
-                    messageBox.classList.add('hidden');
-                }, 300);
-            }, 2000);
-        }
+      const deletedItemName = itemToDelete.name;
+      const newItems = items.filter((item) => item.id !== itemToDelete.id);
+      setItems(newItems);
+
+      const messageBox = document.getElementById('message-box');
+      if (messageBox) {
+        messageBox.textContent = '「' + deletedItemName + '」の記録を削除しました。';
+        messageBox.classList.remove('opacity-0', 'scale-90', 'hidden', 'bg-indigo-600');
+        messageBox.classList.add('opacity-100', 'scale-100', 'bg-red-500');
+        setTimeout(() => {
+          messageBox.classList.remove('opacity-100', 'scale-100');
+          messageBox.classList.add('opacity-0', 'scale-90');
+          setTimeout(() => {
+            messageBox.classList.add('hidden');
+          }, 300);
+        }, 2000);
+      }
     }
     setItemToDelete(null);
   };
@@ -189,15 +189,15 @@ export default function Aredoko() {
   // 検索処理
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-        const query = searchQuery.toLowerCase();
-        if (!query) return true;
-        
-        return (
-            item.name.toLowerCase().includes(query) ||
-            item.location.toLowerCase().includes(query) ||
-            item.tags.some(tag => tag.toLowerCase().includes(query)) ||
-            item.note.toLowerCase().includes(query)
-        );
+      const query = searchQuery.toLowerCase();
+      if (!query) return true;
+
+      return (
+        item.name.toLowerCase().includes(query) ||
+        item.location.toLowerCase().includes(query) ||
+        item.tags.some(tag => tag.toLowerCase().includes(query)) ||
+        item.note.toLowerCase().includes(query)
+      );
     }).sort((a, b) => b.createdAt - a.createdAt);
   }, [items, searchQuery]);
 
@@ -208,9 +208,9 @@ export default function Aredoko() {
 
 
   const locationKeys = Object.keys(groupedItems).sort((a, b) => {
-      const itemA = groupedItems[a][0];
-      const itemB = groupedItems[b][0];
-      return itemB.createdAt - itemA.createdAt;
+    const itemA = groupedItems[a][0];
+    const itemB = groupedItems[b][0];
+    return itemB.createdAt - itemA.createdAt;
   });
 
 
@@ -224,50 +224,50 @@ export default function Aredoko() {
       {/* ヘッダー */}
       <header className="bg-white shadow-sm p-4 sticky top-0 z-10 border-b border-slate-200">
         <div className="flex justify-between items-center max-w-md mx-auto">
-            <div className="flex items-center gap-2">
-                
-                {/* 🚨 修正箇所: Linkコンポーネントを使って常に「apps/categories」への戻る矢印を表示 */}
-                <Link 
-                    href="/apps/categories"
-                    className="p-1 -ml-2 mr-1 rounded-full text-slate-500 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center justify-center"
-                    title="カテゴリ一覧に戻る"
-                >
-                    <BackArrowIcon className="w-6 h-6" />
-                </Link>
-                
-                <h1 className="text-xl font-bold text-indigo-600 flex items-center gap-2">
-                    アレどこ <span className="text-xs text-slate-400 font-normal">Aredoko</span>
-                </h1>
-            </div>
+          <div className="flex items-center gap-2">
 
-            {/* 使い方ボタン */}
-            <button
-                onClick={() => setIsInstructionModalOpen(true)}
-                className="p-2 text-sm font-bold bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors flex items-center gap-1 shadow-sm"
-                title="アプリの使い方"
+            {/* 🚨 修正箇所: Linkコンポーネントを使って常に「/premium/dashboard」への戻る矢印を表示 */}
+            <Link
+              href="/premium/dashboard"
+              className="p-1 -ml-2 mr-1 rounded-full text-slate-500 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center justify-center"
+              title="ダッシュボードに戻る"
             >
-                <span className="text-base font-bold">?</span>使い方
-            </button>
+              <BackArrowIcon className="w-6 h-6" />
+            </Link>
+
+            <h1 className="text-xl font-bold text-indigo-600 flex items-center gap-2">
+              アレどこ <span className="text-xs text-slate-400 font-normal">Aredoko</span>
+            </h1>
+          </div>
+
+          {/* 使い方ボタン */}
+          <button
+            onClick={() => setIsInstructionModalOpen(true)}
+            className="p-2 text-sm font-bold bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors flex items-center gap-1 shadow-sm"
+            title="アプリの使い方"
+          >
+            <span className="text-base font-bold">?</span>使い方
+          </button>
         </div>
       </header>
 
       <main className="max-w-md mx-auto p-4">
-        
+
         {/* --- activeTab が 'list' か、または activeTab が空でない場合にのみ描画 --- */}
         {(activeTab === 'list' || activeTab === '') && (
           <div className="space-y-4 pt-2">
-            
+
             {/* 画面タイトル */}
             <div className="flex items-center justify-between mb-4">
-                {searchQuery ? (
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <span className="text-indigo-500">🔍</span> 検索結果
-                    </h2>
-                ) : (
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <span className="text-indigo-500">📦</span> 場所別カテゴリ一覧
-                    </h2>
-                )}
+              {searchQuery ? (
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-indigo-500">🔍</span> 検索結果
+                </h2>
+              ) : (
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-indigo-500">📦</span> 場所別カテゴリ一覧
+                </h2>
+              )}
             </div>
 
             {/* 検索入力フィールド */}
@@ -280,13 +280,13 @@ export default function Aredoko() {
                 className={`w-full p-4 pl-12 rounded-xl border-0 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all bg-white ${searchQuery ? 'pr-12' : 'pr-4'}`}
               />
               <span className="absolute left-4 top-4 text-slate-400 text-lg">🔍</span>
-              
+
               {/* 検索クリアボタン */}
               {searchQuery && (
                 <button
                   onClick={handleGoToList}
                   className="absolute right-3 top-3 p-1 rounded-full text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 transition-colors"
-                  title="検索をクリア" 
+                  title="検索をクリア"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
@@ -300,7 +300,7 @@ export default function Aredoko() {
                 <div className="bg-white p-6 rounded-xl shadow-md border border-slate-100 text-left">
                   <h2 className="text-base font-bold text-slate-700 mb-3">👋 まだ何も記録されていません</h2>
                   <p className="text-sm text-slate-500 mb-5">
-                      探し物の場所を忘れるストレスから解放されるために、さっそくモノの場所を記録しましょう。
+                    探し物の場所を忘れるストレスから解放されるために、さっそくモノの場所を記録しましょう。
                   </p>
                   <button
                     onClick={() => setActiveTab('add')}
@@ -319,19 +319,19 @@ export default function Aredoko() {
             ) : (
               // 登録アイテムがある場合
               <div className="space-y-6 pt-2">
-                
+
                 {searchQuery && filteredItems.length > 0 && (
-                    <p className="text-left text-sm text-slate-500 font-medium">
-                        「{searchQuery}」の検索結果: <span className="text-indigo-600 font-bold">{filteredItems.length}</span>件
-                    </p>
+                  <p className="text-left text-sm text-slate-500 font-medium">
+                    「{searchQuery}」の検索結果: <span className="text-indigo-600 font-bold">{filteredItems.length}</span>件
+                  </p>
                 )}
-                
+
                 {filteredItems.length === 0 && searchQuery && (
-                    <p className="text-center text-slate-500 py-8">
-                        「{searchQuery}」は見つかりませんでした...
-                    </p>
+                  <p className="text-center text-slate-500 py-8">
+                    「{searchQuery}」は見つかりませんでした...
+                  </p>
                 )}
-                
+
                 {/* 場所ごとにグループ化して表示 */}
                 {locationKeys.length > 0 && (
                   locationKeys.map((location) => (
@@ -344,7 +344,7 @@ export default function Aredoko() {
                       <div className="space-y-3">
                         {groupedItems[location].map((item) => (
                           <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 relative transition-all active:scale-[0.99] hover:shadow-md">
-                            <button 
+                            <button
                               onClick={() => handleDelete(item)}
                               className="absolute top-2 right-2 text-slate-300 hover:text-red-500 p-2 z-10"
                               title="削除"
@@ -352,7 +352,7 @@ export default function Aredoko() {
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
                             <h3 className="font-bold text-lg text-slate-800 pr-10">{item.name}</h3>
-                            
+
                             {item.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
                                 {item.tags.filter(Boolean).map((tag, i) => (
@@ -362,7 +362,7 @@ export default function Aredoko() {
                                 ))}
                               </div>
                             )}
-                            
+
                             {item.note && (
                               <div className="mt-3 text-sm text-slate-500 border-t border-slate-100 pt-3 flex gap-2">
                                 <span>📝</span>
@@ -407,7 +407,7 @@ export default function Aredoko() {
                     onChange={(e) => setNewLocation(e.target.value)}
                   />
                   <p className="text-xs text-slate-400 mt-1">
-                      📍 **重要:** この場所ごとにアイテムが分類されて表示されます。
+                    📍 **重要:** この場所ごとにアイテムが分類されて表示されます。
                   </p>
                 </div>
 
@@ -450,12 +450,12 @@ export default function Aredoko() {
             </div>
           </div>
         )}
-        
+
         {/* ローディング表示 */}
         {activeTab !== 'list' && activeTab !== 'add' && (
-            <div className="py-20 text-center text-slate-400">
-                読み込み中...
-            </div>
+          <div className="py-20 text-center text-slate-400">
+            読み込み中...
+          </div>
         )}
 
       </main>
@@ -479,12 +479,12 @@ export default function Aredoko() {
       </nav>
 
       {/* メッセージボックス */}
-      <div 
+      <div
         id="message-box"
         className="fixed bottom-24 left-1/2 transform -translate-x-1/2 p-3 bg-indigo-600 text-white rounded-xl shadow-xl transition-all duration-300 opacity-0 scale-90 hidden z-50 font-bold"
       >
       </div>
-      
+
       {/* 削除確認モーダル */}
       {itemToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
@@ -517,43 +517,43 @@ export default function Aredoko() {
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4 my-8">
             <div className="flex justify-between items-center border-b pb-3 mb-3">
-                <h3 className="text-xl font-bold text-indigo-700">📦 アプリの使い方</h3>
-                <button 
-                    onClick={() => setIsInstructionModalOpen(false)}
-                    className="text-slate-400 hover:text-slate-600 p-1"
-                >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+              <h3 className="text-xl font-bold text-indigo-700">📦 アプリの使い方</h3>
+              <button
+                onClick={() => setIsInstructionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
             </div>
-            
+
             <h4 className="text-base font-bold text-slate-700 mt-4">1. 記録（追加）</h4>
             <ol className="list-decimal pl-5 space-y-3 text-slate-600 text-sm">
-                <li>
-                    **「➕ 追加」**タブを開き、モノの名前（例: `実印`）と**しまった場所**（例: `書斎の引き出し`）を入力します。
-                </li>
-                <li>
-                    タグ（例: `重要` `銀行`）やメモ（例: `夫の通帳とセット`）を記録すると、検索精度が上がります。
-                </li>
+              <li>
+                **「➕ 追加」**タブを開き、モノの名前（例: `実印`）と**しまった場所**（例: `書斎の引き出し`）を入力します。
+              </li>
+              <li>
+                タグ（例: `重要` `銀行`）やメモ（例: `夫の通帳とセット`）を記録すると、検索精度が上がります。
+              </li>
             </ol>
-            
+
             <h4 className="text-base font-bold text-slate-700 mt-4 pt-3 border-t">2. 整理・分類</h4>
             <ul className="list-disc pl-5 space-y-3 text-slate-600 text-sm">
-                <li>
-                    同じ「**しまった場所**」の名前で複数のモノを登録すると、「**📜 カテゴリ**」タブで**その場所ごとにモノが分類されて表示**されます。
-                </li>
-                <li>
-                    場所名を統一することで、どこに何があるか一目でわかります。
-                </li>
+              <li>
+                同じ「**しまった場所**」の名前で複数のモノを登録すると、「**📜 カテゴリ**」タブで**その場所ごとにモノが分類されて表示**されます。
+              </li>
+              <li>
+                場所名を統一することで、どこに何があるか一目でわかります。
+              </li>
             </ul>
 
             <h4 className="text-base font-bold text-slate-700 mt-4 pt-3 border-t">3. 確認・検索</h4>
             <ul className="list-disc pl-5 space-y-3 text-slate-600 text-sm">
-                <li>
-                    **「📜 カテゴリ」**タブは、登録した全アイテムを**場所ごとに一覧表示**する画面です。
-                </li>
-                <li>
-                    リスト上部の検索ボックスは、一覧（カテゴリ）からさらに絞り込むためのものです。
-                </li>
+              <li>
+                **「📜 カテゴリ」**タブは、登録した全アイテムを**場所ごとに一覧表示**する画面です。
+              </li>
+              <li>
+                リスト上部の検索ボックスは、一覧（カテゴリ）からさらに絞り込むためのものです。
+              </li>
             </ul>
 
             <div className="pt-4">

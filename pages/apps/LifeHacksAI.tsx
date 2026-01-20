@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { ArrowLeft, Sparkles, AlertTriangle, Loader2, Lightbulb, Zap, Clock, MessageSquare, ExternalLink, X, LogOut, User } from 'lucide-react'; 
+import { ArrowLeft, Sparkles, AlertTriangle, Loader2, Lightbulb, Zap, Clock, MessageSquare, ExternalLink, X, LogOut, User } from 'lucide-react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -44,7 +44,7 @@ export default function LifeHacksApp() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [uiMessage, setUiMessage] = useState('');
     const [user, setUser] = useState<any>(null);
-    
+
     // ★修正: 表示用のテーマ名 (stateに昇格)
     const [displayTheme, setDisplayTheme] = useState('時短料理');
 
@@ -57,15 +57,15 @@ export default function LifeHacksApp() {
                 const firebaseConfig = JSON.parse(firebaseConfigRaw);
                 const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
                 const auth = getAuth(app);
-                signInAnonymously(auth); 
+                signInAnonymously(auth);
                 onAuthStateChanged(auth, (currentUser) => {
                     setUser(currentUser);
                 });
             }
         } catch (e: any) {
-             console.error("Firebase Initialization Error:", e);
+            console.error("Firebase Initialization Error:", e);
         }
-    }, []); 
+    }, []);
 
     // API呼び出し関数
     const fetchHacks = async () => {
@@ -79,7 +79,7 @@ export default function LifeHacksApp() {
             setIsGenerating(false);
             return;
         }
-        
+
         // 最終的なテーマを決定
         const finalTheme = theme === "その他（自由に記入）" && customThemeInput.trim()
             ? customThemeInput.trim()
@@ -90,7 +90,7 @@ export default function LifeHacksApp() {
             setIsGenerating(false);
             return;
         }
-        
+
         // ★修正: 最終的なテーマをstateに保存
         setDisplayTheme(finalTheme);
 
@@ -137,9 +137,9 @@ export default function LifeHacksApp() {
             setIsGenerating(false);
         }
     };
-    
+
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
     const logout = () => {
@@ -165,7 +165,7 @@ export default function LifeHacksApp() {
                     <button onClick={handleGoCategories} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
-                    
+
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <Lightbulb className="w-6 h-6 text-yellow-500" />
                         知っ得！生活の裏技AI
@@ -174,21 +174,21 @@ export default function LifeHacksApp() {
             </header>
 
             <main className="max-w-xl mx-auto p-4 sm:p-6">
-                
+
                 {uiMessage && (
                     <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{uiMessage}</div>
                 )}
-                
+
                 {/* 1. テーマ選択フォーム */}
                 <section className="mb-8 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
                         <Zap size={20} /> 裏技のテーマを選ぶ
                     </h2>
-                    
+
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         どんな分野の裏技を知りたいですか？
                     </label>
-                    
+
                     <select
                         value={theme}
                         onChange={(e) => {
@@ -218,7 +218,7 @@ export default function LifeHacksApp() {
                             />
                         </div>
                     )}
-                    
+
                     <button
                         onClick={fetchHacks}
                         disabled={isGenerating || (isCustomInputActive && !customThemeInput.trim())}
@@ -236,7 +236,7 @@ export default function LifeHacksApp() {
                             <Lightbulb className="w-6 h-6 text-yellow-500" />
                             知っ得裏技 5選
                         </h2>
-                        
+
                         <p className="text-sm text-gray-600 mb-4">
                             テーマ: <span className="font-bold text-yellow-700">{displayTheme}</span> に関する知恵です。
                         </p>
@@ -259,7 +259,7 @@ export default function LifeHacksApp() {
                                 </div>
                             ))}
                         </div>
-                        
+
                         <button
                             onClick={() => setHacks([])}
                             className="w-full mt-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition-colors"
@@ -278,7 +278,7 @@ export default function LifeHacksApp() {
                     </div>
                 )}
             </main>
-            
+
             <footer className="text-center py-6 text-xs text-gray-400">
                 © 2025 みんなの那須アプリ
             </footer>

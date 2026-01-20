@@ -138,7 +138,7 @@ const AIGasPriceTrackerApp = () => {
         <div className="min-h-screen bg-gray-50 font-sans pb-20">
             <header className="bg-white shadow-md sticky top-0 z-10 p-4 border-b border-gray-200">
                 <div className="max-w-xl mx-auto flex items-center justify-between">
-                    <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft size={20} /></button>
+                    <button onClick={() => window.location.href = '/premium/dashboard'} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft size={20} /></button>
                     <h1 className="text-xl font-bold flex items-center gap-2"><Fuel className="text-orange-500" /> 最安ガソリン</h1>
                     <Settings size={20} className="text-gray-400" />
                 </div>

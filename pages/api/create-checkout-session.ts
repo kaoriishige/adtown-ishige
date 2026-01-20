@@ -5,7 +5,6 @@ import { getAuth } from 'firebase-admin/auth';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: '2023-10-16' as any });
 
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).end('Method Not Allowed');
@@ -43,10 +42,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       ],
       customer_email: user.email || undefined,
-      success_url: `${req.headers.origin}/premium?session_id={CHECKOUT_SESSION_ID}`,
+      // 成功時はまずdashboardへ、失敗時はLPへ
+      success_url: `${req.headers.origin}/premium/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.origin}/premium`,
     });
-
 
     return res.status(200).json({ url: session.url });
   } catch (err) {

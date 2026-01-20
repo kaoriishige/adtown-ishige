@@ -45,13 +45,13 @@ export default function NasuFlyerApp() {
     <div style={{ backgroundColor: '#fff', minHeight: '100vh', fontFamily: 'sans-serif', color: '#333' }}>
       <Head>
         <title>那須・大田原 特売チラシ</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
       </Head>
 
-      {/* ヘッダー：onClickを使わず、aタグの基本機能で/homeへ強制移動させる */}
+      {/* ヘッダー：onClickを使わず、aタグの基本機能で/premium/dashboardへ強制移動させる */}
       <div style={{ position: 'sticky', top: 0, backgroundColor: '#fff', borderBottom: '1px solid #eee', padding: '15px', display: 'flex', alignItems: 'center', zIndex: 10 }}>
-        <a 
-          href="/home" 
+        <a
+          href="/premium/dashboard"
           style={{ textDecoration: 'none', color: '#007aff', fontSize: '18px', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}
         >
           ＜ 戻る
@@ -65,12 +65,12 @@ export default function NasuFlyerApp() {
             <h2 style={{ fontSize: '14px', color: '#999', marginBottom: '10px', paddingLeft: '5px' }}>📍 {city}</h2>
             <div style={{ display: 'grid', gap: '8px' }}>
               {stores.map((s: any, i: number) => (
-                <a 
-                  key={i} 
+                <a
+                  key={i}
                   href={s.url}
                   style={{
-                    textDecoration: 'none', color: 'inherit', width: '100%', padding: '20px', 
-                    backgroundColor: '#fff', border: '2px solid #007aff', borderRadius: '15px', 
+                    textDecoration: 'none', color: 'inherit', width: '100%', padding: '20px',
+                    backgroundColor: '#fff', border: '2px solid #007aff', borderRadius: '15px',
                     fontSize: '17px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
                     boxShadow: '0 4px 0 #007aff', marginBottom: '4px', boxSizing: 'border-box'
                   }}
@@ -82,6 +82,30 @@ export default function NasuFlyerApp() {
             </div>
           </div>
         ))}
+
+        {/* --- PREMIUM UPSELL (Immediately below the store list) --- */}
+        <div style={{
+          marginTop: '40px', padding: '25px', backgroundColor: '#fff5f8',
+          border: '1px solid #ffdde6', borderRadius: '25px', textAlign: 'center'
+        }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#ff4d88', margin: '0 0 10px 0' }}>
+            プレミアムプラン月額480円
+          </h3>
+          <p style={{ fontSize: '12px', color: '#ff85ad', lineHeight: '1.6', margin: '0 0 20px 0', fontWeight: 'bold' }}>
+            合わなければ、いつでも解約できます。<br />
+            まずは1ヶ月だけ試してみてください。
+          </p>
+          <a
+            href="/premium"
+            style={{
+              display: 'block', padding: '15px', backgroundColor: '#ff4d88', color: '#fff',
+              textDecoration: 'none', borderRadius: '15px', fontWeight: 'bold', fontSize: '16px',
+              boxShadow: '0 4px 15px rgba(255, 77, 136, 0.3)'
+            }}
+          >
+            プレミアムを使ってみる
+          </a>
+        </div>
       </div>
     </div>
   );

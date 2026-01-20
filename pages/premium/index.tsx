@@ -82,7 +82,7 @@ const PremiumLandingPage: NextPage<LPProps> = ({ uid }) => {
 
     const handleSeeFree = () => {
         // 「無料のまま戻れる」安心導線を用意（離脱率を下げつつ信頼を上げる）
-        router.push('/home');
+        router.push('/premium/dashboard');
     };
 
     return (
@@ -96,7 +96,7 @@ const PremiumLandingPage: NextPage<LPProps> = ({ uid }) => {
             <header className="bg-white/80 backdrop-blur-xl border-b border-[#E8E2D9] px-6 py-4 sticky top-0 z-50">
                 <div className="max-w-xl mx-auto flex items-center gap-4">
                     <button
-                        onClick={() => router.push('/home')}
+                        onClick={() => router.push('/premium/dashboard')}
                         className="w-10 h-10 flex items-center justify-center rounded-full bg-[#FDFCFD] border border-[#E8E2D9] text-[#A89F94] active:scale-90 transition-all"
                     >
                         <RiArrowLeftSLine size={24} />

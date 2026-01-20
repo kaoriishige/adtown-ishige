@@ -9,7 +9,7 @@ type HandType = 'right' | 'left';
 
 export default function PalmistryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export default function PalmistryPage() {
   }, []);
 
   const handleGoBack = () => {
-    window.location.href = '/apps/categories';
+    window.location.href = '/premium/dashboard';
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,7 +55,7 @@ export default function PalmistryPage() {
       // 1. 画像データの準備
       const match = selectedImage.match(/^data:(.+);base64,(.+)$/);
       if (!match) throw new Error("画像の読み込みに失敗しました。別の画像をお試しください。");
-      
+
       const mimeType = match[1];
       const base64Data = match[2];
 
@@ -88,7 +88,7 @@ export default function PalmistryPage() {
 
       // 手に応じた指示
       const handTitle = hand === 'right' ? "右手（現在の運勢・後天性）" : "左手（生まれ持った運勢・先天性）";
-      const handInstruction = hand === 'right' 
+      const handInstruction = hand === 'right'
         ? "これは【右手】の画像です。右手は「現在の自分、努力して得た運勢（後天性）」を表します。これまでの努力の結果や、現状の運気、未来への可能性を中心に鑑定してください。"
         : "これは【左手】の画像です。左手は「生まれ持った運勢、才能、本質（先天性）」を表します。相談者が本来持っている潜在能力や性格、宿命的な傾向を中心に鑑定してください。";
 
@@ -151,16 +151,16 @@ export default function PalmistryPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("API Error Data:", errorData);
-        
+
         let errorMsg = `APIエラー (${response.status})`;
         if (errorData.error && errorData.error.message) {
-            errorMsg += `: ${errorData.error.message}`;
+          errorMsg += `: ${errorData.error.message}`;
         }
-        
+
         if (response.status === 400) errorMsg = "画像を解析できませんでした。別の画像を試してください。";
         if (response.status === 403) errorMsg = "APIキーが無効か、アクセス権限がありません。";
         if (response.status === 404) errorMsg = "AIモデルが見つかりません。";
-        
+
         throw new Error(errorMsg);
       }
 
@@ -190,40 +190,40 @@ export default function PalmistryPage() {
 
   // テーマ選択ボタンコンポーネント
   const TopicButton = ({ id, icon: Icon, label, colorClass }: { id: Topic, icon: any, label: string, colorClass: string }) => (
-    <button 
-        onClick={() => setTopic(id)}
-        className={`relative p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 border-2 ${topic === id ? `bg-white border-${colorClass} ring-2 ring-${colorClass} ring-offset-2 shadow-md z-10` : 'bg-gray-50 border-transparent hover:bg-gray-100 text-gray-500'}`}
+    <button
+      onClick={() => setTopic(id)}
+      className={`relative p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 border-2 ${topic === id ? `bg-white border-${colorClass} ring-2 ring-${colorClass} ring-offset-2 shadow-md z-10` : 'bg-gray-50 border-transparent hover:bg-gray-100 text-gray-500'}`}
     >
-        {topic === id && (
-            <div className={`absolute top-1.5 right-1.5 text-${colorClass}`}>
-                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-            </div>
-        )}
-        <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${topic === id ? `text-${colorClass}` : 'text-gray-400'}`} />
-        <span className={`font-bold text-xs sm:text-sm ${topic === id ? 'text-gray-800' : 'text-gray-500'}`}>{label}</span>
+      {topic === id && (
+        <div className={`absolute top-1.5 right-1.5 text-${colorClass}`}>
+          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
+        </div>
+      )}
+      <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${topic === id ? `text-${colorClass}` : 'text-gray-400'}`} />
+      <span className={`font-bold text-xs sm:text-sm ${topic === id ? 'text-gray-800' : 'text-gray-500'}`}>{label}</span>
     </button>
   );
 
   // 手の選択ボタンコンポーネント
   const HandButton = ({ type, label, subLabel }: { type: HandType, label: string, subLabel: string }) => (
-    <button 
-        onClick={() => setHand(type)}
-        className={`flex-1 p-3 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${hand === type ? 'bg-purple-50 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+    <button
+      onClick={() => setHand(type)}
+      className={`flex-1 p-3 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${hand === type ? 'bg-purple-50 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
     >
-        <div className={`p-2 rounded-full ${hand === type ? 'bg-purple-200 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>
-            <HelpingHand className="w-5 h-5" />
-        </div>
-        <div className="text-left">
-            <div className={`font-bold text-sm ${hand === type ? 'text-purple-900' : 'text-gray-700'}`}>{label}</div>
-            <div className="text-xs text-gray-500">{subLabel}</div>
-        </div>
-        {hand === type && <CheckCircle2 className="w-5 h-5 text-purple-500 ml-auto" />}
+      <div className={`p-2 rounded-full ${hand === type ? 'bg-purple-200 text-purple-700' : 'bg-gray-100 text-gray-400'}`}>
+        <HelpingHand className="w-5 h-5" />
+      </div>
+      <div className="text-left">
+        <div className={`font-bold text-sm ${hand === type ? 'text-purple-900' : 'text-gray-700'}`}>{label}</div>
+        <div className="text-xs text-gray-500">{subLabel}</div>
+      </div>
+      {hand === type && <CheckCircle2 className="w-5 h-5 text-purple-500 ml-auto" />}
     </button>
   );
 
   return (
     <div className="min-h-screen bg-purple-50 text-gray-800 font-sans">
-      
+
       <header className="bg-white shadow-sm sticky top-0 z-10 p-4 border-b border-purple-200">
         <div className="max-w-md mx-auto flex items-center gap-3">
           <button onClick={handleGoBack} className="p-2 hover:bg-purple-100 rounded-full"><ArrowLeft className="w-5 h-5 text-purple-700" /></button>
@@ -232,15 +232,15 @@ export default function PalmistryPage() {
       </header>
 
       <main className="max-w-md mx-auto p-6 pb-20">
-        
+
         {/* Intro Section - Always visible unless analyzing/result */}
         {!isAnalyzing && !result && (
           <div className="space-y-6">
             {!selectedImage && (
               <div className="text-center bg-white p-6 rounded-2xl shadow-md border border-purple-100">
-                <h2 className="text-2xl font-bold text-purple-800 mb-2">あなたの運命を<br/>本物のAIが視ます</h2>
+                <h2 className="text-2xl font-bold text-purple-800 mb-2">あなたの運命を<br />本物のAIが視ます</h2>
                 <p className="text-sm text-gray-600">
-                  Googleの最新AIが、あなたの手のひらを解析。<br/>
+                  Googleの最新AIが、あなたの手のひらを解析。<br />
                   今のあなたに必要な言葉を紡ぎます。
                 </p>
               </div>
@@ -248,37 +248,37 @@ export default function PalmistryPage() {
 
             {/* 手の選択エリア */}
             <div className="bg-white p-5 rounded-2xl shadow-md border border-purple-100 animate-fade-in-up">
-                <h3 className="text-base font-bold text-purple-900 mb-3 flex items-center gap-2">
-                    <HelpingHand className="w-4 h-4 text-purple-500" />
-                    どちらの手を視ますか？
-                </h3>
-                <div className="flex flex-col gap-3">
-                    <HandButton type="right" label="右手" subLabel="現在の運勢 (後天性)" />
-                    <HandButton type="left" label="左手" subLabel="生まれ持った運勢 (先天性)" />
-                </div>
+              <h3 className="text-base font-bold text-purple-900 mb-3 flex items-center gap-2">
+                <HelpingHand className="w-4 h-4 text-purple-500" />
+                どちらの手を視ますか？
+              </h3>
+              <div className="flex flex-col gap-3">
+                <HandButton type="right" label="右手" subLabel="現在の運勢 (後天性)" />
+                <HandButton type="left" label="左手" subLabel="生まれ持った運勢 (先天性)" />
+              </div>
             </div>
 
             {/* テーマ選択エリア */}
             <div className="bg-white p-5 rounded-2xl shadow-md border border-purple-100 animate-fade-in-up">
-                <h3 className="text-base font-bold text-purple-900 mb-3 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-500" />
-                    今日は何について占いますか？
-                </h3>
-                <p className="text-xs text-gray-500 mb-3">
-                    気になることに絞ると、より詳しく視えますよ。
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                    <TopicButton id="love" icon={Heart} label="恋愛・結婚" colorClass="pink-500" />
-                    <TopicButton id="work" icon={Briefcase} label="仕事・才能" colorClass="blue-500" />
-                    <TopicButton id="money" icon={Coins} label="金運・財運" colorClass="yellow-500" />
-                    <TopicButton id="general" icon={Star} label="総合運" colorClass="purple-600" />
-                </div>
+              <h3 className="text-base font-bold text-purple-900 mb-3 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-500" />
+                今日は何について占いますか？
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                気になることに絞ると、より詳しく視えますよ。
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <TopicButton id="love" icon={Heart} label="恋愛・結婚" colorClass="pink-500" />
+                <TopicButton id="work" icon={Briefcase} label="仕事・才能" colorClass="blue-500" />
+                <TopicButton id="money" icon={Coins} label="金運・財運" colorClass="yellow-500" />
+                <TopicButton id="general" icon={Star} label="総合運" colorClass="purple-600" />
+              </div>
             </div>
 
             {/* 画像選択エリア */}
             <div className="mb-6">
               <input type="file" ref={fileInputRef} accept="image/*" capture="environment" className="hidden" onChange={handleImageSelect} />
-              
+
               {!selectedImage ? (
                 <button onClick={() => fileInputRef.current?.click()} className="w-full py-12 bg-white border-2 border-dashed border-purple-300 rounded-2xl flex flex-col items-center justify-center text-purple-500 hover:bg-purple-50 shadow-sm transition-colors group">
                   <div className="bg-purple-100 p-4 rounded-full mb-3 group-hover:scale-110 transition-transform">
@@ -292,7 +292,7 @@ export default function PalmistryPage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={selectedImage} alt="手相" className="w-full rounded-2xl shadow-lg border-4 border-white" />
                   <button onClick={handleReset} className="absolute top-2 right-2 p-2 bg-gray-900/70 text-white rounded-full hover:bg-gray-900 transition-colors shadow-lg">
-                      <RefreshCw className="w-5 h-5" />
+                    <RefreshCw className="w-5 h-5" />
                   </button>
                 </div>
               )}
@@ -301,16 +301,16 @@ export default function PalmistryPage() {
             {/* 鑑定ボタン: 画像選択時のみ表示 */}
             {selectedImage && (
               <button onClick={handleAnalyze} className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xl rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 animate-bounce-subtle">
-                <Sparkles className="w-6 h-6" /> 
+                <Sparkles className="w-6 h-6" />
                 {hand === 'right' ? '右手' : '左手'}で鑑定する
               </button>
             )}
-            
+
             {error && (
-                <div className="mt-4 bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 text-left animate-shake">
-                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-red-700 text-sm font-bold whitespace-pre-wrap">{error}</p>
-                </div>
+              <div className="mt-4 bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 text-left animate-shake">
+                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-700 text-sm font-bold whitespace-pre-wrap">{error}</p>
+              </div>
             )}
           </div>
         )}
@@ -319,17 +319,17 @@ export default function PalmistryPage() {
         {isAnalyzing && (
           <div className="flex flex-col items-center justify-center py-12 space-y-6 bg-white rounded-2xl shadow-inner min-h-[400px]">
             <div className="relative">
-                <div className="absolute inset-0 bg-purple-200 rounded-full animate-ping opacity-20 duration-1000"></div>
-                <div className="absolute inset-0 bg-purple-100 rounded-full animate-pulse opacity-40 delay-75"></div>
-                <Loader2 className="w-16 h-16 text-purple-600 animate-spin relative z-10" />
+              <div className="absolute inset-0 bg-purple-200 rounded-full animate-ping opacity-20 duration-1000"></div>
+              <div className="absolute inset-0 bg-purple-100 rounded-full animate-pulse opacity-40 delay-75"></div>
+              <Loader2 className="w-16 h-16 text-purple-600 animate-spin relative z-10" />
             </div>
             <div className="text-center space-y-2">
-                <p className="text-purple-800 font-bold text-xl animate-pulse">那須の母が手相を見ています...</p>
-                <p className="text-sm text-gray-500">
-                    {hand === 'right' ? '現在の運勢' : '生まれ持った運勢'}を読み解いています<br/>
-                    テーマ: <span className="font-bold text-purple-600">{topic === 'love' ? '恋愛・結婚' : topic === 'work' ? '仕事・才能' : topic === 'money' ? '金運' : topic === 'health' ? '健康' : '総合運'}</span>
-                </p>
-                <p className="text-xs text-gray-400">少し時間がかかる場合があります</p>
+              <p className="text-purple-800 font-bold text-xl animate-pulse">那須の母が手相を見ています...</p>
+              <p className="text-sm text-gray-500">
+                {hand === 'right' ? '現在の運勢' : '生まれ持った運勢'}を読み解いています<br />
+                テーマ: <span className="font-bold text-purple-600">{topic === 'love' ? '恋愛・結婚' : topic === 'work' ? '仕事・才能' : topic === 'money' ? '金運' : topic === 'health' ? '健康' : '総合運'}</span>
+              </p>
+              <p className="text-xs text-gray-400">少し時間がかかる場合があります</p>
             </div>
           </div>
         )}
@@ -341,31 +341,31 @@ export default function PalmistryPage() {
               <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
               <h3 className="text-xl font-bold text-white relative z-10">鑑定結果</h3>
               <div className="flex justify-center gap-2 mt-2 relative z-10">
-                  <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
-                      手: {hand === 'right' ? '右手 (現在)' : '左手 (先天)'}
-                  </div>
-                  <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
-                      テーマ: {topic === 'love' ? '恋愛・結婚' : topic === 'work' ? '仕事・才能' : topic === 'money' ? '金運' : topic === 'health' ? '健康' : '総合運'}
-                  </div>
+                <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
+                  手: {hand === 'right' ? '右手 (現在)' : '左手 (先天)'}
+                </div>
+                <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
+                  テーマ: {topic === 'love' ? '恋愛・結婚' : topic === 'work' ? '仕事・才能' : topic === 'money' ? '金運' : topic === 'health' ? '健康' : '総合運'}
+                </div>
               </div>
             </div>
-            
+
             <div className="p-6 prose prose-purple max-w-none text-gray-800 whitespace-pre-wrap font-medium leading-relaxed">
               {result}
             </div>
-            
+
             <div className="p-6 bg-purple-50 text-center border-t border-purple-100">
               <div className="mb-6 text-left bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
-                  <p className="text-sm text-purple-800 font-bold mb-1 flex items-center gap-1">
-                      <RefreshCw className="w-4 h-4" /> 那須の母より
-                  </p>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                      手相はあなたの心の映し鏡じゃよ。<br/>
-                      今日の鑑定結果をヒントに、前向きに行動すれば、手相も運命もまた変わっていくからね。<br/>
-                      また迷った時は、いつでも見せにおいで。
-                  </p>
+                <p className="text-sm text-purple-800 font-bold mb-1 flex items-center gap-1">
+                  <RefreshCw className="w-4 h-4" /> 那須の母より
+                </p>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  手相はあなたの心の映し鏡じゃよ。<br />
+                  今日の鑑定結果をヒントに、前向きに行動すれば、手相も運命もまた変わっていくからね。<br />
+                  また迷った時は、いつでも見せにおいで。
+                </p>
               </div>
-              
+
               <button onClick={handleReset} className="w-full py-3 bg-white text-purple-700 font-bold border-2 border-purple-200 rounded-full hover:bg-purple-50 transition-colors flex items-center justify-center gap-2 shadow-sm">
                 <Camera className="w-5 h-5" /> 別のテーマ・写真で占う
               </button>

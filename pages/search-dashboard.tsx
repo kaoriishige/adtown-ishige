@@ -1,13 +1,13 @@
 import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from "next/router"; 
+import { useRouter } from "next/router";
 import nookies from 'nookies';
 // import { adminAuth, adminDb } from '@/lib/firebase-admin'; 
 import {
     RiArrowLeftLine,
     RiSearchLine,
-    RiMapPinLine, 
+    RiMapPinLine,
     RiQuestionLine,
     RiLayoutGridFill,
     RiHome2Line,
@@ -21,7 +21,7 @@ const SearchDashboardPage: NextPage = () => {
     const router = useRouter();
 
     const handleGoBack = () => {
-        window.location.href = "/home";
+        window.location.href = "/premium/dashboard";
     };
 
     const primaryLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-blue-600 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-blue-500 transition-transform transform hover:scale-105 text-center";
@@ -37,7 +37,7 @@ const SearchDashboardPage: NextPage = () => {
                 <header className="bg-white shadow-sm flex-shrink-0">
                     <div className="max-w-xl mx-auto p-4 flex items-center">
                         <button
-                            onClick={() => router.back()}
+                            onClick={() => router.push('/premium/dashboard')}
                             className="p-2 rounded-full hover:bg-gray-100"
                         >
                             <RiArrowLeftLine className="w-6 h-6 text-gray-700" />
@@ -47,7 +47,7 @@ const SearchDashboardPage: NextPage = () => {
 
                 <main className="flex-1 overflow-y-auto">
                     <div className="max-w-xl mx-auto px-4 md:px-8 py-6 space-y-8">
-                        
+
                         <p className="text-gray-600 text-center text-lg font-medium">
                             🔍 ご希望の探し方を選んでください。
                         </p>
@@ -100,11 +100,11 @@ const SearchDashboardPage: NextPage = () => {
                                 📍 エリアから探す
                             </h2>
                             <div className="flex flex-wrap justify-center gap-4">
-                                
+
                                 {areaList.map((area: string) => (
                                     <Link
                                         // ★ リンク先: 大カテゴリ選択ページへ
-                                        href={`/area-search/${area}`} 
+                                        href={`/area-search/${area}`}
                                         key={area}
                                         legacyBehavior
                                     >
@@ -115,7 +115,7 @@ const SearchDashboardPage: NextPage = () => {
                                 ))}
                             </div>
                         </section>
-                        
+
                     </div>
                 </main>
 

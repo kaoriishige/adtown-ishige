@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, User } from 'firebase/auth';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { ShoppingCart, Flame, Loader2, ThumbsUp, ArrowLeft, Utensils, Zap, Image as ImageIcon, X } from 'lucide-react';
+import { ShoppingCart, Flame, Loader2, ThumbsUp, ArrowLeft, Utensils, Zap, Image as ImageIcon, X, ChevronLeft } from 'lucide-react';
 
 // --- 型定義 ---
 interface Recipe {
@@ -274,7 +274,7 @@ const KondateApp = () => {
 
     const handleBack = () => {
         if (menuResult) setMenuResult(null);
-        else if (typeof window !== 'undefined') window.history.back();
+        else if (typeof window !== 'undefined') window.location.href = '/premium/dashboard';
     };
 
     const openFlyer = (url: string) => {
@@ -299,8 +299,14 @@ const KondateApp = () => {
 
             <header className="bg-white shadow-md sticky top-0 z-20 p-4">
                 <div className="max-w-4xl mx-auto flex items-center gap-3">
-                    <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft size={24} className="text-gray-600" /></button>
-                    <h1 className="text-xl sm:text-2xl font-extrabold text-nasu-green">💰 AI献立＆特売ナビ</h1>
+                    <button
+                        onClick={handleBack}
+                        className="text-[#007aff] text-base font-bold flex items-center gap-0.5 active:opacity-60 transition-opacity p-2 hover:bg-gray-100 rounded-lg"
+                    >
+                        <ChevronLeft size={20} />
+                        戻る
+                    </button>
+                    <h1 className="text-xl sm:text-2xl font-extrabold text-nasu-green ml-2">💰 AI献立＆特売ナビ</h1>
                 </div>
             </header>
 
@@ -406,6 +412,22 @@ const KondateApp = () => {
                         </div>
                     </section>
                 )}
+
+                {/* --- PREMIUM UPSELL (Always visible at bottom) --- */}
+                <div className="mt-12 p-6 bg-pink-50 rounded-2xl border border-pink-100 text-center shadow-sm">
+                    <h3 className="text-xl font-black text-pink-600 mb-2">プレミアムプラン月額480円</h3>
+                    <p className="text-sm font-bold text-pink-400 leading-relaxed mb-6">
+                        合わなければ、いつでも解約できます。<br />
+                        まずは1ヶ月だけ試してみてください。
+                    </p>
+                    <button
+                        onClick={() => typeof window !== 'undefined' && (window.location.href = '/premium')}
+                        className="w-full py-4 bg-pink-500 text-white rounded-xl font-black text-lg shadow-lg shadow-pink-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                    >
+                        プレミアムを使ってみる
+                    </button>
+                </div>
+
                 {uiMessage && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-nasu-green text-white px-6 py-2 rounded-full shadow-xl z-50 animate-bounce">{uiMessage}</div>}
             </main>
         </div>

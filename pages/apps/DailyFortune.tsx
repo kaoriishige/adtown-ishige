@@ -45,20 +45,20 @@ export default function DailyFortuneApp() {
         const initialAuthToken = getEnvVar('__initial_auth_token') || null;
 
         if (!firebaseConfigRaw) {
-             // Firebase設定がなくてもGeminiは動くため、警告のみ
-             return;
+            // Firebase設定がなくてもGeminiは動くため、警告のみ
+            return;
         }
 
         try {
             const firebaseConfig = JSON.parse(firebaseConfigRaw);
             const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
             const auth = getAuth(app);
-            
+
             // 認証試行
-            if (initialAuthToken) { 
+            if (initialAuthToken) {
                 signInWithCustomToken(auth, initialAuthToken as string);
             } else {
-                signInAnonymously(auth); 
+                signInAnonymously(auth);
             }
 
             // 認証状態の監視
@@ -66,9 +66,9 @@ export default function DailyFortuneApp() {
                 setUser(currentUser);
             });
         } catch (e: any) {
-             console.error("Firebase Initialization Error:", e);
+            console.error("Firebase Initialization Error:", e);
         }
-    }, []); 
+    }, []);
 
     // API呼び出し関数
     const fetchFortune = async () => {
@@ -82,7 +82,7 @@ export default function DailyFortuneApp() {
             setIsGenerating(false);
             return;
         }
-        
+
         // 入力チェック
         if (!birthday) {
             setUiMessage("生年月日を入力してください。");
@@ -134,10 +134,10 @@ export default function DailyFortuneApp() {
             setIsGenerating(false);
         }
     };
-    
+
     // リンクの代わりにボタンを使用し、window.locationで遷移させる
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
     const handleLogout = () => {
@@ -160,12 +160,12 @@ export default function DailyFortuneApp() {
                     <button onClick={handleGoCategories} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ArrowLeft size={20} className="text-gray-600" />
                     </button>
-                    
+
                     <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <Sparkles className="w-6 h-6 text-yellow-500" />
                         今日の運勢占い
                     </h1>
-                    
+
                     {/* 認証済みの場合のみログアウトボタンを表示 */}
                     {user ? (
                         <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-500">
@@ -178,11 +178,11 @@ export default function DailyFortuneApp() {
             </header>
 
             <main className="max-w-xl mx-auto p-4 sm:p-6">
-                
+
                 {uiMessage && (
                     <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{uiMessage}</div>
                 )}
-                
+
                 {/* 入力フォーム */}
                 <section className="mb-8 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
@@ -212,7 +212,7 @@ export default function DailyFortuneApp() {
                             <Gift className="w-6 h-6 text-pink-500" />
                             {new Date().toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} の運勢
                         </h2>
-                        
+
                         {/* 総合運 */}
                         <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
                             <h3 className="font-bold text-yellow-800 mb-1 flex items-center gap-2">
@@ -255,7 +255,7 @@ export default function DailyFortuneApp() {
                 )}
 
             </main>
-            
+
             <footer className="text-center py-6 text-xs text-gray-400">
                 © 2025 みんなの那須アプリ
             </footer>

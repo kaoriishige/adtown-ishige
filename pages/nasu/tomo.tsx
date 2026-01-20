@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, Auth } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection, query, updateDoc, arrayUnion, Firestore } from 'firebase/firestore';
-import { User, MessageSquare, CornerUpRight, Heart, Loader2, Users } from 'lucide-react';
+import { User, MessageSquare, CornerUpRight, Heart, Loader2, Users, ChevronLeft } from 'lucide-react';
 
 // New Component Import for Real-Time Chat
 import ChatRoom from './chat/[id]';
@@ -50,24 +50,24 @@ type ProfileFormState = {
 
 // ローカル/Next.js環境用にFirebase設定を環境変数からロードするヘルパー関数
 const getFirebaseConfig = (): object => {
-    if (typeof window !== 'undefined' && typeof window.__firebase_config !== 'undefined') {
-        return JSON.parse(window.__firebase_config);
-    }
-    
-    const envConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    };
+  if (typeof window !== 'undefined' && typeof window.__firebase_config !== 'undefined') {
+    return JSON.parse(window.__firebase_config);
+  }
 
-    if (envConfig.apiKey && envConfig.projectId) {
-        return envConfig;
-    }
+  const envConfig = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  };
 
-    return {};
+  if (envConfig.apiKey && envConfig.projectId) {
+    return envConfig;
+  }
+
+  return {};
 };
 
 // グローバル変数がない場合は、フォールバック値を使用
@@ -91,7 +91,7 @@ const withRetry = async <T,>(fn: () => Promise<T>, retries: number = 3): Promise
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-  throw new Error("Retry function failed to execute successfully."); 
+  throw new Error("Retry function failed to execute successfully.");
 };
 
 const profileOptions = {
@@ -109,7 +109,7 @@ const App: React.FC = () => {
   const [potentialMatches, setPotentialMatches] = useState<PotentialMatch[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [currentChatTargetId, setCurrentChatTargetId] = useState<string | null>(null); 
+  const [currentChatTargetId, setCurrentChatTargetId] = useState<string | null>(null);
 
   // Profile Form State
   const [form, setForm] = useState<ProfileFormState>({
@@ -146,29 +146,29 @@ const App: React.FC = () => {
       // Sign in with custom token or anonymously
       const authenticate = async () => {
         try {
-            if (initialAuthToken) {
-              await withRetry(() => signInWithCustomToken(newAuth, initialAuthToken));
-            } else {
-              await withRetry(() => signInAnonymously(newAuth));
-            }
-        } catch(e: any) {
-            console.error("Authentication Attempt Failed:", e);
-            
-            // --- 認証エラーの詳細ハンドリング ---
-            let detailMessage = `認証に失敗しました。原因: ${e.message}`;
+          if (initialAuthToken) {
+            await withRetry(() => signInWithCustomToken(newAuth, initialAuthToken));
+          } else {
+            await withRetry(() => signInAnonymously(newAuth));
+          }
+        } catch (e: any) {
+          console.error("Authentication Attempt Failed:", e);
 
-            if (e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed') {
-                detailMessage = "認証エラー: 匿名認証が制限されています。Firebaseコンソールで**Authentication** -> **Sign-in method**に進み、**Anonymous**プロバイダを**有効**にしてください。";
-            } else if (e.code === 'auth/invalid-api-key') {
-                 detailMessage = "認証エラー: APIキーが無効です。`.env.local`の`NEXT_PUBLIC_FIREBASE_API_KEY`を確認してください。";
-            } else if (e.code === 'auth/network-request-failed') {
-                 detailMessage = "認証エラー: ネットワーク接続の問題、またはFirebaseサービスへのアクセスがブロックされています。";
-            }
+          // --- 認証エラーの詳細ハンドリング ---
+          let detailMessage = `認証に失敗しました。原因: ${e.message}`;
 
-            setErrorMessage(detailMessage);
+          if (e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed') {
+            detailMessage = "認証エラー: 匿名認証が制限されています。Firebaseコンソールで**Authentication** -> **Sign-in method**に進み、**Anonymous**プロバイダを**有効**にしてください。";
+          } else if (e.code === 'auth/invalid-api-key') {
+            detailMessage = "認証エラー: APIキーが無効です。`.env.local`の`NEXT_PUBLIC_FIREBASE_API_KEY`を確認してください。";
+          } else if (e.code === 'auth/network-request-failed') {
+            detailMessage = "認証エラー: ネットワーク接続の問題、またはFirebaseサービスへのアクセスがブロックされています。";
+          }
+
+          setErrorMessage(detailMessage);
         }
       };
-      
+
       authenticate();
 
       return () => unsubscribe();
@@ -211,7 +211,7 @@ const App: React.FC = () => {
   // 3. AI Matching (Mocked) - Fetching all public profiles
   useEffect(() => {
     if (!db || !profile || view !== 'dashboard') return;
-    
+
     const q = query(collection(db, PROFILES_COLLECTION));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -222,22 +222,22 @@ const App: React.FC = () => {
       const matches: PotentialMatch[] = allProfiles.map(p => {
         let matchScore = 0;
         if (profile) {
-            if (p.city === profile.city) matchScore++;
-            if (p.status === profile.status) matchScore++;
-            if (p.childAge === profile.childAge) matchScore++;
+          if (p.city === profile.city) matchScore++;
+          if (p.status === profile.status) matchScore++;
+          if (p.childAge === profile.childAge) matchScore++;
         }
-        
+
         const isConnected = (profile?.connections || []).some(c => c.targetId === p.id);
-        
-        return { 
-          ...p, 
-          matchScore, 
-          isConnected 
+
+        return {
+          ...p,
+          matchScore,
+          isConnected
         };
       })
-      .filter(p => p.matchScore >= 2 && !p.isConnected)
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, 5);
+        .filter(p => p.matchScore >= 2 && !p.isConnected)
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 5);
 
       setPotentialMatches(matches);
     }, (error) => {
@@ -256,16 +256,16 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     setErrorMessage(null);
-    
+
     const newProfileData: UserProfile = {
       city: form.city,
       status: form.status,
       childAge: form.childAge,
-      name: `匿名ユーザー${userId ? userId.substring(0, 4) : 'xxxx'}`, 
+      name: `匿名ユーザー${userId ? userId.substring(0, 4) : 'xxxx'}`,
       lastUpdated: new Date().toISOString(),
-      connections: [], 
+      connections: [],
     };
-    
+
     try {
       const profileRef = doc(db, PROFILES_COLLECTION, userId);
       await withRetry(() => setDoc(profileRef, newProfileData));
@@ -280,12 +280,12 @@ const App: React.FC = () => {
 
   const sendConnectionRequest = async (targetUserId: string) => {
     if (!db || !userId || !profile) return;
-    
+
     setIsLoading(true);
     setErrorMessage(null);
-    
+
     const currentUserRef = doc(db, PROFILES_COLLECTION, userId);
-    
+
     const requestData: ConnectionRequest = {
       targetId: targetUserId,
       status: 'pending',
@@ -299,12 +299,12 @@ const App: React.FC = () => {
       }));
       console.log(`Connection request sent to ${targetUserId}`);
 
-      setPotentialMatches(prev => 
-        prev.map(match => 
+      setPotentialMatches(prev =>
+        prev.map(match =>
           match.id === targetUserId ? { ...match, isConnected: true } : match
         )
       );
-      
+
       handleChatStart(targetUserId);
 
     } catch (e) {
@@ -372,7 +372,7 @@ const App: React.FC = () => {
             ))}
           </select>
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700">子育ての状況</label>
           <select
@@ -411,7 +411,7 @@ const App: React.FC = () => {
           </span>
         </p>
       </div>
-      
+
       <div className="space-y-1">
         <div className="text-sm flex items-center">
           <CornerUpRight className="w-4 h-4 mr-2 text-indigo-400 transform rotate-45" />
@@ -425,7 +425,7 @@ const App: React.FC = () => {
           <span className={`text-xs px-2 py-1 rounded-full ${match.childAge === profile?.childAge ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>{match.childAge}</span>
         </div>
       </div>
-      
+
       <button
         onClick={() => sendConnectionRequest(match.id)}
         disabled={isLoading || match.isConnected}
@@ -462,13 +462,13 @@ const App: React.FC = () => {
           <p className="text-sm text-gray-500 mt-2">新しいユーザーが登録されるまでしばらくお待ちください。</p>
         </div>
       )}
-      
+
       <button
-          onClick={() => setView('profile')}
-          className="mt-6 w-full py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition duration-150 ease-in-out"
-        >
-          プロフィールを編集する
-        </button>
+        onClick={() => setView('profile')}
+        className="mt-6 w-full py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition duration-150 ease-in-out"
+      >
+        プロフィールを編集する
+      </button>
     </div>
   );
 
@@ -488,16 +488,16 @@ const App: React.FC = () => {
         <div className="p-8 bg-red-100 border border-red-400 text-red-700 rounded-xl max-w-lg mx-auto">
           <p className="font-bold">エラーが発生しました</p>
           <p className="text-sm">{errorMessage}</p>
-          
+
           {/* Firebase設定の確認を促す具体的なメッセージ */}
           {errorMessage.includes("認証エラー") && (
-              <div className='mt-4 p-3 bg-red-50 rounded-md text-xs border border-red-300'>
-                <p className='font-bold mb-1'>【対応策の確認】</p>
-                <ul className='list-disc list-inside space-y-1'>
-                    <li>認証が制限されている場合 (`auth/admin-restricted-operation`): Firebaseコンソールで **Authentication** → **Sign-in method** に進み、**Anonymous**（匿名）プロバイダを**有効**にしてください。</li>
-                    <li>APIキーに関するエラーが出た場合: `.env.local`ファイルの `NEXT_PUBLIC_FIREBASE_API_KEY` が正しいか確認してください。</li>
-                </ul>
-              </div>
+            <div className='mt-4 p-3 bg-red-50 rounded-md text-xs border border-red-300'>
+              <p className='font-bold mb-1'>【対応策の確認】</p>
+              <ul className='list-disc list-inside space-y-1'>
+                <li>認証が制限されている場合 (`auth/admin-restricted-operation`): Firebaseコンソールで **Authentication** → **Sign-in method** に進み、**Anonymous**（匿名）プロバイダを**有効**にしてください。</li>
+                <li>APIキーに関するエラーが出た場合: `.env.local`ファイルの `NEXT_PUBLIC_FIREBASE_API_KEY` が正しいか確認してください。</li>
+              </ul>
+            </div>
           )}
         </div>
       );
@@ -510,17 +510,17 @@ const App: React.FC = () => {
         return <Dashboard />;
       case 'chat':
         if (db && userId && currentChatTargetId) {
-            return (
-                <ChatRoom
-                    db={db}
-                    appId={appId}
-                    currentUserId={userId}
-                    targetUserId={currentChatTargetId}
-                    onClose={handleChatClose}
-                />
-            );
+          return (
+            <ChatRoom
+              db={db}
+              appId={appId}
+              currentUserId={userId}
+              targetUserId={currentChatTargetId}
+              onClose={handleChatClose}
+            />
+          );
         }
-        return <Dashboard />; 
+        return <Dashboard />;
       default:
         return <ProfileSetup />;
     }
@@ -556,12 +556,38 @@ const App: React.FC = () => {
         `}
       </style>
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <header className="mb-8 text-center max-w-4xl w-full">
-        <h1 className="text-4xl font-extrabold text-indigo-700 tracking-tight">那須とも (Nasu Tomo)</h1>
-        <p className="text-lg text-gray-500 mt-2">孤独を癒やす、境遇コネクト</p>
+      <header className="bg-white shadow-sm sticky top-0 z-20 p-4 w-full mb-8">
+        <div className="max-w-4xl mx-auto flex items-center">
+          <button
+            onClick={() => typeof window !== 'undefined' && window.history.back()}
+            className="text-[#007aff] text-base font-bold flex items-center gap-0.5 active:opacity-60 transition-opacity p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <ChevronLeft size={20} />
+            戻る
+          </button>
+          <div className="flex-1 text-center pr-16">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-indigo-700 tracking-tight">那須とも</h1>
+            <p className="text-[10px] text-gray-500 mt-0.5">孤独を癒やす、境遇コネクト</p>
+          </div>
+        </div>
       </header>
-      
+
       {renderContent()}
+
+      {/* --- PREMIUM UPSELL --- */}
+      <div className="max-w-4xl w-full mx-auto mt-12 mb-8 p-6 bg-pink-50 rounded-2xl border border-pink-100 text-center shadow-sm">
+        <h3 className="text-xl font-black text-pink-600 mb-2">プレミアムプラン月額480円</h3>
+        <p className="text-sm font-bold text-pink-400 leading-relaxed mb-6">
+          合わなければ、いつでも解約できます。<br />
+          まずは1ヶ月だけ試してみてください。
+        </p>
+        <button
+          onClick={() => typeof window !== 'undefined' && (window.location.href = '/premium')}
+          className="w-full py-4 bg-pink-500 text-white rounded-xl font-black text-lg shadow-lg shadow-pink-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
+        >
+          プレミアムを使ってみる
+        </button>
+      </div>
     </div>
   );
 };

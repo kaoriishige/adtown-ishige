@@ -24,7 +24,7 @@ export default function DisasterInfoApp() {
     const [viewingUrl, setViewingUrl] = useState(null);
 
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
     // 外部サイト閲覧モードのレンダリング

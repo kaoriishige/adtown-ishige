@@ -12,20 +12,20 @@ interface Dialogue {
 
 // --- AI診断の質問と回答のフロー定義（ダミー） ---
 const AI_QUESTIONS = [
-    { 
-        id: 1, 
-        question: "診断したい衣類は、過去1年間で何回着用しましたか？", 
-        options: ["0回 (全く着ていない)", "1～2回", "3回以上"] 
+    {
+        id: 1,
+        question: "診断したい衣類は、過去1年間で何回着用しましたか？",
+        options: ["0回 (全く着ていない)", "1～2回", "3回以上"]
     },
-    { 
-        id: 2, 
-        question: "その衣類を着た時に、あなたは心から満足しましたか？（気分が上がったか）", 
-        options: ["はい（満足した）", "いいえ（満足しなかった）", "覚えていない"] 
+    {
+        id: 2,
+        question: "その衣類を着た時に、あなたは心から満足しましたか？（気分が上がったか）",
+        options: ["はい（満足した）", "いいえ（満足しなかった）", "覚えていない"]
     },
-    { 
-        id: 3, 
-        question: "もしこの衣類が今日お店に売られていたら、今のあなたは購入しますか？", 
-        options: ["購入する", "購入しない", "迷う"] 
+    {
+        id: 3,
+        question: "もしこの衣類が今日お店に売られていたら、今のあなたは購入しますか？",
+        options: ["購入する", "購入しない", "迷う"]
     },
 ];
 
@@ -54,7 +54,7 @@ export default function ClosetSlimmerAI() {
             color: "text-yellow-600 bg-yellow-50"
         };
     }, [dialogueHistory]);
-    
+
     // --- 診断を初期状態に戻す (別の衣類を診断する機能) ---
     const resetDiagnosis = useCallback(() => {
         setPhase('initial');
@@ -84,7 +84,7 @@ export default function ClosetSlimmerAI() {
         setDialogueHistory([
             { type: 'ai', content: `画像を受け取りました。AIクローゼット診断を開始します。\nこの服を維持するか処分するか、一緒に考えていきましょう！` }
         ]);
-        
+
         // 最初の質問を遅延して表示
         setTimeout(() => {
             setIsLoading(false);
@@ -101,7 +101,7 @@ export default function ClosetSlimmerAI() {
 
         // 次の質問へ
         const nextIndex = currentQuestionIndex + 1;
-        
+
         setTimeout(() => {
             if (nextIndex < AI_QUESTIONS.length) {
                 // まだ質問が残っている場合
@@ -117,9 +117,9 @@ export default function ClosetSlimmerAI() {
 
     // --- 戻るボタンの制御 ---
     const handleBack = useCallback(() => {
-        router.push('/apps/categories');
+        router.push('/premium/dashboard');
     }, [router]);
-    
+
     // --- 現在のAIメッセージ ---
     const currentQuestion = AI_QUESTIONS[currentQuestionIndex];
 
@@ -132,8 +132,8 @@ export default function ClosetSlimmerAI() {
             {/* ヘッダー */}
             <header className="bg-white shadow-sm sticky top-0 z-10 p-4 border-b border-gray-200">
                 <div className="max-w-xl mx-auto flex items-center gap-3">
-                    <button 
-                        onClick={handleBack} 
+                    <button
+                        onClick={handleBack}
                         className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5 text-gray-600" />
@@ -144,25 +144,25 @@ export default function ClosetSlimmerAI() {
                     </h1>
                 </div>
             </header>
-            
+
             <main className="max-w-xl mx-auto p-4 sm:p-6 pb-20">
-                
+
                 {/* 1. 写真アップロード/表示エリア */}
                 <section className={`mb-6 p-4 border rounded-xl bg-white shadow-md transition-opacity duration-500 ${phase !== 'initial' ? 'opacity-50' : ''}`}>
                     <h2 className="text-lg font-bold text-gray-700 mb-3 flex items-center gap-2">
                         <Camera className="w-5 h-5 text-indigo-500" />
                         診断したい衣類の写真
                     </h2>
-                    
+
                     <div className="flex flex-col items-center">
                         {imageUrl ? (
                             <div className="relative w-40 h-40 mb-3 border-4 border-indigo-400 rounded-lg overflow-hidden">
                                 {/* 👚ここに診断したい衣類の写真を表示 */}
-                                <Image 
-                                    src={imageUrl} 
-                                    alt="Uploaded clothing item" 
-                                    layout="fill" 
-                                    objectFit="cover" 
+                                <Image
+                                    src={imageUrl}
+                                    alt="Uploaded clothing item"
+                                    layout="fill"
+                                    objectFit="cover"
                                 />
                             </div>
                         ) : (
@@ -170,19 +170,18 @@ export default function ClosetSlimmerAI() {
                                 <span className="text-gray-500">写真をアップロードしてください</span>
                             </div>
                         )}
-                        
-                        <label htmlFor="image-upload" className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors cursor-pointer ${
-                            phase === 'initial' 
-                            ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                            : 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                        }`}>
+
+                        <label htmlFor="image-upload" className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors cursor-pointer ${phase === 'initial'
+                                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                            }`}>
                             写真を選択/撮影
-                            <input 
-                                id="image-upload" 
-                                type="file" 
-                                accept="image/*" 
-                                className="hidden" 
-                                onChange={handleImageUpload} 
+                            <input
+                                id="image-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleImageUpload}
                                 disabled={phase !== 'initial'}
                             />
                         </label>
@@ -191,17 +190,16 @@ export default function ClosetSlimmerAI() {
                     <button
                         onClick={startDiagnosis}
                         disabled={!imageUrl || phase !== 'initial'}
-                        className={`mt-4 w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                            imageUrl && phase === 'initial'
+                        className={`mt-4 w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${imageUrl && phase === 'initial'
                                 ? 'bg-green-500 text-white hover:bg-green-600 shadow-md'
                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
+                            }`}
                     >
                         <Lightbulb className="w-5 h-5" />
                         AI診断を開始する
                     </button>
                 </section>
-                
+
                 {/* 2. AI対話エリア */}
                 {(phase === 'asking' || phase === 'result') && (
                     <section className="mt-8 p-4 bg-white rounded-xl shadow-md">
@@ -214,11 +212,10 @@ export default function ClosetSlimmerAI() {
                         <div className="h-64 overflow-y-auto space-y-4 pr-2 border-b pb-4">
                             {dialogueHistory.map((d, index) => (
                                 <div key={index} className={`flex ${d.type === 'ai' ? 'justify-start' : 'justify-end'}`}>
-                                    <div className={`max-w-[80%] p-3 rounded-xl text-sm whitespace-pre-wrap shadow-sm ${
-                                        d.type === 'ai' 
-                                            ? 'bg-purple-100 text-purple-800 rounded-tl-none' 
+                                    <div className={`max-w-[80%] p-3 rounded-xl text-sm whitespace-pre-wrap shadow-sm ${d.type === 'ai'
+                                            ? 'bg-purple-100 text-purple-800 rounded-tl-none'
                                             : 'bg-indigo-500 text-white rounded-tr-none'
-                                    }`}>
+                                        }`}>
                                         {d.content}
                                     </div>
                                 </div>
@@ -253,7 +250,7 @@ export default function ClosetSlimmerAI() {
                                 </div>
                             </div>
                         )}
-                        
+
                         {/* 3. 診断結果エリア */}
                         {phase === 'result' && (
                             <div className="mt-6 border-t pt-4">
@@ -265,7 +262,7 @@ export default function ClosetSlimmerAI() {
                                     <p className="text-lg font-bold mb-1">推奨アクション: {finalAdvice.action}</p>
                                     <p className="text-gray-700">{finalAdvice.message}</p>
                                 </div>
-                                
+
                                 {/* 修正されたボタン群 */}
                                 <div className="space-y-3 mt-4">
                                     <button
@@ -280,7 +277,7 @@ export default function ClosetSlimmerAI() {
                                         className="w-full py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors shadow-md flex items-center justify-center gap-2"
                                     >
                                         <Trash2 className="w-5 h-5" />
-                                        診断を終了してカテゴリへ戻る
+                                        診断を終了してダッシュボードへ戻る
                                     </button>
                                 </div>
                             </div>

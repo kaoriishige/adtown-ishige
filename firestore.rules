@@ -33,23 +33,11 @@ service cloud.firestore {
     // --- 店舗アプリ (artifacts) のルール ---
     // {userId} と自分のID (request.auth.uid) が一致する場合に許可
     match /artifacts/{appId}/users/{userId} {
-    
-      // ユーザー本人のドキュメント（通常は空か、ユーザ情報）
       allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      // "stores" サブコレクション (プロフィール)
-      match /stores/{storeId} {
+      // ユーザー自身の全てのサブコレクションを許可 (bodyRecords, babyLog, studyLogs, fridgeItems etc)
+      match /{allPaths=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
-
-        // "deals" サブコレクション (お得情報・クーポン)
-        match /deals/{dealId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
-        }
-
-        // (将来的に "events" などが追加された場合もここに記述)
-        // match /events/{eventId} {
-        //   allow read, write: if request.auth.uid == userId;
-        // }
       }
     }
     // ★★★★★★★【追記ここまで】★★★★★★★

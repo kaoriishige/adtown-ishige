@@ -24,7 +24,7 @@ export default function ParentingInfoApp() {
     const [externalUrl, setExternalUrl] = useState(null);
 
     const handleGoCategories = () => {
-        window.location.href = '/apps/categories';
+        window.location.href = '/premium/dashboard';
     };
 
     // 外部サイトを開く

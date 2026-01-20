@@ -137,7 +137,7 @@ export default function MoodTrackerApp() {
     return (
         <div className="min-h-screen bg-gray-50 text-gray-800 pb-10">
             <header className="bg-white p-4 border-b flex items-center justify-between sticky top-0 z-10">
-                <button onClick={() => window.location.href = '/apps/categories'}><ArrowLeft /></button>
+                <button onClick={() => window.location.href = '/premium/dashboard'}><ArrowLeft /></button>
                 <h1 className="font-bold flex items-center gap-2 text-gray-800"><Smile className="text-yellow-500" /> 気分ログ</h1>
                 {authService && user ? <button onClick={() => signOut(authService)}><LogOut size={18} /></button> : <div className="w-5" />}
             </header>

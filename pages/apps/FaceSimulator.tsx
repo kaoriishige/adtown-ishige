@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 
 export default function FaceSimulator() {
   const [image, setImage] = useState<string | null>(null);
@@ -42,48 +43,57 @@ export default function FaceSimulator() {
   };
 
   return (
-    <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#1a1a1a', minHeight: '100vh', color: 'white' }}>
-      <h1 style={{ marginBottom: '30px' }}>10年後の自分シミュレーター</h1>
-      
-      <div style={{ marginBottom: '20px' }}>
-        <input type="file" onChange={handleFileChange} accept="image/*" style={{ marginBottom: '20px' }} />
-      </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap' }}>
-        <div style={{ border: '2px solid #333', padding: '10px', borderRadius: '10px' }}>
-          <p>【 現在のあなた 】</p>
-          {image ? <img src={image} style={{ width: '300px', height: '300px', objectFit: 'cover' }} /> : <div style={{ width: '300px', height: '300px', background: '#222' }} />}
+    <div className="min-h-screen bg-neutral-900 text-white font-sans">
+      <header className="bg-neutral-800 p-4 border-b border-neutral-700 sticky top-0 z-10">
+        <div className="max-w-xl mx-auto flex items-center gap-4">
+          <button onClick={() => window.location.href = '/premium/dashboard'} className="p-2 hover:bg-neutral-700 rounded-full transition-colors">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-xl font-bold">10年後の自分シミュレーター</h1>
+        </div>
+      </header>
+
+      <main style={{ padding: '40px', textAlign: 'center' }}>
+
+        <div style={{ marginBottom: '20px' }}>
+          <input type="file" onChange={handleFileChange} accept="image/*" style={{ marginBottom: '20px' }} />
         </div>
 
-        <div style={{ border: '2px solid #555', padding: '10px', borderRadius: '10px' }}>
-          <p>【 10年後のあなた 】</p>
-          {resultImage ? (
-            <img src={resultImage} style={{ width: '300px', height: '300px', objectFit: 'cover', border: '2px solid gold' }} />
-          ) : (
-            <div style={{ width: '300px', height: '300px', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {loading ? "AIが描いています..." : "準備完了"}
-            </div>
-          )}
-        </div>
-      </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap' }}>
+          <div style={{ border: '2px solid #333', padding: '10px', borderRadius: '10px' }}>
+            <p>【 現在のあなた 】</p>
+            {image ? <img src={image} style={{ width: '300px', height: '300px', objectFit: 'cover' }} /> : <div style={{ width: '300px', height: '300px', background: '#222' }} />}
+          </div>
 
-      <div style={{ marginTop: '30px' }}>
-        <button 
-          onClick={handleSimulate} 
-          disabled={loading || !image}
-          style={{ 
-            padding: '15px 40px', 
-            fontSize: '20px', 
-            cursor: 'pointer', 
-            backgroundColor: loading ? '#555' : '#e50914', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '5px' 
-          }}
-        >
-          {loading ? "シミュレーション中（約15秒）..." : "未来をシミュレーションする"}
-        </button>
-      </div>
+          <div style={{ border: '2px solid #555', padding: '10px', borderRadius: '10px' }}>
+            <p>【 10年後のあなた 】</p>
+            {resultImage ? (
+              <img src={resultImage} style={{ width: '300px', height: '300px', objectFit: 'cover', border: '2px solid gold' }} />
+            ) : (
+              <div style={{ width: '300px', height: '300px', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {loading ? "AIが描いています..." : "準備完了"}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '30px' }}>
+          <button
+            onClick={handleSimulate}
+            disabled={loading || !image}
+            style={{
+              padding: '15px 40px',
+              fontSize: '20px',
+              cursor: 'pointer',
+              backgroundColor: loading ? '#555' : '#e50914',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px'
+            }}
+          >
+            {loading ? "シミュレーション中（約15秒）..." : "未来をシミュレーションする"}
+          </button>
+        </div>
     </div>
   );
 }
