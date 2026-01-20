@@ -1,9 +1,13 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import {
     signInWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
     signOut,
     setPersistence,
     browserLocalPersistence
@@ -11,12 +15,11 @@ import {
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import {
     RiLoginCircleLine,
-    RiMailLine,
-    RiLockPasswordLine,
     RiGiftFill,
     RiEyeLine,
     RiEyeOffLine,
-    RiErrorWarningLine
+    RiErrorWarningLine,
+    RiGoogleFill
 } from 'react-icons/ri';
 
 export default function SpecialLoginPage() {
@@ -42,57 +45,78 @@ export default function SpecialLoginPage() {
         init();
     }, []);
 
+    // 特別パートナーとしての権限チェック共通処理
+    const checkPartnerAccess = async (email: string) => {
+        const q = query(
+            collection(db, "special_partners"),
+            where("email", "==", email.trim())
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            throw new Error("not-a-partner");
+        }
+
+        const partnerDoc = querySnapshot.docs[0];
+        localStorage.setItem('is_special_partner', 'true');
+        localStorage.setItem('partner_doc_id', partnerDoc.id);
+
+        window.location.href = '/premium/dashboard';
+    };
+
+    // Googleログイン処理
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        setError(null);
+        const provider = new GoogleAuthProvider();
+
+        try {
+            const result = await signInWithPopup(auth, provider);
+            if (result.user.email) {
+                await checkPartnerAccess(result.user.email);
+            }
+        } catch (err: any) {
+            console.error("Google Login Error:", err);
+            if (err.message === "not-a-partner") {
+                setError("Google認証されましたが、特別パートナーとして登録されていません。");
+            } else {
+                setError("Googleログインに失敗しました。");
+            }
+            await signOut(auth);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 通常のメール・パスワードログイン処理
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
         try {
-            // 1. Firebase Authentication 認証
-            const userCredential = await signInWithEmailAndPassword(
+            await signInWithEmailAndPassword(
                 auth,
                 loginData.email.trim(),
                 loginData.password
             );
-
-            // 2. Firestore special_partners コレクションの確認
-            const q = query(
-                collection(db, "special_partners"),
-                where("email", "==", loginData.email.trim())
-            );
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
+            await checkPartnerAccess(loginData.email);
+        } catch (err: any) {
+            console.error("Login Error:", err);
+            if (err.message === "not-a-partner") {
                 setError("認証されましたが、特別パートナーとして登録されていません。");
                 await signOut(auth);
-                setLoading(false);
-                return;
-            }
-
-            // 成功：パートナーフラグを保存
-            const partnerDoc = querySnapshot.docs[0];
-            localStorage.setItem('is_special_partner', 'true');
-            localStorage.setItem('partner_doc_id', partnerDoc.id);
-
-            // 3. リダイレクト先を /premium/dashboard に変更
-            // 確実に認証状態を反映させるため window.location を使用
-            window.location.href = '/premium/dashboard';
-
-        } catch (err: any) {
-            console.error("Login Error Code:", err.code);
-
-            // 日本語エラーメッセージ
-            switch (err.code) {
-                case 'auth/invalid-credential':
-                case 'auth/user-not-found':
-                case 'auth/wrong-password':
-                    setError("メールアドレスまたはパスワードが正しくありません。");
-                    break;
-                case 'auth/too-many-requests':
-                    setError("短時間に何度も失敗したためブロックされました。時間を置いてお試しください。");
-                    break;
-                default:
-                    setError("ログインに失敗しました。アカウントがAuthenticationに登録されているか確認してください。");
+            } else {
+                switch (err.code) {
+                    case 'auth/invalid-credential':
+                        setError("メールアドレスまたはパスワードが正しくありません。");
+                        break;
+                    case 'auth/too-many-requests':
+                        setError("短時間に何度も失敗したためブロックされました。");
+                        break;
+                    default:
+                        setError("ログインに失敗しました。登録状況を確認してください。");
+                }
             }
         } finally {
             setLoading(false);
@@ -117,7 +141,25 @@ export default function SpecialLoginPage() {
                     </div>
                 )}
 
-                <div className="bg-white border border-[#E8E2D9] rounded-[2.5rem] p-8 shadow-sm">
+                <div className="bg-white border border-[#E8E2D9] rounded-[2.5rem] p-8 shadow-sm space-y-6">
+
+                    {/* Google Login Button */}
+                    <button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        disabled={loading}
+                        className="w-full py-4 bg-white border border-[#E8E2D9] text-[#4A3B3B] rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-gray-50 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                        <RiGoogleFill size={20} className="text-[#4285F4]" />
+                        Googleアカウントでログイン
+                    </button>
+
+                    <div className="relative flex items-center">
+                        <div className="flex-grow border-t border-[#F3F0EC]"></div>
+                        <span className="px-4 text-[10px] font-black text-[#D1C9BF] uppercase italic">or</span>
+                        <div className="flex-grow border-t border-[#F3F0EC]"></div>
+                    </div>
+
                     <form onSubmit={handleLogin} className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-[#A89F94] px-2 tracking-widest uppercase italic">メールアドレス</label>

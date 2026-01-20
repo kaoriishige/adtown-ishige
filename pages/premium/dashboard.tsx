@@ -106,6 +106,16 @@ export default function PremiumDashboard() {
 
             <main className="max-w-4xl mx-auto p-6">
 
+                {/* 上部 LINE設置 */}
+                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-100 mb-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
+                    <p className="font-black text-gray-700 text-[13px] flex-1">
+                        ログインはLINEからとなりますので、必ず登録してください。
+                    </p>
+                    <a href="https://lin.ee/fwvipcZ" target="_blank" rel="noopener noreferrer" className="shrink-0 active:scale-95 transition-transform">
+                        <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" />
+                    </a>
+                </div>
+
                 {/* 1. STATS SECTION */}
                 <section className="mb-10 text-left">
                     <h3 className="font-black text-gray-400 text-[11px] mb-6 px-2 tracking-[0.2em] uppercase flex items-center gap-2">
@@ -153,10 +163,10 @@ export default function PremiumDashboard() {
                     </div>
                 </section>
 
-                {/* LINE QR */}
+                {/* 下部 LINE設置 */}
                 <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-emerald-100 mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
                     <p className="font-black text-gray-700 text-[13px] flex-1">
-                        システム連携のため、LINE公式アカウントへの登録を必ず完了させてください。
+                        ログインはLINEからとなりますので、必ず登録してください。
                     </p>
                     <a href="https://lin.ee/fwvipcZ" target="_blank" rel="noopener noreferrer" className="shrink-0 active:scale-95 transition-transform">
                         <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" />
