@@ -2,105 +2,119 @@ import { GetServerSideProps, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import nookies from 'nookies';
-// Admin SDKのインポート
+// Admin SDK
 import { adminAuth, adminDb } from '@/lib/firebase-admin'; 
 import { 
-RiLogoutBoxRLine, 
-RiCoupon3Line, 
-RiRobotLine, 
-RiMoneyCnyBoxLine, 
-RiBankLine, 
-RiCloseCircleLine, // 解約モーダル用
-RiAlertFill, // 解約モーダル用
-RiEyeLine, // プレビューボタン用のアイコン
+    RiLogoutBoxRLine, 
+    RiLayoutGridLine,
+    RiStore2Line,
+    RiShieldUserLine
 } from 'react-icons/ri'; 
 
-const AdminPage: NextPage = () => {
-const linkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-gray-700 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-gray-600 transition-transform transform hover:scale-105 text-center";
-const primaryLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-blue-600 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-blue-500 transition-transform transform hover:scale-105 text-center";
-const settingsLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-purple-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-purple-500 transition-transform transform hover:scale-105 text-center";
-const userViewLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-green-600 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-green-500 transition-transform transform hover:scale-105 text-center";
+interface AdminPageProps {
+    storesCount: number;
+    userCount: number;
+}
 
-// 新しいスタイル定義
-const payoutLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-teal-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-teal-500 transition-transform transform hover:scale-105 text-center";
+const AdminPage: NextPage<AdminPageProps> = ({ storesCount, userCount }) => {
+    const linkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-gray-700 text-white text-lg font-semibold rounded-2xl shadow-md hover:bg-gray-600 transition-all transform active:scale-95 text-center flex items-center justify-center gap-3";
+    const primaryLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-blue-600 text-white text-lg font-bold rounded-2xl shadow-lg hover:bg-blue-500 transition-all transform active:scale-95 text-center flex items-center justify-center gap-3";
+    const settingsLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-purple-600 text-white text-lg font-semibold rounded-2xl shadow-md hover:bg-purple-500 transition-all transform active:scale-95 text-center flex items-center justify-center gap-3";
+    const wisdomLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-indigo-600 text-white text-lg font-bold rounded-2xl shadow-lg hover:bg-indigo-500 transition-all transform active:scale-95 text-center flex items-center justify-center gap-3";
 
-// ★追加: Wisdom Guide専用のリンクリストを定義
-const wisdomLinkStyle = "block w-full max-w-md mx-auto py-4 px-6 bg-indigo-600 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-indigo-500 transition-transform transform hover:scale-105 text-center";
+    return (
+        <div className="p-5 min-h-screen bg-gray-50 pb-20">
+            <Head>
+                <title>管理メニュー - 那須アプリ</title>
+            </Head>
+            
+            <header className="max-w-md mx-auto py-10 text-center">
+                <h1 className="text-3xl font-black text-gray-800 tracking-tighter italic">ADMIN MENU</h1>
+                <div className="mt-2 flex justify-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    <span>Stores: {storesCount}</span>
+                    <span>Users: {userCount}</span>
+                </div>
+            </header>
 
+            <nav className="space-y-4">
+                {/* メインダッシュボード */}
+                <Link href="/admin/dashboard" className={primaryLinkStyle}>
+                    <RiLayoutGridLine size={24} /> 運営ダッシュボード
+                </Link>
 
-return (
-<div className="p-5 my-10 min-h-screen bg-gray-50">
-<Head>
-<title>{"管理メニュー"}</title>
-</Head>
-<h1 className="text-4xl font-extrabold mb-10 text-center text-gray-800">管理メニュー</h1>
+                <hr className="my-6 border-gray-200 w-full max-w-md mx-auto" />
 
-{/* 認証解除の警告メッセージ */}
-<div className="max-w-md mx-auto mb-8">
-<p className="text-red-600 bg-red-100 p-4 rounded-md text-center">
-<strong>注意：</strong> 現在、認証が一時的に解除されています。<br/>開発が完了したら、必ず認証処理を元に戻してください。
-</p>
-</div>
+                {/* 店舗管理（ここが反映ポイント） */}
+                <Link href="/admin/manageStores" className={linkStyle}>
+                    <RiStore2Line size={24} /> 店舗管理 ({storesCount}件)
+                </Link>
 
-<nav className="space-y-5">
-{/* 上部主要ボタン */}
-<Link href="/admin/dashboard" className={primaryLinkStyle}>
-📊 運営ダッシュボード
-</Link>
-<Link href="/admin/settings" className={settingsLinkStyle}>
-⚙️ 各種設定
-</Link>
-<Link href="/admin/referral-rewards" className={userViewLinkStyle}>
-💰 店舗紹介料管理
-</Link>
+                <Link href="/admin/manageApps" className={linkStyle}>
+                    📂 アプリ管理 (CRUD)
+                </Link>
 
-<hr className="my-5 border-gray-300" />
+                <Link href="/admin/user-management" className={linkStyle}>
+                    <RiShieldUserLine size={24} /> ユーザー管理 ({userCount}人)
+                </Link>
 
-{/* ★★★ 修正箇所: 店舗管理とアプリ管理を入れ替え ★★★ */}
+                <hr className="my-6 border-gray-200 w-full max-w-md mx-auto" />
 
-<Link href="/admin/manageStores" className={linkStyle}>
-店舗管理
-</Link>
-<Link href="/admin/manageApps" className={linkStyle}>
-アプリ管理 (CRUD)
-</Link>
+                <h2 className="text-xs font-black text-center text-indigo-400 uppercase tracking-[0.2em] mb-4">
+                    Wisdom Guide Management
+                </h2>
+                <Link href="/app/wisdom-guide" className={wisdomLinkStyle}>
+                    ▶️ 動画リスト管理
+                </Link>
 
-{/* ★★★ ここから動画管理リンクを追加 ★★★ */}
-<hr className="my-5 border-gray-300" />
-<h2 className="text-2xl font-bold text-center text-indigo-700 pt-2 pb-1">
-🎓 Wisdom Guide 管理
-</h2>
-<Link 
-    // アプリケーションが `appId` パラメータを必要とする場合、適切なパスに調整してください
-    href="/app/wisdom-guide" 
-    className={wisdomLinkStyle}
->
-▶️ 動画リスト管理 (賢人の子育て指針)
-</Link>
-<hr className="my-5 border-gray-300" />
-{/* ★★★ 動画管理リンクの追加ここまで ★★★ */}
+                <hr className="my-6 border-gray-200 w-full max-w-md mx-auto" />
 
+                <Link href="/admin/settings" className={settingsLinkStyle}>
+                    ⚙️ システム設定
+                </Link>
 
-<Link href="/admin/user-management" className={linkStyle}>
-👤 ユーザー管理
-</Link>
-
-<Link href="/admin/export" className={linkStyle}>
-CSV出力
-</Link>
-{/* ★★★ 修正ここまで ★★★ */}
-
-</nav>
-</div>
-);
+                {/* ログアウトボタン */}
+                <div className="pt-10 max-w-md mx-auto">
+                    <button 
+                        onClick={() => window.location.href = '/home'}
+                        className="w-full py-4 text-gray-400 font-bold text-sm border-2 border-dashed border-gray-200 rounded-2xl active:bg-gray-100 transition"
+                    >
+                        ホームに戻る
+                    </button>
+                </div>
+            </nav>
+        </div>
+    );
 };
 
-// 認証保護は一時的にコメントアウト
-/*
+// --- ★ 修正の核：Firestoreからデータを取得して反映させる ---
 export const getServerSideProps: GetServerSideProps = async (context) => {
-// ... 認証ロジックは省略
+    try {
+        // 1. 店舗数を取得
+        const storesSnapshot = await adminDb.collection('stores').get();
+        const storesCount = storesSnapshot.size;
+
+        // 2. ユーザー数を取得
+        const usersSnapshot = await adminDb.collection('users').get();
+        const userCount = usersSnapshot.size;
+
+        // ※本来はここで認証チェックを行う（開発中はスルー）
+        
+        return {
+            props: {
+                storesCount,
+                userCount
+            }
+        };
+    } catch (err) {
+        console.error("Admin Fetch Error:", err);
+        return {
+            props: {
+                storesCount: 0,
+                userCount: 0
+            }
+        };
+    }
 };
-*/
 
 export default AdminPage;
 

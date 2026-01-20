@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/navigation'; // 追加
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import {
@@ -15,6 +16,7 @@ import {
 } from 'react-icons/ri';
 
 const SpecialSignupPage = () => {
+    const router = useRouter(); // 追加
     const [loading, setLoading] = useState(false);
     const [agreed, setAgreed] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,8 @@ const SpecialSignupPage = () => {
                     updatedAt: serverTimestamp(),
                 });
                 alert('登録情報を更新しました。');
+                // 更新時はダッシュボードへ
+                router.push('/admin/affiliate-dashboard');
             } else {
                 // 新規登録
                 const res = await addDoc(collection(db, "special_partners"), {
@@ -84,7 +88,9 @@ const SpecialSignupPage = () => {
                 });
                 setDocId(res.id);
                 localStorage.setItem('partner_doc_id', res.id);
-                alert('パートナー登録が完了しました。');
+                alert('パートナー登録が完了しました。ログインしてください。');
+                // 新規登録時はログイン画面へ
+                router.push('/admin/special-login');
             }
         } catch (err: any) {
             setError("データの保存に失敗しました。接続を確認してください。");
@@ -177,7 +183,6 @@ const SpecialSignupPage = () => {
                             <RiDownloadLine size={20} /> 契約書(PDF)をダウンロード
                         </a>
 
-                        {/* 閲覧用契約書（15条まで省略なし） */}
                         <div className="w-full h-96 overflow-y-scroll bg-white border border-[#E8E2D9] rounded-[2rem] p-8 text-[11px] leading-[1.8] text-[#6B5D5D] shadow-inner custom-scrollbar">
                             <div className="space-y-8">
                                 <div className="text-center mb-8">
