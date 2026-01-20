@@ -38,6 +38,31 @@ const UserSignupPage = () => {
         });
     };
 
+    // セッション作成とリダイレクト処理
+    const handleAuthSuccess = async (user: any) => {
+        try {
+            const idToken = await user.getIdToken(true);
+            const response = await fetch("/api/auth/sessionLogin", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${idToken}`
+                },
+                body: JSON.stringify({ loginType: "user" }),
+            });
+
+            if (response.ok) {
+                // セッション作成成功後、ダッシュボードへ
+                window.location.replace("/premium/dashboard");
+            } else {
+                setError("セッションの作成に失敗しました。再度ログインをお試しください。");
+            }
+        } catch (e: any) {
+            console.error("Session Error:", e);
+            setError("処理中にエラーが発生しました。");
+        }
+    };
+
     // Googleでの新規登録
     const handleGoogleSignUp = async () => {
         const provider = new GoogleAuthProvider();
@@ -47,9 +72,8 @@ const UserSignupPage = () => {
             const result = await signInWithPopup(auth, provider);
             await saveUserToFirestore(result.user, 'google');
 
-            alert("Googleアカウントで新規登録しました！");
-            // リダイレクト先を /premium/dashboard に変更
-            router.push('/premium/dashboard');
+            // セッション作成とリダイレクト
+            await handleAuthSuccess(result.user);
         } catch (err: any) {
             console.error(err);
             setError("Google登録に失敗しました。");
@@ -75,9 +99,8 @@ const UserSignupPage = () => {
             // 2. Firestoreにユーザー情報を保存
             await saveUserToFirestore(userCredential.user, 'email');
 
-            alert('会員登録が完了しました！');
-            // リダイレクト先を /premium/dashboard に変更
-            router.push('/premium/dashboard');
+            // 3. セッション作成とリダイレクト
+            await handleAuthSuccess(userCredential.user);
         } catch (err: any) {
             console.error(err);
             if (err.code === 'auth/email-already-in-use') {

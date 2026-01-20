@@ -44,13 +44,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.setHeader('Set-Cookie', `${COOKIE_NAME}=${sessionCookie}; ${COOKIE_OPTIONS}`);
 
         // 4. 【確定】リダイレクト先の決定ロジック
-        // 実際のデータにある「isPaid: true」を最優先で判定
-        let redirectPath = '/home';
+        // 全ての一般ユーザーをプレミアムダッシュボードへ誘導
+        let redirectPath = '/premium/dashboard';
 
-        if (userData?.isPaid === true) {
-            // 有料会員（isPaid: true）ならプレミアムダッシュボードへ
-            redirectPath = '/premium/dashboard';
-        } else if (loginType === 'recruit') {
+        if (loginType === 'recruit') {
             redirectPath = '/recruit/dashboard';
         } else if (loginType === 'adver') {
             redirectPath = '/partner/dashboard';

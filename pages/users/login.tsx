@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
+import { auth } from '@/lib/firebase';
 import {
-    getAuth,
     signInWithEmailAndPassword,
     signInWithPopup,
     GoogleAuthProvider,
@@ -10,21 +10,7 @@ import {
     browserLocalPersistence,
     onAuthStateChanged
 } from 'firebase/auth';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 
-// --- Firebase設定 ---
-const firebaseConfig = {
-    apiKey: "AIzaSyDtTt0fWthsU6Baq1fJwUx8CgSakoZnMXY",
-    authDomain: "minna-no-nasu-app.firebaseapp.com",
-    projectId: "minna-no-nasu-app",
-    storageBucket: "minna-no-nasu-app.appspot.com",
-    messagingSenderId: "885979930856",
-    appId: "1:885979930856:web:13d1afd4206c91813e695d",
-};
-
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 const LoginPage: NextPage = () => {
@@ -33,19 +19,6 @@ const LoginPage: NextPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [isLoggingIn, setIsLoggingIn] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
-
-    // --- 自動ログインチェック ---
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // すでにログインしている場合は自動でトップへ
-                await handleLoginSuccess(user);
-            } else {
-                setIsLoggingIn(false);
-            }
-        });
-        return () => unsubscribe();
-    }, []);
 
     // --- ログイン成功時の処理（ここで行き先を指定） ---
     const handleLoginSuccess = async (user: any) => {
@@ -61,17 +34,32 @@ const LoginPage: NextPage = () => {
             });
 
             if (response.ok) {
-                // ✅ ログイン後は必ずプレミアムダッシュボードへ飛ばす
-                window.location.replace("/premium/dashboard");
+                const data = await response.json();
+                // ✅ セッション作成成功後、必ずダッシュボードへ飛ばす
+                window.location.replace(data.redirect || "/premium/dashboard");
             } else {
                 setIsLoggingIn(false);
-                setError("セッションの作成に失敗しました。");
+                setError("セッションの作成に失敗しました。再度ログインをお試しください。");
             }
         } catch (e: any) {
             console.error("Login Error:", e.message);
+            setError("ログイン処理中にエラーが発生しました。");
             setIsLoggingIn(false);
         }
     };
+
+    // --- 自動ログインチェック & 状態監視 ---
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // 認証状態が検出されたらセッション作成へ（手動ログイン・自動ログイン両対応）
+                await handleLoginSuccess(user);
+            } else {
+                setIsLoggingIn(false);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -79,8 +67,9 @@ const LoginPage: NextPage = () => {
         setError(null);
         try {
             await setPersistence(auth, browserLocalPersistence);
-            const result = await signInWithEmailAndPassword(auth, email, password);
-            await handleLoginSuccess(result.user);
+            await signInWithEmailAndPassword(auth, email, password);
+            // signInWithEmailAndPassword が成功すると onAuthStateChanged が発火し、
+            // handleLoginSuccess が呼ばれるため、ここでは何もしない
         } catch (e: any) {
             setError("メールアドレスまたはパスワードが正しくありません。");
             setIsLoggingIn(false);
@@ -92,8 +81,8 @@ const LoginPage: NextPage = () => {
         setError(null);
         try {
             await setPersistence(auth, browserLocalPersistence);
-            const result = await signInWithPopup(auth, googleProvider);
-            await handleLoginSuccess(result.user);
+            await signInWithPopup(auth, googleProvider);
+            // signInWithPopup が成功すると onAuthStateChanged が発火する
         } catch (e: any) {
             setError("Googleログインに失敗しました。");
             setIsLoggingIn(false);
