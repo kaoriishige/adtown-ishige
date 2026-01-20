@@ -33,7 +33,7 @@ const LoginPage: NextPage = () => {
     const [isLoggingIn, setIsLoggingIn] = useState(true); // 初期状態を読み込み中にする
     const [showPassword, setShowPassword] = useState(false);
 
-    // --- ★ 修正：自動ログインチェック ---
+    // --- ★ 自動ログインチェック ---
     useEffect(() => {
         // Firebaseの認証状態を監視
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -61,7 +61,8 @@ const LoginPage: NextPage = () => {
             });
 
             if (response.ok) {
-                window.location.replace("/home");
+                // リダイレクト先を /premium/dashboard に変更
+                window.location.replace("/premium/dashboard");
             } else {
                 setIsLoggingIn(false);
                 setError("セッションの作成に失敗しました。");

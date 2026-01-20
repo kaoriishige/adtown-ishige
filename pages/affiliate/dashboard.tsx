@@ -3,28 +3,40 @@ import Head from 'next/head';
 import Link from 'next/link';
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { getAuth, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { getAuth, signOut, deleteUser } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { adminDb, adminAuth } from '@/lib/firebase-admin';
 import nookies from 'nookies';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
     RiLogoutBoxRLine,
-    RiBankLine,
     RiUserFollowLine,
     RiStore2Line,
     RiUserSearchLine,
-    RiFileCopyLine,
     RiDownload2Line,
     RiCursorLine,
     RiUserAddLine,
     RiHandCoinLine,
-    RiLineLine
+    RiBankLine,
+    RiArrowRightLine,
+    RiUserForbidLine
 } from 'react-icons/ri';
 
-// ===============================
-// 型定義
-// ===============================
+// --- Firebase設定 ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDtTt0fWthsU6Baq1fJwUx8CgSakoZnMXY",
+    authDomain: "minna-no-nasu-app.firebaseapp.com",
+    projectId: "minna-no-nasu-app",
+    storageBucket: "minna-no-nasu-app.appspot.com",
+    messagingSenderId: "885979930856",
+    appId: "1:885979930856:web:13d1afd4206c91813e695d",
+};
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// ★本番ドメイン（テスト時にこれを利用してQRコードを作ります）
+const PRODUCTION_DOMAIN = "https://minna-no-nasu-app.netlify.app";
+
 interface ReferralStat {
     clicks: number;
     registrations: number;
@@ -41,32 +53,52 @@ interface DashboardProps {
     };
 }
 
-// ===============================
-// メインコンポーネント
-// ===============================
+// LINEボタンコンポーネント
+const LineAddFriendButton = () => (
+    <div className="flex flex-col items-center gap-3 p-6 bg-green-50 rounded-3xl border-2 border-green-100 mb-8">
+        <div className="text-center text-green-700 font-black text-sm mb-2 leading-relaxed">
+            <p>ログインは、LINEからになりますので、</p>
+            <p>必ず登録してください。</p>
+        </div>
+        <a href="https://lin.ee/0hY69mH" target="_blank" rel="noreferrer" className="hover:opacity-80 transition-opacity">
+            <img
+                src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png"
+                alt="友だち追加"
+                height="36"
+            />
+        </a>
+    </div>
+);
+
 const AffiliateDashboard: NextPage<DashboardProps> = ({ uid, stats }) => {
     const router = useRouter();
-    const auth = getAuth(app);
     const [activeTab, setActiveTab] = useState<'user' | 'adver' | 'recruit'>('user');
     const [copied, setCopied] = useState(false);
 
-    // 紹介URLの定義
-    const referralLinks = {
-        user: `https://minna-no-nasu-app.netlify.app/?ref=${uid}`,
-        adver: `https://minna-no-nasu-app.netlify.app/partner/signup?ref=${uid}`,
-        recruit: `https://minna-no-nasu-app.netlify.app/recruit?ref=${uid}`
+    // 各タブごとの紹介先URL（本番ドメイン固定）
+    const fullUrls = {
+        user: `${PRODUCTION_DOMAIN}/?ref=${uid}`,
+        adver: `${PRODUCTION_DOMAIN}/partner/signup?ref=${uid}`,
+        recruit: `${PRODUCTION_DOMAIN}/recruit?ref=${uid}`
     };
 
-    const currentStat = stats[activeTab];
+    // 内部プレビュー用パス（開発環境でLPを確認するため）
+    const internalPaths = {
+        user: `/?ref=${uid}`,
+        adver: `/partner/signup?ref=${uid}`,
+        recruit: `/recruit?ref=${uid}`
+    };
 
-    // URLコピー処理
-    const handleCopy = (text: string) => {
-        navigator.clipboard.writeText(text);
+    const currentFullUrl = fullUrls[activeTab];
+    const currentStat = stats[activeTab] || { clicks: 0, registrations: 0, conversions: 0, earned: 0 };
+    const earnedAmount = currentStat.earned || 0;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(currentFullUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
-    // QRコードダウンロード処理
     const downloadQRCode = () => {
         const canvas = document.getElementById('referral-qr') as HTMLCanvasElement;
         if (!canvas) return;
@@ -80,100 +112,110 @@ const AffiliateDashboard: NextPage<DashboardProps> = ({ uid, stats }) => {
     };
 
     const handleLogout = async () => {
+        if (!confirm('ログアウトしますか？')) return;
         await fetch('/api/auth/sessionLogout', { method: 'POST' });
         await signOut(auth);
         router.push('/partner/login');
     };
 
+    const handleDeleteAccount = async () => {
+        if (!confirm('本当に解約（アカウント削除）しますか？この操作は取り消せません。')) return;
+        try {
+            const user = auth.currentUser;
+            if (user) {
+                await deleteUser(user);
+                await fetch('/api/auth/sessionLogout', { method: 'POST' });
+                router.push('/partner/login');
+            }
+        } catch (error) {
+            alert('セキュリティのため一度ログアウトして再ログイン後に試してください。');
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-white">
             <Head><title>アフィリエイト・ダッシュボード</title></Head>
 
-            <header className="bg-white shadow-sm sticky top-0 z-10">
+            <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
                     <div>
-                        <h1 className="text-xl font-bold text-gray-900 uppercase">Affiliate Dashboard</h1>
-                        <p className="text-[10px] text-gray-400 font-mono">ID: {uid}</p>
+                        <h1 className="text-lg font-black text-gray-900 tracking-tighter uppercase">Affiliate Dashboard</h1>
+                        <p className="text-[10px] text-gray-400 font-mono">PARTNER ID: {uid}</p>
                     </div>
-                    <button onClick={handleLogout} className="text-gray-400 hover:text-red-600 transition-colors">
-                        <RiLogoutBoxRLine size={24} />
+                    <button
+                        onClick={handleLogout}
+                        className="text-xs font-bold text-gray-400 hover:text-orange-600 flex items-center gap-1 transition-colors"
+                    >
+                        <RiLogoutBoxRLine size={18} />
+                        <span>ログアウト</span>
                     </button>
                 </div>
             </header>
 
             <main className="max-w-4xl mx-auto px-6 py-8">
-                {/* 報酬設定へのリンク */}
-                <Link href="/affiliate/payout-settings" className="block mb-8 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg hover:brightness-110 transition">
-                    <div className="flex items-center justify-between text-white">
-                        <div className="flex items-center gap-4">
-                            <RiBankLine size={28} />
-                            <div>
-                                <p className="font-bold">報酬受取口座の設定</p>
-                                <p className="text-xs opacity-80">40%の紹介報酬を受け取る口座を登録してください</p>
-                            </div>
-                        </div>
-                        <span className="text-2xl font-bold">→</span>
-                    </div>
-                </Link>
 
-                {/* 実績表示 */}
-                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-4">紹介実績データ</h2>
+                {/* 上部LINEボタン */}
+                <LineAddFriendButton />
+
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-4 text-center md:text-left">紹介実績データ</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <StatBox icon={<RiCursorLine />} label="クリック" value={currentStat.clicks} unit="回" color="text-blue-500" />
-                    <StatBox icon={<RiUserAddLine />} label="無料登録" value={currentStat.registrations} unit="人" color="text-green-500" />
-                    <StatBox icon={<RiHandCoinLine />} label="成約数" value={currentStat.conversions} unit="件" color="text-orange-500" />
-                    <StatBox icon={<RiBankLine />} label="発生報酬" value={currentStat.earned.toLocaleString()} unit="円" color="text-red-500" />
+                    <StatBox icon={<RiCursorLine />} label="クリック" value={currentStat.clicks || 0} unit="回" color="text-blue-500" />
+                    <StatBox icon={<RiUserAddLine />} label="無料登録" value={currentStat.registrations || 0} unit="人" color="text-green-500" />
+                    <StatBox icon={<RiHandCoinLine />} label="成約数" value={currentStat.conversions || 0} unit="件" color="text-orange-500" />
+                    <StatBox icon={<RiBankLine />} label="発生報酬" value={earnedAmount.toLocaleString()} unit="円" color="text-red-500" />
                 </div>
 
-                {/* 切り替え・ツールセクション */}
-                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 mb-12">
                     <div className="flex bg-gray-50 border-b">
                         <TabItem active={activeTab === 'user'} onClick={() => setActiveTab('user')} icon={<RiUserFollowLine />} label="一般ユーザー" />
-                        <TabItem active={activeTab === 'adver'} onClick={() => setActiveTab('adver')} icon={<RiStore2Line />} label="広告パートナー" />
-                        <TabItem active={activeTab === 'recruit'} onClick={() => setActiveTab('recruit')} icon={<RiUserSearchLine />} label="求人パートナー" />
+                        <TabItem active={activeTab === 'adver'} onClick={() => setActiveTab('adver')} icon={<RiStore2Line />} label="店舗集客広告" />
+                        <TabItem active={activeTab === 'recruit'} onClick={() => setActiveTab('recruit')} icon={<RiUserSearchLine />} label="企業求人広告" />
                     </div>
 
                     <div className="p-8">
                         <div className="text-center mb-8">
                             <h3 className="text-lg font-black text-gray-800">
-                                {activeTab === 'user' && "一般紹介URL（報酬40%）"}
-                                {activeTab === 'adver' && "広告パートナー紹介URL（報酬40%）"}
-                                {activeTab === 'recruit' && "求人紹介URL（報酬40%）"}
+                                {activeTab === 'user' && "一般ユーザー紹介リンク"}
+                                {activeTab === 'adver' && "店舗集客広告パートナー紹介リンク"}
+                                {activeTab === 'recruit' && "企業求人広告パートナー紹介リンク"}
                             </h3>
+                            <Link
+                                href={internalPaths[activeTab]}
+                                className="inline-flex items-center gap-2 mt-4 px-8 py-3 bg-indigo-600 text-white rounded-full font-bold shadow-lg hover:bg-indigo-700 transition-all active:scale-95"
+                            >
+                                <RiArrowRightLine /> ページを確認する
+                            </Link>
                         </div>
 
-                        {/* QRコード表示エリア */}
                         <div className="flex flex-col items-center gap-6">
-                            <div className="p-6 bg-white border-2 border-gray-100 rounded-3xl shadow-inner">
+                            <div className="p-4 bg-white border-2 border-gray-100 rounded-2xl shadow-inner">
                                 <QRCodeCanvas
                                     id="referral-qr"
-                                    value={referralLinks[activeTab]}
+                                    value={currentFullUrl}
                                     size={200}
                                     level="H"
                                     includeMargin={true}
                                 />
                             </div>
-
                             <button
                                 onClick={downloadQRCode}
-                                className="flex items-center gap-2 bg-gray-800 text-white px-6 py-3 rounded-full font-bold hover:bg-black transition shadow-lg"
+                                className="bg-gray-800 text-white px-6 py-2 rounded-full text-xs font-bold shadow-md hover:bg-black transition-colors"
                             >
-                                <RiDownload2Line /> QRコードを保存
+                                <RiDownload2Line className="inline mr-1" /> QRコードを画像保存
                             </button>
                         </div>
 
-                        {/* URLコピーエリア */}
-                        <div className="mt-12 space-y-2">
-                            <p className="text-[10px] font-black text-gray-400 uppercase ml-1">紹介用URL</p>
+                        <div className="mt-12 space-y-2 text-left">
+                            <p className="text-[10px] font-black text-gray-400 ml-1 uppercase">紹介用URL（本番ドメイン）</p>
                             <div className="flex gap-2">
                                 <input
                                     readOnly
-                                    value={referralLinks[activeTab]}
-                                    className="flex-1 bg-gray-50 border-2 border-gray-100 p-4 rounded-2xl text-sm font-medium text-gray-500 focus:outline-none"
+                                    value={currentFullUrl}
+                                    className="flex-1 bg-gray-50 border border-gray-200 p-4 rounded-2xl text-[11px] font-bold text-gray-600 focus:outline-none"
                                 />
                                 <button
-                                    onClick={() => handleCopy(referralLinks[activeTab])}
-                                    className="bg-indigo-600 text-white px-6 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition"
+                                    onClick={handleCopy}
+                                    className="bg-indigo-600 text-white px-6 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors"
                                 >
                                     {copied ? '完了!' : 'コピー'}
                                 </button>
@@ -182,29 +224,29 @@ const AffiliateDashboard: NextPage<DashboardProps> = ({ uid, stats }) => {
                     </div>
                 </div>
 
-                <footer className="mt-12 text-center pb-12">
-                    <div className="inline-flex items-center gap-2 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                        <RiLineLine className="text-green-500 text-2xl" />
-                        <div className="text-left">
-                            <p className="text-xs font-bold text-gray-800">パートナー専用公式LINE</p>
-                            <a href="https://lin.ee/FwVhCvs" target="_blank" rel="noreferrer" className="text-[10px] text-blue-500 hover:underline font-bold">友だち追加でサポートを受ける</a>
-                        </div>
-                    </div>
-                </footer>
+                {/* 下部LINEボタン */}
+                <LineAddFriendButton />
+
+                <div className="mt-20 pt-8 border-t border-gray-100 flex justify-center">
+                    <button
+                        onClick={handleDeleteAccount}
+                        className="text-xs font-bold text-gray-300 hover:text-red-400 flex items-center gap-1 transition-colors"
+                    >
+                        <RiUserForbidLine size={16} />
+                        <span>パートナー契約を解除する（アカウント削除）</span>
+                    </button>
+                </div>
             </main>
         </div>
     );
 };
 
-// ===============================
-// サブコンポーネント
-// ===============================
 const StatBox = ({ icon, label, value, unit, color }: any) => (
-    <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
-        <div className={`text-2xl ${color} mb-2`}>{icon}</div>
+    <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 text-center">
+        <div className={`text-2xl ${color} mb-2 flex justify-center`}>{icon}</div>
         <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{label}</p>
-        <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-black text-gray-800">{value}</span>
+        <div className="mt-1 flex items-baseline justify-center gap-1">
+            <span className="text-xl font-black text-gray-800">{value}</span>
             <span className="text-[10px] font-bold text-gray-400">{unit}</span>
         </div>
     </div>
@@ -213,37 +255,29 @@ const StatBox = ({ icon, label, value, unit, color }: any) => (
 const TabItem = ({ active, onClick, icon, label }: any) => (
     <button
         onClick={onClick}
-        className={`flex-1 py-5 flex flex-col items-center gap-1 transition-all ${active ? 'bg-white text-indigo-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100/50'
-            }`}
+        className={`flex-1 py-5 flex flex-col items-center gap-1 transition-all ${active ? 'bg-white text-indigo-600 border-b-4 border-indigo-600' : 'text-gray-400 hover:bg-gray-100/50'}`}
     >
         <span className="text-xl">{icon}</span>
-        <span className="text-[9px] font-black uppercase tracking-tighter">{label}</span>
-        {active && <div className="w-8 h-1 bg-indigo-600 rounded-full mt-1" />}
+        <span className="text-[9px] font-black uppercase tracking-tighter text-center">{label}</span>
     </button>
 );
 
-// ===============================
-// サーバーサイドロジック
-// ===============================
 export const getServerSideProps: GetServerSideProps = async (context) => {
     try {
         const cookies = nookies.get(context);
         const token = await adminAuth.verifySessionCookie(cookies.session || '', true);
         const { uid } = token;
-
         if (!uid) return { redirect: { destination: '/partner/login', permanent: false } };
 
         const userDoc = await adminDb.collection('users').doc(uid).get();
         const userData = userDoc.data() || {};
-
-        // 統計データの初期値設定
         const defaultStat = { clicks: 0, registrations: 0, conversions: 0, earned: 0 };
+
         const stats = {
             user: userData.stats_user || defaultStat,
             adver: userData.stats_adver || defaultStat,
             recruit: userData.stats_recruit || defaultStat,
         };
-
         return { props: { uid, stats } };
     } catch (err) {
         return { redirect: { destination: '/partner/login', permanent: false } };

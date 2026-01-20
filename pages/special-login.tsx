@@ -61,7 +61,8 @@ export default function SpecialLoginPage() {
         localStorage.setItem('is_special_partner', 'true');
         localStorage.setItem('partner_doc_id', partnerDoc.id);
 
-        window.location.href = '/premium/dashboard';
+        // リダイレクト先を /affiliate/dashboard に変更
+        window.location.href = '/affiliate/dashboard';
     };
 
     // Googleログイン処理
@@ -131,7 +132,7 @@ export default function SpecialLoginPage() {
                 <div className="text-center">
                     <RiGiftFill size={48} className="mx-auto text-pink-500 mb-4" />
                     <h1 className="text-2xl font-black italic text-[#4A3B3B]">特別パートナーログイン</h1>
-                    <p className="text-[10px] text-[#A89F94] mt-2 font-bold tracking-widest uppercase">Affiliate Access</p>
+                    <p className="text-[10px] text-[#A89F94] mt-2 font-bold tracking-widest uppercase italic">Affiliate Access</p>
                 </div>
 
                 {error && (
