@@ -48,7 +48,8 @@ const UserSignupPage = () => {
             await saveUserToFirestore(result.user, 'google');
 
             alert("Googleアカウントで新規登録しました！");
-            router.push('/dashboard');
+            // リダイレクト先を /home に変更
+            router.push('/home');
         } catch (err: any) {
             console.error(err);
             setError("Google登録に失敗しました。");
@@ -75,7 +76,8 @@ const UserSignupPage = () => {
             await saveUserToFirestore(userCredential.user, 'email');
 
             alert('会員登録が完了しました！');
-            router.push('/dashboard');
+            // リダイレクト先を /home に変更
+            router.push('/home');
         } catch (err: any) {
             console.error(err);
             if (err.code === 'auth/email-already-in-use') {
