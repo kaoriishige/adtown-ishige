@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { useRouter } from 'next/router';
 import { app } from '@/lib/firebase';
 import { useAffiliateTracker } from '@/lib/affiliate-tracker';
 
@@ -73,6 +74,7 @@ const StatCard = ({ number, label }: { number: string; label: string }) => (
 
 export default function PartnerSignupLP() {
   const auth = getAuth(app);
+  const router = useRouter();
   const formRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
@@ -89,8 +91,21 @@ export default function PartnerSignupLP() {
   const [loading, setLoading] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
+  // 認証状態管理
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
   // アフィリエイトトラッキング
   useAffiliateTracker('adver');
+
+  // 認証状態の確認
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      setAuthChecked(true);
+    });
+    return () => unsubscribe();
+  }, [auth]);
 
   // 公開ページ設定
   useEffect(() => {
@@ -159,6 +174,17 @@ export default function PartnerSignupLP() {
       setLoading(false);
     }
   };
+
+  // 認証状態がまだ確認中
+  if (!authChecked) {
+    return <div className="text-center py-40">Loading...</div>;
+  }
+
+  // すでにログイン済みなら、サブスク選択ページへリダイレクト
+  if (authUser) {
+    router.replace('/partner/subscribe_plan');
+    return null;
+  }
 
   return (
     <div className="bg-white text-slate-900 font-sans selection:bg-orange-100 overflow-x-hidden antialiased">
