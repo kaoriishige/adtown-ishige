@@ -58,7 +58,7 @@ const PayoutSettings: NextPage<Props> = ({ uid, initialData }) => {
     return (
         <div className="min-h-screen bg-[#F8FAFC] text-[#1E293B] antialiased pb-20">
             <Head>
-                <title>口座情報設定 | ADTOWN</title>
+                <title>口座情報設定 | adtown</title>
             </Head>
 
             {/* ヘッダー：戻るボタンを大きく */}

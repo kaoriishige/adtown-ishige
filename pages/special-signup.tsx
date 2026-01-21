@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -185,10 +186,117 @@ const SpecialSignupPage = () => {
                             <RiDownloadLine size={20} /> 契約書(PDF)をダウンロード
                         </a>
 
-                        <div className="w-full h-64 overflow-y-scroll bg-white border border-[#E8E2D9] rounded-[2rem] p-6 text-[11px] leading-[1.8] text-[#6B5D5D] shadow-inner custom-scrollbar">
-                            {/* 契約書本文（内容は既存のものを維持） */}
-                            <p className="font-bold text-center mb-4">みんなの那須アプリ アフィリエイト契約書</p>
-                            <p>第1条〜第15条 略...</p>
+                        <div className="w-full h-[400px] overflow-y-scroll bg-white border border-[#E8E2D9] rounded-[2rem] p-8 text-[11px] leading-[1.8] text-[#6B5D5D] shadow-inner custom-scrollbar">
+                            <p className="font-bold text-center mb-6 text-xs text-[#4A3B3B]">みんなの那須アプリ アフィリエイト契約書</p>
+                            <div className="space-y-6">
+                                <p>本契約は、みんなの那須アプリ運営（以下「運営者」）と、株式会社adtown（以下「支払会社」）と、アフィリエイト契約を締結したパートナー（以下「アフィリエイター」）との間で締結される。</p>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第1条（目的）</p>
+                                    <p>本契約は、アフィリエイターが「みんなの那須アプリ」の一般ユーザー登録、店舗集客広告掲載、企業求人広告掲載の利用促進を行い、運営者および支払会社が定める条件に基づき紹介手数料を支払うことを目的とする。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第2条（対象サービス）</p>
+                                    <p>アフィリエイト対象となるサービスは以下のとおりとする。<br />
+                                        ・みんなの那須アプリ 一般ユーザー<br />
+                                        ・みんなの那須アプリ 店舗集客広告掲載<br />
+                                        ・みんなの那須アプリ 企業求人広告掲載<br />
+                                        ※上記はいずれも基本無料で利用可能なサービスであり、有料課金が発生した場合のみ紹介手数料の対象となる。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第3条（紹介手数料）</p>
+                                    <p>アフィリエイターが紹介したユーザーまたは事業者が有料課金に移行し、決済が完了した時点で成果確定とし、以下の金額を毎月自動振込にて支払う。<br />
+                                        ・一般ユーザー 有料課金（サブスク月額480円）：1名につき192円（40%）<br />
+                                        ・店舗集客広告掲載 有料課金（サブスク月額4,400円）：1社につき1,760円（40%）<br />
+                                        ・企業求人広告掲載 有料課金（サブスク月額8,800円）：1社につき3,520円（40%）<br />
+                                        ※紹介手数料は、株式会社adtownと正式にアフィリエイト契約を締結した場合にのみ発生する。<br />
+                                        ※成果は決済完了をもって確定とし、無料登録のみでは成果対象とならない。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第4条（支払条件）</p>
+                                    <p>1. 紹介手数料は月末締め、翌月15日にアフィリエイターが登録した銀行口座へ自動振り込みにて支払う。<br />
+                                        2. 振込手数料は支払会社負担とする。<br />
+                                        3. 源泉徴収は行わないものとする。<br />
+                                        4. 本契約は個人アフィリエイターを対象とする。法人が発生した場合は、別途法人向け契約書を締結するものとする。<br />
+                                        5. 最低支払金額の設定、支払保留条件がある場合は別途定める。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第5条（紹介方法）</p>
+                                    <p>アフィリエイターは、本人専用の以下の紹介ツールを使用して拡散活動を行うものとする。<br />
+                                        ・みんなの那須アプリ一般ユーザー登録用URL・QRコード<br />
+                                        ・店舗集客広告掲載登録用URL・QRコード<br />
+                                        ・企業求人広告掲載登録用URL・QRコード<br />
+                                        これらはアフィリエイター専用マイページより取得可能とする。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第6条（成果確定および返金・解約時の取扱い）</p>
+                                    <p>1. 有料課金の決済完了をもって成果確定とする。<br />
+                                        2. 初月無料期間中の解約、未入金、返金が発生した場合は成果対象外とする。<br />
+                                        3. 成果確定後であっても、返金処理が行われた場合は当該成果に係る紹介手数料は無効とし、既に支払済みの場合は次回支払時に相殺するものとする。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第7条（禁止事項）</p>
+                                    <p>アフィリエイターは以下の行為を行ってはならない。<br />
+                                        ・虚偽・誇大な表現による勧誘<br />
+                                        ・公序良俗に反する内容での宣伝<br />
+                                        ・なりすまし行為<br />
+                                        ・不正登録・自作自演による登録<br />
+                                        ・運営者・支払会社の信用を毀損する行為</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第8条（知的財産権および素材使用）</p>
+                                    <p>1. アフィリエイターは、運営者が提供するロゴ、画像、名称、素材を、運営者の定めるガイドラインに従って使用するものとする。<br />
+                                        2. 無断改変、誤解を招く表現での使用を禁止する。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第9条（反社会的勢力の排除）</p>
+                                    <p>アフィリエイターは、自己および関係者が反社会的勢力に該当しないこと、また今後も関与しないことを保証する。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第10条（個人情報の取扱い）</p>
+                                    <p>アフィリエイターは、紹介活動に関連して知り得た個人情報を、本契約の目的以外に使用してはならない。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第11条（契約期間）</p>
+                                    <p>本契約の有効期間は契約締結日より1年間とし、双方異議なき場合は自動更新とする。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第12条（契約解除）</p>
+                                    <p>運営者または支払会社は、アフィリエイターが本契約に違反した場合、事前通知なく契約を解除できるものとする。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第13条（免責事項）</p>
+                                    <p>システム障害、通信障害、不可抗力による損害について、運営者および支払会社は一切の責任を負わないものとする。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第14条（準拠法および管轄）</p>
+                                    <p>本契約は日本法に準拠し、本契約に関する紛争については栃木県を管轄する地方裁判所を第一審の専属的合意管轄裁判所とする。</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="font-bold text-[#4A3B3B]">第15条（協議事項）</p>
+                                    <p>本契約に定めのない事項、または本契約の解釈に疑義が生じた場合は、運営者、支払会社、アフィリエイター間で誠意をもって協議し解決するものとする。</p>
+                                </div>
+
+                                <div className="mt-8 pt-6 border-t border-gray-100">
+                                    <p>以上、本契約の内容を確認し、同意の上で契約を締結する。</p>
+                                    <p>契約日：登録日</p>
+                                    <p className="mt-4 font-bold text-xs text-[#4A3B3B]">株式会社adtown</p>
+                                </div>
+                            </div>
                         </div>
 
                         <label className="flex items-start gap-4 p-6 bg-pink-50/50 rounded-[2rem] border-2 border-pink-100 cursor-pointer group hover:bg-pink-50 transition-all shadow-sm">

@@ -67,7 +67,7 @@ export default function ProjectDashboard() {
   useEffect(() => {
     // TODO: ここでFirebaseから「自分が作成した投稿」と「参加中の投稿」を取得
     // const q = query(collection(db, 'projects'), where('organizerId', '==', user.uid));
-    
+
     setTimeout(() => {
       setMyProjects(MOCK_MY_PROJECTS);
       setJoinedProjects(MOCK_JOINED_PROJECTS);
@@ -78,10 +78,10 @@ export default function ProjectDashboard() {
   // 募集締め切り/再開のトグル処理
   const toggleStatus = (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'closed' : 'active';
-    const confirmMsg = newStatus === 'closed' 
-      ? '募集を締め切りますか？（検索結果に「募集終了」と表示されます）' 
+    const confirmMsg = newStatus === 'closed'
+      ? '募集を締め切りますか？（検索結果に「募集終了」と表示されます）'
       : '募集を再開しますか？';
-    
+
     if (confirm(confirmMsg)) {
       setMyProjects(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
       // TODO: Firebase updateDoc(doc(db, 'projects', id), { status: newStatus });
@@ -101,7 +101,7 @@ export default function ProjectDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       <Head>
-        <title>活動管理ダッシュボード | ADTOWN-ISHIGE</title>
+        <title>活動管理ダッシュボード | adtown-ishige</title>
       </Head>
 
       {/* ヘッダーエリア */}
@@ -109,7 +109,7 @@ export default function ProjectDashboard() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold text-gray-800">マイページ</h1>
           <Link href="/projects/create" className="text-sm bg-blue-600 text-white px-3 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition">
-             ＋ 新規作成
+            ＋ 新規作成
           </Link>
         </div>
 
@@ -117,18 +117,16 @@ export default function ProjectDashboard() {
         <div className="flex gap-6">
           <button
             onClick={() => setActiveTab('organized')}
-            className={`pb-3 text-sm font-bold transition-all relative ${
-              activeTab === 'organized' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className={`pb-3 text-sm font-bold transition-all relative ${activeTab === 'organized' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              }`}
           >
             主催した活動
             {activeTab === 'organized' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full"></span>}
           </button>
           <button
             onClick={() => setActiveTab('joined')}
-            className={`pb-3 text-sm font-bold transition-all relative ${
-              activeTab === 'joined' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className={`pb-3 text-sm font-bold transition-all relative ${activeTab === 'joined' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              }`}
           >
             参加予定
             {activeTab === 'joined' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full"></span>}
@@ -151,13 +149,12 @@ export default function ProjectDashboard() {
             ) : (
               myProjects.map((project) => (
                 <div key={project.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  
+
                   {/* カードヘッダー: ステータスとタイトル */}
                   <div className="p-4 border-b border-gray-100">
                     <div className="flex justify-between items-start mb-2">
-                      <span className={`text-xs px-2 py-1 rounded font-bold ${
-                        project.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'
-                      }`}>
+                      <span className={`text-xs px-2 py-1 rounded font-bold ${project.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'
+                        }`}>
                         {project.status === 'active' ? '募集中' : '募集終了'}
                       </span>
                       <span className="text-xs text-gray-400">{project.dateStr}</span>
@@ -193,22 +190,21 @@ export default function ProjectDashboard() {
                     <Link href={`/projects/${project.id}`} className="text-sm text-gray-600 font-bold hover:underline">
                       確認する
                     </Link>
-                    
+
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => toggleStatus(project.id, project.status)}
-                        className={`text-xs px-3 py-2 rounded border font-bold transition ${
-                          project.status === 'active' 
-                            ? 'bg-white border-orange-200 text-orange-600 hover:bg-orange-50' 
+                        className={`text-xs px-3 py-2 rounded border font-bold transition ${project.status === 'active'
+                            ? 'bg-white border-orange-200 text-orange-600 hover:bg-orange-50'
                             : 'bg-white border-green-200 text-green-600 hover:bg-green-50'
-                        }`}
+                          }`}
                       >
                         {project.status === 'active' ? '締め切る' : '再開する'}
                       </button>
-                      
-                      <button 
-                         onClick={() => handleDelete(project.id)}
-                         className="text-xs px-3 py-2 rounded border border-gray-200 bg-white text-gray-400 hover:text-red-600 hover:border-red-200 transition"
+
+                      <button
+                        onClick={() => handleDelete(project.id)}
+                        className="text-xs px-3 py-2 rounded border border-gray-200 bg-white text-gray-400 hover:text-red-600 hover:border-red-200 transition"
                       >
                         削除
                       </button>
@@ -223,7 +219,7 @@ export default function ProjectDashboard() {
         {/* --- 参加予定タブの内容 --- */}
         {activeTab === 'joined' && (
           <>
-             {joinedProjects.length === 0 ? (
+            {joinedProjects.length === 0 ? (
               <div className="text-center py-10 text-gray-400">
                 参加予定のプロジェクトはありません
               </div>
@@ -243,7 +239,7 @@ export default function ProjectDashboard() {
         )}
 
       </main>
-      
+
       {/* 共通フッターメニューがあればここに配置 */}
     </div>
   );

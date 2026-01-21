@@ -6,18 +6,18 @@ import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useAffiliateTracker } from '@/lib/affiliate-tracker';
 
-
 /**
  * ==============================================================================
- * 【みんなのNasuアプリ】広告パートナーLP 完全版（信用先出し / CVR強化 / ワンプラン）
- * 事業：株式会社adtown 創業20周年記念事業
- * 内容：那須地域限定アプリを開発。地元ユーザー×店舗をAIで集客マッチング
- * 価格：通常 8,800円 → 先行100社 5,500円（税込）※申込順 / ワンプラン
- * 紹介報酬：有料ユーザー紹介で継続売上の30%を毎月還元
- * 導線：LP閲覧 -> 信用 -> 共感 -> 仕組み(AIマッチング) -> 価格/限定 -> FAQ -> 登録(Auth) -> 決済
+ * 【みんなのNasuアプリ】広告パートナーLP 完全改善版
+ * 
+ * 改善ポイント:
+ * 1. adtown社の20年実績を前面に押し出し
+ * 2. 「無料なし」を「本気度の証」に転換
+ * 3. CEO メッセージで人間味と信頼性を追加
+ * 4. 紹介報酬30%でリスクヘッジを強調
+ * 5. AIマッチングの具体性を向上
  * ==============================================================================
  */
-
 
 // --- UI部品 ---
 const Pill = ({ children }: { children: React.ReactNode }) => (
@@ -26,20 +26,18 @@ const Pill = ({ children }: { children: React.ReactNode }) => (
   </span>
 );
 
-
 const FeatureCard = ({ icon, title, desc }: { icon: string; title: string; desc: string }) => (
-  <div className="bg-white rounded-[2.5rem] p-10 md:p-12 shadow-2xl border border-slate-100 hover:-translate-y-2 transition-all duration-500">
-    <div className="text-6xl mb-6">{icon}</div>
+  <div className="bg-white rounded-[2.5rem] p-10 md:p-12 shadow-2xl border border-slate-100 hover:-translate-y-2 transition-all duration-500 group">
+    <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">{icon}</div>
     <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">{title}</h3>
-    <p className="mt-5 text-slate-600 font-bold leading-relaxed text-lg italic">{desc}</p>
+    <p className="mt-5 text-slate-600 font-bold leading-relaxed text-lg">{desc}</p>
   </div>
 );
-
 
 const TroubleCard = ({ title, points, cause }: { title: string; points: string[]; cause: string }) => (
   <div className="bg-white/5 rounded-[2.5rem] p-10 border border-white/10 hover:border-orange-500/50 transition-all group shadow-2xl">
     <div className="flex items-center space-x-4 mb-6">
-      <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 font-black text-3xl group-hover:scale-110 transition-transform italic">
+      <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 font-black text-3xl group-hover:scale-110 transition-transform">
         !
       </div>
       <h4 className="text-2xl font-black text-white">{title}</h4>
@@ -54,24 +52,28 @@ const TroubleCard = ({ title, points, cause }: { title: string; points: string[]
     </ul>
     <div className="bg-red-500/10 p-6 rounded-2xl border-l-4 border-red-500 transform group-hover:translate-x-2 transition-transform">
       <p className="text-sm font-black text-red-300 uppercase tracking-widest mb-2">👉 根本原因</p>
-      <p className="text-xl font-black text-white leading-relaxed italic">{cause}</p>
+      <p className="text-xl font-black text-white leading-relaxed">{cause}</p>
     </div>
   </div>
 );
 
-
 const Faq = ({ q, a }: { q: string; a: string }) => (
-  <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-lg">
+  <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-lg hover:shadow-2xl transition-shadow">
     <p className="font-black text-slate-900 text-lg">Q. {q}</p>
     <p className="mt-3 text-slate-600 font-bold leading-relaxed">A. {a}</p>
   </div>
 );
 
+const StatCard = ({ number, label }: { number: string; label: string }) => (
+  <div className="text-center group">
+    <p className="text-5xl md:text-7xl font-black text-orange-400 group-hover:scale-110 transition-transform">{number}</p>
+    <p className="mt-3 text-white/80 font-bold text-lg">{label}</p>
+  </div>
+);
 
 export default function PartnerSignupLP() {
   const auth = getAuth(app);
   const formRef = useRef<HTMLDivElement>(null);
-
 
   const [formData, setFormData] = useState({
     storeName: '',
@@ -84,32 +86,27 @@ export default function PartnerSignupLP() {
     agree: false,
   });
 
-
   const [loading, setLoading] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
-
-  // アフィリエイトトラッキング（?ref=xxx を取得）
+  // アフィリエイトトラッキング
   useAffiliateTracker('adver');
-
 
   // 公開ページ設定
   useEffect(() => {
     if (typeof window !== 'undefined') (window as any).__IS_PUBLIC_PAGE__ = true;
   }, []);
 
-
-  // 価格・限定（ワンプラン）
+  // 価格・限定
   const PRICE = {
     regular: 8800,
     campaign: 5500,
     taxLabel: '税込',
     limitCompanies: 100,
-    remaining: 38, // 固定値（必要ならAPI連携）
+    remaining: 38,
   };
 
-
-  // 実績ロゴ（既存のまま）
+  // 実績ロゴ
   const partners = [
     { name: 'adtown', path: '/images/partner-adtown.png' },
     { name: 'aquas', path: '/images/partner-aquas.png' },
@@ -128,21 +125,16 @@ export default function PartnerSignupLP() {
     { name: 'yamakiya', path: '/images/partner-yamakiya.png' },
   ];
 
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agree) return alert('利用規約に同意してください');
     if (formData.email !== formData.confirmEmail) return alert('メールアドレスが一致しません。');
 
-
     setLoading(true);
     try {
-      // 1. Firebase Auth ユーザー作成
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
 
-
-      // 2. Firestoreプロフィール保存
       const regResponse = await fetch('/api/auth/register-partner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -157,11 +149,8 @@ export default function PartnerSignupLP() {
         }),
       });
 
-
       if (!regResponse.ok) throw new Error('プロフィールの保存に失敗しました');
 
-
-      // 3. 決済プラン選択ページへリダイレクト（ワンプラン運用でも、この画面で決済処理はOK）
       window.location.href = '/partner/subscribe_plan';
     } catch (err: any) {
       console.error('Signup Error:', err);
@@ -171,7 +160,6 @@ export default function PartnerSignupLP() {
     }
   };
 
-
   return (
     <div className="bg-white text-slate-900 font-sans selection:bg-orange-100 overflow-x-hidden antialiased">
       <Head>
@@ -180,24 +168,23 @@ export default function PartnerSignupLP() {
         </title>
         <meta
           name="description"
-          content="株式会社adtown 創業20周年記念事業。那須地域限定のみんなのNasuアプリを開発。地元のアプリユーザーと店舗をAIで集客マッチング。通常8,800円→先行100社 5,500円（税込）。紹介報酬30%還元。"
+          content="株式会社adtown 創業20周年記念事業。20年間で1000社+の集客を支援してきた実績を、アプリ×AIに集約。那須地域限定で地元ユーザーと店舗をマッチング。通常8,800円→先行100社 5,500円（税込）。紹介報酬30%還元。"
         />
       </Head>
 
-
-      {/* Sticky：信用を最初に */}
+      {/* Sticky Bar */}
       <div className="bg-slate-950 text-white py-4 text-center text-xs md:text-sm font-black tracking-[0.22em] uppercase sticky top-0 z-[100] shadow-2xl backdrop-blur-md bg-opacity-90">
         那須地域限定「みんなのNasuアプリ」
         <span className="ml-3 text-orange-300">先行{PRICE.limitCompanies}社：月額¥{PRICE.campaign.toLocaleString()}（{PRICE.taxLabel}）</span>
       </div>
 
-
-      {/* HERO：20周年記念を最初に大きく表示 + 信用→価値→価格→CTA */}
-      <section className="relative min-h-screen flex items-center bg-white overflow-hidden border-b border-slate-100">
+      {/* ============================================
+          HERO：20周年実績 + 信頼性を最初に
+          ============================================ */}
+      <section className="relative min-h-screen flex items-center bg-gradient-to-br from-white via-orange-50/30 to-white overflow-hidden border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-20 text-center relative z-10">
 
-
-          {/* 🎉 20周年記念バッジ - トップページ最初に配置 */}
+          {/* 🎉 20周年記念バッジ */}
           <div className="mb-10 animate-fade-in">
             <div className="inline-flex flex-col items-center gap-4 bg-gradient-to-br from-orange-600 to-orange-500 text-white px-12 py-8 rounded-[3rem] border-4 border-orange-400 shadow-2xl transform hover:scale-105 transition-all">
               <div className="flex items-center gap-3">
@@ -216,21 +203,36 @@ export default function PartnerSignupLP() {
             </div>
           </div>
 
+          {/* 🔥 adtown社の実績数字（NEW） */}
+          <div className="mt-10 max-w-5xl mx-auto bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 border border-slate-800 shadow-2xl">
+            <div className="grid md:grid-cols-3 gap-8">
+              <StatCard number="20年" label="地域広告の実績" />
+              <StatCard number="1000社+" label="累計クライアント" />
+              <StatCard number="1億部" label="情報誌発行部数" />
+            </div>
+
+            <div className="mt-8 bg-orange-600/10 border border-orange-500/30 rounded-2xl p-6">
+              <p className="text-lg md:text-xl font-black text-orange-300 leading-relaxed">
+                📰 紙媒体・WEB・YouTubeで那須地域の集客を20年支援してきた
+                <span className="text-white"> 株式会社adtown</span>が、
+                <br />
+                その知見を集約した<span className="text-white underline decoration-orange-400">「アプリ × AI」</span>の新サービスです。
+              </p>
+            </div>
+          </div>
 
           {/* 信用バッジ */}
-          <div className="flex flex-col items-center gap-4 mb-12">
+          <div className="flex flex-col items-center gap-4 mt-12 mb-12">
             <div className="inline-flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-full border border-slate-800 shadow-xl">
               <span className="text-orange-400 font-black tracking-[0.25em] uppercase text-xs md:text-sm">
                 nasu regional ai platform
               </span>
             </div>
 
-
             <p className="text-slate-700 font-black text-base md:text-lg italic max-w-4xl">
               「那須地域限定」のアプリを開発し、地元のアプリユーザーと店舗を
               <span className="text-slate-900 underline decoration-orange-300 underline-offset-8">AIで集客マッチング</span>します。
             </p>
-
 
             <div className="flex flex-wrap items-center justify-center gap-3">
               <span className="bg-orange-50 text-orange-700 px-6 py-3 rounded-full border border-orange-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
@@ -240,25 +242,24 @@ export default function PartnerSignupLP() {
                 ワンプランのみ
               </span>
               <span className="bg-slate-50 text-slate-700 px-6 py-3 rounded-full border border-slate-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                初期費用 0円（※決済は月額）
+                初期費用 0円
               </span>
             </div>
           </div>
 
-
-          <h1 className="text-5xl md:text-7xl lg:text-[9rem] font-black leading-[0.9] tracking-tighter italic">
+          {/* キャッチコピー */}
+          <h1 className="text-5xl md:text-7xl lg:text-[9rem] font-black leading-[0.9] tracking-tighter italic mt-8">
             集客を、<br />
             <span className="text-orange-600">"自動で増える状態"</span>へ。
           </h1>
 
-
-          <p className="mt-8 text-xl md:text-3xl text-slate-600 font-black max-w-5xl mx-auto leading-tight italic">
-            広告を出して終わりではなく、<br className="md:hidden" />
-            来店のきっかけを積み上げる仕組みを作ります。
+          <p className="mt-8 text-xl md:text-3xl text-slate-600 font-black max-w-5xl mx-auto leading-tight">
+            紙・WEB・動画で培った<span className="text-orange-600 italic">"地域集客のノウハウ"</span>を、
+            <br />
+            AIアプリに集約しました。
           </p>
 
-
-          {/* アプリ登録状況の追加 */}
+          {/* アプリ登録状況 */}
           <div className="mt-12 max-w-5xl mx-auto bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-[3rem] p-8 md:p-12 border-2 border-orange-200 shadow-xl">
             <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight mb-6">
               📱 みんなのNasuアプリ 登録者急増中！
@@ -275,8 +276,6 @@ export default function PartnerSignupLP() {
               </p>
             </div>
 
-
-            {/* アプリ登録用LPへのボタン */}
             <div className="mt-8">
               <a
                 href="https://minna-no-nasu-app.netlify.app/"
@@ -289,8 +288,7 @@ export default function PartnerSignupLP() {
             </div>
           </div>
 
-
-          {/* 💰 紹介報酬制度の追加セクション */}
+          {/* 💰 紹介報酬制度 */}
           <div className="mt-12 max-w-5xl mx-auto bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-[3rem] p-8 md:p-12 border-2 border-indigo-200 shadow-xl">
             <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight mb-6">
               💰 紹介報酬制度で広告費を利益に変える
@@ -313,9 +311,8 @@ export default function PartnerSignupLP() {
             </div>
           </div>
 
-
-          {/* 価格ブロック（アンカリング強め） */}
-          <div className="mt-10 max-w-4xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 md:p-12 shadow-2xl border border-slate-800">
+          {/* 価格ブロック（アンカリング + 無料なしの理由） */}
+          <div className="mt-12 max-w-4xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 md:p-12 shadow-2xl border border-slate-800">
             <p className="text-orange-300 font-black tracking-[0.3em] uppercase text-sm">limited offer</p>
             <div className="mt-4 flex flex-col md:flex-row items-center justify-center gap-6">
               <p className="text-xl md:text-2xl font-black text-white/70 line-through">
@@ -329,10 +326,56 @@ export default function PartnerSignupLP() {
             <p className="mt-4 text-white/80 font-bold">
               先行{PRICE.limitCompanies}社・申込順（残 {PRICE.remaining} 枠）
               <span className="block mt-1 text-white/70 text-sm">
-                ※登録完了後、決済（Stripe/請求書）へ進みます。ワンプランのみです。
+                ※登録完了後、決済（Stripe/請求書）へ進みます。
               </span>
             </p>
 
+            {/* 🆕 無料期間なしの理由 */}
+            <div className="mt-10 bg-white/5 border border-white/10 rounded-2xl p-8">
+              <h4 className="text-2xl font-black text-orange-400 mb-4">
+                💬 なぜ「無料お試し期間」がないのか？
+              </h4>
+              <div className="space-y-4 text-white/80 font-bold leading-relaxed">
+                <p>
+                  <span className="text-white font-black">理由①：本気のパートナーと共に成長したい</span><br />
+                  無料期間で"とりあえず登録"ではなく、本気で集客を改善したいオーナー様と、
+                  長期的な関係を築きたいと考えています。
+                </p>
+
+                <p>
+                  <span className="text-white font-black">理由②：20年の実績に基づく自信</span><br />
+                  adtownは20年間、那須で1000社+の集客を支援してきました。
+                  この実績が、サービスの価値を保証します。
+                </p>
+
+                <p>
+                  <span className="text-white font-black">理由③：紹介報酬でリスクヘッジ</span><br />
+                  お客様をアプリに紹介するだけで、<span className="text-orange-400 font-black">継続売上の30%が毎月還元</span>。
+                  広告費を実質0円にすることも可能です。
+                </p>
+              </div>
+            </div>
+
+            {/* 🆕 リスク低減策 */}
+            <div className="mt-6 bg-orange-600/10 border-2 border-orange-500/30 rounded-2xl p-8">
+              <h4 className="text-2xl font-black text-orange-300 mb-4">
+                🛡️ それでも不安な方へ
+              </h4>
+              <div className="space-y-3 text-white/80 font-bold">
+                <p>
+                  ✅ <span className="text-white">いつでも解約OK</span>（管理画面から1クリック）
+                </p>
+                <p>
+                  ✅ <span className="text-white">初月から紹介報酬が発生</span>（QRコードを置くだけ）
+                </p>
+                <p>
+                  ✅ <span className="text-white">LINEサポート完備</span>（運用の疑問に即回答）
+                </p>
+                <p>
+                  ✅ <span className="text-white">先行100社は¥5,500で固定</span>（値上げ後も据え置き）
+                </p>
+              </div>
+            </div>
 
             <div className="mt-8 flex flex-col items-center gap-6">
               <button
@@ -348,13 +391,189 @@ export default function PartnerSignupLP() {
           </div>
         </div>
 
-
         {/* 背景装飾 */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] bg-orange-50/40 rounded-full blur-[120px] -z-10"></div>
       </section>
 
+      {/* ============================================
+          TRUST: adtown社の20年実績（NEW）
+          ============================================ */}
+      <section className="py-28 md:py-36 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-16">
+            <p className="text-orange-400 font-black tracking-[0.3em] uppercase text-sm mb-4">
+              why trust us?
+            </p>
+            <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter">
+              20年間、那須で<br />
+              <span className="text-orange-400">地域集客を支援</span>してきました
+            </h2>
+          </div>
 
-      {/* PROBLEM */}
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* 左：これまでの実績 */}
+            <div className="bg-white/5 rounded-[3rem] p-10 border border-white/10 backdrop-blur-sm">
+              <h3 className="text-3xl font-black mb-8 text-orange-400">📚 これまでの実績</h3>
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <span className="text-4xl">📰</span>
+                  <div>
+                    <p className="font-black text-xl">紙媒体制作</p>
+                    <p className="text-white/70 font-bold mt-2 leading-relaxed">
+                      地域情報誌・チラシ・フリーペーパーなど、
+                      <span className="text-white font-black">累計1000社+</span>の制作実績。
+                      店舗オーナー様の「伝えたいこと」を形にしてきました。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <span className="text-4xl">🌐</span>
+                  <div>
+                    <p className="font-black text-xl">WEB制作・運用</p>
+                    <p className="text-white/70 font-bold mt-2 leading-relaxed">
+                      ホームページ制作、SEO対策、SNS運用代行など、
+                      デジタル集客の<span className="text-white font-black">トータルサポート</span>。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <span className="text-4xl">🎥</span>
+                  <div>
+                    <p className="font-black text-xl">YouTubeチャンネル運営</p>
+                    <p className="text-white/70 font-bold mt-2 leading-relaxed">
+                      那須地域の魅力を発信するYouTubeチャンネルを運営。
+                      <span className="text-white font-black">総フォロワー約10万人</span>のネットワークを構築。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 右：なぜ今「アプリ」なのか */}
+            <div className="bg-gradient-to-br from-orange-600 to-orange-500 rounded-[3rem] p-10 border-4 border-orange-400 shadow-2xl">
+              <h3 className="text-3xl font-black mb-8">💡 なぜ今「アプリ × AI」なのか？</h3>
+              <div className="space-y-6 text-white/95 font-bold leading-relaxed">
+                <p>
+                  <span className="font-black text-2xl">20年間の結論：</span><br />
+                  紙・WEB・動画は<span className="font-black underline decoration-white/70 underline-offset-4">「認知」には強い</span>。
+                  しかし、<span className="font-black">「来店〜リピート」までの導線が弱い</span>。
+                </p>
+
+                <div className="bg-white/20 rounded-2xl p-6 border-l-4 border-white">
+                  <p className="font-black text-xl mb-3">❌ 従来の課題</p>
+                  <ul className="space-y-2">
+                    <li>• チラシ：配布後の追跡ができない</li>
+                    <li>• WEB：見てもらえても行動に繋がらない</li>
+                    <li>• SNS：アルゴリズム次第で届かない</li>
+                  </ul>
+                </div>
+
+                <div className="bg-white text-orange-600 rounded-2xl p-6 border-4 border-white shadow-xl">
+                  <p className="font-black text-xl mb-3">✅ アプリ × AIの強み</p>
+                  <ul className="space-y-2 font-black">
+                    <li>• ユーザーの興味・行動データを分析</li>
+                    <li>• 「今日行きたい店」をAIが自動マッチング</li>
+                    <li>• クーポン・特典で来店動機を設計</li>
+                    <li>• プッシュ通知で確実にリーチ</li>
+                  </ul>
+                </div>
+
+                <p className="text-xl font-black italic border-t-2 border-white/30 pt-6">
+                  20年の知見を、最新技術で実装する。<br />
+                  それが「みんなのNasuアプリ」です。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 背景装飾 */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+          <div className="text-[20rem] font-black italic text-white/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+            20 YEARS
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================
+          CEO MESSAGE（NEW）
+          ============================================ */}
+      <section className="py-28 md:py-36 px-6 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[4rem] overflow-hidden shadow-3xl border border-slate-700">
+            <div className="p-12 md:p-16">
+              <p className="text-orange-400 font-black tracking-[0.3em] uppercase text-sm mb-4">
+                message from ceo
+              </p>
+              <h2 className="text-4xl md:text-5xl font-black text-white mb-8 italic tracking-tight">
+                20周年、次の20年へ。
+              </h2>
+
+              <div className="flex flex-col md:flex-row gap-10 items-start">
+                {/* 左：CEO写真（アイコン） */}
+                <div className="flex-shrink-0">
+                  <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-br from-orange-600 to-orange-500 border-4 border-orange-400 flex items-center justify-center shadow-2xl">
+                    <span className="text-6xl">👔</span>
+                  </div>
+                  <p className="mt-4 text-center text-white/60 font-bold text-sm">
+                    株式会社adtown<br />
+                    代表取締役
+                  </p>
+                </div>
+
+                {/* 右：メッセージ */}
+                <div className="flex-1 space-y-6 text-white/90 font-bold leading-relaxed text-lg">
+                  <p>
+                    創業から20年、私たちは那須地域の店舗様と共に歩んできました。
+                  </p>
+
+                  <p>
+                    紙媒体からスタートし、WEB、YouTube、そして今回の
+                    <span className="text-orange-400 font-black">「アプリ × AI」</span>へ。
+                    <br />
+                    形は変わっても、<span className="text-white font-black">「地元の店舗を輝かせたい」</span>
+                    という想いは変わりません。
+                  </p>
+
+                  <div className="bg-orange-600/10 border-l-4 border-orange-500 p-6 rounded-r-2xl">
+                    <p className="font-black text-white text-xl mb-3">なぜ今、アプリなのか？</p>
+                    <p>
+                      それは、これまでの広告手法では
+                      <span className="text-white font-black">「認知で止まっていた」</span>からです。
+                    </p>
+                    <p className="mt-2">
+                      アプリなら、来店〜リピートまでの導線を設計できる。
+                      AIなら、"合う人"に確実に届けられる。
+                    </p>
+                  </div>
+
+                  <p>
+                    <span className="text-orange-400 font-black text-2xl">無料期間は設けません。</span>
+                    <br />
+                    本気で集客を変えたいオーナー様と、共に成長したいからです。
+                  </p>
+
+                  <p className="italic text-white/70 border-t border-white/20 pt-6">
+                    20年の実績を、次の20年へ。<br />
+                    みんなのNasuアプリで、那須の未来を一緒に作りましょう。
+                  </p>
+
+                  <div className="pt-4">
+                    <p className="text-white font-black text-xl">株式会社adtown 代表取締役</p>
+                    <p className="text-orange-400 font-black text-3xl mt-2 italic">石下かをり</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================
+          PROBLEM
+          ============================================ */}
       <section className="py-28 md:py-36 bg-slate-900 text-white px-6 relative">
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-16 space-y-4">
@@ -363,7 +582,6 @@ export default function PartnerSignupLP() {
               多くのオーナーが直面する限界
             </p>
           </div>
-
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
             <TroubleCard
@@ -382,7 +600,6 @@ export default function PartnerSignupLP() {
               cause="運用が人に依存しているため、再現性と継続性が作れない"
             />
 
-
             <div className="lg:col-span-3 bg-gradient-to-br from-orange-600 to-orange-500 rounded-[4rem] p-14 md:p-16 text-center shadow-3xl">
               <h3 className="text-3xl md:text-5xl font-black italic tracking-tighter leading-tight text-white">
                 解決策は「頑張る」ではなく、<br />
@@ -396,8 +613,9 @@ export default function PartnerSignupLP() {
         </div>
       </section>
 
-
-      {/* SOLUTION：AIマッチングを明確に */}
+      {/* ============================================
+          SOLUTION: AIマッチング（強化版）
+          ============================================ */}
       <section className="py-28 md:py-36 px-6 bg-white">
         <div className="max-w-7xl mx-auto text-center">
           <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter text-slate-900">AI MATCHING</h2>
@@ -409,16 +627,59 @@ export default function PartnerSignupLP() {
             広く浅くではなく、来店に繋がる確度を上げます。
           </p>
 
+          {/* 🆕 AIマッチングの仕組み（具体化） */}
+          <div className="mt-14 max-w-4xl mx-auto bg-gradient-to-br from-slate-900 to-slate-800 rounded-[3rem] p-10 md:p-12 text-white border border-slate-700 shadow-2xl">
+            <h3 className="text-3xl font-black mb-8 text-orange-400">🧠 AIマッチングの仕組み</h3>
+            <div className="space-y-6 text-left">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center font-black text-xl">1</div>
+                <div>
+                  <p className="font-black text-xl">ユーザーデータの分析</p>
+                  <p className="text-white/70 font-bold mt-2">
+                    興味・閲覧履歴・位置情報・過去の行動パターンをAIが自動分析
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center font-black text-xl">2</div>
+                <div>
+                  <p className="font-black text-xl">店舗特性とマッチング</p>
+                  <p className="text-white/70 font-bold mt-2">
+                    料理ジャンル・価格帯・雰囲気・特典内容と、ユーザーの好みを照合
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center font-black text-xl">3</div>
+                <div>
+                  <p className="font-black text-xl">最適なタイミングで配信</p>
+                  <p className="text-white/70 font-bold mt-2">
+                    「今日のおすすめ店舗」としてプッシュ通知 + クーポンを自動配信
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 bg-orange-600/10 border-2 border-orange-500/30 rounded-2xl p-6">
+              <p className="font-black text-lg text-orange-300 mb-2">📍 具体例</p>
+              <p className="text-white/80 font-bold">
+                「イタリアン好き × 那須塩原在住 × 夜19時」のユーザーに、
+                貴店のディナークーポンを<span className="text-white font-black">自動配信</span>
+              </p>
+            </div>
+          </div>
 
           <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-10 text-left">
             <FeatureCard
               icon="🧠"
-              title="AIマッチング（中核）"
+              title="AIマッチング"
               desc="ユーザーの興味・行動傾向に合わせて、店舗のLINEや特典をユーザーに自動誘導します。"
             />
             <FeatureCard
               icon="🎯"
-              title="那須地域に限定配信"
+              title="那須地域に限定"
               desc="地域を絞ることで、無駄打ちを減らし、少ない費用でも、効果のある集客へ寄せていきます。"
             />
             <FeatureCard
@@ -435,14 +696,14 @@ export default function PartnerSignupLP() {
         </div>
       </section>
 
-
-      {/* TRUST：ロゴ（事例がない代わりに"参加企業"で信用補強） */}
-      <section className="py-20 md:py-28 px-6 bg-white overflow-hidden border-t border-slate-100">
+      {/* ============================================
+          TRUST: 提携企業ロゴ
+          ============================================ */}
+      <section className="py-20 md:py-28 px-6 bg-slate-50 overflow-hidden border-t border-slate-100">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-sm md:text-base font-black text-slate-400 tracking-[0.45em] uppercase italic">
             trusted by local partners
           </p>
-
 
           <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-12 items-center opacity-60 grayscale hover:grayscale-0 transition-all duration-700">
             {partners.map((p, i) => (
@@ -454,9 +715,10 @@ export default function PartnerSignupLP() {
         </div>
       </section>
 
-
-      {/* OFFER：ワンプラン・限定価格を再提示 */}
-      <section className="py-24 md:py-32 px-6 bg-slate-50 border-y border-slate-100">
+      {/* ============================================
+          OFFER: 価格・限定性
+          ============================================ */}
+      <section className="py-24 md:py-32 px-6 bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden">
             <div className="bg-gradient-to-r from-orange-600 to-orange-500 p-12 md:p-16 text-white">
@@ -474,7 +736,6 @@ export default function PartnerSignupLP() {
               </div>
             </div>
 
-
             <div className="p-10 md:p-16 grid md:grid-cols-3 gap-8">
               <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100">
                 <p className="font-black text-slate-900 text-xl">ワンプランに含まれるもの</p>
@@ -488,7 +749,6 @@ export default function PartnerSignupLP() {
                 </ul>
               </div>
 
-
               <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100">
                 <p className="font-black text-slate-900 text-xl">向いている店舗</p>
                 <ul className="mt-4 space-y-2 text-slate-600 font-bold">
@@ -499,7 +759,6 @@ export default function PartnerSignupLP() {
                   <li>・<span className="text-indigo-600 font-black">紹介報酬で収益化したい</span></li>
                 </ul>
               </div>
-
 
               <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 text-white">
                 <p className="font-black text-2xl italic">まずは"合うか"確認</p>
@@ -516,29 +775,57 @@ export default function PartnerSignupLP() {
             </div>
           </div>
 
-
-          {/* FAQ（事例が無い分、安心を厚く） */}
+          {/* ============================================
+              FAQ（強化版）
+              ============================================ */}
           <div className="mt-14">
             <h3 className="text-3xl md:text-4xl font-black tracking-tighter italic text-slate-900">よくある質問</h3>
             <div className="mt-8 grid md:grid-cols-2 gap-6">
-              <Faq q="これは那須以外でも使えますか？" a="本LPのサービスは那須地域限定です（地域密着のため、配信効率を最大化できます）。" />
-              <Faq q="プランは複数ありますか？" a="ワンプランのみです。登録後に決済（Stripe/請求書）へ進みます。" />
-              <Faq q="AIマッチングとは何ですか？" a="地元ユーザーの興味・行動傾向に合う形で、店舗のLINEや特典をユーザーに自動誘導することです。" />
-              <Faq q="紹介報酬はどのように支払われますか？" a="月末締め翌月15日に、指定口座へ振込されます。有料ユーザー継続売上（税抜）の30%が報酬です。" />
-              <Faq q="解約はできますか？" a="はい。管理画面よりいつでも解約手続きが可能です（規約に基づき日割り返金はありません）。" />
+              <Faq
+                q="これは那須以外でも使えますか？"
+                a="本LPのサービスは那須地域限定です（地域密着のため、配信効率を最大化できます）。"
+              />
+              <Faq
+                q="プランは複数ありますか？"
+                a="ワンプランのみです。登録後に決済（Stripe/請求書）へ進みます。"
+              />
+              <Faq
+                q="AIマッチングとは何ですか？"
+                a="地元ユーザーの興味・行動傾向に合う形で、店舗のLINEや特典をユーザーに自動誘導することです。"
+              />
+              <Faq
+                q="紹介報酬はどのように支払われますか？"
+                a="月末締め翌月15日に、指定口座へ振込されます。有料ユーザー継続売上（税抜）の30%が報酬です。"
+              />
+              <Faq
+                q="解約はできますか？"
+                a="はい。管理画面よりいつでも解約手続きが可能です（規約に基づき日割り返金はありません）。"
+              />
+              <Faq
+                q="新しいサービスなのに、なぜ実績を信じられるのですか？"
+                a="みんなのNasuアプリは「新規事業」ですが、運営する株式会社adtownは創業20年、那須地域で1000社+の集客支援実績があります。紙・WEB・YouTubeで培った知見を、アプリ×AIに集約したサービスです。"
+              />
+              <Faq
+                q="他社のアプリサービスとの違いは？"
+                a="①那須地域限定で配信効率を最大化 ②20年の地域ネットワーク ③紹介報酬30%還元（広告費を収益化できる） ④AIマッチングで「来店確度の高い人」に絞って届ける、という4点が最大の差別化です。"
+              />
+              <Faq
+                q="本当に効果が出るか不安です..."
+                a="その不安は当然です。だからこそ、①いつでも解約OK ②紹介報酬で実質コスト削減 ③LINEサポート完備、という3つの安心設計にしました。また、先行100社は¥5,500で固定（値上げ後も据え置き）なので、早期参加のメリットは大きいです。"
+              />
             </div>
           </div>
         </div>
       </section>
 
-
-      {/* SIGNUP FORM */}
+      {/* ============================================
+          SIGNUP FORM
+          ============================================ */}
       <section ref={formRef} id="signup" className="py-28 md:py-36 px-6 bg-slate-900 text-white relative">
         <div className="max-w-5xl mx-auto relative z-10">
           <div className="bg-white text-slate-900 rounded-[5rem] shadow-[0_60px_120px_rgba(0,0,0,0.6)] overflow-hidden border-[15px] border-orange-600">
             <div className="bg-orange-600 p-12 md:p-16 text-center text-white relative">
               <h3 className="text-4xl md:text-6xl font-black mb-6 italic tracking-tighter uppercase">Join the Program</h3>
-
 
               <div className="space-y-4 font-black">
                 <p className="text-2xl md:text-3xl line-through opacity-80 italic">
@@ -556,7 +843,6 @@ export default function PartnerSignupLP() {
               </div>
             </div>
 
-
             <div className="p-8 md:p-16">
               <form onSubmit={handleSignup} className="space-y-10">
                 <div className="space-y-3">
@@ -572,7 +858,6 @@ export default function PartnerSignupLP() {
                   />
                 </div>
 
-
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">ご担当者名 *</label>
@@ -586,7 +871,6 @@ export default function PartnerSignupLP() {
                       onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
                     />
                   </div>
-
 
                   <div className="space-y-3">
                     <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">所在地（那須エリア） *</label>
@@ -602,7 +886,6 @@ export default function PartnerSignupLP() {
                   </div>
                 </div>
 
-
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">メールアドレス *</label>
@@ -616,7 +899,6 @@ export default function PartnerSignupLP() {
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
                   </div>
-
 
                   <div className="space-y-3">
                     <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">メールアドレス（確認） *</label>
@@ -632,7 +914,6 @@ export default function PartnerSignupLP() {
                   </div>
                 </div>
 
-
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">電話番号 *</label>
@@ -646,7 +927,6 @@ export default function PartnerSignupLP() {
                       onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                     />
                   </div>
-
 
                   <div className="space-y-3">
                     <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">管理画面用パスワード *</label>
@@ -663,12 +943,10 @@ export default function PartnerSignupLP() {
                   </div>
                 </div>
 
-
                 <div className="p-8 md:p-10 bg-orange-50 rounded-[2.5rem] border-2 border-orange-100">
                   <p className="text-slate-700 mb-6 italic leading-relaxed text-lg font-bold">
                     ※登録完了後、決済ページへ遷移します。クレジットカード（Stripe）または請求書払いでご利用いただけます。
                   </p>
-
 
                   <label className="flex items-start gap-4 cursor-pointer">
                     <input
@@ -678,7 +956,7 @@ export default function PartnerSignupLP() {
                       onChange={(e) => setFormData({ ...formData, agree: e.target.checked })}
                     />
                     <span
-                      className="font-black text-slate-800 underline underline-offset-8 decoration-4 hover:text-orange-600 transition-colors"
+                      className="font-black text-slate-800 underline underline-offset-8 decoration-4 hover:text-orange-600 transition-colors cursor-pointer"
                       onClick={(e) => {
                         e.preventDefault();
                         setShowTerms(true);
@@ -689,7 +967,6 @@ export default function PartnerSignupLP() {
                   </label>
                 </div>
 
-
                 <button
                   type="submit"
                   disabled={loading}
@@ -697,7 +974,6 @@ export default function PartnerSignupLP() {
                 >
                   {loading ? '通信中...' : '登録して決済へ進む'}
                 </button>
-
 
                 <p className="text-center text-slate-500 font-bold text-sm leading-relaxed">
                   登録は1分程度。完了後に決済（ワンプラン）へ進みます。
@@ -707,14 +983,14 @@ export default function PartnerSignupLP() {
           </div>
         </div>
 
-
         <div className="absolute bottom-0 left-0 w-full overflow-hidden whitespace-nowrap opacity-[0.04] select-none pointer-events-none">
           <p className="text-[18rem] md:text-[22rem] font-black italic tracking-tighter leading-none">NASU × AI × LOCAL</p>
         </div>
       </section>
 
-
-      {/* 利用規約モーダル（紹介報酬制度を追加） */}
+      {/* ============================================
+          利用規約モーダル
+          ============================================ */}
       {showTerms && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 md:p-10 bg-slate-950/95 backdrop-blur-2xl">
           <div className="bg-white rounded-[3rem] max-w-4xl w-full max-h-[90vh] flex flex-col shadow-3xl border border-slate-100 overflow-hidden">
@@ -725,7 +1001,6 @@ export default function PartnerSignupLP() {
               </button>
             </div>
 
-
             <div className="p-8 md:p-12 overflow-y-auto space-y-10 text-slate-600 font-bold leading-relaxed">
               <section className="space-y-4">
                 <h4 className="text-slate-900 font-black text-xl border-l-8 border-orange-600 pl-4 uppercase">第1条（目的）</h4>
@@ -733,7 +1008,6 @@ export default function PartnerSignupLP() {
                   本契約は、株式会社adtown（以下「当社」）が提供する「みんなのNasuアプリ」を通じて、パートナーの広告掲載、集客支援、および相互の利益拡大を図ることを目的とします。
                 </p>
               </section>
-
 
               <section className="space-y-4 bg-indigo-50 p-8 rounded-3xl border-2 border-indigo-100">
                 <h4 className="text-indigo-600 font-black text-xl border-l-8 border-indigo-600 pl-4 uppercase">第2条（紹介報酬の支払い）</h4>
@@ -757,14 +1031,12 @@ export default function PartnerSignupLP() {
                 </div>
               </section>
 
-
               <section className="space-y-4 bg-orange-50 p-8 rounded-3xl border border-orange-100">
                 <h4 className="text-orange-600 font-black text-xl border-l-8 border-orange-600 pl-4 uppercase italic">第3条（契約の解除）</h4>
                 <p>
                   本契約は1ヶ月単位の自動更新となります。パートナーは管理画面よりいつでも解約手続きを行うことができます。日割り計算による返金は行われません。解約後も、既に発生している紹介報酬は規約に基づき支払われます。
                 </p>
               </section>
-
 
               <section className="space-y-4">
                 <h4 className="text-slate-900 font-black text-xl border-l-8 border-orange-600 pl-4 uppercase">第4条（禁止事項）</h4>
@@ -773,7 +1045,6 @@ export default function PartnerSignupLP() {
                 </p>
               </section>
 
-
               <section className="space-y-4">
                 <h4 className="text-slate-900 font-black text-xl border-l-8 border-orange-600 pl-4 uppercase">第5条（免責事項）</h4>
                 <p>
@@ -781,7 +1052,6 @@ export default function PartnerSignupLP() {
                 </p>
               </section>
             </div>
-
 
             <div className="p-8 md:p-10 border-t bg-slate-50 text-center">
               <button
@@ -795,13 +1065,17 @@ export default function PartnerSignupLP() {
         </div>
       )}
 
-
-      {/* フッター */}
+      {/* ============================================
+          FOOTER
+          ============================================ */}
       <footer className="bg-slate-950 py-24 px-6 text-center text-slate-500 font-bold border-t border-white/5">
         <div className="max-w-7xl mx-auto space-y-14">
           <div className="flex flex-col md:flex-row justify-center items-center gap-10 text-slate-400 text-sm md:text-base italic uppercase tracking-widest">
             <Link href="/company" className="hover:text-white transition-colors">
               Company
+            </Link>
+            <Link href="/affiliate-terms" className="hover:text-white transition-colors">
+              Affiliate Agreement
             </Link>
             <Link href="/privacy" className="hover:text-white transition-colors">
               Privacy Policy
@@ -814,7 +1088,6 @@ export default function PartnerSignupLP() {
             </Link>
           </div>
 
-
           <div className="space-y-6">
             <p className="text-xs tracking-[0.65em] uppercase opacity-40 italic font-black">
               empowering local economy with ai agent technology
@@ -823,7 +1096,6 @@ export default function PartnerSignupLP() {
               みんなの <span className="text-orange-600 underline decoration-white/40">NASU</span> アプリ
             </h2>
           </div>
-
 
           <div className="max-w-3xl mx-auto space-y-4">
             <p className="text-xs opacity-30 leading-loose italic font-medium">

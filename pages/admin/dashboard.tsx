@@ -18,7 +18,7 @@ const AdminPage: NextPage = () => {
     return (
         <div className="p-5 my-10 min-h-screen bg-gray-50 text-gray-800 antialiased">
             <Head>
-                <title>管理メニュー | ADTOWN</title>
+                <title>管理メニュー | adtown</title>
             </Head>
             <h1 className="text-4xl font-black mb-10 text-center uppercase tracking-tighter">管理メニュー</h1>
 
