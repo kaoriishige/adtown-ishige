@@ -94,6 +94,7 @@ export default function FaceSimulator() {
             {loading ? "シミュレーション中（約15秒）..." : "未来をシミュレーションする"}
           </button>
         </div>
+      </main>
     </div>
   );
 }
