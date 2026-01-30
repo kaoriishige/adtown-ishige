@@ -6,7 +6,8 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import Link from 'next/link';
@@ -30,6 +31,19 @@ const LoginPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<MessageContent | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
+
+  // 認証状態管理
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // 認証状態の確認
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      setAuthChecked(true);
+    });
+    return () => unsubscribe();
+  }, [auth]);
 
   // --- 修正：勝手に飛ばす監視（onAuthStateChanged）を削除 ---
   useEffect(() => {
@@ -135,6 +149,18 @@ const LoginPage: React.FC = () => {
       setError(message);
     }
   };
+
+  // 認証状態がまだ確認中
+  if (!authChecked) {
+    return <div className="text-center py-40">Loading...</div>;
+  }
+
+  // すでにログイン済みなら、ダッシュボードへリダイレクト
+  if (authUser) {
+    const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
+    router.replace(targetPath);
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

@@ -8,6 +8,15 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == recruiterId;
     }
     
+    // --- 一般ユーザー (users) のルール ---
+    // 新規登録時に自分のドキュメントを作成できる
+    // 自分のドキュメントのみ読み書き可能
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    
     // --- 求人情報 (recruitments) のルール ---
     // (既存のルールはそのまま)
     match /recruitments/{recruitmentId} {
@@ -41,6 +50,77 @@ service cloud.firestore {
       }
     }
     // ★★★★★★★【追記ここまで】★★★★★★★
+
+    // --- プレミアム機能のコレクション ---
+    // フリマ投稿
+    match /furima_posts/{postId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // おすそわけ投稿
+    match /osuso_posts/{postId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // ヘルパー投稿
+    match /helper_posts/{postId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // スキル投稿
+    match /skill_posts/{postId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // ペット掲示板
+    match /pet_posts/{postId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // レンタル投稿
+    match /rental_posts/{postId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // 空き家投稿
+    match /akiya_posts/{postId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // 空き畑投稿
+    match /akihata_posts/{postId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // サポートアラート
+    match /support_alerts/{alertId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
+
+    // 半額アラート
+    match /half_price_alerts/{alertId} {
+      allow create: if request.auth != null;
+      allow read: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+    }
 
   }
 }

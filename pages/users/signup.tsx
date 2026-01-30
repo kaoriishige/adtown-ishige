@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 import { db, app } from '@/lib/firebase';
-import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import {
     RiMailLine,
@@ -21,10 +21,23 @@ const UserSignupPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // 認証状態管理
+    const [authUser, setAuthUser] = useState<any>(null);
+    const [authChecked, setAuthChecked] = useState(false);
+
     const [userData, setUserData] = useState({
         email: '',
         password: '',
     });
+
+    // 認証状態の確認
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setAuthUser(user);
+            setAuthChecked(true);
+        });
+        return () => unsubscribe();
+    }, [auth]);
 
     // Firestoreへのユーザーデータ保存処理
     const saveUserToFirestore = async (user: any, providerType: string) => {
@@ -69,14 +82,39 @@ const UserSignupPage = () => {
         try {
             setError(null);
             setLoading(true);
-            const result = await signInWithPopup(auth, provider);
-            await saveUserToFirestore(result.user, 'google');
 
-            // セッション作成とリダイレクト
-            await handleAuthSuccess(result.user);
+            // 1. Google認証
+            const result = await signInWithPopup(auth, provider);
+            console.log('✅ Google認証成功:', result.user.uid);
+
+            // 2. Firestoreへの保存
+            try {
+                await saveUserToFirestore(result.user, 'google');
+                console.log('✅ Firestore保存成功');
+            } catch (firestoreErr: any) {
+                console.error('❌ Firestore保存エラー:', firestoreErr);
+                setError(`データベースへの保存に失敗しました。Firestoreのセキュリティルールを確認してください。エラー: ${firestoreErr.message}`);
+                return;
+            }
+
+            // 3. セッション作成とリダイレクト
+            try {
+                await handleAuthSuccess(result.user);
+                console.log('✅ セッション作成成功');
+            } catch (sessionErr: any) {
+                console.error('❌ セッション作成エラー:', sessionErr);
+                setError(`セッションの作成に失敗しました。エラー: ${sessionErr.message}`);
+                return;
+            }
         } catch (err: any) {
-            console.error(err);
-            setError("Google登録に失敗しました。");
+            console.error('❌ Google登録エラー:', err);
+            if (err.code === 'auth/popup-closed-by-user') {
+                setError("ログインがキャンセルされました。");
+            } else if (err.code === 'auth/popup-blocked') {
+                setError("ポップアップがブロックされました。ブラウザの設定を確認してください。");
+            } else {
+                setError(`Google登録に失敗しました。エラー: ${err.message}`);
+            }
         } finally {
             setLoading(false);
         }
@@ -112,6 +150,17 @@ const UserSignupPage = () => {
             setLoading(false);
         }
     };
+
+    // 認証状態がまだ確認中
+    if (!authChecked) {
+        return <div className="text-center py-40">Loading...</div>;
+    }
+
+    // すでにログイン済みなら、ダッシュボードへリダイレクト
+    if (authUser) {
+        router.replace('/premium/dashboard');
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-[#FDFCFD] flex flex-col justify-center py-12 px-6 font-sans text-[#4A3B3B]">
