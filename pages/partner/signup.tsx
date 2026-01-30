@@ -143,13 +143,23 @@ export default function PartnerSignupLP() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agree) return alert('利用規約に同意してください');
-    if (formData.email !== formData.confirmEmail) return alert('メールアドレスが一致しません。');
+
+    // 既にログイン済みの場合はメール確認をスキップ
+    if (!authUser && formData.email !== formData.confirmEmail) {
+      return alert('メールアドレスが一致しません。');
+    }
 
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      const user = userCredential.user;
+      let user = authUser;
 
+      // ログインしていない場合のみ新規アカウント作成
+      if (!authUser) {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        user = userCredential.user;
+      }
+
+      // パートナー情報を登録
       const regResponse = await fetch('/api/auth/register-partner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -159,7 +169,7 @@ export default function PartnerSignupLP() {
           contactPerson: formData.contactPerson,
           address: formData.address,
           phoneNumber: formData.phoneNumber,
-          email: formData.email,
+          email: user.email || formData.email,
           serviceType: 'adver',
         }),
       });
@@ -180,11 +190,8 @@ export default function PartnerSignupLP() {
     return <div className="text-center py-40">Loading...</div>;
   }
 
-  // すでにログイン済みなら、サブスク選択ページへリダイレクト
-  if (authUser) {
-    router.replace('/partner/subscribe_plan');
-    return null;
-  }
+  // ログイン済みでもランディングページを表示
+  // （フォーム送信時に適切にリダイレクトされる）
 
   return (
     <div className="bg-white text-slate-900 font-sans selection:bg-orange-100 overflow-x-hidden antialiased">
@@ -920,24 +927,30 @@ export default function PartnerSignupLP() {
                       autoComplete="email"
                       placeholder="mail@example.com"
                       required
-                      className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                      value={formData.email}
+                      disabled={!!authUser}
+                      className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                      value={authUser ? authUser.email || '' : formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
+                    {authUser && (
+                      <p className="text-xs text-slate-500 ml-3 font-bold">※ログイン済みのアカウントを使用します</p>
+                    )}
                   </div>
 
-                  <div className="space-y-3">
-                    <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">メールアドレス（確認） *</label>
-                    <input
-                      type="email"
-                      autoComplete="off"
-                      placeholder="再入力してください"
-                      required
-                      className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                      value={formData.confirmEmail}
-                      onChange={(e) => setFormData({ ...formData, confirmEmail: e.target.value })}
-                    />
-                  </div>
+                  {!authUser && (
+                    <div className="space-y-3">
+                      <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">メールアドレス（確認） *</label>
+                      <input
+                        type="email"
+                        autoComplete="off"
+                        placeholder="再入力してください"
+                        required
+                        className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
+                        value={formData.confirmEmail}
+                        onChange={(e) => setFormData({ ...formData, confirmEmail: e.target.value })}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -954,19 +967,21 @@ export default function PartnerSignupLP() {
                     />
                   </div>
 
-                  <div className="space-y-3">
-                    <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">管理画面用パスワード *</label>
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="8文字以上推奨"
-                      required
-                      minLength={8}
-                      className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    />
-                  </div>
+                  {!authUser && (
+                    <div className="space-y-3">
+                      <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">管理画面用パスワード *</label>
+                      <input
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="8文字以上推奨"
+                        required
+                        minLength={8}
+                        className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-8 md:p-10 bg-orange-50 rounded-[2.5rem] border-2 border-orange-100">
