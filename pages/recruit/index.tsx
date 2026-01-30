@@ -1040,9 +1040,9 @@ const RecruitSignupPage: NextPage = () => {
             <div>
               <h5 className="text-white font-bold text-lg mb-6">リンク</h5>
               <ul className="space-y-4 text-sm">
-                <li><Link href="/privacy-policy" className="hover:text-blue-400 transition-colors">プライバシーポリシー</Link></li>
+                <li><Link href="/privacy" className="hover:text-blue-400 transition-colors">プライバシーポリシー</Link></li>
                 <li><Link href="/terms" className="hover:text-blue-400 transition-colors">利用規約</Link></li>
-                <li><Link href="/tokushoho" className="hover:text-blue-400 transition-colors">特定商取引法に基づく表記</Link></li>
+                <li><Link href="/sctl" className="hover:text-blue-400 transition-colors">特定商取引法に基づく表記</Link></li>
               </ul>
             </div>
             <div>

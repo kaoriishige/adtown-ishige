@@ -1115,16 +1115,13 @@ export default function PartnerSignupLP() {
             <Link href="/company" className="hover:text-white transition-colors">
               Company
             </Link>
-            <Link href="/affiliate-terms" className="hover:text-white transition-colors">
-              Affiliate Agreement
-            </Link>
             <Link href="/privacy" className="hover:text-white transition-colors">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="hover:text-white transition-colors">
+            <Link href="/sctl" className="hover:text-white transition-colors">
               SCTL（特商法）
             </Link>
-            <Link href="/contact" className="hover:text-white transition-colors">
+            <Link href="/support" className="hover:text-white transition-colors">
               Support
             </Link>
           </div>
