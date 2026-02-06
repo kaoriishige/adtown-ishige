@@ -675,10 +675,13 @@ const StoreProfilePage: FC = () => {
 
                 if (uploadTasks.length > 0) {
                     try {
-                        // 並列実行。1つ失敗しても他は続ける
-                        await Promise.allSettled(uploadTasks);
+                        // Firebaseの支払い反映待ちなどで通信が固まるのを防ぐため、20秒の絶対時間制限を設けます
+                        await Promise.race([
+                            Promise.allSettled(uploadTasks),
+                            new Promise(resolve => setTimeout(resolve, 20000))
+                        ]);
                     } catch (e) {
-                        console.error("Parallel upload general error:", e);
+                        console.error("Parallel upload process timed out or failed:", e);
                     }
                 }
 
