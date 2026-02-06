@@ -13,7 +13,7 @@ import {
     Firestore // 型をインポート
 } from 'firebase/firestore';
 import {
-    ref, uploadBytesResumable, getDownloadURL,
+    ref, uploadBytes, getDownloadURL,
     FirebaseStorage // 型をインポート
 } from 'firebase/storage';
 // ★★★ 修正箇所ここまで ★★★
@@ -344,14 +344,6 @@ const StoreProfilePage: FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [industryData, setIndustryData] = useState<IndustrySpecificData>({});
     const [matchingValues, setMatchingValues] = useState<string[]>([]); // AIマッチング用価値観
-    const [skipStorage, setSkipStorage] = useState(false); // ストレージ保存をスキップ
-    const [debugLog, setDebugLog] = useState<string[]>([]);
-
-    const addDebugLog = (msg: string) => {
-        const time = new Date().toLocaleTimeString();
-        setDebugLog(prev => [`[${time}] ${msg}`, ...prev].slice(0, 50));
-        console.log(`[PROFILE DEBUG] ${msg}`);
-    };
 
     // プレースホルダーの計算
     const descriptionPlaceholder = useMemo(() => {
@@ -455,15 +447,12 @@ const StoreProfilePage: FC = () => {
                 setGalleryImageUrls(storeData.galleryImageUrls || []);
                 setIndustryData(storeData.industryData || {});
                 setMatchingValues(storeData.matchingValues || []);
-                addDebugLog(`Profile loaded for store: ${storeDoc.id}`);
             } else {
                 setMatchingValues([]); // 新規作成時
-                addDebugLog("No existing profile found. Starting new.");
             }
         } catch (err: any) {
             console.error("店舗情報の取得に失敗:", err);
             setError("店舗情報の読み込みに失敗しました。");
-            addDebugLog(`Load Error: ${err.message}`);
         } finally {
             setLoading(false);
         }
@@ -587,7 +576,6 @@ const StoreProfilePage: FC = () => {
 
         setIsSaving(true);
         setError(null);
-        addDebugLog("Save process started...");
 
         try {
             const firestore = db as Firestore;
@@ -623,18 +611,14 @@ const StoreProfilePage: FC = () => {
                 setStoreId(currentStoreId);
             } else {
                 const storeDocRefForUpdate = doc(userStoresCollectionRef, currentStoreId);
-                addDebugLog(`Updating existing store: ${currentStoreId}`);
                 await updateDoc(storeDocRefForUpdate, allStoreData);
             }
-            addDebugLog("Firestore data write successful.");
 
             // 2. 画像のアップロードとFirestore更新
-            if (storage && currentStoreId && !skipStorage) {
-                addDebugLog("Storage upload section started.");
+            if (storage && currentStoreId) {
                 const storeDocRef = doc(userStoresCollectionRef, currentStoreId);
                 let uploadErrorMessage = '';
 
-                // 全アップロードタスクを配列に格納
                 const uploadTasks: Promise<void>[] = [];
 
                 // メイン画像
@@ -646,21 +630,13 @@ const StoreProfilePage: FC = () => {
 
                     const task = (async () => {
                         try {
-                            addDebugLog(`Starting Main Image upload...`);
-                            const uploadTask = uploadBytesResumable(fileRef, mainImageFile);
-
-                            await new Promise((resolve, reject) => {
-                                const timer = setTimeout(() => { uploadTask.cancel(); reject(new Error("Main: Timeout")); }, 15000);
-                                uploadTask.on('state_changed', null, (err) => { clearTimeout(timer); reject(err); }, () => { clearTimeout(timer); resolve(true); });
-                            });
-
+                            await uploadBytes(fileRef, mainImageFile);
                             const url = await getDownloadURL(fileRef);
                             await updateDoc(storeDocRef, { mainImageUrl: url });
                             setMainImageUrl(url);
-                            addDebugLog("Main Image OK");
                         } catch (e: any) {
-                            addDebugLog(`Main Error: ${e.message}`);
-                            uploadErrorMessage += `メイン: ${e.message}\n`;
+                            console.error("Main Image Upload Error:", e);
+                            uploadErrorMessage += `メイン画像: ${e.message}\n`;
                         }
                     })();
                     uploadTasks.push(task);
@@ -668,7 +644,6 @@ const StoreProfilePage: FC = () => {
 
                 // ギャラリー画像
                 if (galleryImageFiles.length > 0) {
-                    addDebugLog(`Queuing ${galleryImageFiles.length} gallery images...`);
                     const galleryTask = (async () => {
                         const newUrls: string[] = [];
                         for (const file of galleryImageFiles) {
@@ -678,17 +653,12 @@ const StoreProfilePage: FC = () => {
                             const fileRef = ref(storageInstance, storagePath);
 
                             try {
-                                const uploadTask = uploadBytesResumable(fileRef, file);
-                                await new Promise((resolve, reject) => {
-                                    const timer = setTimeout(() => { uploadTask.cancel(); reject(new Error("Gallery: Timeout")); }, 15000);
-                                    uploadTask.on('state_changed', null, (err) => { clearTimeout(timer); reject(err); }, () => { clearTimeout(timer); resolve(true); });
-                                });
+                                await uploadBytes(fileRef, file);
                                 const url = await getDownloadURL(fileRef);
                                 newUrls.push(url);
-                                addDebugLog(`Gallery file OK`);
                             } catch (e: any) {
-                                uploadErrorMessage += `ギャラリー(${file.name}): ${e.message}\n`;
-                                addDebugLog(`Gallery Error: ${e.message}`);
+                                console.error(`Gallery Upload Error (${file.name}):`, e);
+                                uploadErrorMessage += `${file.name}: ${e.message}\n`;
                             }
                         }
                         if (newUrls.length > 0) {
@@ -696,8 +666,7 @@ const StoreProfilePage: FC = () => {
                                 await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(...newUrls) });
                                 setGalleryImageUrls(prev => [...prev, ...newUrls]);
                             } catch (e: any) {
-                                addDebugLog(`Gallery Update Store Error: ${e.message}`);
-                                uploadErrorMessage += `ギャラリーDB更新失敗: ${e.message}\n`;
+                                console.error("Gallery DB Update Error:", e);
                             }
                         }
                     })();
@@ -705,39 +674,30 @@ const StoreProfilePage: FC = () => {
                 }
 
                 if (uploadTasks.length > 0) {
-                    addDebugLog("Uploading images in parallel (Max 20s SAFETY)...");
                     try {
-                        // Promise.allSettled は各タスクの成功失敗に関わらず、全て終わるのを待つ
-                        // さらに Promise.race で20秒の絶対時間制限を設ける
-                        await Promise.race([
-                            Promise.allSettled(uploadTasks),
-                            new Promise(resolve => setTimeout(() => {
-                                addDebugLog("SAFETY TIMEOUT TRIGGERED!");
-                                resolve(true);
-                            }, 20000))
-                        ]);
-                        addDebugLog("Parallel process finished.");
+                        // 並列実行。1つ失敗しても他は続ける
+                        await Promise.allSettled(uploadTasks);
                     } catch (e) {
-                        console.error("Parallel upload crash:", e);
-                        addDebugLog("Parallel crash.");
+                        console.error("Parallel upload general error:", e);
                     }
                 }
 
                 if (uploadErrorMessage) {
-                    setError(`店舗情報の保存は完了しましたが、画像の一部が保存できませんでした(Storageエラー)。詳細:\n${uploadErrorMessage}`);
+                    setError(`店舗情報は正常に保存されましたが、一部の画像のアップロードに失敗しました。\n\n${uploadErrorMessage}`);
                     await new Promise(r => setTimeout(r, 4000));
+                } else {
+                    setError('店舗情報を保存しました。');
                 }
             }
             setMainImageFile(null);
             setGalleryImageFiles([]);
 
-            // 処理成功後、強制リロードして最新データをフェッチ
-            addDebugLog("Save completed successfully. Reloading page...");
+            // 成功メッセージを表示するために少し待つ
+            await new Promise(r => setTimeout(r, 1000));
             router.reload();
 
         } catch (err: any) {
             console.error("!!! SAVE FAILED !!! An error occurred in handleSaveProfile:", err);
-            addDebugLog(`!!! SAVE FAILED !!! ${err.message}`);
             let errorMessage = `保存に失敗しました: ${err.message}`;
             if (err.code === 'permission-denied' || (err.code && err.code.includes('storage/unauthorized'))) {
                 errorMessage += "\n\n【重要】Firebase Storage の権限エラーです。ルールを確認してください。";
@@ -1008,53 +968,37 @@ const StoreProfilePage: FC = () => {
                 </div>
 
 
-                {/* 5. 保存ボタン (変更なし) */}
-                <div className="space-y-4">
-                    <label className="flex items-center space-x-2 text-sm text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={skipStorage}
-                            onChange={(e) => setSkipStorage(e.target.checked)}
-                            className="w-4 h-4"
-                        />
-                        <span>【緊急用】画像アップロードでフリーズする場合はチェックを入れて保存してください（文字のみ保存）</span>
-                    </label>
-
-                    <button onClick={handleSaveProfile} disabled={isSaving} className="w-full px-6 py-3 bg-green-600 text-white text-xl font-bold rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors shadow-lg">
-                        {isSaving ? '保存中...' : '店舗情報をすべて保存する'}
-                    </button>
-                </div>
+                {/* 5. 保存ボタン */}
+                <button
+                    onClick={handleSaveProfile}
+                    disabled={isSaving}
+                    className="w-full px-6 py-4 bg-indigo-600 text-white text-xl font-bold rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors shadow-lg"
+                >
+                    {isSaving ? (
+                        <span className="flex items-center justify-center">
+                            <RiLoader4Line className="animate-spin mr-2" />
+                            保存中...
+                        </span>
+                    ) : (
+                        '店舗情報をすべて保存する'
+                    )}
+                </button>
 
                 {error && (
-                    <p className={`my-4 p-3 rounded whitespace-pre-wrap ${error === '店舗情報を保存しました。' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'}`}>
+                    <p className={`my-4 p-4 rounded-lg whitespace-pre-wrap font-medium border ${error === '店舗情報を保存しました。' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600'}`}>
                         {error}
                     </p>
                 )}
-
             </div>
 
 
-            <div className="mt-8">
+            <div className="mt-8 text-center pb-12">
                 <Link href="/partner/dashboard" legacyBehavior>
-                    <a className="text-blue-600 hover:underline">← ダッシュボードに戻る</a>
+                    <a className="text-gray-500 hover:text-indigo-600 transition-colors flex items-center justify-center">
+                        <RiArrowLeftLine className="mr-1" />
+                        ダッシュボードに戻る
+                    </a>
                 </Link>
-            </div>
-
-            {/* Debug Log Terminal */}
-            <div className="mt-12 bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs overflow-auto max-h-48 border-2 border-gray-700 shadow-xl">
-                <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
-                    <span className="font-bold text-gray-400 uppercase tracking-widest">Debug Terminal (appId: {appId})</span>
-                    <button onClick={() => setDebugLog([])} className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-0.5 rounded transition-colors text-[10px]">CLEAR</button>
-                </div>
-                {debugLog.length === 0 ? (
-                    <div className="text-gray-500 italic">待機中... (No logs yet)</div>
-                ) : (
-                    debugLog.map((log, i) => (
-                        <div key={i} className="mb-1 leading-tight break-all border-l-2 border-indigo-500 pl-2 py-0.5 bg-gray-800/30 rounded-r">
-                            {log}
-                        </div>
-                    ))
-                )}
             </div>
         </div>
     );
