@@ -3,19 +3,15 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { db, auth, storage } from '../../lib/firebase';
 import {
-    collection, query, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion, where // whereをインポート
+    collection, query, getDocs, doc, updateDoc, addDoc, serverTimestamp, arrayUnion, where, Firestore
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, FirebaseStorage } from "firebase/storage";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { v4 as uuidv4 } from 'uuid';
 
-// グローバル変数の型を宣言
 declare const __app_id: string;
-
-// グローバル変数からアプリIDを取得
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-// カテゴリデータ (省略していません)
 const categoryData = {
     "飲食関連": ["レストラン・食堂", "カフェ・喫茶店", "居酒屋・バー", "パン屋（ベーカリー）", "和菓子・洋菓子店", "ラーメン店", "そば・うどん店", "寿司屋", "その他"],
     "買い物関連": ["農産物直売所・青果店", "精肉店・鮮魚店", "個人経営の食料品店", "酒店", "ブティック・衣料品店", "雑貨店・民芸品店", "書店", "花屋", "お土産店", "その他"],
@@ -30,7 +26,6 @@ const categoryData = {
 };
 const mainCategories = Object.keys(categoryData);
 
-// 店舗紹介文のテンプレート
 const descriptionPlaceholders: { [key: string]: string } = {
     '飲食関連': '【お店のこだわり】\n例：地元那須の新鮮な野菜をたっぷり使ったイタリアンです。\n\n【おすすめメニュー】\n例：とちぎ和牛のグリル、季節野菜のバーニャカウダ\n\n【席数】\n例：30席（カウンター10席、テーブル20席）\n\n【個室】\n例：あり（4名様用×2室）\n\n【禁煙・喫煙】\n例：全席禁煙\n\n【駐車場】\n例：あり（10台）\n\n【営業時間】\n例：\n[月～金]\n11:00～15:00 (L.O. 14:30)\n17:00～22:00 (L.O. 21:30)\n[土・日・祝]\n11:00～22:00 (L.O. 21:30)\n\n【定休日】\n例：毎週水曜日、第2火曜日',
     '美容室・理容室': '【得意なスタイル】\n例：ショートカット、透明感のあるカラーリングが得意です。\n\n【お店の雰囲気】\n例：白を基調とした落ち着いた空間で、リラックスした時間をお過ごしいただけます。\n\n【席数】\n例：4席\n\n【駐車場】\n例：あり（店舗前に2台）\n\n【営業時間】\n例：\n平日 10:00～20:00\n土日祝 9:00～19:00\n\n【定休日】\n例：毎週火曜日',
@@ -38,7 +33,7 @@ const descriptionPlaceholders: { [key: string]: string } = {
     'デフォルト': '【お店・会社の特徴】\n例：地域に根ざして50年。お客様一人ひとりに寄り添ったサービスを心がけています。\n\n【主なサービス内容】\n例：\n・〇〇の販売\n・〇〇の修理・メンテナンス\n\n【営業時間】\n例：\n9:00～18:00\n\n【定休日】\n例：土日祝',
 };
 
-const EditStorePage = () => { // コンポーネント名を変更
+const EditStorePage = () => {
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
@@ -68,7 +63,6 @@ const EditStorePage = () => { // コンポーネント名を変更
         return descriptionPlaceholders['デフォルト'];
     }, [mainCategory, subCategory]);
 
-
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
@@ -84,9 +78,7 @@ const EditStorePage = () => { // コンポーネント名を変更
         if (!currentUser) return;
         setLoading(true);
         try {
-            // 🟢 修正点 1: 読み込み先を 'ads' コレクションに変更
             const adsRef = collection(db, 'ads');
-            // 🟢 修正点 2: ログインユーザーのID (ownerId) でフィルタリング
             const q = query(adsRef, where('ownerId', '==', currentUser.uid));
             const querySnapshot = await getDocs(q);
 
@@ -109,11 +101,7 @@ const EditStorePage = () => { // コンポーネント名を変更
             }
         } catch (err: any) {
             console.error("店舗情報の取得に失敗:", err);
-            let errorMessage = "店舗情報の読み込みに失敗しました。";
-            if (err.code === 'permission-denied') {
-                errorMessage += " Firebaseのセキュリティルールを確認してください。";
-            }
-            setError(errorMessage);
+            setError("店舗情報の読み込みに失敗しました。");
         }
         setLoading(false);
     }, []);
@@ -132,77 +120,55 @@ const EditStorePage = () => { // コンポーネント名を変更
         }
     }, [mainCategory]);
 
-
     const handleMainImageChange = (event: React.ChangeEvent<HTMLInputElement>) => { if (event.target.files && event.target.files[0]) { setMainImageFile(event.target.files[0]); } };
     const handleGalleryImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => { if (event.target.files) { setGalleryImageFiles(prev => [...prev, ...Array.from(event.target.files!)]); } };
     const handleSnsUrlChange = (index: number, value: string) => { const newSnsUrls = [...snsUrls]; newSnsUrls[index] = value; setSnsUrls(newSnsUrls); };
 
     const handleDeleteImage = async (imageUrlToDelete: string, imageType: 'main' | 'gallery') => {
         if (!user || !storeId) {
-            alert("エラーが発生しました。ページを再読み込みしてください。");
+            alert("エラーが発生しました。");
             return;
         }
-        if (!window.confirm("この写真を本当に削除しますか？この操作は元に戻せません。")) {
-            return;
-        }
-
-        // 🚨 注意: サーバー側API /api/partner/delete-image の修正も必要です。
-
-        setError(null);
+        if (!window.confirm("この写真を削除しますか？")) return;
         try {
             const token = await user.getIdToken();
             const response = await fetch('/api/partner/delete-image', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ storeId, imageUrl: imageUrlToDelete, imageType, appId }),
             });
-
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || "削除に失敗しました。");
-            }
-
-            if (imageType === 'main') {
-                setMainImageUrl(null);
-            } else {
-                setGalleryImageUrls(prev => prev.filter(url => url !== imageUrlToDelete));
-            }
-            alert("写真を削除しました。");
-
+            if (!response.ok) throw new Error("削除に失敗しました。");
+            if (imageType === 'main') setMainImageUrl(null);
+            else setGalleryImageUrls(prev => prev.filter(url => url !== imageUrlToDelete));
         } catch (err: any) {
-            console.error("画像削除エラー:", err);
             setError(err.message);
         }
     };
 
+    // --- 保存処理 (直列アップロード & 構文修正版) ---
     const handleSaveProfile = async () => {
-        if (!user) {
-            console.error("Save failed: User is not logged in.");
-            return alert('ログインしていません。');
+        console.log("デバッグ: 保存開始時のUID =", user?.uid);
+        console.log("デバッグ: 保存先のAppID =", appId);
+
+        if (!user || !db || !storage) {
+            setError('ログイン情報またはFirebaseの初期化に失敗しました。');
+            return;
         }
 
-        console.log("--- 1. SAVE PROCESS STARTED ---");
-        console.log("User ID:", user.uid);
-
-        if (!mainCategory || (mainCategory !== 'その他' && !subCategory)) { return alert('カテゴリ（大分類・小分類）は必須項目です。'); }
-        if (mainCategory === 'その他' && !otherMainCategory) { return alert('カテゴリ（大分類）で「その他」を選んだ場合は、内容を入力してください。'); }
-        if (subCategory === 'その他' && !otherSubCategory) { return alert('カテゴリ（小分類）で「その他」を選んだ場合は、内容を入力してください。'); }
+        if (!mainCategory || (mainCategory !== 'その他' && !subCategory)) {
+            alert('カテゴリは必須項目です。');
+            return;
+        }
 
         setIsSaving(true);
         setError(null);
 
         try {
-            // 🟢 修正点 3: 保存先をトップレベルの 'ads' コレクションに変更
-            const adsCollectionRef = collection(db, 'ads');
-            console.log("--- 2. Firestore Path ---");
-            console.log("Attempting to write to collection: ads");
-
+            const firestore = db as Firestore;
+            const storageInstance = storage as FirebaseStorage;
+            const adsCollectionRef = collection(firestore, 'ads');
             let currentStoreId = storeId;
 
-            // 🟢 修正点 4: 永続的な ownerId をデータに含める
             const textData = {
                 storeName, address, phoneNumber,
                 mainCategory, subCategory,
@@ -210,78 +176,59 @@ const EditStorePage = () => { // コンポーネント名を変更
                 otherSubCategory: subCategory === 'その他' ? otherSubCategory : '',
                 description, websiteUrl,
                 snsUrls: snsUrls.filter(url => url.trim() !== ''),
-                ownerId: user.uid, // ★ パートナーを識別するための最重要フィールド
+                ownerId: user.uid,
                 updatedAt: serverTimestamp(),
             };
-            console.log("--- 3. Firestore Data ---");
-            console.log("Data to save:", textData);
 
+            // 1. 文書の作成または更新
             if (!currentStoreId) {
-                console.log("Creating new document in 'ads'...");
                 const docRef = await addDoc(adsCollectionRef, {
-                    ...textData,
-                    status: 'pending',
-                    createdAt: serverTimestamp(),
-                    mainImageUrl: '',
-                    galleryImageUrls: []
+                    ...textData, status: 'pending', createdAt: serverTimestamp(), mainImageUrl: '', galleryImageUrls: []
                 });
                 currentStoreId = docRef.id;
                 setStoreId(currentStoreId);
-                console.log("SUCCESS: New document created with ID:", currentStoreId);
             } else {
-                console.log("Updating existing document in 'ads':", currentStoreId);
-                const storeDocRefForUpdate = doc(adsCollectionRef, currentStoreId);
-                await updateDoc(storeDocRefForUpdate, textData);
-                console.log("SUCCESS: Document updated.");
+                await updateDoc(doc(adsCollectionRef, currentStoreId), textData);
             }
 
-            const storeDocRef = doc(adsCollectionRef, currentStoreId!);
+            const storeDocRef = doc(adsCollectionRef, currentStoreId);
 
+            // 2. メイン画像のアップロード (直列)
             if (mainImageFile) {
                 const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
-                // 🟢 修正点 5: Storage パスを ads に変更 (推奨)
                 const storagePath = `ads/${currentStoreId}/${uniqueFileName}`;
-                console.log("--- 4. Main Image Upload ---");
-                console.log("Uploading to Storage path:", storagePath);
-                const fileRef = ref(storage, storagePath);
-                const uploadTask = await uploadBytesResumable(fileRef, mainImageFile);
-                const updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
-                await updateDoc(storeDocRef, { mainImageUrl: updatedMainImageUrl });
-                setMainImageUrl(updatedMainImageUrl);
-                console.log("SUCCESS: Main image uploaded.");
+                const fileRef = ref(storageInstance, storagePath);
+
+                await uploadBytes(fileRef, mainImageFile);
+                const url = await getDownloadURL(fileRef);
+                await updateDoc(storeDocRef, { mainImageUrl: url });
+                setMainImageUrl(url);
+                setMainImageFile(null);
             }
 
+            // 3. ギャラリー画像のアップロード (直列ループ)
             if (galleryImageFiles.length > 0) {
-                console.log(`--- 5. Gallery Image Upload (${galleryImageFiles.length} files) ---`);
-                const newGalleryImageUrls: string[] = [];
                 for (const file of galleryImageFiles) {
                     const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
-                    // 🟢 修正点 6: Storage パスを ads に変更 (推奨)
                     const storagePath = `ads/${currentStoreId}/${uniqueFileName}`;
-                    console.log("Uploading to Storage path:", storagePath);
-                    const fileRef = ref(storage, storagePath);
-                    const uploadTask = await uploadBytesResumable(fileRef, file);
-                    const downloadURL = await getDownloadURL(uploadTask.ref);
-                    newGalleryImageUrls.push(downloadURL);
+                    const fileRef = ref(storageInstance, storagePath);
+
+                    await uploadBytes(fileRef, file);
+                    const url = await getDownloadURL(fileRef);
+                    await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(url) });
+                    setGalleryImageUrls(prev => [...prev, url]);
                 }
-                await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(...newGalleryImageUrls) });
-                setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
-                console.log("SUCCESS: Gallery images uploaded.");
+                setGalleryImageFiles([]);
             }
 
-            setMainImageFile(null);
-            setGalleryImageFiles([]);
-
-            console.log("--- 6. SAVE PROCESS COMPLETED ON CLIENT ---");
             alert('店舗情報を保存しました。');
+            setTimeout(() => {
+                router.reload();
+            }, 1000);
 
         } catch (err: any) {
-            console.error("!!! SAVE FAILED !!! An error occurred in handleSaveProfile:", err);
-            let errorMessage = `保存に失敗しました: ${err.message}`;
-            if (err.code === 'permission-denied' || (err.code && err.code.includes('storage/unauthorized'))) {
-                errorMessage += "\n\n【重要】これはFirebaseの権限エラーです。FirebaseコンソールでFirestoreとStorage両方のセキュリティルールが正しく設定されているか確認してください。";
-            }
-            setError(errorMessage);
+            console.error("SAVE ERROR:", err);
+            setError(`保存に失敗しました: ${err.message}`);
         } finally {
             setIsSaving(false);
         }
@@ -322,59 +269,55 @@ const EditStorePage = () => { // コンポーネント名を変更
                     <div className="flex justify-between items-center mb-1">
                         <div>
                             <label className="font-bold">店舗紹介文・営業時間</label>
-                            <p className="text-sm text-gray-500 mt-1">営業時間や定休日もこちらにご記入ください。</p>
+                            <p className="text-sm text-gray-500 mt-1">営業時間や定休日も記入してください。</p>
                         </div>
-                        <button type="button" onClick={() => setDescription(descriptionPlaceholder)} className="bg-blue-500 text-white text-sm font-bold py-2 px-4 rounded hover:bg-blue-600 transition-colors">テンプレートを貼り付け</button>
+                        <button type="button" onClick={() => setDescription(descriptionPlaceholder)} className="bg-blue-500 text-white text-sm font-bold py-2 px-4 rounded hover:bg-blue-600 transition-colors">テンプレート貼り付け</button>
                     </div>
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded mt-1" rows={15} placeholder="カテゴリを選択後、「テンプレートを貼り付け」ボタンを押すと入力が簡単になります。"></textarea>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded mt-1" rows={15}></textarea>
                 </div>
 
                 <div className="space-y-2">
                     <label className="font-bold">トップ画像 (1枚)</label>
-                    <p className="text-sm text-gray-500">推奨サイズ: 横1200px × 縦675px (16:9)</p>
                     <div className="p-2 border rounded min-h-[100px]">
                         {(mainImageUrl || mainImageFile) ? (
                             <div className="relative inline-block">
-                                <img src={mainImageFile ? URL.createObjectURL(mainImageFile) : mainImageUrl!} alt="トップ画像プレビュー" className="w-48 h-auto rounded" />
-                                <button type="button" onClick={() => { if (mainImageFile) { setMainImageFile(null); const input = document.getElementById('main-image-input') as HTMLInputElement; if (input) input.value = ''; } else if (mainImageUrl) { handleDeleteImage(mainImageUrl, 'main'); } }} className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -m-2">X</button>
+                                <img src={mainImageFile ? URL.createObjectURL(mainImageFile) : mainImageUrl!} alt="プレビュー" className="w-48 h-auto rounded" />
+                                <button type="button" onClick={() => { if (mainImageFile) setMainImageFile(null); else handleDeleteImage(mainImageUrl!, 'main'); }} className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -m-2">X</button>
                             </div>
-                        ) : (<p className="text-gray-400">まだ画像はありません。</p>)}
+                        ) : (<p className="text-gray-400">画像なし</p>)}
                     </div>
-                    <input id="main-image-input" type="file" accept="image/*" onChange={handleMainImageChange} className="text-sm" />
+                    <input type="file" accept="image/*" onChange={handleMainImageChange} className="text-sm" />
                 </div>
+
                 <div className="space-y-2">
-                    <label className="font-bold">ギャラリー写真 (複数可)</label>
-                    <p className="text-sm text-gray-500">推奨サイズ: 横800px × 縦800px (1:1)</p>
+                    <label className="font-bold">ギャラリー写真</label>
                     <div className="p-2 border rounded min-h-[112px] flex flex-wrap gap-2">
-                        {galleryImageUrls && galleryImageUrls.filter(url => url).map((url, index) => (
+                        {galleryImageUrls.map((url, index) => (
                             <div key={index} className="relative">
-                                <img src={url} alt={`ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }} />
+                                <img src={url} className="w-24 h-24 object-cover rounded" alt="" />
                                 <button type="button" onClick={() => handleDeleteImage(url, 'gallery')} className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">X</button>
                             </div>
                         ))}
                         {galleryImageFiles.map((file, index) => (
-                            <div key={index} className="relative">
-                                <img src={URL.createObjectURL(file)} alt={`新規ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded" />
+                            <div key={`new-${index}`} className="relative">
+                                <img src={URL.createObjectURL(file)} className="w-24 h-24 object-cover rounded" alt="" />
                                 <button type="button" onClick={() => setGalleryImageFiles(galleryImageFiles.filter((_, i) => i !== index))} className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">X</button>
                             </div>
                         ))}
-                        {galleryImageUrls.filter(url => url).length === 0 && galleryImageFiles.length === 0 && (<p className="text-gray-400">まだ写真はありません。</p>)}
                     </div>
                     <input type="file" multiple onChange={handleGalleryImagesChange} accept="image/*" className="text-sm" />
                 </div>
 
-                <div><label className="font-bold">公式ウェブサイトURL</label><input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
-                <div><label className="font-bold">SNS URL 1</label><input type="url" value={snsUrls[0]} onChange={(e) => handleSnsUrlChange(0, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
-                <div><label className="font-bold">SNS URL 2</label><input type="url" value={snsUrls[1]} onChange={(e) => handleSnsUrlChange(1, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
-                <div><label className="font-bold">SNS URL 3</label><input type="url" value={snsUrls[2]} onChange={(e) => handleSnsUrlChange(2, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https-..." /></div>
+                <div><label className="font-bold">公式URL</label><input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
+                <div><label className="font-bold">SNS URL 1</label><input type="url" value={snsUrls[0]} onChange={(e) => handleSnsUrlChange(0, e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
 
-                <button onClick={handleSaveProfile} disabled={isSaving} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400">
-                    {isSaving ? '保存中...' : '保存する'}
+                <button onClick={handleSaveProfile} disabled={isSaving} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 w-full font-bold">
+                    {isSaving ? '保存中（閉じないでください）...' : '店舗情報を保存する'}
                 </button>
             </div>
 
-            <div className="mt-8">
-                <Link href="/partner/dashboard" legacyBehavior><a className="text-blue-600 hover:underline">← ダッシュボードに戻る</a></Link>
+            <div className="mt-8 text-center">
+                <Link href="/partner/dashboard" className="text-blue-600 hover:underline">← ダッシュボードに戻る</Link>
             </div>
         </div>
     );
