@@ -9,10 +9,18 @@ const RecruitLoginPage = () => {
 
   // 認証状態管理
   const [authChecked, setAuthChecked] = useState(false);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
+  const addDebugLog = (msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    setDebugLog(prev => [`[${time}] ${msg}`, ...prev].slice(0, 50));
+    console.log(`[RECRUIT LOGIN DEBUG] ${msg}`);
+  };
 
   useEffect(() => {
-    // 【重要】auth.currentUserを直接見ず、監視関数を使う
+    addDebugLog("Initializing Auth check...");
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      addDebugLog(`Auth confirmed: ${user?.uid || 'null'}`);
       setAuthChecked(true);
       if (user) {
         // ログイン状態が確認できたら自動でダッシュボードへ
@@ -37,16 +45,27 @@ const RecruitLoginPage = () => {
     }
   };
 
-  // 認証状態がまだ確認中
-  if (!authChecked) {
-    return <div className="text-center py-40">Loading...</div>;
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <button onClick={handleLogin} className="px-4 py-2 bg-blue-500 text-white rounded-md">
-        テストログイン（情報を記憶）
-      </button>
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-grow flex items-center justify-center">
+        {!authChecked ? (
+          <div className="text-center">Loading...</div>
+        ) : (
+          <button onClick={handleLogin} className="px-4 py-2 bg-blue-500 text-white rounded-md">
+            テストログイン（情報を記憶）
+          </button>
+        )}
+      </div>
+
+      {/* デバッグログ表示 (本番での切り分け用) */}
+      <div className="p-4 bg-gray-900 text-green-400 font-mono text-xs overflow-auto max-h-60 border-t-4 border-gray-700">
+        <p className="font-bold border-b border-gray-700 mb-2 pb-1">Debug Terminal</p>
+        <p className="mb-2 italic opacity-70">※ エラー調査用のログです。解決したら削除します。</p>
+        {debugLog.map((log, i) => (
+          <div key={i}>{log}</div>
+        ))}
+        {debugLog.length === 0 && <div>Waiting for events...</div>}
+      </div>
     </div>
   );
 };

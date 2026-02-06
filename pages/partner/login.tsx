@@ -32,9 +32,20 @@ const LoginPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<MessageContent | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
+  const addDebugLog = (msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    setDebugLog(prev => [`[${time}] ${msg}`, ...prev].slice(0, 50));
+    console.log(`[LOGIN DEBUG] ${msg}`);
+  };
 
   // 認証状態管理 (AuthContextを使用)
   const { user: authUser, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    addDebugLog(`Auth loading: ${authLoading}, User: ${authUser?.uid || 'null'}`);
+  }, [authLoading, authUser]);
 
   // --- 修正：勝手に飛ばす監視（onAuthStateChanged）を削除し、AuthContextに一本化 ---
 
@@ -143,85 +154,102 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // 認証状態がまだ確認中 (AuthContextのロード中)
-  if (authLoading) {
-    return <div className="text-center py-40">Loading...</div>;
-  }
-
-  // すでにログイン済みなら、ダッシュボードへリダイレクト
-  if (authUser) {
-    const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
-    router.replace(targetPath);
-    return null;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Head><title>パートナーログイン</title></Head>
-      <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900 text-center">パートナーログイン</h1>
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <Head>
+        <title>Adtown パートナーログイン</title>
+      </Head>
 
-        <div className="flex justify-center space-x-6">
-          {['adver', 'recruit'].map((type) => (
-            <label key={type} className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={loginType === type}
-                onChange={() => setLoginType(type)}
-                className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {type === 'adver' ? '広告パートナー' : '求人パートナー'}
-              </span>
-            </label>
-          ))}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center animate-pulse">{error}</div>}
-          {successMessage && <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm text-center">{successMessage}</div>}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">メールアドレス</label>
-            <input
-              type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-              placeholder="example@mail.com"
-              className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm"
-            />
+      <div className="flex-grow flex items-center justify-center p-4">
+        {authLoading ? (
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-lg font-semibold text-gray-700">認証情報を確認中...</p>
+            <p className="text-sm text-gray-500 mt-2">画面下のログを確認してください</p>
           </div>
+        ) : authUser ? (
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-lg font-semibold text-gray-700">ログイン済みです</p>
+            <p className="text-sm text-gray-500 mt-2">ダッシュボードへ移動しています...</p>
+          </div>
+        ) : (
+          <div className="max-w-md w-full bg-white rounded-xl shadow-lg border border-gray-100 p-8 space-y-6">
+            <h1 className="text-3xl font-bold text-gray-900 text-center">パートナーログイン</h1>
 
-          {!isPasswordResetMode && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700">パスワード</label>
-              <div className="relative mt-1">
+            <div className="flex justify-center space-x-6">
+              {['adver', 'recruit'].map((type) => (
+                <label key={type} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={loginType === type}
+                    onChange={() => setLoginType(type)}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {type === 'adver' ? '広告パートナー' : '求人パートナー'}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center animate-pulse">{error}</div>}
+              {successMessage && <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm text-center">{successMessage}</div>}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">メールアドレス</label>
                 <input
-                  type={passwordVisible ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
-                  className="block w-full p-3 border border-gray-300 rounded-md pr-10"
+                  type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                  placeholder="example@mail.com"
+                  className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm"
                 />
-                <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
-                  {passwordVisible ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
+              </div>
+
+              {!isPasswordResetMode && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">パスワード</label>
+                  <div className="relative mt-1">
+                    <input
+                      type={passwordVisible ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
+                      className="block w-full p-3 border border-gray-300 rounded-md pr-10"
+                    />
+                    <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
+                      {passwordVisible ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-sm flex justify-center space-x-4">
+                <button type="button" onClick={handleEmailForget} className="text-indigo-600 hover:underline">メール忘れ</button>
+                <button type="button" onClick={handleStartPasswordReset} className="text-indigo-600 hover:underline">パスワード忘れ</button>
+              </div>
+
+              <button type="submit" disabled={loading} className="w-full py-3 bg-orange-500 text-white font-bold rounded-md disabled:bg-gray-400">
+                {loading ? "処理中..." : (isPasswordResetMode ? '再設定メールを送信' : 'ログイン')}
+              </button>
+            </form>
+
+            <div className="text-center text-sm mt-4 pt-4 border-t border-gray-100">
+              <p className="text-gray-600">アカウントをお持ちでないですか？</p>
+              <div className="flex justify-center space-x-4 mt-2">
+                <Link href="/partner/signup" className="text-blue-600 font-medium hover:underline">広告パートナー登録</Link>
+                <Link href="/recruit" className="text-blue-600 font-medium hover:underline">求人パートナー登録</Link>
               </div>
             </div>
-          )}
-
-          <div className="text-sm flex justify-center space-x-4">
-            <button type="button" onClick={handleEmailForget} className="text-indigo-600 hover:underline">メール忘れ</button>
-            <button type="button" onClick={handleStartPasswordReset} className="text-indigo-600 hover:underline">パスワード忘れ</button>
           </div>
+        )}
+      </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3 bg-orange-500 text-white font-bold rounded-md disabled:bg-gray-400">
-            {loading ? "処理中..." : (isPasswordResetMode ? '再設定メールを送信' : 'ログイン')}
-          </button>
-        </form>
-
-        <div className="text-center text-sm mt-4 pt-4 border-t border-gray-100">
-          <p className="text-gray-600">アカウントをお持ちでないですか？</p>
-          <div className="flex justify-center space-x-4 mt-2">
-            <Link href="/partner/signup" className="text-blue-600 font-medium hover:underline">広告パートナー登録</Link>
-            <Link href="/recruit" className="text-blue-600 font-medium hover:underline">求人パートナー登録</Link>
-          </div>
-        </div>
+      {/* デバッグログ表示 (本番での切り分け用) */}
+      <div className="p-4 bg-gray-900 text-green-400 font-mono text-xs overflow-auto max-h-60 border-t-4 border-gray-700">
+        <p className="font-bold border-b border-gray-700 mb-2 pb-1">Debug Terminal</p>
+        <p className="mb-2 italic opacity-70">※ エラー調査用のログです。解決したら削除します。</p>
+        {debugLog.map((log, i) => (
+          <div key={i}>{log}</div>
+        ))}
+        {debugLog.length === 0 && <div>Waiting for login events...</div>}
       </div>
     </div>
   );

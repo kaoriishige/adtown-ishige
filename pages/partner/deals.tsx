@@ -80,6 +80,13 @@ const PartnerDealsPage: NextPage = () => {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null); // アップロード状況表示用
   const [successMessage, setSuccessMessage] = useState<string | null>(null); // 登録完了メッセージ用
   const [error, setError] = useState<string | null>(null);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
+  const addDebugLog = (msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    setDebugLog(prev => [`[${time}] ${msg}`, ...prev].slice(0, 50));
+    console.log(`[DEBUG] ${msg}`);
+  };
 
   // プレースホルダーの動的生成
   const descriptionPlaceholder = useMemo(() => {
@@ -94,11 +101,14 @@ const PartnerDealsPage: NextPage = () => {
 
   // 認証チェック
   useEffect(() => {
+    addDebugLog("Initializing Auth check...");
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
+        addDebugLog(`Auth confirmed: ${currentUser.uid}`);
         setUser(currentUser);
         setAuthChecked(true); // ユーザー確認完了
       } else {
+        addDebugLog("No active userSession. Redirecting to login...");
         setLoading(false); // ローディング終了（ログインページへ遷移するため）
         setAuthChecked(true);
         router.push('/partner/login');
@@ -181,6 +191,7 @@ const PartnerDealsPage: NextPage = () => {
   // 認証完了時にデータを取得（初回のみ）
   useEffect(() => {
     if (user && authChecked) {
+      addDebugLog("Auth and User ready. Fetching data...");
       fetchStoreAndDeals(user);
     }
   }, [user, authChecked, fetchStoreAndDeals]);
@@ -224,6 +235,7 @@ const PartnerDealsPage: NextPage = () => {
 
     setIsSubmitting(true);
     setError(null);
+    addDebugLog(`Registration started (AppID: ${appId}). Preparing files...`);
 
     try {
       const mediaItems: MediaItem[] = [];
@@ -241,6 +253,7 @@ const PartnerDealsPage: NextPage = () => {
             const fileRef = ref(storage, `ads/${store.id}/${sanitizedFileName}`);
 
             // Resumable upload with progress and timeout
+            addDebugLog(`${logPrefix} Starting Storage upload...`);
             const uploadTask = uploadBytesResumable(fileRef, file);
 
             const uploadPromise = new Promise<string>((resolve, reject) => {
@@ -269,6 +282,7 @@ const PartnerDealsPage: NextPage = () => {
                 },
                 async () => {
                   clearTimeout(timeoutId);
+                  addDebugLog(`${logPrefix} Upload success. Fetching URL...`);
                   const url = await getDownloadURL(uploadTask.snapshot.ref);
                   resolve(url);
                 }
@@ -307,7 +321,9 @@ const PartnerDealsPage: NextPage = () => {
         isActive: true,
       };
 
+      addDebugLog("All files uploaded. Saving to Firestore...");
       const docRef = await addDoc(dealsCollectionRef, newDealData);
+      addDebugLog(`Successfully registered! ID: ${docRef.id}`);
       console.log("Document added with ID:", docRef.id);
 
       // ローカルStateを更新（再取得によるフリーズ回避）
@@ -360,151 +376,174 @@ const PartnerDealsPage: NextPage = () => {
     }
   };
 
-  // 認証チェック中はローディング
-  if (!authChecked) return <div className="flex justify-center items-center h-screen">読み込み中...</div>;
-  if (!user) return null; // ログインページへのリダイレクト中に何も表示しない
-
   return (
-    <div className="container mx-auto p-8 max-w-3xl">
+    <div className="container mx-auto p-8 max-w-3xl min-h-screen flex flex-col">
       <Head>
         <title>{"お得情報・クーポン・フードロス管理"}</title>
       </Head>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">お得情報・クーポン・フードロス管理</h1>
-        <Link href="/partner/dashboard" className="text-blue-600 hover:underline flex items-center">
-          <RiArrowLeftLine className="mr-1" /> ダッシュボードに戻る
-        </Link>
-      </div>
 
-      <form onSubmit={handleCreateDeal} className="space-y-4 p-4 border rounded-lg mb-8 bg-white shadow">
-        <h2 className="text-xl font-semibold">新規登録</h2>
-        <div>
-          <label className="font-bold">種別</label>
-          <select
-            value={newDealType}
-            onChange={(e) => setNewDealType(e.target.value as 'お得情報' | 'クーポン' | 'フードロス')}
-            className="w-full p-2 border rounded mt-1"
-          >
-            <option value="お得情報">お得情報</option>
-            <option value="クーポン">クーポン</option>
-            <option value="フードロス">フードロス</option>
-          </select>
+      <div className="flex-grow">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">お得情報・クーポン・フードロス管理</h1>
+          <Link href="/partner/dashboard" className="text-blue-600 hover:underline flex items-center">
+            <RiArrowLeftLine className="mr-1" /> ダッシュボードに戻る
+          </Link>
         </div>
-        <div><label className="font-bold">タイトル</label><input type="text" value={newDealTitle} onChange={(e) => setNewDealTitle(e.target.value)} required className="w-full p-2 border rounded mt-1" /></div>
-        <div><label className="font-bold">説明文</label><textarea value={newDealDescription} onChange={(e) => setNewDealDescription(e.target.value)} required className="w-full p-2 border rounded mt-1" rows={5} placeholder={descriptionPlaceholder}></textarea></div>
-        <div>
-          <label className="font-bold">画像 (追加・複数可)</label>
-          <input
-            type="file"
-            key={fileInputKey}
-            onChange={handleFileChange}
-            accept="image/*"
-            multiple
-            className="w-full p-2 border rounded mt-1 text-sm"
-          />
-          {selectedFiles.length > 0 && (
-            <div className="mt-2 p-2 border rounded bg-gray-50">
-              <p className="text-sm font-bold text-gray-700 mb-1">選択中の画像 ({selectedFiles.length}枚):</p>
-              <ul className="space-y-1">
-                {selectedFiles.map((file, index) => (
-                  <li key={index} className="flex justify-between items-center text-xs bg-white p-1 border rounded">
-                    <span className="truncate flex-1 mr-2">{file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
-                    <button
-                      type="button"
-                      onClick={() => removeSelectedFile(index)}
-                      className="text-red-500 hover:text-red-700 font-bold px-2"
-                    >
-                      削除
-                    </button>
-                  </li>
-                ))}
-              </ul>
+
+        {!authChecked ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-lg font-semibold text-gray-700">認証情報を確認中...</p>
+              <p className="text-sm text-gray-500 mt-2">画面下のログを確認してください</p>
             </div>
-          )}
-        </div>
-        <div>
-          <label className="font-bold">動画URL (任意)</label>
-          <input
-            type="url"
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=... または https://example.com/video.mp4"
-            className="w-full p-2 border rounded mt-1 text-sm"
-          />
-          <p className="text-xs text-gray-500 mt-1">動画はURLで登録してください（YouTube、Vimeo、直接URLなど）</p>
-        </div>
+          </div>
+        ) : !user ? (
+          <div className="flex justify-center items-center py-20">ログインページへ移動しています...</div>
+        ) : (
+          <>
 
-        <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-green-500 text-white font-bold rounded hover:bg-green-600 disabled:bg-gray-400 mt-4 w-full">
-          {isSubmitting ? (uploadStatus || '処理中...') : '登録する'}
-        </button>
-      </form>
-
-      <h2 className="text-xl font-semibold">登録済みリスト</h2>
-
-      {successMessage && <p className="text-green-600 my-4 bg-green-100 p-3 rounded text-sm font-semibold whitespace-pre-wrap">{successMessage}</p>}
-      {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded text-sm font-semibold whitespace-pre-wrap">エラー: {error}</p>}
-
-      {loading ? (
-        <div className="text-center py-4">データを読み込み中...</div>
-      ) : (
-        <div className="space-y-4 mt-4">
-          {deals.length > 0 ? (
-            deals.map(deal => (
-              <div key={deal.id} className="bg-white p-4 border rounded-lg flex flex-col gap-4 shadow-sm">
-                <div className="flex justify-between items-start">
-                  <div className="min-w-0 flex-1">
-                    <span className="text-xs bg-gray-200 rounded-full px-2 py-1 font-semibold">{deal.type}</span>
-                    <p className="font-bold truncate mt-1 text-lg">{deal.title}</p>
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{deal.description}</p>
+            <form onSubmit={handleCreateDeal} className="space-y-4 p-4 border rounded-lg mb-8 bg-white shadow">
+              <h2 className="text-xl font-semibold">新規登録</h2>
+              <div>
+                <label className="font-bold">種別</label>
+                <select
+                  value={newDealType}
+                  onChange={(e) => setNewDealType(e.target.value as 'お得情報' | 'クーポン' | 'フードロス')}
+                  className="w-full p-2 border rounded mt-1"
+                >
+                  <option value="お得情報">お得情報</option>
+                  <option value="クーポン">クーポン</option>
+                  <option value="フードロス">フードロス</option>
+                </select>
+              </div>
+              <div><label className="font-bold">タイトル</label><input type="text" value={newDealTitle} onChange={(e) => setNewDealTitle(e.target.value)} required className="w-full p-2 border rounded mt-1" /></div>
+              <div><label className="font-bold">説明文</label><textarea value={newDealDescription} onChange={(e) => setNewDealDescription(e.target.value)} required className="w-full p-2 border rounded mt-1" rows={5} placeholder={descriptionPlaceholder}></textarea></div>
+              <div>
+                <label className="font-bold">画像 (追加・複数可)</label>
+                <input
+                  type="file"
+                  key={fileInputKey}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  multiple
+                  className="w-full p-2 border rounded mt-1 text-sm"
+                />
+                {selectedFiles.length > 0 && (
+                  <div className="mt-2 p-2 border rounded bg-gray-50">
+                    <p className="text-sm font-bold text-gray-700 mb-1">選択中の画像 ({selectedFiles.length}枚):</p>
+                    <ul className="space-y-1">
+                      {selectedFiles.map((file, index) => (
+                        <li key={index} className="flex justify-between items-center text-xs bg-white p-1 border rounded">
+                          <span className="truncate flex-1 mr-2">{file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
+                          <button
+                            type="button"
+                            onClick={() => removeSelectedFile(index)}
+                            className="text-red-500 hover:text-red-700 font-bold px-2"
+                          >
+                            削除
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="text-right flex-shrink-0 flex flex-col items-end ml-4">
-                    <p className="text-xs text-gray-500 mb-2">{deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('ja-JP') : ''}</p>
-                    <button onClick={() => handleDeleteDeal(deal.id)} className="text-red-500 hover:underline text-sm">削除</button>
-                  </div>
-                </div>
-
-                {/* メディア表示エリア */}
-                {deal.mediaUrls && deal.mediaUrls.length > 0 ? (
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {deal.mediaUrls.map((media, idx) => {
-                      if (media.type === 'video') {
-                        // YouTube URLを埋め込み形式に変換
-                        let embedUrl = media.url;
-                        if (media.url.includes('youtube.com/watch?v=')) {
-                          const videoId = media.url.split('v=')[1]?.split('&')[0];
-                          embedUrl = `https://www.youtube.com/embed/${videoId}`;
-                        } else if (media.url.includes('youtu.be/')) {
-                          const videoId = media.url.split('youtu.be/')[1]?.split('?')[0];
-                          embedUrl = `https://www.youtube.com/embed/${videoId}`;
-                        }
-
-                        return (
-                          <iframe
-                            key={idx}
-                            src={embedUrl}
-                            className="w-64 h-40 rounded flex-shrink-0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        );
-                      } else {
-                        return (
-                          <img key={idx} src={media.url} alt={`img-${idx}`} className="w-40 h-40 object-cover rounded flex-shrink-0" />
-                        );
-                      }
-                    })}
-                  </div>
-                ) : (
-                  deal.imageUrl && <img src={deal.imageUrl} alt={deal.title} className="w-40 h-40 object-cover rounded" />
                 )}
               </div>
-            ))
-          ) : (
-            !error && <p>まだ情報が登録されていません。</p>
-          )}
-        </div>
-      )}
+              <div>
+                <label className="font-bold">動画URL (任意)</label>
+                <input
+                  type="url"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=... または https://example.com/video.mp4"
+                  className="w-full p-2 border rounded mt-1 text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">動画はURLで登録してください（YouTube、Vimeo、直接URLなど）</p>
+              </div>
 
+              <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-green-500 text-white font-bold rounded hover:bg-green-600 disabled:bg-gray-400 mt-4 w-full">
+                {isSubmitting ? (uploadStatus || '処理中...') : '登録する'}
+              </button>
+            </form>
+
+            <h2 className="text-xl font-semibold">登録済みリスト</h2>
+
+            {successMessage && <p className="text-green-600 my-4 bg-green-100 p-3 rounded text-sm font-semibold whitespace-pre-wrap">{successMessage}</p>}
+            {error && <p className="text-red-500 my-4 bg-red-100 p-3 rounded text-sm font-semibold whitespace-pre-wrap">エラー: {error}</p>}
+
+            {loading ? (
+              <div className="text-center py-4">データを読み込み中...</div>
+            ) : (
+              <div className="space-y-4 mt-4">
+                {deals.length > 0 ? (
+                  deals.map(deal => (
+                    <div key={deal.id} className="bg-white p-4 border rounded-lg flex flex-col gap-4 shadow-sm">
+                      <div className="flex justify-between items-start">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs bg-gray-200 rounded-full px-2 py-1 font-semibold">{deal.type}</span>
+                          <p className="font-bold truncate mt-1 text-lg">{deal.title}</p>
+                          <p className="text-sm text-gray-600 whitespace-pre-wrap">{deal.description}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0 flex flex-col items-end ml-4">
+                          <p className="text-xs text-gray-500 mb-2">{deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('ja-JP') : ''}</p>
+                          <button onClick={() => handleDeleteDeal(deal.id)} className="text-red-500 hover:underline text-sm">削除</button>
+                        </div>
+                      </div>
+
+                      {/* メディア表示エリア */}
+                      {deal.mediaUrls && deal.mediaUrls.length > 0 ? (
+                        <div className="flex gap-2 overflow-x-auto pb-2">
+                          {deal.mediaUrls.map((media, idx) => {
+                            if (media.type === 'video') {
+                              // YouTube URLを埋め込み形式に変換
+                              let embedUrl = media.url;
+                              if (media.url.includes('youtube.com/watch?v=')) {
+                                const videoId = media.url.split('v=')[1]?.split('&')[0];
+                                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                              } else if (media.url.includes('youtu.be/')) {
+                                const videoId = media.url.split('youtu.be/')[1]?.split('?')[0];
+                                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                              }
+
+                              return (
+                                <iframe
+                                  key={idx}
+                                  src={embedUrl}
+                                  className="w-64 h-40 rounded flex-shrink-0"
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              );
+                            } else {
+                              return (
+                                <img key={idx} src={media.url} alt={`img-${idx}`} className="w-40 h-40 object-cover rounded flex-shrink-0" />
+                              );
+                            }
+                          })}
+                        </div>
+                      ) : (
+                        deal.imageUrl && <img src={deal.imageUrl} alt={deal.title} className="w-40 h-40 object-cover rounded" />
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  !error && <p>まだ情報が登録されていません。</p>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* デバッグログ表示 (本番での切り分け用) */}
+      <div className="mt-20 p-4 bg-gray-900 text-green-400 font-mono text-xs rounded-lg overflow-auto max-h-60 border-2 border-gray-700">
+        <p className="font-bold border-b border-gray-700 mb-2 pb-1">Debug Terminal</p>
+        <p className="mb-2 italic opacity-70">※ エラー調査用のログです。解決したら削除します。</p>
+        {debugLog.map((log, i) => (
+          <div key={i}>{log}</div>
+        ))}
+        {debugLog.length === 0 && <div>Waiting for events...</div>}
+      </div>
     </div>
   );
 };
