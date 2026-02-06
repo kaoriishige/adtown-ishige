@@ -251,15 +251,21 @@ const PartnerDealsPage: NextPage = () => {
 
               uploadTask.on('state_changed',
                 (snapshot) => {
-                  // 必要に応じて進捗率を console.log に出す程度に留める
+                  // 進捗率をUIにフィードバック
                   const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                  setUploadStatus(`${logPrefix} ${progress.toFixed(0)}%`);
                   console.log(`${logPrefix} ${progress.toFixed(0)}%`);
                 },
                 (error: any) => {
                   clearTimeout(timeoutId);
                   console.error("Upload error details:", error);
-                  const errorMsg = error.code ? `[${error.code}] ${error.message}` : error.message;
-                  reject(new Error(`システムエラー: ${errorMsg}`));
+                  let errorMsg = error.message;
+                  if (error.code === 'storage/unauthorized') {
+                    errorMsg = "ストレージへの書き込み権限がありません。storage.rulesの設定を確認してください。";
+                  } else if (error.code === 'storage/canceled') {
+                    errorMsg = "アップロードがキャンセルされました（タイムアウトの可能性があります）。";
+                  }
+                  reject(new Error(`アップロード失敗 (${file.name}): ${errorMsg}`));
                 },
                 async () => {
                   clearTimeout(timeoutId);
@@ -429,7 +435,7 @@ const PartnerDealsPage: NextPage = () => {
         </div>
 
         <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-green-500 text-white font-bold rounded hover:bg-green-600 disabled:bg-gray-400 mt-4 w-full">
-          {isSubmitting ? '処理中...' : '登録する'}
+          {isSubmitting ? (uploadStatus || '処理中...') : '登録する'}
         </button>
       </form>
 

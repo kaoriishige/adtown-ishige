@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const COOKIE_OPTIONS = [
             `Max-Age=${60 * 60 * 24 * 5}`,
             'HttpOnly',
-            'SameSite=Strict',
+            'SameSite=Lax',
             'Path=/',
             isProduction ? 'Secure' : '',
         ].filter(Boolean).join('; ');
