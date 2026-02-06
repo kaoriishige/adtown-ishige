@@ -673,21 +673,28 @@ const StoreProfilePage: FC = () => {
                     uploadTasks.push(galleryTask);
                 }
 
+                let completedTasksCount = 0;
                 if (uploadTasks.length > 0) {
                     try {
-                        // Firebaseの支払い反映待ちなどで通信が固まるのを防ぐため、20秒の絶対時間制限を設けます
-                        await Promise.race([
-                            Promise.allSettled(uploadTasks),
-                            new Promise(resolve => setTimeout(resolve, 20000))
+                        // タイムアウトを検知するために Promise.race の戻り値を確認
+                        const raceResult = await Promise.race([
+                            Promise.allSettled(uploadTasks).then(() => 'success'),
+                            new Promise(resolve => setTimeout(() => resolve('timeout'), 25000))
                         ]);
+
+                        if (raceResult === 'timeout') {
+                            uploadErrorMessage += "画像の通信が時間切れになりました。通信環境やFirebaseの支払い反映待ちの可能性があります。\n";
+                        }
                     } catch (e) {
-                        console.error("Parallel upload process timed out or failed:", e);
+                        console.error("Parallel upload general error:", e);
+                        uploadErrorMessage += "アップロード中に不明なエラーが発生しました。\n";
                     }
                 }
 
                 if (uploadErrorMessage) {
-                    setError(`店舗情報は正常に保存されましたが、一部の画像のアップロードに失敗しました。\n\n${uploadErrorMessage}`);
-                    await new Promise(r => setTimeout(r, 4000));
+                    setError(`店舗情報は一部保存されましたが、画像に関しては問題があります：\n\n${uploadErrorMessage}\n\n※文字データは保存されています。`);
+                    // エラーメッセージを確認してもらうため長めに待つ
+                    await new Promise(r => setTimeout(r, 6000));
                 } else {
                     setError('店舗情報を保存しました。');
                 }
