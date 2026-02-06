@@ -344,6 +344,7 @@ const StoreProfilePage: FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [industryData, setIndustryData] = useState<IndustrySpecificData>({});
     const [matchingValues, setMatchingValues] = useState<string[]>([]); // AIマッチング用価値観
+    const [skipStorage, setSkipStorage] = useState(false); // ストレージ保存をスキップ
     const [debugLog, setDebugLog] = useState<string[]>([]);
 
     const addDebugLog = (msg: string) => {
@@ -628,110 +629,107 @@ const StoreProfilePage: FC = () => {
             addDebugLog("Firestore data write successful.");
 
             // 2. 画像のアップロードとFirestore更新
-            if (storage && currentStoreId) {
+            if (storage && currentStoreId && !skipStorage) {
+                addDebugLog("Storage upload section started.");
                 const storeDocRef = doc(userStoresCollectionRef, currentStoreId);
                 let uploadErrorMessage = '';
 
-                // メイン画像処理
+                // 全アップロードタスクを配列に格納
+                const uploadTasks: Promise<void>[] = [];
+
+                // メイン画像
                 if (mainImageFile) {
-                    try {
-                        addDebugLog(`Starting Main Image upload: ${mainImageFile.name}`);
+                    const ext = mainImageFile.name.split('.').pop();
+                    const sanitizedName = `main_${uuidv4()}.${ext}`;
+                    const storagePath = `users/${user.uid}/stores/${currentStoreId}/${sanitizedName}`;
+                    const fileRef = ref(storageInstance, storagePath);
 
-                        // ファイル名のサニタイズ (スペースや日本語を除去)
-                        const ext = mainImageFile.name.split('.').pop();
-                        const sanitizedName = `main_${uuidv4()}.${ext}`;
+                    const task = (async () => {
+                        try {
+                            addDebugLog(`Starting Main Image upload...`);
+                            const uploadTask = uploadBytesResumable(fileRef, mainImageFile);
 
-                        const storagePath = `users/${user.uid}/stores/${currentStoreId}/${sanitizedName}`;
-                        const fileRef = ref(storageInstance, storagePath);
+                            await new Promise((resolve, reject) => {
+                                const timer = setTimeout(() => { uploadTask.cancel(); reject(new Error("Main: Timeout")); }, 15000);
+                                uploadTask.on('state_changed', null, (err) => { clearTimeout(timer); reject(err); }, () => { clearTimeout(timer); resolve(true); });
+                            });
 
-                        // タイムアウト付きのアップロード処理
-                        const uploadTask = uploadBytesResumable(fileRef, mainImageFile);
-
-                        await new Promise((resolve, reject) => {
-                            const timeout = setTimeout(() => {
-                                uploadTask.cancel();
-                                reject(new Error("タイムアウト(15秒)"));
-                            }, 15000); // 15秒に短縮
-
-                            uploadTask.on('state_changed',
-                                (snapshot) => {
-                                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                                    addDebugLog(`Main Image: ${Math.round(progress)}%`);
-                                },
-                                (err) => {
-                                    clearTimeout(timeout);
-                                    reject(err);
-                                },
-                                () => {
-                                    clearTimeout(timeout);
-                                    resolve(true);
-                                }
-                            );
-                        });
-
-                        const updatedMainImageUrl = await getDownloadURL(fileRef);
-                        addDebugLog("Main Image upload successful.");
-                        await updateDoc(storeDocRef, { mainImageUrl: updatedMainImageUrl });
-                        setMainImageUrl(updatedMainImageUrl);
-                    } catch (err: any) {
-                        uploadErrorMessage += `メイン画像: ${err.message}\n`;
-                        console.error("Main Image Upload Failed:", err);
-                        addDebugLog(`Main Image Error: ${err.message}`);
-                    }
+                            const url = await getDownloadURL(fileRef);
+                            await updateDoc(storeDocRef, { mainImageUrl: url });
+                            setMainImageUrl(url);
+                            addDebugLog("Main Image OK");
+                        } catch (e: any) {
+                            addDebugLog(`Main Error: ${e.message}`);
+                            uploadErrorMessage += `メイン: ${e.message}\n`;
+                        }
+                    })();
+                    uploadTasks.push(task);
                 }
 
-                // ギャラリー画像処理
+                // ギャラリー画像
                 if (galleryImageFiles.length > 0) {
-                    addDebugLog(`Starting Gallery uploads (${galleryImageFiles.length} files)...`);
-                    const newGalleryImageUrls: string[] = [];
-                    for (const file of galleryImageFiles) {
-                        try {
+                    addDebugLog(`Queuing ${galleryImageFiles.length} gallery images...`);
+                    const galleryTask = (async () => {
+                        const newUrls: string[] = [];
+                        for (const file of galleryImageFiles) {
                             const ext = file.name.split('.').pop();
                             const sanitizedName = `gallery_${uuidv4()}.${ext}`;
                             const storagePath = `users/${user.uid}/stores/${currentStoreId}/${sanitizedName}`;
                             const fileRef = ref(storageInstance, storagePath);
 
-                            addDebugLog(`Uploading: ${file.name}`);
-                            const uploadTask = uploadBytesResumable(fileRef, file);
-
-                            await new Promise((resolve, reject) => {
-                                const timeout = setTimeout(() => {
-                                    uploadTask.cancel();
-                                    reject(new Error("タイムアウト(30秒)"));
-                                }, 30000);
-
-                                uploadTask.on('state_changed', null,
-                                    (err) => { clearTimeout(timeout); reject(err); },
-                                    () => { clearTimeout(timeout); resolve(true); }
-                                );
-                            });
-
-                            const downloadURL = await getDownloadURL(fileRef);
-                            newGalleryImageUrls.push(downloadURL);
-                            addDebugLog(`Success: ${file.name}`);
-                        } catch (err: any) {
-                            uploadErrorMessage += `ギャラリー (${file.name}): ${err.message}\n`;
-                            console.error(`Gallery Upload Failed (${file.name}):`, err);
-                            addDebugLog(`Gallery Error (${file.name}): ${err.message}`);
+                            try {
+                                const uploadTask = uploadBytesResumable(fileRef, file);
+                                await new Promise((resolve, reject) => {
+                                    const timer = setTimeout(() => { uploadTask.cancel(); reject(new Error("Gallery: Timeout")); }, 15000);
+                                    uploadTask.on('state_changed', null, (err) => { clearTimeout(timer); reject(err); }, () => { clearTimeout(timer); resolve(true); });
+                                });
+                                const url = await getDownloadURL(fileRef);
+                                newUrls.push(url);
+                                addDebugLog(`Gallery file OK`);
+                            } catch (e: any) {
+                                uploadErrorMessage += `ギャラリー(${file.name}): ${e.message}\n`;
+                                addDebugLog(`Gallery Error: ${e.message}`);
+                            }
                         }
-                    }
-                    if (newGalleryImageUrls.length > 0) {
-                        await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(...newGalleryImageUrls) });
-                        setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
+                        if (newUrls.length > 0) {
+                            try {
+                                await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(...newUrls) });
+                                setGalleryImageUrls(prev => [...prev, ...newUrls]);
+                            } catch (e: any) {
+                                addDebugLog(`Gallery Update Store Error: ${e.message}`);
+                                uploadErrorMessage += `ギャラリーDB更新失敗: ${e.message}\n`;
+                            }
+                        }
+                    })();
+                    uploadTasks.push(galleryTask);
+                }
+
+                if (uploadTasks.length > 0) {
+                    addDebugLog("Uploading images in parallel (Max 20s SAFETY)...");
+                    try {
+                        // Promise.allSettled は各タスクの成功失敗に関わらず、全て終わるのを待つ
+                        // さらに Promise.race で20秒の絶対時間制限を設ける
+                        await Promise.race([
+                            Promise.allSettled(uploadTasks),
+                            new Promise(resolve => setTimeout(() => {
+                                addDebugLog("SAFETY TIMEOUT TRIGGERED!");
+                                resolve(true);
+                            }, 20000))
+                        ]);
+                        addDebugLog("Parallel process finished.");
+                    } catch (e) {
+                        console.error("Parallel upload crash:", e);
+                        addDebugLog("Parallel crash.");
                     }
                 }
-                setMainImageFile(null);
-                setGalleryImageFiles([]);
 
                 if (uploadErrorMessage) {
-                    addDebugLog("Some uploads failed/timed out, but text data is saved.");
-                    setError(`店舗情報は保存されましたが、画像の一部が保存できませんでした。原因: Storageのルール設定、または接続状況を確認してください。\n\n${uploadErrorMessage}`);
-                    // 3秒待ってからリロードへ
-                    await new Promise(r => setTimeout(r, 3000));
-                } else {
-                    addDebugLog("All uploads successful.");
+                    setError(`店舗情報の保存は完了しましたが、画像の一部が保存できませんでした(Storageエラー)。詳細:\n${uploadErrorMessage}`);
+                    await new Promise(r => setTimeout(r, 4000));
                 }
             }
+            setMainImageFile(null);
+            setGalleryImageFiles([]);
 
             // 処理成功後、強制リロードして最新データをフェッチ
             addDebugLog("Save completed successfully. Reloading page...");
@@ -1011,9 +1009,21 @@ const StoreProfilePage: FC = () => {
 
 
                 {/* 5. 保存ボタン (変更なし) */}
-                <button onClick={handleSaveProfile} disabled={isSaving} className="w-full px-6 py-3 bg-green-600 text-white text-xl font-bold rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors shadow-lg">
-                    {isSaving ? '保存中...' : '店舗情報をすべて保存する'}
-                </button>
+                <div className="space-y-4">
+                    <label className="flex items-center space-x-2 text-sm text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={skipStorage}
+                            onChange={(e) => setSkipStorage(e.target.checked)}
+                            className="w-4 h-4"
+                        />
+                        <span>【緊急用】画像アップロードでフリーズする場合はチェックを入れて保存してください（文字のみ保存）</span>
+                    </label>
+
+                    <button onClick={handleSaveProfile} disabled={isSaving} className="w-full px-6 py-3 bg-green-600 text-white text-xl font-bold rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors shadow-lg">
+                        {isSaving ? '保存中...' : '店舗情報をすべて保存する'}
+                    </button>
+                </div>
 
                 {error && (
                     <p className={`my-4 p-3 rounded whitespace-pre-wrap ${error === '店舗情報を保存しました。' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'}`}>
