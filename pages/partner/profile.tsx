@@ -565,14 +565,6 @@ const StoreProfilePage: FC = () => {
             setError('カテゴリは必須項目です。');
             return;
         }
-        if (mainCategory === 'その他' && !otherMainCategory) {
-            setError('カテゴリ（大分類）で「その他」を選択した場合は、詳細なカテゴリ名を記入してください。');
-            return;
-        }
-        if (matchingValues.length === 0) {
-            setError('AIマッチング用の価値観を1つ以上選択してください。');
-            return;
-        }
 
         setIsSaving(true);
         setError(null);
@@ -580,144 +572,80 @@ const StoreProfilePage: FC = () => {
         try {
             const firestore = db as Firestore;
             const storageInstance = storage as FirebaseStorage;
-
             const userStoresCollectionRef = collection(firestore, 'artifacts', appId, 'users', user.uid, 'stores');
             let currentStoreId = storeId;
 
             const normalizedIndustryKey = getNormalizedIndustryKey(mainCategory, subCategory);
 
-            // 保存対象とする強み (タイトルが空でないもの)
-            const filteredSpecialtyPoints = specialtyPoints.filter(
-                p => p.title.trim() !== ''
-            );
-
-            // 1. Firestoreデータ保存
+            // 1. 文字データの保存 (Firestore)
             const allStoreData = {
                 storeName, address, phoneNumber, mainCategory, subCategory,
                 otherMainCategory: mainCategory === 'その他' ? otherMainCategory : '',
                 otherSubCategory: subCategory === 'その他' ? otherSubCategory : '',
                 description, targetUserInterests,
-                specialtyPoints: filteredSpecialtyPoints, // フィルターした強みデータを保存
-                matchingValues: matchingValues,
-                lineOfficialId: lineOfficialId, lineLiffUrl: lineLiffUrl, websiteUrl,
-                snsUrls: snsUrls.filter(url => url.trim() !== ''), ownerId: user.uid, updatedAt: serverTimestamp(),
+                specialtyPoints: specialtyPoints.filter(p => p.title.trim() !== ''),
+                matchingValues,
+                lineOfficialId, lineLiffUrl, websiteUrl,
+                snsUrls: snsUrls.filter(url => url.trim() !== ''),
+                ownerId: user.uid,
+                updatedAt: serverTimestamp(),
                 normalizedIndustryKey: normalizedIndustryKey, ...industryData,
             };
 
             if (!currentStoreId) {
-                // 新規作成
                 const docRef = await addDoc(userStoresCollectionRef, { ...allStoreData, status: 'pending', createdAt: serverTimestamp(), mainImageUrl: '', galleryImageUrls: [] });
                 currentStoreId = docRef.id;
                 setStoreId(currentStoreId);
             } else {
-                const storeDocRefForUpdate = doc(userStoresCollectionRef, currentStoreId);
-                await updateDoc(storeDocRefForUpdate, allStoreData);
+                await updateDoc(doc(userStoresCollectionRef, currentStoreId), allStoreData);
             }
 
-            // 2. 画像のアップロードとFirestore更新
-            if (storage && currentStoreId) {
-                const storeDocRef = doc(userStoresCollectionRef, currentStoreId);
-                let uploadErrorMessage = '';
+            const storeDocRef = doc(userStoresCollectionRef, currentStoreId);
 
-                const uploadTasks: Promise<void>[] = [];
+            // --- ここからが「フリーズ対策」の直列アップロード ---
 
-                // メイン画像
-                if (mainImageFile) {
-                    const ext = mainImageFile.name.split('.').pop();
-                    const sanitizedName = `main_${uuidv4()}.${ext}`;
-                    const storagePath = `users/${user.uid}/stores/${currentStoreId}/${sanitizedName}`;
+            // 2. メイン画像の保存
+            if (mainImageFile) {
+                const ext = mainImageFile.name.split('.').pop();
+                const storagePath = `users/${user.uid}/stores/${currentStoreId}/main_${uuidv4()}.${ext}`;
+                const fileRef = ref(storageInstance, storagePath);
+
+                await uploadBytes(fileRef, mainImageFile);
+                const url = await getDownloadURL(fileRef);
+                await updateDoc(storeDocRef, { mainImageUrl: url });
+                setMainImageUrl(url);
+                setMainImageFile(null);
+            }
+
+            // 3. ギャラリー画像の保存 (1枚ずつ確実に実行)
+            if (galleryImageFiles.length > 0) {
+                for (const file of galleryImageFiles) {
+                    const ext = file.name.split('.').pop();
+                    const storagePath = `users/${user.uid}/stores/${currentStoreId}/gallery_${uuidv4()}.${ext}`;
                     const fileRef = ref(storageInstance, storagePath);
 
-                    const task = (async () => {
-                        try {
-                            await uploadBytes(fileRef, mainImageFile);
-                            const url = await getDownloadURL(fileRef);
-                            await updateDoc(storeDocRef, { mainImageUrl: url });
-                            setMainImageUrl(url);
-                        } catch (e: any) {
-                            console.error("Main Image Upload Error:", e);
-                            uploadErrorMessage += `メイン画像: ${e.message}\n`;
-                        }
-                    })();
-                    uploadTasks.push(task);
+                    await uploadBytes(fileRef, file);
+                    const url = await getDownloadURL(fileRef);
+                    await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(url) });
+                    setGalleryImageUrls(prev => [...prev, url]);
                 }
-
-                // ギャラリー画像
-                if (galleryImageFiles.length > 0) {
-                    const galleryTask = (async () => {
-                        const newUrls: string[] = [];
-                        for (const file of galleryImageFiles) {
-                            const ext = file.name.split('.').pop();
-                            const sanitizedName = `gallery_${uuidv4()}.${ext}`;
-                            const storagePath = `users/${user.uid}/stores/${currentStoreId}/${sanitizedName}`;
-                            const fileRef = ref(storageInstance, storagePath);
-
-                            try {
-                                await uploadBytes(fileRef, file);
-                                const url = await getDownloadURL(fileRef);
-                                newUrls.push(url);
-                            } catch (e: any) {
-                                console.error(`Gallery Upload Error (${file.name}):`, e);
-                                uploadErrorMessage += `${file.name}: ${e.message}\n`;
-                            }
-                        }
-                        if (newUrls.length > 0) {
-                            try {
-                                await updateDoc(storeDocRef, { galleryImageUrls: arrayUnion(...newUrls) });
-                                setGalleryImageUrls(prev => [...prev, ...newUrls]);
-                            } catch (e: any) {
-                                console.error("Gallery DB Update Error:", e);
-                            }
-                        }
-                    })();
-                    uploadTasks.push(galleryTask);
-                }
-
-                let completedTasksCount = 0;
-                if (uploadTasks.length > 0) {
-                    try {
-                        // タイムアウトを検知するために Promise.race の戻り値を確認
-                        const raceResult = await Promise.race([
-                            Promise.allSettled(uploadTasks).then(() => 'success'),
-                            new Promise(resolve => setTimeout(() => resolve('timeout'), 25000))
-                        ]);
-
-                        if (raceResult === 'timeout') {
-                            uploadErrorMessage += "画像の通信が時間切れになりました。通信環境やFirebaseの支払い反映待ちの可能性があります。\n";
-                        }
-                    } catch (e) {
-                        console.error("Parallel upload general error:", e);
-                        uploadErrorMessage += "アップロード中に不明なエラーが発生しました。\n";
-                    }
-                }
-
-                if (uploadErrorMessage) {
-                    setError(`店舗情報は一部保存されましたが、画像に関しては問題があります：\n\n${uploadErrorMessage}\n\n※文字データは保存されています。`);
-                    // エラーメッセージを確認してもらうため長めに待つ
-                    await new Promise(r => setTimeout(r, 6000));
-                } else {
-                    setError('店舗情報を保存しました。');
-                }
+                setGalleryImageFiles([]);
             }
-            setMainImageFile(null);
-            setGalleryImageFiles([]);
 
-            // 成功メッセージを表示するために少し待つ
-            await new Promise(r => setTimeout(r, 1000));
-            router.reload();
+            setError('保存しました。');
+
+            // 保存完了後に少し待ってからリロード (通信切断を防ぐ)
+            setTimeout(() => {
+                router.reload();
+            }, 1500);
 
         } catch (err: any) {
-            console.error("!!! SAVE FAILED !!! An error occurred in handleSaveProfile:", err);
-            let errorMessage = `保存に失敗しました: ${err.message}`;
-            if (err.code === 'permission-denied' || (err.code && err.code.includes('storage/unauthorized'))) {
-                errorMessage += "\n\n【重要】Firebase Storage の権限エラーです。ルールを確認してください。";
-            }
-            setError(errorMessage);
+            console.error("Critical Save Error:", err);
+            setError(`保存失敗: ${err.message}`);
         } finally {
             setIsSaving(false);
         }
     };
-
 
     // ----------------------------------------------------
     // UIレンダリングヘルパー (変更なし)
