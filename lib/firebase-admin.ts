@@ -24,6 +24,7 @@ const initializeFirebaseAdmin = () => {
                     clientEmail,
                     privateKey,
                 }),
+                storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
             });
         } catch (err) {
             console.error("🔥 Firebase Admin SDK initialization failed:", err);

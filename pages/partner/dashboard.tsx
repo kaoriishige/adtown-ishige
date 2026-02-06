@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '../../lib/firebase';
-import { adminDb, adminAuth } from '@/lib/firebase-admin'; 
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 import nookies from 'nookies';
 import {
     RiLogoutBoxRLine,
@@ -13,11 +13,12 @@ import {
     RiRobotLine,
     RiMoneyCnyBoxLine,
     RiBankLine,
-    RiCloseCircleLine, 
-    RiAlertFill, 
-    RiEyeLine, 
-    RiLoader4Line, 
+    RiCloseCircleLine,
+    RiAlertFill,
+    RiEyeLine,
+    RiLoader4Line,
 } from 'react-icons/ri';
+import { useAuth } from '@/contexts/AuthContext';
 
 // =========================================================================
 // 1. DUMMY/PLACEHOLDER DEFINITIONS
@@ -27,9 +28,9 @@ declare const __app_id: string;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 const StoreIcon = (props: React.SVGProps<SVGSVGElement>) => (
-<svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
-<path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-</svg>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
 );
 
 // ===============================
@@ -39,8 +40,8 @@ interface DashboardProps {
     companyName: string;
     isPaid: boolean;
     subscriptionStatus: string | null;
-    hasRecruitRole: boolean; 
-    storeId: string | null; 
+    hasRecruitRole: boolean;
+    storeId: string | null;
 }
 
 interface ActionButtonProps {
@@ -119,8 +120,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const roles = userData.roles || [];
 
         if (!roles.includes('adver')) {
-             console.warn(`[Auth] Access Denied: User ${uid} does not have 'adver' role.`);
-             return { redirect: { destination: '/partner/login', permanent: false } };
+            console.warn(`[Auth] Access Denied: User ${uid} does not have 'adver' role.`);
+            return { redirect: { destination: '/partner/login', permanent: false } };
         }
 
         const adverStatus = userData.adverSubscriptionStatus || null;
@@ -144,9 +145,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                 companyName: userData.companyName || (userData as any).storeName || 'パートナー',
                 roles: roles,
                 isPaid: isPaid,
-                subscriptionStatus: adverStatus, 
-                hasRecruitRole: roles.includes('recruit'), 
-                storeId: storeId, 
+                subscriptionStatus: adverStatus,
+                hasRecruitRole: roles.includes('recruit'),
+                storeId: storeId,
             }
         };
     } catch (err) {
@@ -159,27 +160,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 // 5. MAIN COMPONENT (PartnerDashboard)
 // ===================================
 const PartnerDashboard: NextPage<DashboardProps> = (props) => {
-    const { 
-        companyName, isPaid, hasRecruitRole, storeId 
+    const {
+        companyName, isPaid, hasRecruitRole, storeId
     } = props;
-    
+
     const router = useRouter();
     const { payment_status } = router.query;
     const auth = getAuth(app);
-    
-    const [authLoading, setAuthLoading] = useState(true);
-    const [showCancelModal, setShowCancelModal] = useState(false);
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
-            if (!user) {
-                router.replace('/partner/login');
-            } else {
-                setAuthLoading(false);
-            }
-        });
-        return () => unsubscribe();
-    }, [auth, router]);
+    // 認証状態管理 (AuthContextを使用)
+    const { user: authUser, loading: authLoading } = useAuth();
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
     useEffect(() => {
         const refreshAndRedirect = async () => {
@@ -209,7 +200,7 @@ const PartnerDashboard: NextPage<DashboardProps> = (props) => {
     };
 
     if (authLoading || (payment_status === 'success')) {
-         return (
+        return (
             <div className="flex justify-center items-center h-screen bg-gray-50">
                 <RiLoader4Line className="animate-spin text-4xl text-indigo-600" />
                 <span className="ml-4 text-lg font-semibold text-gray-700">
@@ -273,6 +264,13 @@ const PartnerDashboard: NextPage<DashboardProps> = (props) => {
                         </p>
                     </div>
                     <div className="flex flex-col items-end text-right">
+                        <p className="text-[10px] font-bold text-gray-700 leading-tight mb-1">こちらのLINEに必ず登録して、<br />次回よりLINEからログインください。</p>
+                        <div
+                            className="mb-2"
+                            dangerouslySetInnerHTML={{
+                                __html: '<a href="https://lin.ee/FwVhCvs" target="_blank"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="30" border="0"></a>'
+                            }}
+                        />
                         <button
                             onClick={handleLogout}
                             className="flex items-center space-x-2 text-sm text-gray-600 hover:text-red-600 p-2 rounded-lg transition-colors font-semibold"
@@ -409,8 +407,7 @@ const PartnerDashboard: NextPage<DashboardProps> = (props) => {
                     <section className="mt-6">
                         <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
                             <div className="flex flex-col">
-                                <h2 className="text-lg font-bold text-gray-700 mb-1">LINEよりお問い合わせください。</h2>
-                                <p className="text-sm text-gray-500 mt-1">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
+                                <h2 className="text-lg font-bold text-gray-700 mb-1">こちらのLINEに必ず登録して、次回よりLINEからログインください。</h2>
                             </div>
                             <div
                                 dangerouslySetInnerHTML={{

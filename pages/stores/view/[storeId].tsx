@@ -5,10 +5,10 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Error from 'next/error';
 // Ri Icons
-import { RiMapPinLine, RiGlobalLine, RiTimeLine, RiPhoneLine, RiMailLine, RiStarFill, RiCheckboxCircleFill, RiCheckLine, RiFocus2Line } from 'react-icons/ri'; 
-import { FaLine, FaAngleRight } from 'react-icons/fa'; // LINE, アイコン用
+import { RiMapPinLine, RiGlobalLine, RiTimeLine, RiPhoneLine, RiMailLine, RiStarFill, RiCheckboxCircleFill, RiCheckLine, RiFocus2Line, RiTwitterXLine, RiInstagramLine, RiFacebookBoxLine, RiYoutubeLine, RiExternalLinkLine } from 'react-icons/ri';
+import { FaLine, FaAngleRight, FaTiktok } from 'react-icons/fa'; // LINE, アイコン用
 import { adminDb } from '@/lib/firebase-admin'; // Firestore Admin SDK (サーバーサイド用)
-import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore'; 
+import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 
 // =========================================================================
@@ -28,13 +28,13 @@ const DUMMY_STORE_DATA: StoreData = {
     address: null, phoneNumber: null, email: null, url: null, lineLiffUrl: null, hours: null,
     ownerId: 'dummy-owner-uid', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     isPublished: false, specialtyPoints: [], averageRating: 0, reviewCount: 0,
-    matchingValues: [], // LPに表示するために型を追加
+    matchingValues: [], snsUrls: [], // LPに表示するために型を追加
 };
 
 // **実行時エラー回避のためのダミー実装 (TypeScriptエラー回避のため残します)**
 const createFirestoreDummyReference = (isDoc = false): any => {
     const ref: any = {
-        collection: (name: string) => createFirestoreDummyReference(false), 
+        collection: (name: string) => createFirestoreDummyReference(false),
         collectionGroup: (name: string) => ref,
         doc: (id: string) => createFirestoreDummyReference(true),
         where: (field: string, op: string, value: any) => ref,
@@ -42,14 +42,14 @@ const createFirestoreDummyReference = (isDoc = false): any => {
         get: async () => {
             if (isDoc) {
                 return {
-                    exists: false, 
+                    exists: false,
                     id: 'dummy-store-id',
                     data: () => ({}),
                 };
             }
-            return { empty: true, docs: [] }; 
+            return { empty: true, docs: [] };
         },
-        path: 'dummy/path' 
+        path: 'dummy/path'
     };
     return ref;
 };
@@ -60,27 +60,28 @@ const createFirestoreDummyReference = (isDoc = false): any => {
 
 // ★★★ 修正点1: 「3つの強み」の型をオブジェクトに変更 ★★★
 interface SpecialtyPoint {
-  title: string;
-  description: string;
+    title: string;
+    description: string;
 }
 
 interface StoreData {
     id: string; name: string; mainCategory: string; tagline: string | null; description: string | null;
     images: string[]; address: string | null; phoneNumber: string | null; email: string | null;
     url: string | null; lineLiffUrl?: string | null; hours: string | null; ownerId: string;
-    createdAt: string; updatedAt: string; isPublished: boolean; 
+    createdAt: string; updatedAt: string; isPublished: boolean;
     specialtyPoints: SpecialtyPoint[]; // ★ 型を string[] から SpecialtyPoint[] に変更
     averageRating: number; reviewCount: number;
     matchingValues: string[]; // LPに表示するために型を追加
+    snsUrls: string[]; // SNS URLの配列
 }
 interface StoreViewProps { store: StoreData | null; error: string | null; }
 
-const cleanString = (val: any) => { 
+const cleanString = (val: any) => {
     if (val === undefined || val === null || val === '') { return null; }
     if (typeof val === 'string' && val.trim() === '') { return null; }
     return val;
 };
-const safeToISOString = (timestamp: any, fallback: string): string => { 
+const safeToISOString = (timestamp: any, fallback: string): string => {
     if (timestamp && typeof timestamp.toDate === 'function') {
         try { return timestamp.toDate().toISOString(); } catch (e) { return fallback; }
     }
@@ -95,41 +96,51 @@ interface MatchingCategory {
     options: string[];
 }
 const ALL_MATCHING_VALUES: MatchingCategory[] = [
-    { title: "専門性・実績", options: [
-        '特定の分野（経営、Web、人事）に特化', 
-        '豊富な実績・具体的な成功事例', 
-        '業界・業種への深い理解', 
-        '最新の知識・情報に精通',
-        '的確な課題分析・診断力',
-    ]},
-    { title: "提案力・解決力", options: [
-        '机上の空論でなく実行可能な提案',
-        '企業の課題・本質を的確に把握',
-        '複数の解決策・選択肢を提示',
-        '期待を超えるアイデア・付加価値の提供',
-        '成果（売上・コスト削減）にコミット',
-    ]},
-    { title: "ヒアリング力・伴走力", options: [
-        '経営者の悩み・ビジョンを深くヒアリング',
-        '親身になって相談に乗ってくれる',
-        '専門用語を使わず分かりやすく説明',
-        '実行まで伴走・サポート',
-        '社内スタッフへの研修・指導',
-    ]},
-    { title: "価格の透明性・適正さ", options: [
-        '料金体系（顧問、プロジェクト）が明確',
-        '事前に詳細な見積もりを提示',
-        '価格以上の価値がある',
-        '予算に応じたプランを提案',
-        '各種補助金・助成金の活用を提案',
-    ]},
-    { title: "人物・信頼感", options: [
-        '話しやすく相談しやすい人柄',
-        '長期的なパートナーとして信頼できる',
-        'レスポンスが早く丁寧',
-        '秘密厳守・誠実な対応',
-        '地元（那須）の経済・事情に精通',
-    ]}
+    {
+        title: "専門性・実績", options: [
+            '特定の分野（経営、Web、人事）に特化',
+            '豊富な実績・具体的な成功事例',
+            '業界・業種への深い理解',
+            '最新の知識・情報に精通',
+            '的確な課題分析・診断力',
+        ]
+    },
+    {
+        title: "提案力・解決力", options: [
+            '机上の空論でなく実行可能な提案',
+            '企業の課題・本質を的確に把握',
+            '複数の解決策・選択肢を提示',
+            '期待を超えるアイデア・付加価値の提供',
+            '成果（売上・コスト削減）にコミット',
+        ]
+    },
+    {
+        title: "ヒアリング力・伴走力", options: [
+            '経営者の悩み・ビジョンを深くヒアリング',
+            '親身になって相談に乗ってくれる',
+            '専門用語を使わず分かりやすく説明',
+            '実行まで伴走・サポート',
+            '社内スタッフへの研修・指導',
+        ]
+    },
+    {
+        title: "価格の透明性・適正さ", options: [
+            '料金体系（顧問、プロジェクト）が明確',
+            '事前に詳細な見積もりを提示',
+            '価格以上の価値がある',
+            '予算に応じたプランを提案',
+            '各種補助金・助成金の活用を提案',
+        ]
+    },
+    {
+        title: "人物・信頼感", options: [
+            '話しやすく相談しやすい人柄',
+            '長期的なパートナーとして信頼できる',
+            'レスポンスが早く丁寧',
+            '秘密厳守・誠実な対応',
+            '地元（那須）の経済・事情に精通',
+        ]
+    }
 ];
 // ★★★ 編集画面のカテゴリ定義ここまで ★★★
 
@@ -140,14 +151,14 @@ const ALL_MATCHING_VALUES: MatchingCategory[] = [
 
 export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ query }) => {
     const { storeId } = query;
-    
+
     if (!storeId || typeof storeId !== 'string') {
         return { props: { store: null, error: 'Invalid Store ID' } };
     }
 
     try {
         const dbInstance = (adminDb && (adminDb as any).collection) ? (adminDb as Firestore) : (createFirestoreDummyReference() as Firestore);
-        const dbRef: Firestore = dbInstance; 
+        const dbRef: Firestore = dbInstance;
 
         let storeDoc: QueryDocumentSnapshot | undefined = undefined;
 
@@ -162,15 +173,15 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
             console.log(`[CollectionGroup Search] Store ID ${storeId} not found across all users. (No match found)`);
             return { notFound: true };
         }
-        
+
         const rawData = storeDoc.data();
-        
+
         const foundStoreId = storeDoc.id;
-        const foundOwnerId = rawData.ownerId || DUMMY_STORE_DATA.ownerId; 
+        const foundOwnerId = rawData.ownerId || DUMMY_STORE_DATA.ownerId;
         const descriptionText = cleanString(rawData.description) || '';
-        
-        const hoursMatch = descriptionText.match(/【営業時間】([\s\S]+?)(?=【|\s*$)/); 
-        
+
+        const hoursMatch = descriptionText.match(/【営業時間】([\s\S]+?)(?=【|\s*$)/);
+
         // ★★★ 修正点2: 読み込みロジックを変更 (古いstring[]にも対応) ★★★
         const loadedSpecialtyPoints = rawData.specialtyPoints || [];
         let formattedSpecialtyPoints: SpecialtyPoint[];
@@ -189,34 +200,35 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
 
         const mergedData: StoreData = {
             id: foundStoreId,
-            name: cleanString(rawData.storeName) || cleanString(rawData.name) || DUMMY_STORE_DATA.name, 
-            address: cleanString(rawData.address), 
-            phoneNumber: cleanString(rawData.phoneNumber) || cleanString(rawData.tel), 
+            name: cleanString(rawData.storeName) || cleanString(rawData.name) || DUMMY_STORE_DATA.name,
+            address: cleanString(rawData.address),
+            phoneNumber: cleanString(rawData.phoneNumber) || cleanString(rawData.tel),
             mainCategory: cleanString(rawData.mainCategory) || DUMMY_STORE_DATA.mainCategory,
             tagline: cleanString(rawData.tagline),
             description: descriptionText,
             specialtyPoints: formattedSpecialtyPoints, // ★ 修正したデータをセット
-            url: cleanString(rawData.websiteUrl || rawData.url), 
+            url: cleanString(rawData.websiteUrl || rawData.url),
             lineLiffUrl: cleanString(rawData.lineLiffUrl),
-            images: cleanString(rawData.mainImageUrl) 
-                ? [cleanString(rawData.mainImageUrl)!, ...rawData.galleryImageUrls || []].filter((url: string) => url) 
+            images: cleanString(rawData.mainImageUrl)
+                ? [cleanString(rawData.mainImageUrl)!, ...rawData.galleryImageUrls || []].filter((url: string) => url)
                 : [],
-            email: cleanString(rawData.email), 
-            hours: hoursMatch ? hoursMatch[1].trim() : cleanString(rawData.hours), 
+            email: cleanString(rawData.email),
+            hours: hoursMatch ? hoursMatch[1].trim() : cleanString(rawData.hours),
             ownerId: foundOwnerId,
-            isPublished: rawData.isPublished ?? DUMMY_STORE_DATA.isPublished, 
+            isPublished: rawData.isPublished ?? DUMMY_STORE_DATA.isPublished,
             averageRating: rawData.averageRating || 0,
             reviewCount: rawData.reviewCount || 0,
             createdAt: safeToISOString(rawData.createdAt, DUMMY_STORE_DATA.createdAt),
             updatedAt: safeToISOString(rawData.updatedAt, DUMMY_STORE_DATA.updatedAt),
-            matchingValues: rawData.matchingValues || [], 
+            matchingValues: rawData.matchingValues || [],
+            snsUrls: rawData.snsUrls || [],
         };
-        
+
         let warning = null;
         if (!cleanString(mergedData.name)) {
             warning = `【警告】店舗名が未登録です。`;
         } else if (mergedData.images.length === 0) {
-             warning = `【警告】メイン画像が未登録です。`;
+            warning = `【警告】メイン画像が未登録です。`;
         }
 
         return { props: { store: mergedData, error: warning } };
@@ -238,7 +250,7 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
 const formatLongText = (text: string | null | undefined): JSX.Element => {
     if (!text) return <></>;
 
-    const lines = text.split('\n').filter(line => line.trim() !== ''); 
+    const lines = text.split('\n').filter(line => line.trim() !== '');
     let listItems: string[] = [];
     const elements: JSX.Element[] = [];
     let currentKey = 0;
@@ -259,7 +271,7 @@ const formatLongText = (text: string | null | undefined): JSX.Element => {
     lines.forEach(line => {
         const trimmedLine = line.trim();
         if (trimmedLine.startsWith('■') || trimmedLine.startsWith('●')) {
-            listItems.push(trimmedLine.substring(1).trim()); 
+            listItems.push(trimmedLine.substring(1).trim());
         } else {
             pushList(); // もし直前までリストが続いていたら、ここでリストを出力
             elements.push(
@@ -273,12 +285,38 @@ const formatLongText = (text: string | null | undefined): JSX.Element => {
     return <>{elements}</>;
 };
 
+/**
+ * SNSアイコンを取得するヘルパー関数
+ */
+const getSnsIcon = (url: string) => {
+    const lowercaseUrl = url.toLowerCase();
+    if (lowercaseUrl.includes('instagram.com')) return <RiInstagramLine className="w-5 h-5 mr-3 mt-1 text-pink-500" />;
+    if (lowercaseUrl.includes('twitter.com') || lowercaseUrl.includes('x.com')) return <RiTwitterXLine className="w-5 h-5 mr-3 mt-1 text-gray-900" />;
+    if (lowercaseUrl.includes('facebook.com')) return <RiFacebookBoxLine className="w-5 h-5 mr-3 mt-1 text-blue-600" />;
+    if (lowercaseUrl.includes('youtube.com') || lowercaseUrl.includes('youtu.be')) return <RiYoutubeLine className="w-5 h-5 mr-3 mt-1 text-red-600" />;
+    if (lowercaseUrl.includes('tiktok.com')) return <FaTiktok className="w-5 h-5 mr-3 mt-1 text-black" />;
+    return <RiExternalLinkLine className="w-5 h-5 mr-3 mt-1 text-gray-500" />;
+};
+
+/**
+ * SNS名の表示名を取得するヘルパー関数
+ */
+const getSnsName = (url: string) => {
+    const lowercaseUrl = url.toLowerCase();
+    if (lowercaseUrl.includes('instagram.com')) return 'Instagram';
+    if (lowercaseUrl.includes('twitter.com') || lowercaseUrl.includes('x.com')) return 'Twitter(X)';
+    if (lowercaseUrl.includes('facebook.com')) return 'Facebook';
+    if (lowercaseUrl.includes('youtube.com') || lowercaseUrl.includes('youtu.be')) return 'YouTube';
+    if (lowercaseUrl.includes('tiktok.com')) return 'TikTok';
+    return 'SNS/他リンク';
+};
+
 
 // LINE CTAボタンコンポーネント (変更なし)
 const LineCTAButton: React.FC<{ store: StoreData, text: string, subText: string, className?: string, isPrimary?: boolean }> = ({ store, text, subText, className = '', isPrimary = true }) => (
     cleanString(store.lineLiffUrl) ? (
         <a
-            href={store.lineLiffUrl!} 
+            href={store.lineLiffUrl!}
             target="_blank"
             rel="noopener noreferrer"
             className={`flex flex-col items-center justify-center p-4 rounded-xl shadow-2xl transition transform hover:scale-[1.02] text-center font-sans ${isPrimary ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-500 shadow-lg' : 'bg-green-600 text-white hover:bg-green-700 shadow-md'} ${className}`}
@@ -298,22 +336,22 @@ const LineCTAButton: React.FC<{ store: StoreData, text: string, subText: string,
 const parseDescription = (description: string) => {
     if (!description) return [];
 
-    const blocks: { title: string; content: string }[] = []; 
+    const blocks: { title: string; content: string }[] = [];
     let parts = description.split(/【(.+?)】/g).filter(p => p.trim());
-    
+
     if (parts.length > 0 && !description.trim().startsWith('【')) {
-        blocks.push({ title: "店舗の紹介", content: parts[0].trim() }); 
+        blocks.push({ title: "店舗の紹介", content: parts[0].trim() });
         parts = parts.slice(1);
     }
-    
+
     for (let i = 0; i < parts.length; i += 2) {
         const title = parts[i].trim();
-        if (title === '営業時間') continue; 
+        if (title === '営業時間') continue;
 
         const content = (parts[i + 1] || '').trim();
         if (title && content) { blocks.push({ title, content }); }
     }
-    
+
     return blocks.map(block => ({ ...block, content: block.content.trim() }));
 };
 
@@ -325,13 +363,13 @@ const parseDescription = (description: string) => {
 // ★★★ renderMatchingValues (変更なし) ★★★
 // (このコンポーネントは、元から文字列の配列 "matchingValues" を扱うため、変更不要です)
 const renderMatchingValues = (matchingValues: string[]) => {
-    if (!matchingValues || matchingValues.length === 0) return null; 
+    if (!matchingValues || matchingValues.length === 0) return null;
 
     const selectedSet = new Set(matchingValues);
     const allOptionsSet = new Set(ALL_MATCHING_VALUES.flatMap(group => group.options));
     const customValues = matchingValues.filter(v => !allOptionsSet.has(v));
     const groupedSelectedValues: { title: string, options: string[] }[] = [];
-    
+
     ALL_MATCHING_VALUES.forEach(group => {
         const selectedOptions = group.options.filter(value => selectedSet.has(value));
         if (selectedOptions.length > 0) {
@@ -358,7 +396,7 @@ const renderMatchingValues = (matchingValues: string[]) => {
                 AIマッチング用 サービス（目的）別価値観登録
             </h2>
             <p className="text-sm text-gray-700 mb-6 border-b pb-3">
-                小分類「<span className="font-semibold text-indigo-700">コンサルティング</span>」に基づき、貴店で**選択された強み**を表示しています。 
+                小分類「<span className="font-semibold text-indigo-700">コンサルティング</span>」に基づき、貴店で**選択された強み**を表示しています。
                 <span className="font-bold text-red-600 ml-1">({matchingValues.length} 個選択済み)</span>
             </p>
 
@@ -367,7 +405,7 @@ const renderMatchingValues = (matchingValues: string[]) => {
                     <h3 className="font-bold text-indigo-700 mb-3">{group.title}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {group.options.map((value, optionIndex) => (
-                            <MatchingValueItem 
+                            <MatchingValueItem
                                 key={optionIndex}
                                 value={value}
                             />
@@ -375,7 +413,7 @@ const renderMatchingValues = (matchingValues: string[]) => {
                     </div>
                 </div>
             ))}
-            
+
             {customValues.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-indigo-200">
                     <h3 className="font-bold text-indigo-700 mb-3">
@@ -385,12 +423,12 @@ const renderMatchingValues = (matchingValues: string[]) => {
                         カスタムで登録された強み:
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                         {customValues.map((v, i) => (
-                             <MatchingValueItem 
-                                 key={`custom-${i}`}
-                                 value={v}
-                             />
-                         ))}
+                        {customValues.map((v, i) => (
+                            <MatchingValueItem
+                                key={`custom-${i}`}
+                                value={v}
+                            />
+                        ))}
                     </div>
                 </div>
             )}
@@ -401,14 +439,14 @@ const renderMatchingValues = (matchingValues: string[]) => {
 
 
 const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
-    const router = useRouter(); 
+    const router = useRouter();
 
     useEffect(() => {
-        if (!store) return; 
+        if (!store) return;
         const timer = setTimeout(() => {
             console.log(`[LINE PUSH] 3秒後、${store.name}へのLINE登録を促すプッシュ処理をトリガーしました。`);
-        }, 3000); 
-        return () => clearTimeout(timer); 
+        }, 3000);
+        return () => clearTimeout(timer);
     }, [store]);
 
     if (!store) {
@@ -417,9 +455,9 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
 
     const mainImage = store.images[0];
     const galleryImages = store.images.slice(1);
-    const contentBlocks = parseDescription(store.description || ''); 
-    const starRating = Math.max(0, Math.min(5, Math.round(store.averageRating * 2) / 2)); 
-    
+    const contentBlocks = parseDescription(store.description || '');
+    const starRating = Math.max(0, Math.min(5, Math.round(store.averageRating * 2) / 2));
+
     // ★★★ 修正点3: 「3つの強み」のフィルターロジックを修正 ★★★
     // p (オブジェクト) の title (文字列) が空でないことを確認する
     const displaySpecialtyPoints = store.specialtyPoints.filter(p => p && p.title && p.title.trim() !== '');
@@ -432,7 +470,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
         <div className="min-h-screen bg-white font-sans text-gray-800">
             <Head>
                 {/* 確実に単一の文字列をタイトルにする */}
-                <title>{`${displayStoreName} | ${store.tagline || displayMainCategory}`}</title> 
+                <title>{`${displayStoreName} | ${store.tagline || displayMainCategory}`}</title>
                 <meta name="description" content={store.tagline || store.description || displayStoreName} />
                 <meta property="og:title" content={displayStoreName} />
                 <meta property="og:image" content={mainImage} />
@@ -445,10 +483,10 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                     <span className="text-xl font-extrabold text-gray-900 tracking-tight truncate">
                         {displayStoreName}
                     </span>
-                    <LineCTAButton 
+                    <LineCTAButton
                         store={store}
-                        text="問合せ" 
-                        subText="" 
+                        text="問合せ"
+                        subText=""
                         isPrimary={false}
                         className="p-2 px-4 h-10 w-auto shadow-md text-sm font-semibold rounded-full hidden sm:flex"
                     />
@@ -457,13 +495,13 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
 
             <main>
                 {/* 1. HERO SECTION - 画像がなければ NO IMAGE 表示 */}
-                <section 
-                    className="relative bg-gray-900 text-white pt-16 pb-20 overflow-hidden" 
-                    style={{ 
-                        backgroundImage: mainImage ? `linear-gradient(rgba(16, 32, 72, 0.9), rgba(16, 32, 72, 0.9)), url(${mainImage})` : 'none', 
+                <section
+                    className="relative bg-gray-900 text-white pt-16 pb-20 overflow-hidden"
+                    style={{
+                        backgroundImage: mainImage ? `linear-gradient(rgba(16, 32, 72, 0.9), rgba(16, 32, 72, 0.9)), url(${mainImage})` : 'none',
                         backgroundColor: '#102048', // ネイビー固定
-                        backgroundSize: 'cover', 
-                        backgroundPosition: 'center' 
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
                     }}
                 >
                     <div className="max-w-4xl mx-auto px-4 text-center">
@@ -474,7 +512,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         <h2 className="text-xl md:text-2xl font-light mb-8 opacity-90">
                             {displayStoreName}
                         </h2>
-                        
+
                         {!mainImage && (
                             <p className="text-4xl font-black text-gray-400/50 mb-10">NO IMAGE</p>
                         )}
@@ -494,10 +532,10 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         </div>
 
                         {/* メインCTA */}
-                        <LineCTAButton 
+                        <LineCTAButton
                             store={store}
-                            text="【いますぐ問合せ】LINEで相談・予約" 
-                            subText={cleanString(store.lineLiffUrl) ? "無料で簡単に予約・問合せが可能です" : "LINE連携URLが未登録です"} 
+                            text="【いますぐ問合せ】LINEで相談・予約"
+                            subText={cleanString(store.lineLiffUrl) ? "無料で簡単に予約・問合せが可能です" : "LINE連携URLが未登録です"}
                             className="w-full sm:w-2/3 mx-auto max-w-sm animate-pulse-slow"
                             isPrimary={true}
                         />
@@ -509,7 +547,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         )}
                     </div>
                 </section>
-                
+
                 {/* 2. THREE PROMISES - 3つの強みを柔軟に強調 (データがある場合のみ表示) */}
                 {/* ★★★ 修正点4: JSXの表示ロジックを変更 ★★★ */}
                 {displaySpecialtyPoints.length > 0 && (
@@ -522,10 +560,10 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                                 {displaySpecialtyPoints.slice(0, 3).map((point, i) => (
                                     <div key={i} className="text-center p-6 bg-white rounded-xl shadow-lg border-t-4 border-blue-600">
                                         <RiCheckboxCircleFill className="w-8 h-8 mx-auto text-blue-500 mb-3" />
-                                        
+
                                         {/* ★ ここを修正: {point} -> {point.title} */}
                                         <h3 className="text-xl font-bold mb-3 text-gray-900">{point.title}</h3>
-                                        
+
                                         {/* ★ ここを修正: ハードコードされたPタグ -> {point.description} を表示 */}
                                         <p className="text-sm text-gray-600">
                                             {point.description || 'プロフィールで設定された貴店の最も重要な強みです。'}
@@ -536,13 +574,13 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         </div>
                     </section>
                 )}
-                
+
                 {/* 3. AIマッチング用 サービス（目的）別価値観登録 セクションの追加 */}
                 {(store.matchingValues && store.matchingValues.length > 0) && (
                     <section className="py-16 bg-indigo-50 border-t-4 border-indigo-200">
-                         <div className="max-w-4xl mx-auto px-4">
-                             {renderMatchingValues(store.matchingValues)}
-                         </div>
+                        <div className="max-w-4xl mx-auto px-4">
+                            {renderMatchingValues(store.matchingValues)}
+                        </div>
                     </section>
                 )}
 
@@ -575,15 +613,15 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                                 <div className="mt-16 pt-8 border-t border-gray-200">
                                     <h3 className="text-2xl font-bold mb-6 text-gray-800">実績・オフィス風景</h3>
                                     <div className="grid grid-cols-2 gap-4">
-                                        {galleryImages.slice(0, 4).map((url: string, i: number) => ( 
+                                        {galleryImages.slice(0, 4).map((url: string, i: number) => (
                                             <img
                                                 key={i}
                                                 src={url}
                                                 alt={`ギャラリー画像 ${i + 2}`}
                                                 className="w-full h-48 object-cover rounded-lg shadow-md"
                                                 onError={(e) => {
-                                                    (e.target as HTMLImageElement).onerror = null; 
-                                                    (e.target as HTMLImageElement).src = `https://placehold.co/400x300/ccc/000?text=NO+IMAGE`; 
+                                                    (e.target as HTMLImageElement).onerror = null;
+                                                    (e.target as HTMLImageElement).src = `https://placehold.co/400x300/ccc/000?text=NO+IMAGE`;
                                                 }}
                                             />
                                         ))}
@@ -614,10 +652,10 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         <p className="text-xl mb-8 font-light opacity-90">
                             ご不明点、ご要望はLINE/お電話にてお気軽にご連絡ください。
                         </p>
-                        <LineCTAButton 
+                        <LineCTAButton
                             store={store}
-                            text="LINEで無料相談・予約する" 
-                            subText={cleanString(store.lineLiffUrl) ? "無料で簡単に予約・問合せが可能です" : "LINE連携URLが未登録です"} 
+                            text="LINEで無料相談・予約する"
+                            subText={cleanString(store.lineLiffUrl) ? "無料で簡単に予約・問合せが可能です" : "LINE連携URLが未登録です"}
                             className="w-full sm:w-2/3 mx-auto max-w-md animate-pulse-slow"
                             isPrimary={true}
                         />
@@ -626,7 +664,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                         <div className="mt-12 pt-8 border-t border-blue-700 text-left">
                             <h3 className="text-xl font-bold mb-4">連絡先・基本情報</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                
+
                                 <div className="flex items-start">
                                     <RiPhoneLine className="flex-shrink-0 w-5 h-5 mr-3 mt-1 text-yellow-400" />
                                     <div>
@@ -660,10 +698,10 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                                         <h4 className="font-bold">Webサイト:</h4>
                                         <p className="text-gray-300">
                                             {cleanString(store.url) ? (
-                                                <a 
-                                                    href={store.url!} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer" 
+                                                <a
+                                                    href={store.url!}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
                                                     className="hover:underline break-all"
                                                 >
                                                     {store.url}
@@ -683,6 +721,24 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                                         </div>
                                     </div>
                                 )}
+                                {store.snsUrls && store.snsUrls.map((url, index) => (
+                                    <div key={index} className="flex items-start">
+                                        {getSnsIcon(url)}
+                                        <div>
+                                            <h4 className="font-bold">{getSnsName(url)}:</h4>
+                                            <p className="text-gray-300">
+                                                <a
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="hover:underline break-all"
+                                                >
+                                                    {url}
+                                                </a>
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -693,9 +749,9 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
             <footer className="bg-gray-800 text-gray-400 p-4 text-center text-sm">
                 <div className="max-w-4xl mx-auto">
                     <p>
-                        © {new Date().getFullYear()} {displayStoreName}. All rights reserved. | 
+                        © {new Date().getFullYear()} {displayStoreName}. All rights reserved. |
                         <Link href="/partner/dashboard" legacyBehavior>
-                           <a className="text-blue-400 hover:underline ml-2">パートナーダッシュボードへ</a>
+                            <a className="text-blue-400 hover:underline ml-2">パートナーダッシュボードへ</a>
                         </Link>
                     </p>
                 </div>

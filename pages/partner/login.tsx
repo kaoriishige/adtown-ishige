@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 // --- 型定義 ---
 type MessageContent = string | React.ReactNode;
@@ -32,18 +33,10 @@ const LoginPage: React.FC = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
 
-  // 認証状態管理
-  const [authUser, setAuthUser] = useState<any>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  // 認証状態管理 (AuthContextを使用)
+  const { user: authUser, loading: authLoading } = useAuth();
 
-  // 認証状態の確認
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthUser(user);
-      setAuthChecked(true);
-    });
-    return () => unsubscribe();
-  }, [auth]);
+  // --- 修正：勝手に飛ばす監視（onAuthStateChanged）を削除し、AuthContextに一本化 ---
 
   // --- 修正：勝手に飛ばす監視（onAuthStateChanged）を削除 ---
   useEffect(() => {
@@ -150,8 +143,8 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // 認証状態がまだ確認中
-  if (!authChecked) {
+  // 認証状態がまだ確認中 (AuthContextのロード中)
+  if (authLoading) {
     return <div className="text-center py-40">Loading...</div>;
   }
 

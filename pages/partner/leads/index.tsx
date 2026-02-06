@@ -12,7 +12,7 @@ import {
 
 // React Icons のインポート
 // ★ FIX: FaSpinner をインポートに追加
-import { FaArrowLeft, FaUsers, FaLine, FaTimesCircle, FaRegClock, FaSpinner } from 'react-icons/fa'; 
+import { FaArrowLeft, FaUsers, FaLine, FaTimesCircle, FaRegClock, FaSpinner } from 'react-icons/fa';
 
 // グローバル変数の型を宣言
 declare const __app_id: string;
@@ -32,7 +32,7 @@ interface LeadData extends DocumentData {
     userId: string; // ユーザーID
     interests: string[]; // 興味関心
     status: 'pending' | 'lineContacted' | 'achieved';
-    createdAt: { toDate: () => Date }; 
+    createdAt: { toDate: () => Date };
 }
 
 // *******************************************************
@@ -47,7 +47,7 @@ const LeadsManagementPage: FC = () => {
         lineContacted: 0,
         pending: 0,
     });
-    const [leads, setLeads] = useState<LeadData[]>([]); 
+    const [leads, setLeads] = useState<LeadData[]>([]);
     const [error, setError] = useState<string | null>(null);
 
     // 認証チェックとリダイレクト
@@ -82,8 +82,8 @@ const LeadsManagementPage: FC = () => {
             const allLeads: LeadData[] = [];
             let total = 0;
             let lineContacted = 0;
-            let achieved = 0; 
-            
+            let achieved = 0;
+
             querySnapshot.forEach(doc => {
                 const data = doc.data() as LeadData;
                 total++;
@@ -96,7 +96,7 @@ const LeadsManagementPage: FC = () => {
                 if (status === 'lineContacted') {
                     lineContacted++;
                 } else if (status === 'achieved') {
-                    achieved++; 
+                    achieved++;
                 }
             });
 
@@ -127,9 +127,9 @@ const LeadsManagementPage: FC = () => {
     if (loading) {
         return (
             <div className="p-8 text-center text-gray-600 flex items-center justify-center h-screen">
-                 {/* ★ FaSpinnerが使えるようになりました */}
-                 <FaSpinner className="animate-spin w-6 h-6 mr-3 text-indigo-500" />
-                 AIアプローチデータを読み込み中...
+                {/* ★ FaSpinnerが使えるようになりました */}
+                <FaSpinner className="animate-spin w-6 h-6 mr-3 text-indigo-500" />
+                AIアプローチデータを読み込み中...
             </div>
         );
     }
@@ -146,7 +146,7 @@ const LeadsManagementPage: FC = () => {
             <p className="text-4xl font-extrabold text-gray-900 mt-2" style={{ color }}>{count}</p>
         </div>
     );
-    
+
     // リードのステータス表示ヘルパー
     const LeadStatusBadge: FC<{ status: LeadData['status'] }> = ({ status }) => {
         switch (status) {
@@ -181,23 +181,23 @@ const LeadsManagementPage: FC = () => {
 
             {/* ステータスカードの表示 */}
             <div className="grid grid-cols-3 gap-6 mb-10">
-                <Card 
-                    title="総リード数" 
-                    count={counts.total} 
-                    icon={<FaUsers className="w-6 h-6 text-indigo-400" />} 
-                    color="#6366f1" 
+                <Card
+                    title="総リード数"
+                    count={counts.total}
+                    icon={<FaUsers className="w-6 h-6 text-indigo-400" />}
+                    color="#6366f1"
                 />
-                <Card 
-                    title="LINE誘導済" 
-                    count={counts.lineContacted} 
-                    icon={<FaLine className="w-6 h-6 text-green-500" />} 
-                    color="#10b981" 
+                <Card
+                    title="LINE誘導済"
+                    count={counts.lineContacted}
+                    icon={<FaLine className="w-6 h-6 text-green-500" />}
+                    color="#10b981"
                 />
-                <Card 
-                    title="未対応/未契約" 
-                    count={counts.pending} 
-                    icon={<FaTimesCircle className="w-6 h-6 text-red-500" />} 
-                    color="#ef4444" 
+                <Card
+                    title="未対応/未契約"
+                    count={counts.pending}
+                    icon={<FaTimesCircle className="w-6 h-6 text-red-500" />}
+                    color="#ef4444"
                 />
             </div>
 
@@ -215,7 +215,7 @@ const LeadsManagementPage: FC = () => {
             ) : (
                 <div className="bg-white p-6 rounded-xl shadow-lg">
                     <h2 className="text-xl font-bold mb-4 border-b pb-2 text-gray-700">詳細リード一覧 ({leads.length}件)</h2>
-                    
+
                     <div className="space-y-3">
                         {leads.map((lead) => (
                             <div key={lead.id} className="p-4 border rounded-lg flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition">

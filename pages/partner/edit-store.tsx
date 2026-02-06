@@ -60,7 +60,7 @@ const EditStorePage = () => { // コンポーネント名を変更
     const [mainImageFile, setMainImageFile] = useState<File | null>(null);
     const [galleryImageFiles, setGalleryImageFiles] = useState<File[]>([]);
     const [error, setError] = useState<string | null>(null);
-    
+
     const descriptionPlaceholder = useMemo(() => {
         if (mainCategory.includes('美容') || mainCategory.includes('健康')) return descriptionPlaceholders['美容室・理容室'];
         if (subCategory.includes('整体') || subCategory.includes('整骨院')) return descriptionPlaceholders['整体・整骨院・鍼灸院'];
@@ -123,7 +123,7 @@ const EditStorePage = () => { // コンポーネント名を変更
             fetchStoreProfile(user);
         }
     }, [user, fetchStoreProfile]);
-    
+
     useEffect(() => {
         if (mainCategory && categoryData[mainCategory as keyof typeof categoryData]) {
             setSubCategoryOptions(categoryData[mainCategory as keyof typeof categoryData]);
@@ -136,7 +136,7 @@ const EditStorePage = () => { // コンポーネント名を変更
     const handleMainImageChange = (event: React.ChangeEvent<HTMLInputElement>) => { if (event.target.files && event.target.files[0]) { setMainImageFile(event.target.files[0]); } };
     const handleGalleryImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => { if (event.target.files) { setGalleryImageFiles(prev => [...prev, ...Array.from(event.target.files!)]); } };
     const handleSnsUrlChange = (index: number, value: string) => { const newSnsUrls = [...snsUrls]; newSnsUrls[index] = value; setSnsUrls(newSnsUrls); };
-    
+
     const handleDeleteImage = async (imageUrlToDelete: string, imageType: 'main' | 'gallery') => {
         if (!user || !storeId) {
             alert("エラーが発生しました。ページを再読み込みしてください。");
@@ -145,9 +145,9 @@ const EditStorePage = () => { // コンポーネント名を変更
         if (!window.confirm("この写真を本当に削除しますか？この操作は元に戻せません。")) {
             return;
         }
-        
+
         // 🚨 注意: サーバー側API /api/partner/delete-image の修正も必要です。
-        
+
         setError(null);
         try {
             const token = await user.getIdToken();
@@ -157,14 +157,14 @@ const EditStorePage = () => { // コンポーネント名を変更
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify({ storeId, imageUrl: imageUrlToDelete, imageType }),
+                body: JSON.stringify({ storeId, imageUrl: imageUrlToDelete, imageType, appId }),
             });
 
             const data = await response.json();
             if (!response.ok) {
                 throw new Error(data.error || "削除に失敗しました。");
             }
-            
+
             if (imageType === 'main') {
                 setMainImageUrl(null);
             } else {
@@ -196,34 +196,34 @@ const EditStorePage = () => { // コンポーネント名を変更
 
         try {
             // 🟢 修正点 3: 保存先をトップレベルの 'ads' コレクションに変更
-            const adsCollectionRef = collection(db, 'ads'); 
+            const adsCollectionRef = collection(db, 'ads');
             console.log("--- 2. Firestore Path ---");
             console.log("Attempting to write to collection: ads");
-            
+
             let currentStoreId = storeId;
-            
+
             // 🟢 修正点 4: 永続的な ownerId をデータに含める
-            const textData = { 
-                storeName, address, phoneNumber, 
-                mainCategory, subCategory, 
-                otherMainCategory: mainCategory === 'その他' ? otherMainCategory : '', 
-                otherSubCategory: subCategory === 'その他' ? otherSubCategory : '', 
-                description, websiteUrl, 
-                snsUrls: snsUrls.filter(url => url.trim() !== ''), 
+            const textData = {
+                storeName, address, phoneNumber,
+                mainCategory, subCategory,
+                otherMainCategory: mainCategory === 'その他' ? otherMainCategory : '',
+                otherSubCategory: subCategory === 'その他' ? otherSubCategory : '',
+                description, websiteUrl,
+                snsUrls: snsUrls.filter(url => url.trim() !== ''),
                 ownerId: user.uid, // ★ パートナーを識別するための最重要フィールド
-                updatedAt: serverTimestamp(), 
+                updatedAt: serverTimestamp(),
             };
             console.log("--- 3. Firestore Data ---");
             console.log("Data to save:", textData);
 
             if (!currentStoreId) {
                 console.log("Creating new document in 'ads'...");
-                const docRef = await addDoc(adsCollectionRef, { 
-                    ...textData, 
-                    status: 'pending', 
-                    createdAt: serverTimestamp(), 
-                    mainImageUrl: '', 
-                    galleryImageUrls: [] 
+                const docRef = await addDoc(adsCollectionRef, {
+                    ...textData,
+                    status: 'pending',
+                    createdAt: serverTimestamp(),
+                    mainImageUrl: '',
+                    galleryImageUrls: []
                 });
                 currentStoreId = docRef.id;
                 setStoreId(currentStoreId);
@@ -234,13 +234,13 @@ const EditStorePage = () => { // コンポーネント名を変更
                 await updateDoc(storeDocRefForUpdate, textData);
                 console.log("SUCCESS: Document updated.");
             }
-            
+
             const storeDocRef = doc(adsCollectionRef, currentStoreId!);
 
             if (mainImageFile) {
                 const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
                 // 🟢 修正点 5: Storage パスを ads に変更 (推奨)
-                const storagePath = `ads/${currentStoreId}/${uniqueFileName}`; 
+                const storagePath = `ads/${currentStoreId}/${uniqueFileName}`;
                 console.log("--- 4. Main Image Upload ---");
                 console.log("Uploading to Storage path:", storagePath);
                 const fileRef = ref(storage, storagePath);
@@ -250,14 +250,14 @@ const EditStorePage = () => { // コンポーネント名を変更
                 setMainImageUrl(updatedMainImageUrl);
                 console.log("SUCCESS: Main image uploaded.");
             }
-            
+
             if (galleryImageFiles.length > 0) {
                 console.log(`--- 5. Gallery Image Upload (${galleryImageFiles.length} files) ---`);
                 const newGalleryImageUrls: string[] = [];
                 for (const file of galleryImageFiles) {
                     const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
                     // 🟢 修正点 6: Storage パスを ads に変更 (推奨)
-                    const storagePath = `ads/${currentStoreId}/${uniqueFileName}`; 
+                    const storagePath = `ads/${currentStoreId}/${uniqueFileName}`;
                     console.log("Uploading to Storage path:", storagePath);
                     const fileRef = ref(storage, storagePath);
                     const uploadTask = await uploadBytesResumable(fileRef, file);
@@ -268,7 +268,7 @@ const EditStorePage = () => { // コンポーネント名を変更
                 setGalleryImageUrls(prev => [...prev, ...newGalleryImageUrls]);
                 console.log("SUCCESS: Gallery images uploaded.");
             }
-            
+
             setMainImageFile(null);
             setGalleryImageFiles([]);
 
@@ -296,7 +296,7 @@ const EditStorePage = () => { // コンポーネント名を変更
             <div className="space-y-6">
                 <div><label className="font-bold">店舗名 *</label><input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
                 <div><label className="font-bold">住所 *</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
-                {address && ( <div className="mt-4"><iframe width="100%" height="300" style={{ border: 0 }} loading="lazy" allowFullScreen src={`https://maps.google.co.jp/maps?output=embed&q=${encodeURIComponent(address)}`}></iframe></div> )}
+                {address && (<div className="mt-4"><iframe width="100%" height="300" style={{ border: 0 }} loading="lazy" allowFullScreen src={`https://maps.google.co.jp/maps?output=embed&q=${encodeURIComponent(address)}`}></iframe></div>)}
                 <div><label className="font-bold">電話番号 *</label><input type="text" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full p-2 border rounded mt-1" /></div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
@@ -306,7 +306,7 @@ const EditStorePage = () => { // コンポーネント名を変更
                             <option value="">選択してください</option>
                             {mainCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
-                        {mainCategory === 'その他' && ( <input type="text" value={otherMainCategory} onChange={e => setOtherMainCategory(e.target.value)} placeholder="カテゴリ名を入力" className="w-full p-2 border rounded mt-2"/> )}
+                        {mainCategory === 'その他' && (<input type="text" value={otherMainCategory} onChange={e => setOtherMainCategory(e.target.value)} placeholder="カテゴリ名を入力" className="w-full p-2 border rounded mt-2" />)}
                     </div>
                     <div>
                         <label className="font-bold">カテゴリ（小分類）*</label>
@@ -314,10 +314,10 @@ const EditStorePage = () => { // コンポーネント名を変更
                             <option value="">大分類を先に選択</option>
                             {subCategoryOptions.map(sub => <option key={sub} value={sub}>{sub}</option>)}
                         </select>
-                        {subCategory === 'その他' && ( <input type="text" value={otherSubCategory} onChange={e => setOtherSubCategory(e.target.value)} placeholder="カテゴリ名を入力" className="w-full p-2 border rounded mt-2"/> )}
+                        {subCategory === 'その他' && (<input type="text" value={otherSubCategory} onChange={e => setOtherSubCategory(e.target.value)} placeholder="カテゴリ名を入力" className="w-full p-2 border rounded mt-2" />)}
                     </div>
                 </div>
-                
+
                 <div>
                     <div className="flex justify-between items-center mb-1">
                         <div>
@@ -328,7 +328,7 @@ const EditStorePage = () => { // コンポーネント名を変更
                     </div>
                     <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded mt-1" rows={15} placeholder="カテゴリを選択後、「テンプレートを貼り付け」ボタンを押すと入力が簡単になります。"></textarea>
                 </div>
-                
+
                 <div className="space-y-2">
                     <label className="font-bold">トップ画像 (1枚)</label>
                     <p className="text-sm text-gray-500">推奨サイズ: 横1200px × 縦675px (16:9)</p>
@@ -338,7 +338,7 @@ const EditStorePage = () => { // コンポーネント名を変更
                                 <img src={mainImageFile ? URL.createObjectURL(mainImageFile) : mainImageUrl!} alt="トップ画像プレビュー" className="w-48 h-auto rounded" />
                                 <button type="button" onClick={() => { if (mainImageFile) { setMainImageFile(null); const input = document.getElementById('main-image-input') as HTMLInputElement; if (input) input.value = ''; } else if (mainImageUrl) { handleDeleteImage(mainImageUrl, 'main'); } }} className="absolute top-0 right-0 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -m-2">X</button>
                             </div>
-                        ) : ( <p className="text-gray-400">まだ画像はありません。</p> )}
+                        ) : (<p className="text-gray-400">まだ画像はありません。</p>)}
                     </div>
                     <input id="main-image-input" type="file" accept="image/*" onChange={handleMainImageChange} className="text-sm" />
                 </div>
@@ -353,21 +353,21 @@ const EditStorePage = () => { // コンポーネント名を変更
                             </div>
                         ))}
                         {galleryImageFiles.map((file, index) => (
-                               <div key={index} className="relative">
-                                    <img src={URL.createObjectURL(file)} alt={`新規ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded"/>
-                                    <button type="button" onClick={() => setGalleryImageFiles(galleryImageFiles.filter((_, i) => i !== index))} className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">X</button>
-                               </div>
+                            <div key={index} className="relative">
+                                <img src={URL.createObjectURL(file)} alt={`新規ギャラリー画像 ${index + 1}`} className="w-24 h-24 object-cover rounded" />
+                                <button type="button" onClick={() => setGalleryImageFiles(galleryImageFiles.filter((_, i) => i !== index))} className="absolute top-[-5px] right-[-5px] bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">X</button>
+                            </div>
                         ))}
                         {galleryImageUrls.filter(url => url).length === 0 && galleryImageFiles.length === 0 && (<p className="text-gray-400">まだ写真はありません。</p>)}
                     </div>
                     <input type="file" multiple onChange={handleGalleryImagesChange} accept="image/*" className="text-sm" />
                 </div>
-                
+
                 <div><label className="font-bold">公式ウェブサイトURL</label><input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
                 <div><label className="font-bold">SNS URL 1</label><input type="url" value={snsUrls[0]} onChange={(e) => handleSnsUrlChange(0, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
                 <div><label className="font-bold">SNS URL 2</label><input type="url" value={snsUrls[1]} onChange={(e) => handleSnsUrlChange(1, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https://..." /></div>
                 <div><label className="font-bold">SNS URL 3</label><input type="url" value={snsUrls[2]} onChange={(e) => handleSnsUrlChange(2, e.target.value)} className="w-full p-2 border rounded mt-1" placeholder="https-..." /></div>
-                
+
                 <button onClick={handleSaveProfile} disabled={isSaving} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400">
                     {isSaving ? '保存中...' : '保存する'}
                 </button>

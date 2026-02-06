@@ -40,6 +40,16 @@ service cloud.firestore {
 
     // ★★★★★★★【以下を追記】★★★★★★★
     // --- 店舗アプリ (artifacts) のルール ---
+
+    // --- リード情報 (leads) のルール ---
+    match /artifacts/{appId}/leads/{leadId} {
+      allow read: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow write: if request.auth != null && (
+        (resource == null && request.resource.data.ownerId == request.auth.uid) ||
+        (resource != null && resource.data.ownerId == request.auth.uid)
+      );
+    }
+
     // {userId} と自分のID (request.auth.uid) が一致する場合に許可
     match /artifacts/{appId}/users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;

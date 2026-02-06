@@ -8,7 +8,7 @@ import {
   ReactNode,
 } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../lib/firebase'; 
+import { auth } from '../lib/firebase';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 
@@ -17,7 +17,7 @@ type UserPlan = 'free' | 'paid_480' | null;
 type AuthContextType = {
   user: User | null;
   userRole: 'admin' | 'user' | null;
-  userPlan: UserPlan; 
+  userPlan: UserPlan;
   loading: boolean;
   logout: () => Promise<void>;
 };
@@ -25,15 +25,15 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userRole: null,
-  userPlan: null, 
+  userPlan: null,
   loading: true,
-  logout: async () => {},
+  logout: async () => { },
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
-  const [userPlan, setUserPlan] = useState<UserPlan>(null); 
+  const [userPlan, setUserPlan] = useState<UserPlan>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const response = await axios.get('/api/users/get-role', {
             headers: { Authorization: `Bearer ${token}` },
           });
-          
+
           const { role, plan } = response.data;
           setUserRole(role);
           setUserPlan(plan);
@@ -62,24 +62,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserRole(null);
         setUserPlan(null);
       }
-      setLoading(false); 
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
   const logout = async () => {
-    setLoading(true); 
+    setLoading(true);
     try {
-      await axios.post('/api/logout'); 
-      await auth.signOut(); 
-      router.push('/login'); 
+      await axios.post('/api/logout');
+      await auth.signOut();
+      router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
       setUser(null);
       setUserRole(null);
-      setUserPlan(null); 
+      setUserPlan(null);
       setLoading(false);
     }
   };
@@ -87,21 +87,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     user,
     userRole,
-    userPlan, 
+    userPlan,
     loading,
     logout,
   };
 
   /**
-   * ここが修正の核心です
+   * 認証のロード状態を無視して表示する公開ページの判定
    */
-  const isPublicLP = router.pathname === '/partner/signup';
+  const publicPaths = [
+    '/',
+    '/partner/login',
+    '/partner/signup',
+    '/partner/forgot-password',
+    '/recruit/login',
+    '/recruit',
+    '/legal',
+    '/privacy',
+    '/privacy-policy',
+    '/terms',
+    '/sctl',
+    '/tokushoho',
+    '/company',
+    '/contact',
+    '/help',
+    '/verify-email',
+  ];
 
-  // 1. パートナー募集LPの場合は、認証のロード状態を無視して即座に子供要素を表示する
-  if (isPublicLP) {
+  // 完全一致、または特定のディレクトリ以下を公開に設定
+  const isPublicPage =
+    publicPaths.includes(router.pathname) ||
+    router.pathname.startsWith('/stores/view/') ||
+    router.pathname.startsWith('/app/');
+
+  // 1. 公開ページの場合は、認証のロード状態を無視して即座に子供要素を表示する
+  if (isPublicPage) {
     return (
       <AuthContext.Provider value={value}>
-        {children} 
+        {children}
       </AuthContext.Provider>
     );
   }
@@ -109,12 +132,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // 2. それ以外の管理画面などは、認証ロード中は待機画面を出す
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh', 
-        backgroundColor: '#fff' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: '#fff'
       }}>
         認証情報を読み込み中...
       </div>
@@ -124,7 +147,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // 3. 通常レンダリング
   return (
     <AuthContext.Provider value={value}>
-      {children} 
+      {children}
     </AuthContext.Provider>
   );
 };
