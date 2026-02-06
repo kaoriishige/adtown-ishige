@@ -344,6 +344,13 @@ const StoreProfilePage: FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [industryData, setIndustryData] = useState<IndustrySpecificData>({});
     const [matchingValues, setMatchingValues] = useState<string[]>([]); // AIマッチング用価値観
+    const [debugLog, setDebugLog] = useState<string[]>([]);
+
+    const addDebugLog = (msg: string) => {
+        const time = new Date().toLocaleTimeString();
+        setDebugLog(prev => [`[${time}] ${msg}`, ...prev].slice(0, 50));
+        console.log(`[PROFILE DEBUG] ${msg}`);
+    };
 
     // プレースホルダーの計算
     const descriptionPlaceholder = useMemo(() => {
@@ -447,12 +454,15 @@ const StoreProfilePage: FC = () => {
                 setGalleryImageUrls(storeData.galleryImageUrls || []);
                 setIndustryData(storeData.industryData || {});
                 setMatchingValues(storeData.matchingValues || []);
+                addDebugLog(`Profile loaded for store: ${storeDoc.id}`);
             } else {
                 setMatchingValues([]); // 新規作成時
+                addDebugLog("No existing profile found. Starting new.");
             }
         } catch (err: any) {
             console.error("店舗情報の取得に失敗:", err);
             setError("店舗情報の読み込みに失敗しました。");
+            addDebugLog(`Load Error: ${err.message}`);
         } finally {
             setLoading(false);
         }
@@ -576,6 +586,7 @@ const StoreProfilePage: FC = () => {
 
         setIsSaving(true);
         setError(null);
+        addDebugLog("Save process started...");
 
         try {
             const firestore = db as Firestore;
@@ -610,10 +621,11 @@ const StoreProfilePage: FC = () => {
                 currentStoreId = docRef.id;
                 setStoreId(currentStoreId);
             } else {
-                // 更新
                 const storeDocRefForUpdate = doc(userStoresCollectionRef, currentStoreId);
+                addDebugLog(`Updating existing store: ${currentStoreId}`);
                 await updateDoc(storeDocRefForUpdate, allStoreData);
             }
+            addDebugLog("Firestore data write successful.");
 
             // 2. 画像のアップロードとFirestore更新
             if (storage && currentStoreId) {
@@ -623,11 +635,13 @@ const StoreProfilePage: FC = () => {
                 // メイン画像処理
                 if (mainImageFile) {
                     try {
+                        addDebugLog(`Starting Main Image upload: ${mainImageFile.name}`);
                         const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
                         const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
                         const fileRef = ref(storageInstance, storagePath);
                         const uploadTask = await uploadBytesResumable(fileRef, mainImageFile);
                         const updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
+                        addDebugLog("Main Image upload successful.");
                         await updateDoc(storeDocRef, { mainImageUrl: updatedMainImageUrl });
                         setMainImageUrl(updatedMainImageUrl);
                     } catch (err: any) {
@@ -641,12 +655,14 @@ const StoreProfilePage: FC = () => {
                     const newGalleryImageUrls: string[] = [];
                     for (const file of galleryImageFiles) {
                         try {
+                            addDebugLog(`Starting Gallery Image upload: ${file.name}`);
                             const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
                             const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
                             const fileRef = ref(storageInstance, storagePath);
                             const uploadTask = await uploadBytesResumable(fileRef, file);
                             const downloadURL = await getDownloadURL(uploadTask.ref);
                             newGalleryImageUrls.push(downloadURL);
+                            addDebugLog(`Gallery Image upload successful: ${file.name}`);
                         } catch (err: any) {
                             uploadErrorMessage += `ギャラリー画像 (${file.name}) のアップロードに失敗。\n`;
                             console.error(`Gallery Image Upload Failed (${file.name}):`, err);
@@ -668,10 +684,12 @@ const StoreProfilePage: FC = () => {
             }
 
             // 処理成功後、強制リロードして最新データをフェッチ
+            addDebugLog("Save completed successfully. Reloading page...");
             router.reload();
 
         } catch (err: any) {
             console.error("!!! SAVE FAILED !!! An error occurred in handleSaveProfile:", err);
+            addDebugLog(`!!! SAVE FAILED !!! ${err.message}`);
             let errorMessage = `保存に失敗しました: ${err.message}`;
             if (err.code === 'permission-denied' || (err.code && err.code.includes('storage/unauthorized'))) {
                 errorMessage += "\n\n【重要】Firebase Storage の権限エラーです。ルールを確認してください。";
@@ -960,6 +978,23 @@ const StoreProfilePage: FC = () => {
                 <Link href="/partner/dashboard" legacyBehavior>
                     <a className="text-blue-600 hover:underline">← ダッシュボードに戻る</a>
                 </Link>
+            </div>
+
+            {/* Debug Log Terminal */}
+            <div className="mt-12 bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs overflow-auto max-h-48 border-2 border-gray-700 shadow-xl">
+                <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
+                    <span className="font-bold text-gray-400 uppercase tracking-widest">Debug Terminal (appId: {appId})</span>
+                    <button onClick={() => setDebugLog([])} className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-0.5 rounded transition-colors text-[10px]">CLEAR</button>
+                </div>
+                {debugLog.length === 0 ? (
+                    <div className="text-gray-500 italic">待機中... (No logs yet)</div>
+                ) : (
+                    debugLog.map((log, i) => (
+                        <div key={i} className="mb-1 leading-tight break-all border-l-2 border-indigo-500 pl-2 py-0.5 bg-gray-800/30 rounded-r">
+                            {log}
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );
