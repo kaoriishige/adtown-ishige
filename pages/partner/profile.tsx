@@ -636,36 +636,83 @@ const StoreProfilePage: FC = () => {
                 if (mainImageFile) {
                     try {
                         addDebugLog(`Starting Main Image upload: ${mainImageFile.name}`);
-                        const uniqueFileName = `main_${uuidv4()}_${mainImageFile.name}`;
-                        const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
+
+                        // ファイル名のサニタイズ (スペースや日本語を除去)
+                        const ext = mainImageFile.name.split('.').pop();
+                        const sanitizedName = `main_${uuidv4()}.${ext}`;
+
+                        const storagePath = `users/${user.uid}/stores/${currentStoreId}/${sanitizedName}`;
                         const fileRef = ref(storageInstance, storagePath);
-                        const uploadTask = await uploadBytesResumable(fileRef, mainImageFile);
-                        const updatedMainImageUrl = await getDownloadURL(uploadTask.ref);
+
+                        // タイムアウト付きのアップロード処理
+                        const uploadTask = uploadBytesResumable(fileRef, mainImageFile);
+
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                uploadTask.cancel();
+                                reject(new Error("タイムアウト(15秒)"));
+                            }, 15000); // 15秒に短縮
+
+                            uploadTask.on('state_changed',
+                                (snapshot) => {
+                                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                    addDebugLog(`Main Image: ${Math.round(progress)}%`);
+                                },
+                                (err) => {
+                                    clearTimeout(timeout);
+                                    reject(err);
+                                },
+                                () => {
+                                    clearTimeout(timeout);
+                                    resolve(true);
+                                }
+                            );
+                        });
+
+                        const updatedMainImageUrl = await getDownloadURL(fileRef);
                         addDebugLog("Main Image upload successful.");
                         await updateDoc(storeDocRef, { mainImageUrl: updatedMainImageUrl });
                         setMainImageUrl(updatedMainImageUrl);
                     } catch (err: any) {
-                        uploadErrorMessage += `メイン画像のアップロードに失敗。\n`;
+                        uploadErrorMessage += `メイン画像: ${err.message}\n`;
                         console.error("Main Image Upload Failed:", err);
+                        addDebugLog(`Main Image Error: ${err.message}`);
                     }
                 }
 
                 // ギャラリー画像処理
                 if (galleryImageFiles.length > 0) {
+                    addDebugLog(`Starting Gallery uploads (${galleryImageFiles.length} files)...`);
                     const newGalleryImageUrls: string[] = [];
                     for (const file of galleryImageFiles) {
                         try {
-                            addDebugLog(`Starting Gallery Image upload: ${file.name}`);
-                            const uniqueFileName = `gallery_${uuidv4()}_${file.name}`;
-                            const storagePath = `users/${user.uid}/stores/${currentStoreId}/${uniqueFileName}`;
+                            const ext = file.name.split('.').pop();
+                            const sanitizedName = `gallery_${uuidv4()}.${ext}`;
+                            const storagePath = `users/${user.uid}/stores/${currentStoreId}/${sanitizedName}`;
                             const fileRef = ref(storageInstance, storagePath);
-                            const uploadTask = await uploadBytesResumable(fileRef, file);
-                            const downloadURL = await getDownloadURL(uploadTask.ref);
+
+                            addDebugLog(`Uploading: ${file.name}`);
+                            const uploadTask = uploadBytesResumable(fileRef, file);
+
+                            await new Promise((resolve, reject) => {
+                                const timeout = setTimeout(() => {
+                                    uploadTask.cancel();
+                                    reject(new Error("タイムアウト(30秒)"));
+                                }, 30000);
+
+                                uploadTask.on('state_changed', null,
+                                    (err) => { clearTimeout(timeout); reject(err); },
+                                    () => { clearTimeout(timeout); resolve(true); }
+                                );
+                            });
+
+                            const downloadURL = await getDownloadURL(fileRef);
                             newGalleryImageUrls.push(downloadURL);
-                            addDebugLog(`Gallery Image upload successful: ${file.name}`);
+                            addDebugLog(`Success: ${file.name}`);
                         } catch (err: any) {
-                            uploadErrorMessage += `ギャラリー画像 (${file.name}) のアップロードに失敗。\n`;
-                            console.error(`Gallery Image Upload Failed (${file.name}):`, err);
+                            uploadErrorMessage += `ギャラリー (${file.name}): ${err.message}\n`;
+                            console.error(`Gallery Upload Failed (${file.name}):`, err);
+                            addDebugLog(`Gallery Error (${file.name}): ${err.message}`);
                         }
                     }
                     if (newGalleryImageUrls.length > 0) {
@@ -677,9 +724,12 @@ const StoreProfilePage: FC = () => {
                 setGalleryImageFiles([]);
 
                 if (uploadErrorMessage) {
-                    setError(`店舗情報は保存されましたが、画像アップロード中にエラーが発生しました:\n\n${uploadErrorMessage}原因: Storageのルール、タイムアウト、またはネットワークの問題を確認してください。`);
+                    addDebugLog("Some uploads failed/timed out, but text data is saved.");
+                    setError(`店舗情報は保存されましたが、画像の一部が保存できませんでした。原因: Storageのルール設定、または接続状況を確認してください。\n\n${uploadErrorMessage}`);
+                    // 3秒待ってからリロードへ
+                    await new Promise(r => setTimeout(r, 3000));
                 } else {
-                    setError('店舗情報を保存しました。');
+                    addDebugLog("All uploads successful.");
                 }
             }
 
