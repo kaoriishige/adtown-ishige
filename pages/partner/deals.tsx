@@ -101,7 +101,7 @@ const PartnerDealsPage: NextPage = () => {
 
   // 認証チェック
   useEffect(() => {
-    addDebugLog("Initializing Auth check...");
+    addDebugLog(`Initializing Auth check... appId: ${appId}`);
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         addDebugLog(`Auth confirmed: ${currentUser.uid}`);

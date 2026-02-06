@@ -180,7 +180,7 @@ const PartnerDashboard: NextPage<DashboardProps> = (props) => {
     };
 
     useEffect(() => {
-        addDebugLog(`Auth loading: ${authLoading}, User: ${authUser?.uid || 'null'}`);
+        addDebugLog(`Auth loading: ${authLoading}, User: ${authUser?.uid || 'null'}, appId: ${appId}`);
     }, [authLoading, authUser]);
 
     useEffect(() => {
