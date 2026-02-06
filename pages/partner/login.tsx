@@ -45,7 +45,12 @@ const LoginPage: React.FC = () => {
 
   useEffect(() => {
     addDebugLog(`Auth loading: ${authLoading}, User: ${authUser?.uid || 'null'}`);
-  }, [authLoading, authUser]);
+    if (authUser && !authLoading) {
+      addDebugLog("Authenticated. Redirecting to dashboard...");
+      const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
+      router.replace(targetPath);
+    }
+  }, [authLoading, authUser, loginType, router]);
 
   // --- 修正：勝手に飛ばす監視（onAuthStateChanged）を削除し、AuthContextに一本化 ---
 
