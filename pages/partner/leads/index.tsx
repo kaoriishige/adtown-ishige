@@ -16,7 +16,7 @@ import { FaArrowLeft, FaUsers, FaLine, FaTimesCircle, FaRegClock, FaSpinner } fr
 
 // グローバル変数の型を宣言
 declare const __app_id: string;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const appId = process.env.NEXT_PUBLIC_APP_ID || (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
 
 // *******************************************************
 // 型定義

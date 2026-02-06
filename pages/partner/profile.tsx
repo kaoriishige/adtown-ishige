@@ -32,8 +32,8 @@ import { categoryData, mainCategories } from '../../lib/categoryData';
 // グローバル変数の型を宣言
 declare const __app_id: string;
 
-// グローバル変数からアプリIDを取得
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// グローバル変数または環境変数からアプリIDを取得
+const appId = process.env.NEXT_PUBLIC_APP_ID || (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
 
 // *******************************************************
 // プレースホルダー (変更なし)
@@ -240,8 +240,8 @@ const MatchingValuesForm: FC<MatchingValuesFormProps> = ({
                                     onClick={() => handleToggle(option)}
                                     disabled={isDisabled}
                                     className={`p-2 text-left rounded-md border transition-all flex items-center ${isSelected
-                                            ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-                                            : "bg-gray-50 hover:bg-indigo-50 border-gray-300 text-gray-700"
+                                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
+                                        : "bg-gray-50 hover:bg-indigo-50 border-gray-300 text-gray-700"
                                         } ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
                                 >
                                     <span className="text-left font-medium">

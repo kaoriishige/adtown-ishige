@@ -15,8 +15,8 @@ import { RiArrowLeftLine } from 'react-icons/ri';
 // グローバル変数の型を宣言
 declare const __app_id: string;
 
-// グローバル変数からアプリIDを取得
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// グローバル変数または環境変数からアプリIDを取得
+const appId = process.env.NEXT_PUBLIC_APP_ID || (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
 
 // --- 型定義 ---
 interface Store {
