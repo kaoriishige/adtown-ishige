@@ -160,43 +160,46 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
         const dbInstance = (adminDb && (adminDb as any).collection) ? (adminDb as Firestore) : (createFirestoreDummyReference() as Firestore);
         const dbRef: Firestore = dbInstance;
 
-        let storeDoc: QueryDocumentSnapshot | undefined = undefined;
+        console.log(`[getServerSideProps] Fetching data for storeId: ${storeId}`);
 
-        console.log(`[getServerSideProps] Searching collectionGroup("stores") for storeId: ${storeId}`);
+        // 1. まず /users/{storeId} 直下のドキュメントを直接取得する (最新の保存先)
+        const userDocRef = dbRef.collection("users").doc(storeId);
+        let storeDocSnap = await userDocRef.get();
+        let rawData = storeDocSnap.exists ? storeDocSnap.data() : null;
 
-        const storesQuery = dbRef.collectionGroup("stores");
-        const querySnapshot = await storesQuery.get();
+        // 2. もし直下になければ、古い形式 (サブコレクション) でも探す
+        if (!rawData) {
+            console.log(`[getServerSideProps] Not found in /users. Trying collectionGroup("stores")...`);
+            const storesQuery = dbRef.collectionGroup("stores");
+            const querySnapshot = await storesQuery.get();
+            const foundDoc = querySnapshot.docs.find(doc => doc.id === storeId);
 
-        storeDoc = querySnapshot.docs.find(doc => doc.id === storeId);
+            if (foundDoc) {
+                rawData = foundDoc.data();
+                storeDocSnap = foundDoc as any;
+            }
+        }
 
-        if (!storeDoc) {
-            console.log(`[CollectionGroup Search] Store ID ${storeId} not found across all users. (No match found)`);
+        if (!rawData) {
+            console.log(`[getServerSideProps] Store ID ${storeId} not found anywhere.`);
             return { notFound: true };
         }
 
-        const rawData = storeDoc.data();
-
-        const foundStoreId = storeDoc.id;
-        const foundOwnerId = rawData.ownerId || DUMMY_STORE_DATA.ownerId;
+        const foundStoreId = storeId;
+        const foundOwnerId = rawData.ownerId || storeId;
         const descriptionText = cleanString(rawData.description) || '';
-
         const hoursMatch = descriptionText.match(/【営業時間】([\s\S]+?)(?=【|\s*$)/);
 
-        // ★★★ 修正点2: 読み込みロジックを変更 (古いstring[]にも対応) ★★★
         const loadedSpecialtyPoints = rawData.specialtyPoints || [];
         let formattedSpecialtyPoints: SpecialtyPoint[];
-
         if (loadedSpecialtyPoints.length > 0 && typeof loadedSpecialtyPoints[0] === 'string') {
-            // 古い形式 (string[]) から新しい形式 (SpecialtyPoint[]) に変換
             formattedSpecialtyPoints = (loadedSpecialtyPoints as string[]).map((title: string) => ({
                 title: title,
-                description: '', // 古いデータには説明がないため空にする
+                description: '',
             }));
         } else {
-            // 新しい形式 (SpecialtyPoint[])
             formattedSpecialtyPoints = loadedSpecialtyPoints;
         }
-        // ★★★ 修正ここまで ★★★
 
         const mergedData: StoreData = {
             id: foundStoreId,
@@ -206,7 +209,7 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
             mainCategory: cleanString(rawData.mainCategory) || DUMMY_STORE_DATA.mainCategory,
             tagline: cleanString(rawData.tagline),
             description: descriptionText,
-            specialtyPoints: formattedSpecialtyPoints, // ★ 修正したデータをセット
+            specialtyPoints: formattedSpecialtyPoints,
             url: cleanString(rawData.websiteUrl || rawData.url),
             lineLiffUrl: cleanString(rawData.lineLiffUrl),
             images: cleanString(rawData.mainImageUrl)
@@ -225,9 +228,7 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
         };
 
         let warning = null;
-        if (!cleanString(mergedData.name)) {
-            warning = `【警告】店舗名が未登録です。`;
-        } else if (mergedData.images.length === 0) {
+        if (mergedData.images.length === 0) {
             warning = `【警告】メイン画像が未登録です。`;
         }
 
@@ -238,7 +239,6 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
         return { notFound: true };
     }
 };
-
 // ===============================
 // 4. HELPER COMPONENTS (LPデザイン用)
 // ===================================
