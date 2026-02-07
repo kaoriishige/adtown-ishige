@@ -32,10 +32,17 @@ const LoginPage: React.FC = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
 
-  // 認証状態管理 (AuthContextを使用)
   const { user: authUser, loading: authLoading } = useAuth();
 
-  // 【修正】勝手に飛ばす自動リダイレクトを「手動ボタン」へ変更し、フリーズを防止
+  // 遷移処理を共通化（スマホのCookie保存待ちを入れる）
+  const handleFinalRedirect = (path: string) => {
+    setLoading(true);
+    // スマホのSafari等でCookie/Sessionが安定するまで1秒待機
+    setTimeout(() => {
+      window.location.assign(path);
+    }, 1000);
+  };
+
   useEffect(() => {
     if (!authLoading && authUser) {
       const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
@@ -44,72 +51,43 @@ const LoginPage: React.FC = () => {
         <div className="flex flex-col items-center">
           <p className="font-bold text-green-600 mb-4 text-base">ログイン済みです</p>
           <button
-            onClick={() => window.location.href = targetPath}
-            className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold shadow-lg animate-bounce"
+            onClick={(e) => {
+              e.preventDefault();
+              handleFinalRedirect(targetPath);
+            }}
+            className="w-full py-4 bg-indigo-600 text-white rounded-lg font-bold shadow-lg animate-pulse"
           >
-            ダッシュボードを開く
+            {loading ? "移動中..." : "ダッシュボードを開く"}
           </button>
         </div>
       );
     }
-  }, [authLoading, authUser, loginType]);
+  }, [authLoading, authUser, loginType, loading]);
 
   useEffect(() => {
     const queryError = router.query.error as string;
     if (queryError) {
       if (queryError === 'permission_denied') {
-        setError('アクセス権限がありません。ログインタイプを確認してください。');
+        setError('アクセス権限がありません。');
       } else if (queryError === 'user_data_missing') {
-        setError('ユーザー登録が見つかりません。新規登録を行ってください。');
+        setError('ユーザー登録が見つかりません。');
       }
     }
   }, [router.query.error]);
 
-  const handleStartPasswordReset = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage('パスワード再設定メールを送信するには、メールアドレスを入力してください。');
-    setIsPasswordResetMode(true);
-  };
-
-  const handleSendPasswordReset = async () => {
-    if (!email) {
-      setError('メールアドレスを入力してください。');
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      await sendPasswordResetEmail(auth, email);
-      setSuccessMessage(`再設定メールを ${email} に送信しました。`);
-      setIsPasswordResetMode(false);
-    } catch (err: any) {
-      let message = 'メール送信に失敗しました。';
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
-        message = 'このメールアドレスは登録されていません。';
-      }
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmailForget = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage(
-      <div className="text-sm font-medium">
-        メールアドレスをお忘れの場合：
-        <div className="mt-1 font-bold text-indigo-700">adtown@able.ocn.ne.jp</div>
-      </div>
-    );
-    setIsPasswordResetMode(false);
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isPasswordResetMode) {
-      handleSendPasswordReset();
+      setLoading(true);
+      try {
+        await sendPasswordResetEmail(auth, email);
+        setSuccessMessage(`再設定メールを送信しました。`);
+        setIsPasswordResetMode(false);
+      } catch (err: any) {
+        setError('メール送信に失敗しました。');
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -118,6 +96,7 @@ const LoginPage: React.FC = () => {
     setSuccessMessage(null);
 
     try {
+      // 永続性を明示的にセット
       await setPersistence(auth, browserLocalPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
@@ -128,52 +107,52 @@ const LoginPage: React.FC = () => {
         body: JSON.stringify({ loginType }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json();
         setLoading(false);
-        if (data.error === 'user_data_missing') {
-          setError('このメールアドレスは登録されていません。');
-        } else if (data.error === 'permission_denied') {
-          setError('選択したパートナー種別の権限がありません。');
-        } else {
-          setError(data.error || '認証に失敗しました。');
-        }
+        setError(data.error || '認証に失敗しました。');
         return;
       }
 
-      // 【修正】スマホでの自動遷移失敗を回避するため、成功時も手動ボタンを表示
+      // 成功時：自動で飛ばさず、ボタンを表示してユーザーに踏ませる（スマホのポップアップブロック対策）
       const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
       setLoading(false);
       setSuccessMessage(
         <div className="flex flex-col items-center">
-          <p className="font-bold text-green-600 mb-4">認証に成功しました！</p>
+          <p className="font-bold text-green-600 mb-4 text-lg text-center">認証に成功しました！<br />下のボタンを押してください</p>
           <button
-            onClick={() => window.location.href = targetPath}
-            className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold shadow-lg"
+            type="button"
+            onClick={() => handleFinalRedirect(targetPath)}
+            className="w-full py-4 bg-indigo-700 text-white rounded-xl font-bold shadow-2xl"
           >
-            ダッシュボードを表示する
+            ダッシュボードへ入る
           </button>
         </div>
       );
 
     } catch (err: any) {
       setLoading(false);
-      let message = 'メールアドレスまたはパスワードが正しくありません。';
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        message = 'ログイン情報が正しくないか、登録されていません。';
-      } else if (err.code === 'auth/too-many-requests') {
-        message = '試行回数が上限を超えました。しばらく時間をおいてください。';
-      }
-      setError(message);
+      setError('ログイン情報が正しくないか、登録されていません。');
     }
   };
 
+  const handleStartPasswordReset = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage('メールアドレスを入力してください。');
+    setIsPasswordResetMode(true);
+  };
+
+  const handleEmailForget = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(<div className="text-sm font-medium">メールアドレスをお忘れの場合：<br /><span className="font-bold text-indigo-700">adtown@able.ocn.ne.jp</span></div>);
+    setIsPasswordResetMode(false);
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <Head>
-        <title>Adtown パートナーログイン</title>
-      </Head>
+      <Head><title>Adtown パートナーログイン</title></Head>
 
       <div className="flex-grow flex items-center justify-center p-4">
         {authLoading ? (
@@ -182,75 +161,61 @@ const LoginPage: React.FC = () => {
             <p className="text-lg font-semibold text-gray-700">認証情報を確認中...</p>
           </div>
         ) : (
-          <div className="max-w-md w-full bg-white rounded-xl shadow-lg border border-gray-100 p-8 space-y-6">
-            <h1 className="text-3xl font-bold text-gray-900 text-center">パートナーログイン</h1>
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 space-y-6">
+            <h1 className="text-2xl font-bold text-gray-900 text-center">パートナーログイン</h1>
 
             {!authUser && (
-              <div className="flex justify-center space-x-6">
+              <div className="flex justify-center space-x-4 bg-gray-50 p-2 rounded-lg">
                 {['adver', 'recruit'].map((type) => (
-                  <label key={type} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={loginType === type}
-                      onChange={() => setLoginType(type)}
-                      className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">
-                      {type === 'adver' ? '広告パートナー' : '求人パートナー'}
-                    </span>
+                  <label key={type} className={`flex-1 flex items-center justify-center py-2 rounded-md cursor-pointer transition-all ${loginType === type ? 'bg-white shadow-sm text-indigo-600 font-bold' : 'text-gray-500'}`}>
+                    <input type="radio" checked={loginType === type} onChange={() => setLoginType(type)} className="hidden" />
+                    <span className="text-sm">{type === 'adver' ? '広告' : '求人'}</span>
                   </label>
                 ))}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center animate-pulse">{error}</div>}
-              {successMessage && <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm text-center">{successMessage}</div>}
+              {error && <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded text-sm font-medium">{error}</div>}
+              {successMessage && <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded text-sm">{successMessage}</div>}
 
               {!authUser && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">メールアドレス</label>
-                    <input
-                      type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                      placeholder="example@mail.com"
-                      className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    />
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">メールアドレス</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="example@mail.com" />
                   </div>
 
                   {!isPasswordResetMode && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">パスワード</label>
-                      <div className="relative mt-1">
-                        <input
-                          type={passwordVisible ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
-                          className="block w-full p-3 border border-gray-300 rounded-md pr-10 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">パスワード</label>
+                      <div className="relative">
+                        <input type={passwordVisible ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute right-3 top-3 text-gray-400">
                           {passwordVisible ? <EyeOffIcon /> : <EyeIcon />}
                         </button>
                       </div>
                     </div>
                   )}
 
-                  <div className="text-sm flex justify-center space-x-4">
-                    <button type="button" onClick={handleEmailForget} className="text-indigo-600 hover:underline">メール忘れ</button>
-                    <button type="button" onClick={handleStartPasswordReset} className="text-indigo-600 hover:underline">パスワード忘れ</button>
+                  <div className="flex justify-between text-xs text-indigo-600 font-medium px-1">
+                    <button type="button" onClick={handleEmailForget} className="hover:underline">メール忘れ</button>
+                    <button type="button" onClick={handleStartPasswordReset} className="hover:underline">パスワード忘れ</button>
                   </div>
 
-                  <button type="submit" disabled={loading} className="w-full py-3 bg-orange-500 text-white font-bold rounded-md disabled:bg-gray-400 transition duration-200 hover:bg-orange-600">
-                    {loading ? "処理中..." : (isPasswordResetMode ? '再設定メールを送信' : 'ログイン')}
+                  <button type="submit" disabled={loading} className="w-full py-4 bg-orange-500 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform disabled:bg-gray-300">
+                    {loading ? "読み込み中..." : (isPasswordResetMode ? '再設定メールを送信' : 'ログインしてダッシュボードへ')}
                   </button>
                 </>
               )}
             </form>
 
             {!authUser && (
-              <div className="text-center text-sm mt-4 pt-4 border-t border-gray-100">
-                <p className="text-gray-600">アカウントをお持ちでないですか？</p>
-                <div className="flex flex-col space-y-2 mt-2">
-                  <Link href="/partner/signup" className="text-blue-600 font-medium hover:underline">広告パートナー登録</Link>
-                  <Link href="/recruit" className="text-blue-600 font-medium hover:underline">求人パートナー登録</Link>
+              <div className="text-center pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-400 mb-3">アカウントをお持ちでない方</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Link href="/partner/signup" className="text-xs py-2 border border-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-50 text-center">広告登録</Link>
+                  <Link href="/recruit" className="text-xs py-2 border border-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-50 text-center">求人登録</Link>
                 </div>
               </div>
             )}
