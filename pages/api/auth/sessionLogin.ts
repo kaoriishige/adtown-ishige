@@ -5,22 +5,12 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
-    // ====== CORS + キャッシュ対策（スマホ必須）======
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST');
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-
     if (req.method !== 'POST') {
         res.setHeader('Allow', ['POST']);
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const authHeader = req.headers.authorization;
-    const idToken = authHeader?.startsWith('Bearer ')
-        ? authHeader.replace('Bearer ', '')
-        : null;
-
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
     const { loginType } = req.body;
 
     if (!idToken) {
@@ -28,37 +18,25 @@ export default async function handler(
     }
 
     try {
-        // ===============================
-        // 1) Firebaseトークン検証
-        // ===============================
+        // 1) トークン検証（元コードと同じ）
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         const uid = decodedToken.uid;
 
-        // ===============================
-        // 2) ユーザーデータ確認（必須にしない）
-        // ===============================
+        // 2) ユーザー確認（元コードと同じ）
         const userDoc = await adminDb.collection('users').doc(uid).get();
 
         if (!userDoc.exists) {
-            console.warn(
-                `[Auth Warning] UID: ${uid} が users コレクションに存在しません。`
-            );
+            console.warn(`[Auth Warning] UID: ${uid} が users コレクションに存在しません。`);
         }
 
-        // ===============================
-        // 3) セッションクッキー作成（5日）
-        // ★ スマホ対応の安全設定に変更
-        // ===============================
+        // 3) セッションクッキー作成（★ここだけ“安全修正”）
         const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5日
-
-        const sessionCookie = await adminAuth.createSessionCookie(idToken, {
-            expiresIn,
-        });
+        const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
         const isProduction = process.env.NODE_ENV === 'production';
 
-        // ---- ★ ここが“スマホで固まる原因の核心”なので修正 ----
-        res.setHeader('Set-Cookie', [
+        // ====== ★★ ここが“スマホも通る＋他のログインも壊さない”設定 ★★ ======
+        const cookie = [
             `session=${sessionCookie}`,
             `Max-Age=${60 * 60 * 24 * 5}`,
             'HttpOnly',
@@ -67,32 +45,23 @@ export default async function handler(
             isProduction ? 'Secure' : '',
         ]
             .filter(Boolean)
-            .join('; '));
+            .join('; ');
 
-        // ===============================
-        // 4) リダイレクト先を確定
-        // ===============================
+        res.setHeader('Set-Cookie', cookie);
+
+        // 4) リダイレクト先
         let redirectPath = '/premium/dashboard';
-
         if (loginType === 'recruit') {
             redirectPath = '/recruit/dashboard';
         } else if (loginType === 'adver') {
             redirectPath = '/partner/dashboard';
         }
 
-        // ===============================
-        // 5) ★ 必ず JSON を返す（スマホ必須）
-        // ===============================
-        return res.status(200).json({
-            uid,
-            redirect: redirectPath,
-            ok: true,
-        });
-    } catch (error: any) {
+        // 5) かならずJSONで返す（★超重要）
+        return res.status(200).json({ uid, redirect: redirectPath });
+    } catch (error) {
         console.error('Session Login API error:', error);
-
-        return res.status(401).json({
-            error: '認証に失敗しました。もう一度ログインしてください。',
-        });
+        return res.status(401).json({ error: '認証に失敗しました。' });
     }
 }
+
