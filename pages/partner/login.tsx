@@ -6,8 +6,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   setPersistence,
-  browserLocalPersistence,
-  onAuthStateChanged
+  browserLocalPersistence
 } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import Link from 'next/link';
@@ -32,37 +31,29 @@ const LoginPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<MessageContent | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
-  const [debugLog, setDebugLog] = useState<string[]>([]);
-
-  const addDebugLog = (msg: string) => {
-    const time = new Date().toLocaleTimeString();
-    setDebugLog(prev => [`[${time}] ${msg}`, ...prev].slice(0, 50));
-    console.log(`[LOGIN DEBUG] ${msg}`);
-  };
 
   // 認証状態管理 (AuthContextを使用)
   const { user: authUser, loading: authLoading } = useAuth();
 
+  // 【修正】勝手に飛ばす自動リダイレクトを「手動ボタン」へ変更し、フリーズを防止
   useEffect(() => {
-    // 1. 認証が終わっていない、またはユーザーがいないなら何もしない
-    if (authLoading || !authUser) return;
+    if (!authLoading && authUser) {
+      const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
 
-    // 2. ログイン済みの場合の処理
-    addDebugLog("Detected authenticated user. Moving to dashboard...");
-
-    const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
-
-    // 3. 【スマホ対策】router.pushが効かない場合があるため、window.locationで強制遷移
-    // 現在のURLがすでにターゲットと同じでないことを確認（無限ループ防止）
-    if (window.location.pathname !== targetPath) {
-      addDebugLog(`Redirecting to: ${targetPath}`);
-      window.location.href = targetPath;
+      setSuccessMessage(
+        <div className="flex flex-col items-center">
+          <p className="font-bold text-green-600 mb-4 text-base">ログイン済みです</p>
+          <button
+            onClick={() => window.location.href = targetPath}
+            className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold shadow-lg animate-bounce"
+          >
+            ダッシュボードを開く
+          </button>
+        </div>
+      );
     }
   }, [authLoading, authUser, loginType]);
 
-  // --- 修正：勝手に飛ばす監視（onAuthStateChanged）を削除し、AuthContextに一本化 ---
-
-  // --- 修正：勝手に飛ばす監視（onAuthStateChanged）を削除 ---
   useEffect(() => {
     const queryError = router.query.error as string;
     if (queryError) {
@@ -151,10 +142,21 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      // --- 【修正】APIが勝手に返してくる premium/dashboard を無視して正しい場所へ飛ばす ---
+      // 【修正】スマホでの自動遷移失敗を回避するため、成功時も手動ボタンを表示
       const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
-      // キャッシュを無視して強制的にダッシュボードへ飛ばす
-      window.location.assign(targetPath);
+      setLoading(false);
+      setSuccessMessage(
+        <div className="flex flex-col items-center">
+          <p className="font-bold text-green-600 mb-4">認証に成功しました！</p>
+          <button
+            onClick={() => window.location.href = targetPath}
+            className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold shadow-lg"
+          >
+            ダッシュボードを表示する
+          </button>
+        </div>
+      );
+
     } catch (err: any) {
       setLoading(false);
       let message = 'メールアドレスまたはパスワードが正しくありません。';
@@ -178,79 +180,80 @@ const LoginPage: React.FC = () => {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
             <p className="text-lg font-semibold text-gray-700">認証情報を確認中...</p>
-            <p className="text-sm text-gray-500 mt-2">画面下のログを確認してください</p>
-          </div>
-        ) : authUser ? (
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-lg font-semibold text-gray-700">ログイン済みです</p>
-            <p className="text-sm text-gray-500 mt-2">ダッシュボードへ移動しています...</p>
           </div>
         ) : (
           <div className="max-w-md w-full bg-white rounded-xl shadow-lg border border-gray-100 p-8 space-y-6">
             <h1 className="text-3xl font-bold text-gray-900 text-center">パートナーログイン</h1>
 
-            <div className="flex justify-center space-x-6">
-              {['adver', 'recruit'].map((type) => (
-                <label key={type} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={loginType === type}
-                    onChange={() => setLoginType(type)}
-                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    {type === 'adver' ? '広告パートナー' : '求人パートナー'}
-                  </span>
-                </label>
-              ))}
-            </div>
+            {!authUser && (
+              <div className="flex justify-center space-x-6">
+                {['adver', 'recruit'].map((type) => (
+                  <label key={type} className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={loginType === type}
+                      onChange={() => setLoginType(type)}
+                      className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      {type === 'adver' ? '広告パートナー' : '求人パートナー'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm text-center animate-pulse">{error}</div>}
               {successMessage && <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm text-center">{successMessage}</div>}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">メールアドレス</label>
-                <input
-                  type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                  placeholder="example@mail.com"
-                  className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm"
-                />
-              </div>
-
-              {!isPasswordResetMode && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">パスワード</label>
-                  <div className="relative mt-1">
+              {!authUser && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">メールアドレス</label>
                     <input
-                      type={passwordVisible ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
-                      className="block w-full p-3 border border-gray-300 rounded-md pr-10"
+                      type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                      placeholder="example@mail.com"
+                      className="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                     />
-                    <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
-                      {passwordVisible ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
                   </div>
-                </div>
+
+                  {!isPasswordResetMode && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">パスワード</label>
+                      <div className="relative mt-1">
+                        <input
+                          type={passwordVisible ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required
+                          className="block w-full p-3 border border-gray-300 rounded-md pr-10 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                        <button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
+                          {passwordVisible ? <EyeOffIcon /> : <EyeIcon />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-sm flex justify-center space-x-4">
+                    <button type="button" onClick={handleEmailForget} className="text-indigo-600 hover:underline">メール忘れ</button>
+                    <button type="button" onClick={handleStartPasswordReset} className="text-indigo-600 hover:underline">パスワード忘れ</button>
+                  </div>
+
+                  <button type="submit" disabled={loading} className="w-full py-3 bg-orange-500 text-white font-bold rounded-md disabled:bg-gray-400 transition duration-200 hover:bg-orange-600">
+                    {loading ? "処理中..." : (isPasswordResetMode ? '再設定メールを送信' : 'ログイン')}
+                  </button>
+                </>
               )}
-
-              <div className="text-sm flex justify-center space-x-4">
-                <button type="button" onClick={handleEmailForget} className="text-indigo-600 hover:underline">メール忘れ</button>
-                <button type="button" onClick={handleStartPasswordReset} className="text-indigo-600 hover:underline">パスワード忘れ</button>
-              </div>
-
-              <button type="submit" disabled={loading} className="w-full py-3 bg-orange-500 text-white font-bold rounded-md disabled:bg-gray-400">
-                {loading ? "処理中..." : (isPasswordResetMode ? '再設定メールを送信' : 'ログイン')}
-              </button>
             </form>
 
-            <div className="text-center text-sm mt-4 pt-4 border-t border-gray-100">
-              <p className="text-gray-600">アカウントをお持ちでないですか？</p>
-              <div className="flex justify-center space-x-4 mt-2">
-                <Link href="/partner/signup" className="text-blue-600 font-medium hover:underline">広告パートナー登録</Link>
-                <Link href="/recruit" className="text-blue-600 font-medium hover:underline">求人パートナー登録</Link>
+            {!authUser && (
+              <div className="text-center text-sm mt-4 pt-4 border-t border-gray-100">
+                <p className="text-gray-600">アカウントをお持ちでないですか？</p>
+                <div className="flex flex-col space-y-2 mt-2">
+                  <Link href="/partner/signup" className="text-blue-600 font-medium hover:underline">広告パートナー登録</Link>
+                  <Link href="/recruit" className="text-blue-600 font-medium hover:underline">求人パートナー登録</Link>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
