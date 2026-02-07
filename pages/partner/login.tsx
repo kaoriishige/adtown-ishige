@@ -44,21 +44,21 @@ const LoginPage: React.FC = () => {
   const { user: authUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    // ログイン済み かつ ローディングが終わっている場合のみリダイレクト
-    if (!authLoading && authUser) {
-      addDebugLog("Detected authenticated user. Moving to dashboard...");
+    // 1. 認証が終わっていない、またはユーザーがいないなら何もしない
+    if (authLoading || !authUser) return;
 
-      // router.isReady を確認してから遷移させる（スマホ対策）
-      if (router.isReady) {
-        const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
+    // 2. ログイン済みの場合の処理
+    addDebugLog("Detected authenticated user. Moving to dashboard...");
 
-        // 既にそのページにいる場合は何もしない（ループ防止）
-        if (router.pathname !== targetPath) {
-          router.replace(targetPath);
-        }
-      }
+    const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
+
+    // 3. 【スマホ対策】router.pushが効かない場合があるため、window.locationで強制遷移
+    // 現在のURLがすでにターゲットと同じでないことを確認（無限ループ防止）
+    if (window.location.pathname !== targetPath) {
+      addDebugLog(`Redirecting to: ${targetPath}`);
+      window.location.href = targetPath;
     }
-  }, [authLoading, authUser, router.isReady]); // loginTypeを依存配列から外すか慎重に扱う
+  }, [authLoading, authUser, loginType]);
 
   // --- 修正：勝手に飛ばす監視（onAuthStateChanged）を削除し、AuthContextに一本化 ---
 
