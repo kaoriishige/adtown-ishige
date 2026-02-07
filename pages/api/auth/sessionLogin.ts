@@ -19,13 +19,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         const uid = decodedToken.uid;
 
-        // 2. ユーザー確認（実際のデータ構造に基づき取得）
+        // 2. ユーザー確認（ログを出力して原因を特定しやすくする）
         const userDoc = await adminDb.collection('users').doc(uid).get();
+        
+        // もしusersコレクションに無くても、セッション作成自体は進めるように修正
+        // （別コレクションにデータがある場合や、初回ログイン時のフリーズを防ぐため）
         if (!userDoc.exists) {
-            return res.status(403).json({ error: 'user_data_missing' });
+            console.warn(`[Auth Warning] UID: ${uid} が users コレクションに存在しません。`);
         }
-
-        const userData = userDoc.data();
 
         // 3. セッションクッキー作成（有効期限5日間）
         const expiresIn = 60 * 60 * 24 * 5 * 1000;
@@ -43,17 +44,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         res.setHeader('Set-Cookie', `${COOKIE_NAME}=${sessionCookie}; ${COOKIE_OPTIONS}`);
 
-        // 4. 【確定】リダイレクト先の決定ロジック
-        // 全ての一般ユーザーをプレミアムダッシュボードへ誘導
+        // 4. リダイレクト先の決定
         let redirectPath = '/premium/dashboard';
-
         if (loginType === 'recruit') {
             redirectPath = '/recruit/dashboard';
         } else if (loginType === 'adver') {
             redirectPath = '/partner/dashboard';
         }
 
-        // 全ての処理が完了。判定されたパスを返却
         return res.status(200).json({ uid, redirect: redirectPath });
 
     } catch (error: any) {
