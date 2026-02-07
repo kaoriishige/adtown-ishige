@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // ← ★useRef追加
 import { useRouter } from 'next/router';
 import {
   getAuth,
@@ -14,17 +14,13 @@ import {
 import { app } from '@/lib/firebase';
 import Link from 'next/link';
 
-// --- 型定義 ---
-type MessageContent = string | React.ReactNode;
-
-// --- アイコン（省略なし） ---
+/* ===== アイコン類はあなたのコードそのまま（省略なし） ===== */
 const EyeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>);
 const EyeOffIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a1.89 1.89 0 0 1 0-.66M22 12s-3 7-10 7a9.75 9.75 0 0 1-4.24-1.16"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9.9 9.9a3 3 0 1 0 4.2 4.2"></path></svg>);
 const AlertTriangle = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
 
-// ==============================
-//  メインコンポーネント
-// ==============================
+type MessageContent = string | React.ReactNode;
+
 const LoginPage: React.FC = () => {
   const auth = getAuth(app);
   const router = useRouter();
@@ -39,20 +35,21 @@ const LoginPage: React.FC = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
 
-  // ---------- fetch に「5秒タイムアウト」を付ける ----------
+  // ★★★ 超重要：二重実行を防ぐフラグ（スマホ固まりの原因対策）★★★
+  const didLoginRef = useRef(false);
+
+  // ---------- fetch に「5秒タイムアウト」 ----------
   const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 5000) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
-      const res = await fetch(url, { ...options, signal: controller.signal });
-      return res;
+      return await fetch(url, { ...options, signal: controller.signal });
     } finally {
       clearTimeout(timer);
     }
   };
 
-  // ---------- ログイン後処理（スマホ対策版） ----------
+  // ---------- ログイン後処理 ----------
   const handleLoginSuccess = async (user: User) => {
     setLoading(true);
     setError(null);
@@ -70,28 +67,20 @@ const LoginPage: React.FC = () => {
       }, 5000);
 
       let data: any = {};
-      try {
-        data = await response.json();
-      } catch {
-        data = {};
-      }
+      try { data = await response.json(); } catch { }
 
       setLoading(false);
 
       if (response.ok && data.redirect) {
-        // ★ スマホ固まり対策：router ではなく replace
-        window.location.replace(data.redirect);
+        window.location.replace(data.redirect); // ← スマホ最安定
         return;
       }
 
-      // 失敗時は強制サインアウト（無限ループ防止）
-      const msg = data.error === 'user_data_missing'
-        ? 'ユーザー登録が見つかりません。'
-        : data.error || '認証に失敗しました。';
-
+      const msg = data.error || '認証に失敗しました。';
       setError(msg);
       await signOut(auth);
       setAuthUser(null);
+      didLoginRef.current = false; // ← 失敗時はリセット
 
     } catch (err: any) {
       setLoading(false);
@@ -104,20 +93,25 @@ const LoginPage: React.FC = () => {
 
       await signOut(auth);
       setAuthUser(null);
+      didLoginRef.current = false; // ← リセット
     }
   };
 
-  // ---------- 認証監視（暴走しない版） ----------
+  // ---------- 認証監視（★暴走しない版） ----------
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
 
       if (!user) {
         setLoading(false);
+        didLoginRef.current = false; // ← ログアウト時はリセット
         return;
       }
 
-      // ★ ここで await しない（スマホで固まる原因）
+      // ★★★ ここが“スマホ固まり”を止める本丸 ★★★
+      if (didLoginRef.current) return;
+
+      didLoginRef.current = true;   // ← 1回だけ許可
       handleLoginSuccess(user);
     });
 
@@ -148,7 +142,7 @@ const LoginPage: React.FC = () => {
     try {
       await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, email, password);
-      // → onAuthStateChanged が続き処理を担当
+      // → 続きは onAuthStateChanged が担当
     } catch {
       setLoading(false);
       setError('メールアドレスまたはパスワードが正しくありません。');
@@ -176,7 +170,7 @@ const LoginPage: React.FC = () => {
     );
   }
 
-  // ================= UI（ほぼそのまま） =================
+  /* ===== 以下UI部分はあなたのコードをそのまま維持（変更なし） ===== */
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Head>
@@ -198,8 +192,8 @@ const LoginPage: React.FC = () => {
                   key={type}
                   onClick={() => setLoginType(type)}
                   className={`flex-1 py-3 rounded-lg text-sm font-black transition-all ${loginType === type
-                      ? 'bg-white shadow-sm text-indigo-600'
-                      : 'text-gray-400'
+                    ? 'bg-white shadow-sm text-indigo-600'
+                    : 'text-gray-400'
                     }`}
                 >
                   {type === 'adver' ? '広告パートナー' : '求人パートナー'}
@@ -335,4 +329,5 @@ const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
+
 
