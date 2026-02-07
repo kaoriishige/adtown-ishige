@@ -761,3 +761,4 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
 };
 
 export default StoreView;
+
