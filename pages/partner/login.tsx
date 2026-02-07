@@ -246,16 +246,6 @@ const LoginPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* デバッグログ表示 (本番での切り分け用) */}
-      <div className="p-4 bg-gray-900 text-green-400 font-mono text-xs overflow-auto max-h-60 border-t-4 border-gray-700">
-        <p className="font-bold border-b border-gray-700 mb-2 pb-1">Debug Terminal</p>
-        <p className="mb-2 italic opacity-70">※ エラー調査用のログです。解決したら削除します。</p>
-        {debugLog.map((log, i) => (
-          <div key={i}>{log}</div>
-        ))}
-        {debugLog.length === 0 && <div>Waiting for login events...</div>}
-      </div>
     </div>
   );
 };
