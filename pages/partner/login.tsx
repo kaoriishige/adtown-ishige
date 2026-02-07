@@ -153,8 +153,8 @@ const LoginPage: React.FC = () => {
 
       // --- 【修正】APIが勝手に返してくる premium/dashboard を無視して正しい場所へ飛ばす ---
       const targetPath = loginType === 'adver' ? '/partner/dashboard' : '/recruit/dashboard';
-      router.push(targetPath);
-
+      // キャッシュを無視して強制的にダッシュボードへ飛ばす
+      window.location.assign(targetPath);
     } catch (err: any) {
       setLoading(false);
       let message = 'メールアドレスまたはパスワードが正しくありません。';
