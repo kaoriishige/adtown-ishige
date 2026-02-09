@@ -593,7 +593,7 @@ const StoreProfilePage: FC = () => {
             };
 
             if (!currentStoreId) {
-                const docRef = await addDoc(userStoresCollectionRef, { ...allStoreData, status: 'pending', createdAt: serverTimestamp(), mainImageUrl: '', galleryImageUrls: [] });
+                const docRef = await addDoc(userStoresCollectionRef, { ...allStoreData, status: 'approved', createdAt: serverTimestamp(), mainImageUrl: '', galleryImageUrls: [] });
                 currentStoreId = docRef.id;
                 setStoreId(currentStoreId);
             } else {

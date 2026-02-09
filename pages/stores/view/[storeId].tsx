@@ -29,6 +29,7 @@ const DUMMY_STORE_DATA: StoreData = {
     ownerId: 'dummy-owner-uid', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     isPublished: false, specialtyPoints: [], averageRating: 0, reviewCount: 0,
     matchingValues: [], snsUrls: [], // LPに表示するために型を追加
+    deals: [],
 };
 
 // **実行時エラー回避のためのダミー実装 (TypeScriptエラー回避のため残します)**
@@ -64,15 +65,27 @@ interface SpecialtyPoint {
     description: string;
 }
 
+// ★★★ Deal型定義 (追加) ★★★
+interface Deal {
+    id: string;
+    type: 'お得情報' | 'クーポン' | 'フードロス';
+    title: string;
+    description: string;
+    imageUrl?: string;
+    mediaUrls?: { url: string; type: 'image' | 'video' }[];
+    createdAt: string;
+}
+
 interface StoreData {
     id: string; name: string; mainCategory: string; tagline: string | null; description: string | null;
     images: string[]; address: string | null; phoneNumber: string | null; email: string | null;
     url: string | null; lineLiffUrl?: string | null; hours: string | null; ownerId: string;
     createdAt: string; updatedAt: string; isPublished: boolean;
-    specialtyPoints: SpecialtyPoint[]; // ★ 型を string[] から SpecialtyPoint[] に変更
+    specialtyPoints: SpecialtyPoint[];
     averageRating: number; reviewCount: number;
-    matchingValues: string[]; // LPに表示するために型を追加
-    snsUrls: string[]; // SNS URLの配列
+    matchingValues: string[];
+    snsUrls: string[];
+    deals: Deal[]; // ★ 追加
 }
 interface StoreViewProps { store: StoreData | null; error: string | null; }
 
@@ -130,6 +143,7 @@ const ALL_MATCHING_VALUES: MatchingCategory[] = [
             '価格以上の価値がある',
             '予算に応じたプランを提案',
             '各種補助金・助成金の活用を提案',
+            '予算に応じたプランを提案',
         ]
     },
     {
@@ -185,6 +199,29 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
             return { notFound: true };
         }
 
+        // ★★★ deals (サブコレクション) の取得 ★★★
+        let dealsData: Deal[] = [];
+        try {
+            // ストアドキュメントの参照からサブコレクション 'deals' を取得
+            const dealsSnapshot = await storeDocSnap.ref.collection('deals').orderBy('createdAt', 'desc').get();
+            
+            dealsData = dealsSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    type: data.type,
+                    title: data.title,
+                    description: data.description,
+                    imageUrl: data.imageUrl,
+                    mediaUrls: data.mediaUrls,
+                    createdAt: safeToISOString(data.createdAt, new Date().toISOString()),
+                };
+            });
+        } catch (dealErr) {
+            console.warn("Failed to fetch deals:", dealErr);
+            // deals取得に失敗しても、店舗ページ自体は表示させる
+        }
+
         const foundStoreId = storeId;
         const foundOwnerId = rawData.ownerId || storeId;
         const descriptionText = cleanString(rawData.description) || '';
@@ -225,6 +262,7 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
             updatedAt: safeToISOString(rawData.updatedAt, DUMMY_STORE_DATA.updatedAt),
             matchingValues: rawData.matchingValues || [],
             snsUrls: rawData.snsUrls || [],
+            deals: dealsData, // ★ 追加
         };
 
         let warning = null;
@@ -438,6 +476,27 @@ const renderMatchingValues = (matchingValues: string[]) => {
 // ★★★ renderMatchingValues 定義ここまで ★★★
 
 
+// ★ 動画URLから埋め込みURLを生成するヘルパー関数
+const getVideoEmbedUrl = (url: string): string | null => {
+    if (!url) return null;
+
+    // YouTube (通常URL, 短縮URL, 埋め込みURL)
+    const youtubeRegex = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([^#&?]*).*/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch && youtubeMatch[1].length === 11) {
+        return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+    }
+
+    // Vimeo
+    const vimeoRegex = /^(?:https?:\/\/)?(?:www\.)?(?:vimeo\.com\/)(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch && vimeoMatch[1]) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+
+    return null;
+};
+
 const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
     const router = useRouter();
 
@@ -498,7 +557,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 <section
                     className="relative bg-gray-900 text-white pt-16 pb-20 overflow-hidden"
                     style={{
-                        backgroundImage: mainImage ? `linear-gradient(rgba(16, 32, 72, 0.9), rgba(16, 32, 72, 0.9)), url(${mainImage})` : 'none',
+                        backgroundImage: mainImage ? `linear-gradient(rgba(16, 32, 72, 0.6), rgba(16, 32, 72, 0.6)), url(${mainImage})` : 'none',
                         backgroundColor: '#102048', // ネイビー固定
                         backgroundSize: 'cover',
                         backgroundPosition: 'center'
@@ -506,10 +565,10 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 >
                     <div className="max-w-4xl mx-auto px-4 text-center">
                         <p className="text-sm font-semibold mb-3 text-yellow-400 uppercase tracking-widest">{displayMainCategory}</p>
-                        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+                        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight" style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
                             {store.tagline || displayStoreName}
                         </h1>
-                        <h2 className="text-xl md:text-2xl font-light mb-8 opacity-90">
+                        <h2 className="text-xl md:text-2xl font-light mb-8 opacity-90" style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
                             {displayStoreName}
                         </h2>
 
@@ -607,6 +666,87 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* ★★★ お得情報・クーポンセクション (追加) ★★★ */}
+                            {store.deals && store.deals.length > 0 && (
+                                <div className="mt-16 pt-8 border-t-4 border-yellow-200">
+                                    <h3 className="text-2xl font-bold mb-8 text-gray-800 flex items-center">
+                                        <span className="text-3xl mr-2">🎁</span> 
+                                        お得なキャンペーン・クーポン
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {store.deals.map((deal) => {
+                                             const videoItem = deal.mediaUrls?.find(m => m.type === 'video');
+                                             const videoEmbedUrl = videoItem ? getVideoEmbedUrl(videoItem.url) : null;
+
+                                             return (
+                                                <div key={deal.id} className="bg-white rounded-xl shadow-lg border border-yellow-100 overflow-hidden hover:shadow-xl transition-shadow relative">
+                                                    {/* ラベル */}
+                                                    <div className={`absolute top-0 right-0 px-3 py-1 text-white text-xs font-bold rounded-bl-lg z-10
+                                                        ${deal.type === 'クーポン' ? 'bg-yellow-500' : deal.type === 'フードロス' ? 'bg-red-500' : 'bg-green-500'}`}>
+                                                        {deal.type}
+                                                    </div>
+                                                    
+                                                    <div className="p-5">
+                                                        <div className="flex flex-col gap-4 mb-4">
+                                                            <div className="flex gap-4">
+                                                                {deal.imageUrl && (
+                                                                    <div className="flex-shrink-0 flex flex-col items-center">
+                                                                        <img 
+                                                                            src={deal.imageUrl} 
+                                                                            alt={deal.title} 
+                                                                            className="w-24 h-24 object-cover rounded-lg border border-gray-200 mb-2 cursor-pointer"
+                                                                            onClick={() => window.open(deal.imageUrl, '_blank')}
+                                                                        />
+                                                                        <a 
+                                                                            href={deal.imageUrl} 
+                                                                            target="_blank" 
+                                                                            rel="noopener noreferrer"
+                                                                            className="text-white text-xs bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded shadow-sm transition-colors text-center w-full"
+                                                                        >
+                                                                            画像を保存
+                                                                        </a>
+                                                                    </div>
+                                                                )}
+                                                                <div>
+                                                                    <h4 className="font-bold text-lg text-gray-800 leading-snug mb-2">{deal.title}</h4>
+                                                                    <p className="text-xs text-gray-400 mb-2">
+                                                                        {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString() : ''} 更新
+                                                                    </p>
+                                                                    <p className="text-xs text-red-600 font-bold bg-red-50 p-1 rounded inline-block">
+                                                                        ※この特典はダウンロードして店舗にお持ちください
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* 動画表示 */}
+                                                            {videoEmbedUrl && (
+                                                                <div className="w-full aspect-video rounded-lg overflow-hidden border border-gray-200">
+                                                                    <iframe 
+                                                                        src={videoEmbedUrl} 
+                                                                        title={deal.title} 
+                                                                        className="w-full h-full" 
+                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                                                        allowFullScreen
+                                                                    ></iframe>
+                                                                </div>
+                                                            )}
+                                                            {videoItem && !videoEmbedUrl && (
+                                                                 <div className="text-sm text-blue-500 underline break-all">
+                                                                     <a href={videoItem.url} target="_blank" rel="noopener noreferrer">関連動画を見る ({videoItem.url})</a>
+                                                                 </div>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg">
+                                                            {deal.description}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* ギャラリー (変更なし) */}
                             {galleryImages.length > 0 && (

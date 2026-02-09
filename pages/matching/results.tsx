@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { db } from '../../lib/firebase'; // Firestoreのdbをインポート
-import { collection, query, where, getDocs, DocumentData } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs, DocumentData } from 'firebase/firestore';
 import { RiArrowLeftLine, RiMapPinLine, RiStarFill, RiCheckDoubleFill } from 'react-icons/ri';
 import Link from 'next/link';
 
@@ -124,10 +124,9 @@ const MatchingResultsPage = () => {
       setError(null);
       try {
         const q = query(
-          collection(db, "stores"),
+          collectionGroup(db, "stores"), // ★ 修正: collectionGroupを使用
           where("mainCategory", "==", mainCategory),
-          where("subCategory", "==", subCategory),
-          where("status", "==", "approved")
+          where("subCategory", "==", subCategory)
         );
 
         const snapshot = await getDocs(q);
@@ -255,7 +254,7 @@ const MatchingResultsPage = () => {
                 {/* マッチング結果のリスト */}
                 <div className="space-y-4">
                   {matchedStores.map((store, index) => (
-                    <Link href={`/store/${store.id}`} key={store.id} legacyBehavior>
+                    <Link href={`/stores/view/${store.id}`} key={store.id} legacyBehavior>
                       <a className="block bg-white rounded-lg shadow-md overflow-hidden transition transform hover:shadow-lg">
                         {/* ... (メイン画像) ... */}
                         <img 
