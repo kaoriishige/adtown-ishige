@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import React, { useState, useEffect, useRef } from 'react'; // ← ★useRef追加
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import {
   getAuth,
@@ -14,7 +14,7 @@ import {
 import { app } from '@/lib/firebase';
 import Link from 'next/link';
 
-/* ===== アイコン類はあなたのコードそのまま（省略なし） ===== */
+/* ===== アイコンコンポーネント ===== */
 const EyeIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>);
 const EyeOffIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a1.89 1.89 0 0 1 0-.66M22 12s-3 7-10 7a9.75 9.75 0 0 1-4.24-1.16"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9.9 9.9a3 3 0 1 0 4.2 4.2"></path></svg>);
 const AlertTriangle = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>);
@@ -28,6 +28,12 @@ const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginType, setLoginType] = useState<'adver' | 'recruit'>('adver');
+  
+  // ★重要1：最新のloginTypeを保持するRef
+  const loginTypeRef = useRef(loginType);
+  // ★重要2：二重実行を防ぐフラグ
+  const didLoginRef = useRef(false);
+
   const [loading, setLoading] = useState(true);
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [error, setError] = useState<MessageContent | null>(null);
@@ -35,10 +41,12 @@ const LoginPage: React.FC = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
 
-  // ★★★ 超重要：二重実行を防ぐフラグ（スマホ固まりの原因対策）★★★
-  const didLoginRef = useRef(false);
+  // ★重要3：stateが変更されたらRefも更新する
+  useEffect(() => {
+    loginTypeRef.current = loginType;
+  }, [loginType]);
 
-  // ---------- fetch に「5秒タイムアウト」 ----------
+  // ---------- タイムアウト付きFetch ----------
   const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 5000) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -49,7 +57,7 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // ---------- ログイン後処理 ----------
+  // ---------- ログイン成功後のリダイレクト処理 ----------
   const handleLoginSuccess = async (user: User) => {
     setLoading(true);
     setError(null);
@@ -57,68 +65,62 @@ const LoginPage: React.FC = () => {
     try {
       const idToken = await user.getIdToken(true);
 
+      // ★重要4：loginTypeRef.current を使うことで、最新の選択状態を送信
       const response = await fetchWithTimeout('/api/auth/sessionLogin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${idToken}`,
         },
-        body: JSON.stringify({ loginType }),
+        body: JSON.stringify({ loginType: loginTypeRef.current }),
       }, 5000);
 
       let data: any = {};
       try { data = await response.json(); } catch { }
 
-      setLoading(false);
-
       if (response.ok && data.redirect) {
-        window.location.replace(data.redirect); // ← スマホ最安定
+        window.location.replace(data.redirect); 
         return;
       }
 
-      const msg = data.error || '認証に失敗しました。';
-      setError(msg);
+      // 失敗時の処理
+      setLoading(false);
+      setError(data.error || '認証に失敗しました。');
       await signOut(auth);
       setAuthUser(null);
-      didLoginRef.current = false; // ← 失敗時はリセット
+      didLoginRef.current = false; 
 
     } catch (err: any) {
       setLoading(false);
-
-      if (err.name === 'AbortError') {
-        setError('通信がタイムアウトしました。電波状況を確認してください。');
-      } else {
-        setError('通信エラーが発生しました。');
-      }
-
+      setError(err.name === 'AbortError' ? '通信がタイムアウトしました。' : '通信エラーが発生しました。');
       await signOut(auth);
       setAuthUser(null);
-      didLoginRef.current = false; // ← リセット
+      didLoginRef.current = false;
     }
   };
 
-  // ---------- 認証監視（★暴走しない版） ----------
+  // ---------- Firebase 認証監視 ----------
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
 
       if (!user) {
         setLoading(false);
-        didLoginRef.current = false; // ← ログアウト時はリセット
+        didLoginRef.current = false;
         return;
       }
 
-      // ★★★ ここが“スマホ固まり”を止める本丸 ★★★
+      // 既にログイン処理中ならスキップ
       if (didLoginRef.current) return;
 
-      didLoginRef.current = true;   // ← 1回だけ許可
+      didLoginRef.current = true;
       handleLoginSuccess(user);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // ---------- ログイン送信 ----------
+  // ---------- フォーム送信 ----------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -142,7 +144,6 @@ const LoginPage: React.FC = () => {
     try {
       await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, email, password);
-      // → 続きは onAuthStateChanged が担当
     } catch {
       setLoading(false);
       setError('メールアドレスまたはパスワードが正しくありません。');
@@ -160,7 +161,6 @@ const LoginPage: React.FC = () => {
     );
   };
 
-  // ---------- ローディング ----------
   if (loading && !error && !successMessage) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
@@ -170,7 +170,6 @@ const LoginPage: React.FC = () => {
     );
   }
 
-  /* ===== 以下UI部分はあなたのコードをそのまま維持（変更なし） ===== */
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <Head>
@@ -190,6 +189,7 @@ const LoginPage: React.FC = () => {
               {(['adver', 'recruit'] as const).map((type) => (
                 <button
                   key={type}
+                  type="button"
                   onClick={() => setLoginType(type)}
                   className={`flex-1 py-3 rounded-lg text-sm font-black transition-all ${loginType === type
                     ? 'bg-white shadow-sm text-indigo-600'
@@ -269,7 +269,7 @@ const LoginPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-5 bg-orange-500 text-white font-black rounded-xl"
+                  className="w-full py-5 bg-orange-500 text-white font-black rounded-xl hover:bg-orange-600 transition-colors"
                 >
                   {loading
                     ? "Loading..."

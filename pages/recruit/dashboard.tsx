@@ -511,6 +511,17 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                             </span>
                         </p>
                     </div>
+
+                    <div className="flex flex-col items-center mx-4">
+                         <div className="flex items-center gap-2 mb-1">
+                            <p className="text-xs font-bold text-red-600">
+                                こちらのLINEに必ず登録して、<br/>次回よりLINEからログインください。
+                            </p>
+                            <a href="https://lin.ee/qiPhPQO">
+                                <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height={36} style={{ height: '36px' }} />
+                            </a>
+                        </div>
+                    </div>
                     {isPaid && isReady && (
                         <div className="flex flex-col items-end text-right border-l pl-4">
                             <p className="text-sm font-semibold mb-2">
@@ -791,15 +802,11 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
                 <section className="mt-6">
                     <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 flex items-center justify-between">
                         <div className="flex flex-col">
-                            <h2 className="text-lg font-bold text-gray-700 mb-1">LINEよりお問い合わせください。</h2>
-                            <p className="text-sm text-gray-500">ご不明な点、操作方法などサポートが必要な際にご利用ください。</p>
-                            <p className="text-xs text-gray-500 mt-2">
-                                ログインは、ブラウザでadtownと検索してホームページから行ってください。
-                            </p>
+                            <h2 className="text-lg font-bold text-red-600 mb-1">こちらのLINEに必ず登録して、<br/>次回よりLINEからログインください。</h2>
                         </div>
                         <div
                             dangerouslySetInnerHTML={{
-                                __html: '<a href="https://lin.ee/aMc9H5W" target="_blank" rel="noopener noreferrer"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" border="0"></a>'
+                                __html: '<a href="https://lin.ee/qiPhPQO"><img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="友だち追加" height="36" border="0"></a>'
                             }}
                         />
                     </div>

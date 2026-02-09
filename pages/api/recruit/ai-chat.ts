@@ -1,152 +1,103 @@
-// File: /pages/api/recruit/ai-chat.ts
-// AIチャットコンサルティング用 API (Gemini利用)
-
 import type { NextApiRequest, NextApiResponse } from "next";
-import { GoogleGenAI } from "@google/genai"; // 🚨 動作には npm install @google/genai が必要です
 
-// --- 型定義 ---
+const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-type AppealPoints = {
-  growth?: string[];
-  wlb?: string[];
-  benefits?: string[];
-  atmosphere?: string[];
-  organization?: string[];
-};
-
-// フロントエンドから渡される求人情報 (requiredSkills/welcomeSkills は直下)
-type Recruitment = {
-  id: string;
-  title: string;
-  description: string;
-  jobTitle: string;
-  salaryMin: number;
-  salaryMax: number;
-  salaryType: string;
-  location: string;
-  employmentType: string;
-  remotePolicy: string;
-  workingHours: string;
-  appealPoints: AppealPoints;
-  requiredSkills?: string; 
-  welcomeSkills?: string;
-};
-
-// フロントエンドから渡されるチャットメッセージの履歴
-type ChatMessage = {
-  role: 'user' | 'ai';
-  content: string;
-};
-
-// リクエストボディの型
-type ChatRequestBody = {
-  currentRecruitment: Recruitment;
-  history: ChatMessage[];
-  prompt: string;
-};
-
-// レスポンスの型
-type ChatResponse = {
-  response: string;
-};
-
-/**
- * --- 外部LLM連携（Gemini 実装） ---
- */
-async function callExternalLLM(
-  systemPrompt: string, 
-  userPrompt: string, 
-  history: ChatMessage[]
-): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY; 
-  if (!apiKey) {
-    console.error("GEMINI_API_KEY is not set.");
-    // 開発時にキーが未設定の場合のエラーメッセージ
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
-    return "システムエラー：AIコンサルタント機能を利用するには、環境変数 GEMINI_API_KEY を設定してください。";
-  }
-  
-  const ai = new GoogleGenAI({ apiKey }); 
-  const model = "gemini-2.5-flash"; // 高速でチャットに適したモデル
-
-  // Gemini API の履歴フォーマットに変換
-  // 'user'は'user'、'ai'は'model'としてマッピングする
-  const contents = history.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-  }));
-  
-  // 現在のユーザープロンプトを contents の最後に追加
-  const userContents = { role: 'user', parts: [{ text: userPrompt }] };
-  
-  try {
-    const response = await ai.models.generateContent({
-      model: model,
-      // 履歴と現在のプロンプトをcontentsとして渡す
-      contents: [...contents, userContents], 
-      config: {
-        systemInstruction: systemPrompt, // AIの役割とルールを定義
-      }
-    });
-
-    // 応答のテキストを返却
-    if (!response.text) {
-        return "AIから有効な応答が得られませんでした。";
-    }
-    return response.text.trim();
-
-  } catch (error) {
-    console.error("Gemini API call failed:", error);
-    return "AIサービスとの通信中にエラーが発生しました。ログを確認してください。";
-  }
-}
-
-
-/**
- * --- API Handler ---
- */
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ChatResponse | { error: string }>
+  res: NextApiResponse
 ) {
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method Not Allowed - use POST" });
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const body = req.body as Partial<ChatRequestBody> | undefined;
-  
-  // 入力チェック
-  if (!body || !body.currentRecruitment || !body.prompt) {
-    return res.status(400).json({ error: "リクエストボディまたは必須フィールドが不足しています。" });
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: "GEMINI_API_KEY not set" });
   }
-  
+
   try {
-    const { currentRecruitment, history, prompt } = body as ChatRequestBody;
+    const { prompt, currentRecruitment } = req.body;
 
-    // AIコンサルタントとしての役割と、求人情報をコンテキストとして定義
-    const systemPrompt = `あなたはプロの採用コンサルタントAIです。
-      以下の【求人情報】を深く理解した上で、求職者にとって魅力的で具体的な改善提案を日本語で行ってください。
-      回答は質問に直接答え、親切かつプロフェッショナルなトーンで統一し、冗長な前置きは避けてください。
-      
-      【求人情報】
-      職種: ${currentRecruitment.jobTitle}
-      給与: ${currentRecruitment.salaryType} ${currentRecruitment.salaryMin}~${currentRecruitment.salaryMax}
-      説明: ${currentRecruitment.description}
-      必須スキル: ${currentRecruitment.requiredSkills || '未記入'}
-      福利厚生数: ${currentRecruitment.appealPoints.benefits?.length || 0}
-      勤務地: ${currentRecruitment.location}
-      雇用形態: ${currentRecruitment.employmentType}
-      `;
+    if (!prompt || !currentRecruitment) {
+      return res.status(400).json({ error: "Missing prompt or recruitment data" });
+    }
 
-    // 外部LLMを呼び出す (非同期)
-    const aiResponseText = await callExternalLLM(systemPrompt, prompt, history);
+    /* ① 利用可能モデル取得 */
+    const modelsRes = await fetch(`${API_BASE}/models?key=${apiKey}`);
+    const modelsData = await modelsRes.json();
 
-    // 成功応答をフロントエンドに返却
-    return res.status(200).json({ response: aiResponseText });
+    const model = modelsData.models?.find((m: any) =>
+      m.supportedGenerationMethods?.includes("generateContent")
+    );
 
-  } catch (err: any) {
-    console.error("ai-chat error:", err);
-    return res.status(500).json({ error: "Internal server error in ai-chat processing" });
+    if (!model) {
+      return res.status(500).json({ error: "No usable Gemini model" });
+    }
+
+    /* ② AIコンサル専用プロンプト */
+    const systemPrompt = `
+あなたは「求人改善に特化したプロの採用コンサルタントAI」です。
+
+【ルール】
+・「はい」「OK」などの相槌は禁止
+・必ず理由 → 問題点 → 改善案 → そのまま使える文章例 の順で答える
+・抽象論、精神論は禁止
+・日本の中小企業採用を前提にする
+`;
+
+    const context = `
+【求人情報】
+職種名: ${currentRecruitment.title}
+仕事内容: ${currentRecruitment.description}
+勤務地: ${currentRecruitment.location}
+雇用形態: ${currentRecruitment.employmentType}
+給与: ${currentRecruitment.salaryMin}〜${currentRecruitment.salaryMax}
+`;
+
+    /* ③ 生成 */
+    const genRes = await fetch(
+      `${API_BASE}/${model.name}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `
+${systemPrompt}
+
+${context}
+
+【相談内容】
+${prompt}
+
+→ 採用成果が上がる具体的なアドバイスを出してください。
+`,
+                },
+              ],
+            },
+          ],
+        }),
+      }
+    );
+
+    const genData = await genRes.json();
+
+    const text =
+      genData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+    return res.status(200).json({
+      response: text,
+      modelUsed: model.name,
+    });
+
+  } catch (error: any) {
+    console.error("❌ AI CHAT ERROR:", error);
+    return res.status(500).json({ error: error.message });
   }
 }
+
+
