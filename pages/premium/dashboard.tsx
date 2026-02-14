@@ -99,7 +99,7 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
         { name: '救急安心センター', number: '#7119', description: '急な病気やケガで救急車を呼ぶか迷った時', url: 'https://www.fdma.go.jp/publication/portal/post2.html', },
         { name: '那須塩原市の休日当番医', description: '那須塩原市の休日・夜間の急病対応', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/kyukyu_kyumei/1/3340.html', },
         { name: '大田原市の休日当番医', description: '大田原市の休日・夜間の急病対応', url: 'https://www.city.ohtawara.tochigi.jp/docs/2013082771612/', },
-        { name: '那須町の休日当番医', description: '那須町の休日・夜間の急病対応', url: 'https://www.town.nasu.lg.jp/0130/info-0000003505-1.html', },
+        { name: '那須町役場（防災・緊急）', description: '那須町の防災・防犯・緊急情報トップ', url: 'https://www.town.nasu.lg.jp/index2.html', },
         { name: '水道のトラブル (有)クリプトン', number: '090-2463-6638', description: '地元で40年。那須エリアの水道修理・緊急対応', url: 'https://xn--bbkyao7065bpyck41as89d.com/emergency/', },
         { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル相談', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/', },
     ], []);

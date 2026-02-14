@@ -14,7 +14,7 @@ const DISASTER_DATA = {
     },
     "那須町": {
         link: "https://www.town.nasu.lg.jp/index2.html",
-        note: "那須町役場トップページ（緊急情報、防災・安全の確認）"
+        note: "那須町 役場ポータル（防災・緊急情報）"
     }
 };
 
