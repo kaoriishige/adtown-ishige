@@ -303,8 +303,7 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
                                     <div className="w-20 h-20 bg-rose-50/50 rounded-full flex items-center justify-center mx-auto mb-5 border border-white">
                                         <RiIcons.RiShoppingBagLine className="text-rose-100 text-4xl" />
                                     </div>
-                                    <p className="text-[14px] font-black text-rose-300">掲載中の商品はお休み中</p>
-                                    <p className="text-[10px] text-rose-200 mt-2 font-bold italic tracking-wide">Stay tuned for updates!</p>
+                                    <p className="text-[14px] font-black text-rose-300">格安商品情報はございません</p>
                                 </div>
                             ) : (
                                 <div className="flex gap-5 overflow-x-auto no-scrollbar pb-8 snap-x px-2">
