@@ -179,7 +179,8 @@ const RecruitSignupPage: NextPage = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/register-free-partner', {
+      // ステップ1: パートナー登録
+      const registerResponse = await fetch('/api/auth/register-partner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -188,12 +189,31 @@ const RecruitSignupPage: NextPage = () => {
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '登録に失敗しました。');
+      const registerData = await registerResponse.json();
+      if (!registerResponse.ok) throw new Error(registerData.error || '登録に失敗しました。');
 
-      // 成功時: ストレージクリアとリダイレクト
-      ['recruit_company', 'recruit_address', 'recruit_area', 'recruit_contact', 'recruit_phone', 'recruit_email', 'recruit_confirmEmail', 'recruit_password', 'recruit_agreed'].forEach(k => window.sessionStorage.removeItem(k));
-      window.location.href = '/partner/login?signup_success=true';
+      // ステップ2: 決済セッション作成
+      const paymentResponse = await fetch('/api/payment/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partnerId: registerData.partnerId,
+          plan: 'recruit-6600',
+          amount: 6600,
+          successUrl: `${window.location.origin}/partner/login?payment_success=true&partnerId=${registerData.partnerId}`,
+          cancelUrl: `${window.location.origin}/recruit?payment_cancelled=true`
+        }),
+      });
+
+      const paymentData = await paymentResponse.json();
+      if (!paymentResponse.ok) throw new Error(paymentData.error || '決済セッション作成に失敗しました。');
+
+      // ステップ3: 決済ページへリダイレクト
+      if (paymentData.url) {
+        window.location.href = paymentData.url;
+      } else {
+        throw new Error('決済ページのURLが返されませんでした。');
+      }
     } catch (err: any) {
       setError(err.message);
       setIsLoading(false);
@@ -203,8 +223,8 @@ const RecruitSignupPage: NextPage = () => {
   return (
     <div className="bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 overflow-x-hidden antialiased">
       <Head>
-        <title>【公式】AI求人パートナー無料掲載登録｜みんなの那須アプリ（株式会社adtown 創業20周年記念事業）</title>
-        <meta name="description" content="株式会社adtown 創業20周年記念事業。20年間で1000社+の採用を支援してきた実績を、アプリ×AIに集約。那須地域密着のAIマッチングで理想の人材を。先着100社限定キャンペーン実施中。" />
+        <title>【公式】AI求人パートナー登録｜月額6,600円でAI採用マッチング｜みんなの那須アプリ（株式会社adtown 創業20周年記念事業）</title>
+        <meta name="description" content="株式会社adtown 創業20周年記念事業。20年間で1000社+の採用を支援してきた実績を、アプリ×AIに集約。那須地域密着のAIマッチングで理想の人材を月額6,600円でご利用。" />
       </Head>
 
       {/* --- Sticky Bar --- */}
@@ -224,7 +244,7 @@ const RecruitSignupPage: NextPage = () => {
             onClick={scrollToForm}
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full font-bold text-sm transition-all shadow-md active:scale-95"
           >
-            無料登録して掲載
+            登録・決済に進む
           </button>
         </div>
       </header>
@@ -302,10 +322,10 @@ const RecruitSignupPage: NextPage = () => {
 
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <span className="bg-blue-50 text-blue-700 px-6 py-3 rounded-full border border-blue-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                    基本掲載：永久0円
+                    月額 6,600円
                   </span>
                   <span className="bg-green-50 text-green-700 px-6 py-3 rounded-full border border-green-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                    AI採用（攻め）：特別価格
+                    AI採用マッチング搭載
                   </span>
                   <span className="bg-slate-50 text-slate-700 px-6 py-3 rounded-full border border-slate-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
                     成功報酬なし
@@ -318,10 +338,10 @@ const RecruitSignupPage: NextPage = () => {
                   onClick={scrollToForm}
                   className="w-full md:w-auto bg-slate-900 hover:bg-slate-800 text-white text-lg font-bold px-10 py-4 rounded-xl shadow-2xl transition-all transform hover:-translate-y-1"
                 >
-                  まず無料で掲載を開始する
+                  月額6,600円で登録・決済に進む
                 </button>
               </div>
-              <p className="mt-4 text-sm text-slate-500">※登録は最短3分。成功報酬も一切不要です。</p>
+              <p className="mt-4 text-sm text-slate-500">※登録は最短3分。一括払いでのお支払いです。</p>
             </div>
           </div>
 
@@ -335,11 +355,23 @@ const RecruitSignupPage: NextPage = () => {
           <div className="bg-gradient-to-br from-green-400 via-emerald-400 to-teal-500 rounded-3xl p-1 shadow-xl">
             <div className="bg-white rounded-[1.4rem] p-6 md:p-10 text-center">
               <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-4">
-                【先着100社限定】AI採用プラン割引キャンペーン
+                🎉 20周年記念キャンペーン 割引キャンペーン実施中！
               </h3>
+              <div className="mb-6 flex flex-col md:flex-row items-center justify-center gap-4">
+                <div className="text-center">
+                  <p className="text-slate-500 font-bold text-sm mb-1">定　価</p>
+                  <p className="text-3xl font-black text-slate-400 line-through">¥10,000</p>
+                </div>
+                <div className="text-3xl font-black text-slate-300">→</div>
+                <div className="text-center">
+                  <p className="text-green-600 font-black text-sm mb-1">割引価格（先着100社限定）</p>
+                  <p className="text-4xl md:text-5xl font-black text-green-600">¥6,600</p>
+                  <p className="text-sm text-green-700 font-bold mt-1">/月（一括払い）</p>
+                </div>
+              </div>
               <p className="text-slate-600 mb-6 font-bold text-lg leading-relaxed">
-                <span className="text-sm block opacity-70 mb-1">基本掲載（待ちの広告）は永久に無料。</span>
-                「攻めの採用」を可能にするAIプラン月額 8,800円が、今なら <span className="text-4xl font-black text-blue-600">6,600円</span>
+                那須地域限定のAI採用マッチングシステムを、
+                <span className="text-green-600 font-black">定価10,000円から34%OFF！</span>
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <div className="flex items-center space-x-2 bg-slate-100 px-4 py-2 rounded-full font-bold">
@@ -355,82 +387,80 @@ const RecruitSignupPage: NextPage = () => {
           </div>
         </section>
 
-        {/* ============================================
-            なぜ無料なのか？（NEW）
-            ============================================ */}
+        {/* --- 使いやすさ・柔軟性セクション --- */}
         <section className="container mx-auto px-4 mb-20">
-          <div className="rounded-3xl p-1 bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 shadow-xl">
+          <div className="rounded-3xl p-1 bg-gradient-to-br from-purple-400 via-pink-400 to-rose-400 shadow-xl">
             <div className="bg-white rounded-[1.4rem] p-8 md:p-12">
-              <div className="max-w-4xl mx-auto">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-600 text-white flex items-center justify-center flex-shrink-0 shadow-md text-2xl">
-                    💡
+              <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-10">
+                  <h3 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">
+                    ✨ 求人のオンオフで、自由に運用
+                  </h3>
+                  <p className="text-lg md:text-xl text-slate-600 font-bold">
+                    求人がないときはストップ、必要な時だけオン。<br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-rose-600 font-black">
+                      無駄のない、使いやすい働き方。
+                    </span>
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-6 mb-10">
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 shadow-lg hover:shadow-xl transition-all">
+                    <p className="text-5xl mb-4">🎛️</p>
+                    <h4 className="text-xl font-black text-slate-900 mb-3">求人管理が簡単</h4>
+                    <p className="text-slate-700 font-bold leading-relaxed">
+                      求人がない期間は「一時停止」ボタンでストップ。
+                      月額費用は発生しません。
+                    </p>
                   </div>
-                  <div>
-                    <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
-                      なぜ「完全無料」なのか？
-                    </h3>
-                    <p className="mt-2 text-slate-600 leading-relaxed font-bold">
-                      多くの方から「なぜ無料で求人掲載ができるのか？」とご質問をいただきます。<br />
-                      その理由を、率直にお伝えします。
+
+                  <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-8 border-2 border-pink-200 shadow-lg hover:shadow-xl transition-all">
+                    <p className="text-5xl mb-4">⚡</p>
+                    <h4 className="text-xl font-black text-slate-900 mb-3">必要な時だけON</h4>
+                    <p className="text-slate-700 font-bold leading-relaxed">
+                      新しい求人が発生したら、
+                      いつでも「再開」できます。
+                    </p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-rose-50 to-purple-50 rounded-2xl p-8 border-2 border-rose-200 shadow-lg hover:shadow-xl transition-all">
+                    <p className="text-5xl mb-4">💰</p>
+                    <h4 className="text-xl font-black text-slate-900 mb-3">無駄をカット</h4>
+                    <p className="text-slate-700 font-bold leading-relaxed">
+                      採用計画に合わせた柔軟な支払い。
+                      繁忙期だけの利用も可能です。
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-l-4 border-blue-600">
-                    <h4 className="font-black text-xl text-blue-900 mb-3">理由① AIの学習データ収集フェーズ</h4>
-                    <p className="text-slate-700 font-bold leading-relaxed">
-                      私たちのAIマッチングエンジンは、<span className="text-blue-600 font-black">実際の求人・応募データから学習</span>することで精度を高めていきます。
-                      先行100社の皆様には、この学習フェーズのパートナーとして、<span className="text-blue-600 font-black">無料でご協力</span>いただく代わりに、
-                      最先端のAI採用システムを<span className="text-blue-600 font-black">永久に無料</span>でご利用いただけます。
-                    </p>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border-l-4 border-green-600">
-                    <h4 className="font-black text-xl text-green-900 mb-3">理由② 地域経済への貢献</h4>
-                    <p className="text-slate-700 font-bold leading-relaxed">
-                      adtownは20年間、那須地域に根ざして事業を展開してきました。
-                      <span className="text-green-600 font-black">地元企業の採用課題を解決</span>することが、地域経済の活性化に繋がると確信しています。
-                      20周年記念事業として、那須の企業様への恩返しの意味を込めて、無料提供を決定しました。
-                    </p>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-l-4 border-purple-600">
-                    <h4 className="font-black text-xl text-purple-900 mb-3">理由③ なぜ「求人が可能なのか」？（高い集客力）</h4>
-                    <div className="text-slate-700 font-bold leading-relaxed space-y-4">
-                      <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg border border-purple-100">
-                        <CheckCircleIcon className="text-green-500 w-5 h-5 shrink-0 mt-1" />
-                        <p><strong>すでに先行1,000人が登録済み</strong>（高い利用者密度）</p>
-                      </div>
-                      <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg border border-purple-100">
-                        <CheckCircleIcon className="text-green-500 w-5 h-5 shrink-0 mt-1" />
-                        <p><strong>総フォロワー約10万人の地域インフルエンサー</strong>が積極的に情報発信中</p>
-                      </div>
-                      <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg border border-purple-100">
-                        <CheckCircleIcon className="text-green-500 w-5 h-5 shrink-0 mt-1" />
-                        <p>今後、5,000人〜10,000人と急増見込み。今なら<strong>先行者メリットを最大化</strong>可能</p>
+                <div className="bg-slate-900 text-white rounded-3xl p-8 md:p-10 border-4 border-purple-500 shadow-2xl">
+                  <div className="flex flex-col md:flex-row items-start gap-6">
+                    <div className="flex-shrink-0 text-5xl">📋</div>
+                    <div>
+                      <h4 className="text-2xl font-black mb-4">運用例</h4>
+                      <div className="space-y-3 text-white/90 font-bold leading-relaxed">
+                        <p>
+                          <span className="text-purple-300 font-black">📍 春の採用シーズン：</span>
+                          求人を「ON」にして、新卒・転職希望者を積極採用
+                        </p>
+                        <p>
+                          <span className="text-purple-300 font-black">📍 夏の落ち込み期：</span>
+                          一時停止で費用をカット。求人システムはデータ蓄積中
+                        </p>
+                        <p>
+                          <span className="text-purple-300 font-black">📍 秋の採用再開：</span>
+                          再開ボタンで即、アプリのAIが求職者に自動配信開始
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-8 bg-slate-900 rounded-2xl p-8 text-white">
-                  <p className="font-black text-2xl mb-4 italic">📢 つまり、Win-Winの関係です</p>
-                  <div className="space-y-3 text-white/90 font-bold">
-                    <p>✅ <span className="text-white font-black">企業様</span>：「待ち」の掲載は無料 ＋ 「攻め」のAI採用でミスマッチ解消</p>
-                    <p>✅ <span className="text-white font-black">求職者</span>：理想の職場が見つかる ＋ 価値観の合う企業とマッチング</p>
-                    <p>✅ <span className="text-white font-black">adtown</span>：最先端のAIマッチングデータ蓄積 ＋ 那須の地域活性化</p>
-                  </div>
-                </div>
-
-                <div className="mt-6 text-center">
-                  <button
-                    onClick={scrollToForm}
-                    className="inline-block bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-lg px-10 py-4 rounded-2xl shadow-lg shadow-blue-100 transition-all transform hover:-translate-y-1 active:translate-y-0"
-                  >
-                    納得したので、無料登録に進む →
-                  </button>
+                <div className="mt-10 text-center">
+                  <p className="text-slate-600 font-bold text-lg mb-6">
+                    ✅ 複雑な契約や解約金はなし。<br />
+                    <span className="text-slate-900 font-black text-xl">シンプル × フレキシブル = 最も使いやすい採用ツール</span>
+                  </p>
                 </div>
               </div>
             </div>
@@ -489,7 +519,7 @@ const RecruitSignupPage: NextPage = () => {
                     onClick={scrollToForm}
                     className="w-full md:w-auto text-center bg-white border-2 border-slate-200 hover:border-blue-400 text-slate-900 font-black text-lg px-10 py-4 rounded-2xl shadow-sm transition-all active:scale-95"
                   >
-                    企業の無料掲載登録に進む
+                    企業の登録・決済に進む
                   </button>
                 </div>
 
@@ -804,10 +834,10 @@ const RecruitSignupPage: NextPage = () => {
               </div>
 
               <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl border border-slate-100 hover:-translate-y-2 transition-all duration-500 group">
-                <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">💰</div>
-                <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">完全無料</h3>
+                <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">�</div>
+                <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">明確な価格設定</h3>
                 <p className="mt-5 text-slate-600 font-bold leading-relaxed text-lg">
-                  基本の求人広告は永久無料。掲載費・成功報酬・すべて0円。
+                  月額6,600円の一括払い。成功報酬なし。隠れた費用はなし。
                 </p>
               </div>
             </div>
@@ -835,21 +865,17 @@ const RecruitSignupPage: NextPage = () => {
           <div className="container mx-auto px-4 max-w-3xl">
             <h3 className="text-3xl font-black text-center mb-12 italic">Q & A</h3>
             <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-200">
-              <FAQItem question="本当に無料で掲載できますか？">
-                はい。<strong>基本掲載（求職者が探す「待ち」の広告）は永久に無料</strong>です。
-                求人情報の作成・掲載、応募者管理まで、費用は一切かかりません。
+              <FAQItem question="月額6,600円で何ができますか？">
+                AIマッチングシステムの完全機能をご利用いただけます。求職者との自動マッチング、AIスコア調整、応募者管理機能など、すべての機能が含まれます。
               </FAQItem>
-              <FAQItem question="有料プラン（AI Active Matching）との違いは？">
-                有料プランは「攻めの広告」です。AIが御社の採用情報と合う求職者を点数で評価してマッチングします。
-                企業価値観と合うため、<strong>継続率が上がり、離職者が減る</strong>のが最大の特徴です。
-                採用点数は自由に調整可能です。
+              <FAQItem question="支払い方法は何ですか？">
+                月額6,600円の一括払いです。クレジットカードでのご支払いをお願いしております。
               </FAQItem>
               <FAQItem question="成功報酬は発生しますか？">
                 いいえ、<strong>一切発生しません</strong>。何名採用が決まっても、追加の費用をいただくことはございません。
               </FAQItem>
-              <FAQItem question="100社限定キャンペーンの内容は？">
-                通常月額8,800円のAI Active Matchingプランが、先着100社様限定で<strong>月額6,600円</strong>でご利用いただけます。
-                一度ご契約いただくと、この価格は永久に据え置かれます。
+              <FAQItem question="解約はいつでもできますか？">
+                はい、いつでも解約可能です。解約手続きは管理画面から簡単に行えます。
               </FAQItem>
               <FAQItem question="どのような職種でも掲載できますか？">
                 はい。正社員・パート・アルバイト・契約社員など、雇用形態を問わず掲載可能です。
@@ -874,8 +900,8 @@ const RecruitSignupPage: NextPage = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden">
               <div className="bg-slate-900 p-8 text-center">
-                <h3 className="text-2xl font-bold text-white mb-2">無料パートナー登録</h3>
-                <p className="text-slate-400 text-sm">3分で完了。今すぐ求人掲載を始めましょう。</p>
+                <h3 className="text-2xl font-bold text-white mb-2">パートナー登録</h3>
+                <p className="text-slate-400 text-sm">3分で完了。月額6,600円でAI採用マッチングを開始。</p>
               </div>
 
               <form onSubmit={handleSignup} className="p-8 md:p-12 space-y-6">

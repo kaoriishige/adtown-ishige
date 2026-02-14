@@ -33,7 +33,7 @@ interface MediaItem {
 
 interface Deal {
   id: string;
-  type: 'お得情報' | 'クーポン' | 'フードロス';
+  type: 'お得情報' | 'クーポン';
   title: string;
   description: string;
   imageUrl?: string; // 後方互換性のため残す
@@ -50,9 +50,6 @@ const dealPlaceholders: { [key: string]: { [key: string]: string } } = {
   'クーポン': {
     'デフォルト': '【店舗名】\n\n【特典内容】\n例：お会計から10%OFF\n\n【有効期限】\n例：202X年X月X日まで\n\n【その他】\n例：ランチタイムのみ有効です。'
   },
-  'フードロス': {
-    'デフォルト': '【店舗名】\n\n【特典内容】\n例：パン詰め合わせセット 50%OFF\n\n【有効期限】\n例：本日18時まで\n\n【その他】\n例：なくなり次第終了となります。'
-  }
 };
 
 // --- ページコンポーネント ---
@@ -65,7 +62,7 @@ const PartnerDealsPage: NextPage = () => {
   const [loading, setLoading] = useState(true); // データ読み込み中フラグ
 
   // フォームのState
-  const [newDealType, setNewDealType] = useState<'お得情報' | 'クーポン' | 'フードロス'>('お得情報');
+  const [newDealType, setNewDealType] = useState<'お得情報' | 'クーポン'>('お得情報');
   const [newDealTitle, setNewDealTitle] = useState('');
   const [newDealDescription, setNewDealDescription] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // 複数画像ファイル選択用
@@ -375,12 +372,12 @@ const PartnerDealsPage: NextPage = () => {
   return (
     <div className="container mx-auto p-8 max-w-3xl min-h-screen flex flex-col">
       <Head>
-        <title>{"お得情報・クーポン・フードロス管理"}</title>
+        <title>{"お得情報・クーポン管理"}</title>
       </Head>
 
       <div className="flex-grow">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">お得情報・クーポン・フードロス管理</h1>
+          <h1 className="text-2xl font-bold">お得情報・クーポン管理</h1>
           <Link href="/partner/dashboard" className="text-blue-600 hover:underline flex items-center">
             <RiArrowLeftLine className="mr-1" /> ダッシュボードに戻る
           </Link>
@@ -405,12 +402,11 @@ const PartnerDealsPage: NextPage = () => {
                 <label className="font-bold">種別</label>
                 <select
                   value={newDealType}
-                  onChange={(e) => setNewDealType(e.target.value as 'お得情報' | 'クーポン' | 'フードロス')}
+                  onChange={(e) => setNewDealType(e.target.value as 'お得情報' | 'クーポン')}
                   className="w-full p-2 border rounded mt-1"
                 >
                   <option value="お得情報">お得情報</option>
                   <option value="クーポン">クーポン</option>
-                  <option value="フードロス">フードロス</option>
                 </select>
               </div>
               <div><label className="font-bold">タイトル</label><input type="text" value={newDealTitle} onChange={(e) => setNewDealTitle(e.target.value)} required className="w-full p-2 border rounded mt-1" /></div>

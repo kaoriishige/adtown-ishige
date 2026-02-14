@@ -278,7 +278,7 @@ export default function PartnerSignupLP() {
                         <div><div className="text-5xl text-orange-500 mb-2">出し放題</div><p className="text-sm opacity-60">アプリ内広告</p></div>
                     </div>
                     <div className="bg-white/5 p-16 rounded-[4rem] border border-white/10 shadow-3xl">
-                        <p className="text-2xl lg:text-3xl font-bold leading-relaxed italic">貴店の広告やクーポン、フードロスを、アプリ広告出し放題で、爆発的に増え続ける「貴店へのお客様候補」に直接届けることができます。</p>
+                        <p className="text-2xl lg:text-3xl font-bold leading-relaxed italic">貴店の広告やクーポンを、アプリ広告出し放題で、爆発的に増え続ける「貴店へのお客様候補」に直接届けることができます。</p>
                     </div>
                 </div>
             </section>

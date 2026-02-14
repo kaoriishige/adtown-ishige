@@ -774,7 +774,7 @@ export default function PartnerSignupLP() {
                 <p className="font-black text-slate-900 text-xl">ワンプランに含まれるもの</p>
                 <ul className="mt-4 space-y-2 text-slate-600 font-bold">
                   <li>・アプリ内掲載（基本）</li>
-                  <li>・クーポン/特典/フードロス登録・管理</li>
+                  <li>・クーポン/特典登録・管理</li>
                   <li>・AI集客マッチング導線（設計/最適化）</li>
                   <li>・効果の見える化（運用の改善ポイント）</li>
                   <li>・<span className="text-indigo-600 font-black">紹介報酬30%還元</span></li>

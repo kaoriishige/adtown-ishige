@@ -340,8 +340,8 @@ const PartnerDashboard: NextPage<DashboardProps> = (props) => {
                                 <ActionButton
                                     href="/partner/deals"
                                     icon={<RiCoupon3Line className="h-8 w-8 text-white" />}
-                                    title="クーポン・特典・フードロスを登録・管理"
-                                    description="ユーザーの来店を促し、在庫問題を解決する集客ツールです"
+                                    title="クーポン・特典を登録・管理"
+                                    description="ユーザーの来店を促し、売上を最大化する集客ツールです"
                                     bgColorClass="bg-green-500"
                                     isPro={false}
                                     isPaid={isPaid}

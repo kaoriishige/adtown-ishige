@@ -28,7 +28,7 @@ export default function LandingPage() {
             <li>初月はたったの480円キャンペーン中!!</li>
             <li>2ヶ月目からは月額980円（自動更新）</li>
             <li>1日たったの約30円で全55アプリ使い放題！</li>
-            <li>フードロス激安・スーパー特売もスマホで簡単チェック</li>
+
             <li>全年齢対応・家族みんなで使える</li>
           </ul>
         </div>
@@ -65,7 +65,7 @@ export default function LandingPage() {
             <li>個性心理学診断</li>
             <li>相性診断ツール</li>
             <li>スーパー特売情報</li>
-            <li>フードロス激安情報</li>
+
             <li>地域フリマ・健康チェック・ペット情報</li>
           </ul>
           <p className="text-sm mt-2">...他にも55個のアプリが使い放題！</p>

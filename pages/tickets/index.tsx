@@ -22,7 +22,7 @@ const TicketsPage: NextPage<TicketsPageProps> = ({ deals }) => {
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'future-ticket': return { label: '未来のチケット', bg: 'bg-blue-100', text: 'text-blue-800' };
-      case 'food-loss': return { label: 'フードロス削減', bg: 'bg-green-100', text: 'text-green-800' };
+
       case 'donation': return { label: '子ども食堂支援', bg: 'bg-pink-100', text: 'text-pink-800' };
       default: return { label: 'お知らせ', bg: 'bg-gray-100', text: 'text-gray-800' };
     }
@@ -35,7 +35,7 @@ const TicketsPage: NextPage<TicketsPageProps> = ({ deals }) => {
       </Head>
       <div className="max-w-3xl mx-auto p-4 pt-10">
         <h1 className="text-3xl font-bold text-center mb-2">未来のチケット</h1>
-        <p className="text-center text-gray-600 mb-8">特別な体験や、フードロス削減のお得情報を見つけよう！</p>
+        <p className="text-center text-gray-600 mb-8">特別な体験や、お得な情報を見つけよう！</p>
         
         {deals.length > 0 ? (
           <div className="space-y-4">

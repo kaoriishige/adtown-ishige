@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { db } from '@/lib/firebase'; // ★ 修正: 絶対パス @/lib/firebase に統一
 import { collection, getDocs, query, orderBy, limit, DocumentData } from 'firebase/firestore';
-import { RiSearchLine, RiMapPinLine, RiCoupon3Line, RiFilter2Line } from 'react-icons/ri';
+import { RiSearchLine, RiMapPinLine, RiCoupon3Line, RiFilter2Line, RiShoppingBagLine, RiArrowRightSLine } from 'react-icons/ri';
 import { IoSparklesSharp } from 'react-icons/io5';
 
 // グローバル変数の型を宣言
@@ -18,7 +18,7 @@ interface Deal {
     storeId: string;
     storeName: string;
     mainCategory: string;
-    type: 'お得情報' | 'クーポン' | 'フードロス';
+    type: 'お得情報' | 'クーポン';
     title: string;
     description: string;
     imageUrl?: string;
@@ -98,7 +98,7 @@ const DealsPage: NextPage<DealsPageProps> = ({ initialDeals, error }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(initialCategory);
     const [selectedDealType, setSelectedDealType] = useState('すべて');
-    const dealTypes = ['すべて', 'お得情報', 'クーポン', 'フードロス'];
+    const dealTypes = ['すべて', 'お得情報', 'クーポン'];
 
     // フィルタリングロジック
     const filteredDeals = useMemo(() => {
@@ -125,7 +125,6 @@ const DealsPage: NextPage<DealsPageProps> = ({ initialDeals, error }) => {
     const getDealColor = (type: string) => {
         switch(type) {
             case 'クーポン': return 'bg-yellow-500';
-            case 'フードロス': return 'bg-red-500';
             default: return 'bg-green-500';
         }
     };
@@ -157,6 +156,24 @@ const DealsPage: NextPage<DealsPageProps> = ({ initialDeals, error }) => {
                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
                         />
                     </div>
+
+                    {/* フードロス・レスキューへの導線 */}
+                    <Link href="/rescue" legacyBehavior>
+                        <a className="block mb-4 p-3 bg-gradient-to-r from-rose-500 to-orange-500 rounded-xl text-white shadow-lg transform hover:scale-[1.02] transition active:scale-95">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
+                                        <RiShoppingBagLine className="text-xl text-yellow-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Food Loss Rescue</p>
+                                        <p className="text-sm font-black">廃棄食料をレスキューしよう！</p>
+                                    </div>
+                                </div>
+                                <RiArrowRightSLine className="text-2xl opacity-50" />
+                            </div>
+                        </a>
+                    </Link>
 
                     {/* フィルターボタン */}
                     <div className="flex items-center space-x-2 overflow-x-auto pb-2">

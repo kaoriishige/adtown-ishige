@@ -118,8 +118,9 @@ const DashboardCard = ({ href, icon, title, description, color, isPro, isPaid, o
         purple: 'bg-purple-100 text-purple-600 group-hover:bg-purple-200',
         blue: 'bg-blue-100 text-blue-600 group-hover:bg-blue-200',
     };
-    const isDisabled = isPro && !isPaid;
-    const finalHref = isDisabled ? "/recruit/subscribe_plan" : href;
+    // 無料プランなしで有料プランのみなので、disabledなし
+    const isDisabled = false;
+    const finalHref = href;
     const cardContent = (
         <a
             onClick={onClick}
@@ -132,11 +133,11 @@ const DashboardCard = ({ href, icon, title, description, color, isPro, isPaid, o
             <div className="flex items-start space-x-4">
                 <div className={`p-4 rounded-xl ${colorMap[color]} ${isDisabled ? 'grayscale' : ''}`}>{icon}</div>
                 <div>
-                    <h3 className={`text-xl font-bold ${isDisabled ? 'text-gray-500' : 'text-gray-800 group-hover:text-indigo-600'}`}>
+                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600">
                         {title}
                         {isPro && (
-                            <span className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white ${isPaid ? 'bg-green-500' : 'bg-red-500'}`}>
-                                {isPaid ? 'ご利用中' : '有料限定'}
+                            <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full text-white bg-green-500">
+                                ご利用中
                             </span>
                         )}
                     </h3>
@@ -256,12 +257,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         const profileExists = recruiterSnap.exists;
 
 
-        // ★★★★★★★【重要】isPaid の判定ロジック修正 ★★★★★★★
-        subscriptionStatus = userData.recruitSubscriptionStatus || userData.subscriptionStatus || null;
-        
-        // 'active' または 'trialing' の場合に 'isPaid' (有料会員) とみなす
-        isPaid = (subscriptionStatus === 'active' || subscriptionStatus === 'trialing');
-        // ★★★★★★★【ここまで】★★★★★★★
+        // 有料プランのみ対応となったため、ログインユーザーはすでに有料会員
+        subscriptionStatus = userData.recruitSubscriptionStatus || userData.subscriptionStatus || 'active';
+        isPaid = true; // ログインユーザーは常に有料会員
 
 
         billingCycle = userData.recruitBillingCycle || userData.billingCycle || null;
@@ -457,8 +455,7 @@ const RecruitDashboard: NextPage<DashboardProps> = (props) => {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans">
-            {/* isPaid が true になるため、タイトルも正しく表示される */}
-            <Head><title>AI求人パートナー ダッシュボード ({isPaid ? '有料会員' : '無料会員'})</title></Head>
+            <Head><title>AI求人パートナー ダッシュボード (有料会員)</title></Head>
 
 
             {showCancelModal && (

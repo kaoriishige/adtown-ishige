@@ -118,6 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isPublicPage =
     publicPaths.includes(router.pathname) ||
     router.pathname.startsWith('/stores/view/') ||
+    router.pathname.startsWith('/food-loss') ||
+    router.pathname.startsWith('/rescue') ||
     router.pathname.startsWith('/app/');
 
   // 1. 公開ページの場合は、認証のロード状態を無視して即座に子供要素を表示する

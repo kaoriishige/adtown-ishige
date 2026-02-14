@@ -30,6 +30,7 @@ const DUMMY_STORE_DATA: StoreData = {
     isPublished: false, specialtyPoints: [], averageRating: 0, reviewCount: 0,
     matchingValues: [], snsUrls: [], // LPに表示するために型を追加
     deals: [],
+    foodLossItems: [],
 };
 
 // **実行時エラー回避のためのダミー実装 (TypeScriptエラー回避のため残します)**
@@ -68,12 +69,23 @@ interface SpecialtyPoint {
 // ★★★ Deal型定義 (追加) ★★★
 interface Deal {
     id: string;
-    type: 'お得情報' | 'クーポン' | 'フードロス';
+    type: 'お得情報' | 'クーポン';
     title: string;
     description: string;
     imageUrl?: string;
     mediaUrls?: { url: string; type: 'image' | 'video' }[];
     createdAt: string;
+}
+
+interface FoodLossItem {
+    id: string;
+    title: string;
+    price: number;
+    originalPrice?: number;
+    quantity: string;
+    pickupTime?: string;
+    imageUrl?: string;
+    status: 'available' | 'sold_out';
 }
 
 interface StoreData {
@@ -85,7 +97,8 @@ interface StoreData {
     averageRating: number; reviewCount: number;
     matchingValues: string[];
     snsUrls: string[];
-    deals: Deal[]; // ★ 追加
+    deals: Deal[];
+    foodLossItems: FoodLossItem[]; // ★ 追加
 }
 interface StoreViewProps { store: StoreData | null; error: string | null; }
 
@@ -219,7 +232,35 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
             });
         } catch (dealErr) {
             console.warn("Failed to fetch deals:", dealErr);
-            // deals取得に失敗しても、店舗ページ自体は表示させる
+        }
+
+        // ★★★ food_loss_items の取得 ★★★
+        let foodLossItems: FoodLossItem[] = [];
+        try {
+            const appId = process.env.NEXT_PUBLIC_APP_ID || "default-app-id";
+            const itemsSnapshot = await dbRef
+                .collection('artifacts')
+                .doc(appId)
+                .collection('food_loss_items')
+                .where('storeId', '==', storeId)
+                .where('status', '==', 'available')
+                .get();
+
+            foodLossItems = itemsSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    title: data.title,
+                    price: data.price,
+                    originalPrice: data.originalPrice,
+                    quantity: data.quantity,
+                    pickupTime: data.pickupTime,
+                    imageUrl: data.imageUrl,
+                    status: data.status,
+                };
+            });
+        } catch (itemErr) {
+            console.warn("Failed to fetch food loss items:", itemErr);
         }
 
         const foundStoreId = storeId;
@@ -238,6 +279,24 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
             formattedSpecialtyPoints = loadedSpecialtyPoints;
         }
 
+        // ★★★ food_loss_stores (プロフィール) の追加取得 ★★★
+        let foodLossStoreProfile: any = null;
+        try {
+            const appId = process.env.NEXT_PUBLIC_APP_ID || "default-app-id";
+            const flStoreDoc = await dbRef
+                .collection('artifacts')
+                .doc(appId)
+                .collection('food_loss_stores')
+                .doc(storeId)
+                .get();
+            
+            if (flStoreDoc.exists) {
+                foodLossStoreProfile = flStoreDoc.data();
+            }
+        } catch (flErr) {
+            console.warn("Failed to fetch food loss store profile:", flErr);
+        }
+
         const mergedData: StoreData = {
             id: foundStoreId,
             name: cleanString(rawData.storeName) || cleanString(rawData.name) || DUMMY_STORE_DATA.name,
@@ -245,7 +304,7 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
             phoneNumber: cleanString(rawData.phoneNumber) || cleanString(rawData.tel),
             mainCategory: cleanString(rawData.mainCategory) || DUMMY_STORE_DATA.mainCategory,
             tagline: cleanString(rawData.tagline),
-            description: descriptionText,
+            description: foodLossStoreProfile?.description || descriptionText,
             specialtyPoints: formattedSpecialtyPoints,
             url: cleanString(rawData.websiteUrl || rawData.url),
             lineLiffUrl: cleanString(rawData.lineLiffUrl),
@@ -253,7 +312,7 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
                 ? [cleanString(rawData.mainImageUrl)!, ...rawData.galleryImageUrls || []].filter((url: string) => url)
                 : [],
             email: cleanString(rawData.email),
-            hours: hoursMatch ? hoursMatch[1].trim() : cleanString(rawData.hours),
+            hours: foodLossStoreProfile?.businessHours || (hoursMatch ? hoursMatch[1].trim() : cleanString(rawData.hours)),
             ownerId: foundOwnerId,
             isPublished: rawData.isPublished ?? DUMMY_STORE_DATA.isPublished,
             averageRating: rawData.averageRating || 0,
@@ -262,7 +321,8 @@ export const getServerSideProps: GetServerSideProps<StoreViewProps> = async ({ q
             updatedAt: safeToISOString(rawData.updatedAt, DUMMY_STORE_DATA.updatedAt),
             matchingValues: rawData.matchingValues || [],
             snsUrls: rawData.snsUrls || [],
-            deals: dealsData, // ★ 追加
+            deals: dealsData,
+            foodLossItems: foodLossItems, // ★ 追加
         };
 
         let warning = null;
@@ -635,10 +695,54 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                 )}
 
                 {/* 3. AIマッチング用 サービス（目的）別価値観登録 セクションの追加 */}
-                {(store.matchingValues && store.matchingValues.length > 0) && (
-                    <section className="py-16 bg-indigo-50 border-t-4 border-indigo-200">
+                {/* 3. FOOD LOSS SECTION - レスキュー可能な商品表示 */}
+                {store.foodLossItems && store.foodLossItems.length > 0 && (
+                    <section className="py-16 bg-rose-50 border-t-4 border-rose-200">
                         <div className="max-w-4xl mx-auto px-4">
-                            {renderMatchingValues(store.matchingValues)}
+                            <h2 className="text-3xl font-black text-center mb-10 text-rose-800 flex items-center justify-center">
+                                <span className="text-4xl mr-3">🍱</span>
+                                フードロス・レスキュー
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {store.foodLossItems.map(item => (
+                                    <div key={item.id} className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-rose-100 flex flex-col">
+                                        {item.imageUrl && (
+                                            <div className="h-48 overflow-hidden">
+                                                <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                                            </div>
+                                        )}
+                                        <div className="p-6 flex-1 flex flex-col">
+                                            <h3 className="text-xl font-black text-gray-800 mb-2">{item.title}</h3>
+                                            <div className="flex flex-wrap gap-2 mb-4">
+                                                <span className="text-xs font-bold px-2 py-1 bg-rose-100 text-rose-700 rounded-lg">
+                                                    残り: {item.quantity}
+                                                </span>
+                                                {item.pickupTime && (
+                                                    <span className="text-xs font-bold px-2 py-1 bg-orange-100 text-orange-700 rounded-lg flex items-center">
+                                                        <RiTimeLine className="mr-1" />
+                                                        {item.pickupTime}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-baseline gap-3 mb-6">
+                                                <span className="text-3xl font-black text-rose-600">¥{item.price.toLocaleString()}</span>
+                                                {item.originalPrice && (
+                                                    <span className="text-lg text-gray-400 line-through font-bold">¥{item.originalPrice.toLocaleString()}</span>
+                                                )}
+                                            </div>
+                                            <LineCTAButton 
+                                                store={store} 
+                                                text="予約・キープする" 
+                                                subText="LINEから今すぐ連絡してください"
+                                                className="mt-auto py-3 !shadow-none"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-center text-xs text-rose-400 mt-6 font-bold truncate">
+                                ※売り切れの際はご容赦ください。早めの連絡をおすすめします。
+                            </p>
                         </div>
                     </section>
                 )}
@@ -683,7 +787,7 @@ const StoreView: NextPage<StoreViewProps> = ({ store, error }) => {
                                                 <div key={deal.id} className="bg-white rounded-xl shadow-lg border border-yellow-100 overflow-hidden hover:shadow-xl transition-shadow relative">
                                                     {/* ラベル */}
                                                     <div className={`absolute top-0 right-0 px-3 py-1 text-white text-xs font-bold rounded-bl-lg z-10
-                                                        ${deal.type === 'クーポン' ? 'bg-yellow-500' : deal.type === 'フードロス' ? 'bg-red-500' : 'bg-green-500'}`}>
+                                                        ${deal.type === 'クーポン' ? 'bg-yellow-500' : 'bg-green-500'}`}>
                                                         {deal.type}
                                                     </div>
                                                     
