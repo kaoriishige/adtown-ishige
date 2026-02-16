@@ -25,7 +25,7 @@ const LoginPage: NextPage = () => {
     // --- ログイン成功時の処理（ここで行き先を指定） ---
     const handleLoginSuccess = async (user: any) => {
         try {
-            const idToken = await user.getIdToken(true);
+            const idToken = await user.getIdToken(); // forceRefresh を削除して高速化
             const response = await fetch("/api/auth/sessionLogin", {
                 method: "POST",
                 headers: {
@@ -68,11 +68,12 @@ const LoginPage: NextPage = () => {
         setIsLoggingIn(true);
         setError(null);
         try {
-            await setPersistence(auth, browserLocalPersistence);
+            // setPersistence は非同期処理で、ポップアップの起動を遅らせる可能性があるため削除（デフォルトで local）
             await signInWithEmailAndPassword(auth, email, password);
             // signInWithEmailAndPassword が成功すると onAuthStateChanged が発火し、
             // handleLoginSuccess が呼ばれるため、ここでは何もしない
         } catch (e: any) {
+            console.error("Email Login Error:", e.code, e.message);
             setError("メールアドレスまたはパスワードが正しくありません。");
             setIsLoggingIn(false);
         }
@@ -82,11 +83,19 @@ const LoginPage: NextPage = () => {
         setIsLoggingIn(true);
         setError(null);
         try {
-            await setPersistence(auth, browserLocalPersistence);
+            // setPersistence(auth, browserLocalPersistence) は非同期処理であり、
+            // signInWithPopup の直前に呼ぶと「ユーザー操作」の連鎖が切れ、ポップアップがブロックされやすくなるため削除
             await signInWithPopup(auth, googleProvider);
             // signInWithPopup が成功すると onAuthStateChanged が発火する
         } catch (e: any) {
-            setError("Googleログインに失敗しました。");
+            console.error("Google Login Error:", e.code, e.message);
+            if (e.code === 'auth/popup-closed-by-user') {
+                setError("ログイン画面が閉じられました。再度クリックしてログインしてください。");
+            } else if (e.code === 'auth/popup-blocked') {
+                setError("ポップアップがブロックされました。ブラウザの設定で許可してください。");
+            } else {
+                setError(`Googleログインに失敗しました (${e.code})。もう一度お試しください。`);
+            }
             setIsLoggingIn(false);
         }
     };

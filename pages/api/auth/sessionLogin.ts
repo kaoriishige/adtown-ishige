@@ -30,8 +30,8 @@ export default async function handler(
             );
         }
 
-        // 3) セッションクッキー作成（5日）
-        const expiresIn = 60 * 60 * 24 * 5 * 1000;
+        // 3) セッションクッキー作成（24時間）
+        const expiresIn = 60 * 60 * 24 * 1000;
         const sessionCookie = await adminAuth.createSessionCookie(idToken, {
             expiresIn,
         });
@@ -39,7 +39,7 @@ export default async function handler(
         // ===== ★★ ここが“本番＋スマホ対応の決定版” ★★ =====
         const cookie = [
             `session=${sessionCookie}`,
-            `Max-Age=${60 * 60 * 24 * 5}`,
+            `Max-Age=${60 * 60 * 24}`,
             'HttpOnly',
             'Path=/',
             'SameSite=None', // ← スマホ対策
