@@ -13,7 +13,7 @@ const PARENTING_DATA = {
         note: "子育てに関する情報（出産、手当、保育園など）"
     },
     "那須町": {
-        link: "https://www.town.nasu.lg.jp/0138/genre2-1-001.html",
+        link: "https://www.town.nasu.lg.jp/0018/genre1-1-001.html",
         note: "子育て支援トップページ、各種助成金情報"
     }
 };
