@@ -29,9 +29,7 @@ export default function ParentingInfoApp() {
 
     // 外部サイトを開く
     const openExternalSite = (url: string) => {
-        // 那須町のサイトなどは iframe での埋め込みを禁止している（X-Frame-Options: SAMEORIGIN）ため、
-        // 確実に表示されるよう新しいタブで開く方式に変更
-        window.open(url, '_blank', 'noopener,noreferrer');
+        setExternalUrl(url);
     };
 
     // 外部サイトを閉じて一覧に戻る
@@ -39,8 +37,56 @@ export default function ParentingInfoApp() {
         setExternalUrl(null);
     };
 
-    // 外部サイト閲覧モード（iframe方式は廃止し、新しいタブで開く方式に統一）
-    // if (externalUrl) { ... }
+    // 外部サイト閲覧モード（iframe方式を基本としつつ、那須町など対応不可サイトは別タブ誘導）
+    if (externalUrl) {
+        // 那須町などの X-Frame-Options: SAMEORIGIN 対策
+        const isIframeBlocked = externalUrl.includes("town.nasu.lg.jp");
+
+        return (
+            <div className="fixed inset-0 z-50 bg-white flex flex-col">
+                <div className="bg-white border-b p-3 flex items-center shadow-sm">
+                    <button
+                        onClick={closeExternalSite}
+                        className="flex items-center gap-2 text-blue-600 font-bold hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
+                    >
+                        <ArrowLeft size={24} />
+                        <span>アプリに戻る</span>
+                    </button>
+                    <div className="ml-4 text-xs text-gray-400 truncate flex-1 text-right">
+                        外部サイトを閲覧中
+                    </div>
+                </div>
+                
+                {isIframeBlocked ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
+                        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm border border-gray-100 flex flex-col items-center gap-6">
+                            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
+                                <ExternalLink size={32} className="text-blue-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">公式サイトを開きます</h3>
+                                <p className="text-sm text-gray-500 leading-relaxed">
+                                    このサイトはアプリ内での直接表示が制限されています。<br/>下のボタンから公式サイトを開いてください。
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition transform active:scale-95"
+                            >
+                                公式サイトを開く
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <iframe
+                        src={externalUrl}
+                        className="flex-1 w-full border-none"
+                        title="外部子育て情報"
+                    />
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans pb-20">
