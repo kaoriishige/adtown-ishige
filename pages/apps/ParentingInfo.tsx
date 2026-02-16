@@ -29,6 +29,12 @@ export default function ParentingInfoApp() {
 
     // 外部サイトを開く
     const openExternalSite = (url: string) => {
+        if (url.includes("town.nasu.lg.jp")) {
+            // 那須町は埋め込み（iframe）を禁止しているため、直接サイトへ遷移する。
+            // これにより中間画面のボタンをなくし、ブラウザの「戻る」矢印でアプリに戻れるようにする。
+            window.location.href = url;
+            return;
+        }
         setExternalUrl(url);
     };
 
@@ -37,11 +43,8 @@ export default function ParentingInfoApp() {
         setExternalUrl(null);
     };
 
-    // 外部サイト閲覧モード（iframe方式を基本としつつ、那須町など対応不可サイトは別タブ誘導）
+    // 外部サイト閲覧モード（iframe方式）
     if (externalUrl) {
-        // 那須町などの X-Frame-Options: SAMEORIGIN 対策
-        const isIframeBlocked = externalUrl.includes("town.nasu.lg.jp");
-
         return (
             <div className="fixed inset-0 z-50 bg-white flex flex-col">
                 <div className="bg-white border-b p-3 flex items-center shadow-sm">
@@ -57,33 +60,11 @@ export default function ParentingInfoApp() {
                     </div>
                 </div>
                 
-                {isIframeBlocked ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
-                        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm border border-gray-100 flex flex-col items-center gap-6">
-                            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
-                                <ExternalLink size={32} className="text-blue-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-800 mb-2">公式サイトを開きます</h3>
-                                <p className="text-sm text-gray-500 leading-relaxed">
-                                    このサイトはアプリ内での直接表示が制限されています。<br/>下のボタンから公式サイトを開いてください。
-                                </p>
-                            </div>
-                            <button 
-                                onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition transform active:scale-95"
-                            >
-                                公式サイトを開く
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <iframe
-                        src={externalUrl}
-                        className="flex-1 w-full border-none"
-                        title="外部子育て情報"
-                    />
-                )}
+                <iframe
+                    src={externalUrl}
+                    className="flex-1 w-full border-none"
+                    title="外部子育て情報"
+                />
             </div>
         );
     }
