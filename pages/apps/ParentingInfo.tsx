@@ -28,8 +28,10 @@ export default function ParentingInfoApp() {
     };
 
     // 外部サイトを開く
-    const openExternalSite = (url) => {
-        setExternalUrl(url);
+    const openExternalSite = (url: string) => {
+        // 那須町のサイトなどは iframe での埋め込みを禁止している（X-Frame-Options: SAMEORIGIN）ため、
+        // 確実に表示されるよう新しいタブで開く方式に変更
+        window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     // 外部サイトを閉じて一覧に戻る
@@ -37,30 +39,8 @@ export default function ParentingInfoApp() {
         setExternalUrl(null);
     };
 
-    // 外部サイト閲覧モードのレンダリング
-    if (externalUrl) {
-        return (
-            <div className="fixed inset-0 z-50 bg-white flex flex-col">
-                <div className="bg-white border-b p-3 flex items-center shadow-sm">
-                    <button
-                        onClick={closeExternalSite}
-                        className="flex items-center gap-2 text-blue-600 font-bold hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
-                    >
-                        <ArrowLeft size={24} />
-                        <span>アプリに戻る</span>
-                    </button>
-                    <div className="ml-4 text-xs text-gray-400 truncate flex-1 text-right">
-                        外部サイトを閲覧中
-                    </div>
-                </div>
-                <iframe
-                    src={externalUrl}
-                    className="flex-1 w-full border-none"
-                    title="外部子育て情報"
-                />
-            </div>
-        );
-    }
+    // 外部サイト閲覧モード（iframe方式は廃止し、新しいタブで開く方式に統一）
+    // if (externalUrl) { ... }
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans pb-20">
