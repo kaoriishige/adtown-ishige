@@ -323,7 +323,7 @@ const PremiumLandingPage: NextPage<LPProps> = ({ uid }) => {
                     <div className="space-y-6">
                         <ExampleCard title="ママ友にアプリを教える" tag="無料登録" description="無料から有料課金へ移行した利用料の20%があなたに" />
                         <ExampleCard title="知り合いのお店に教える" tag="有料広告掲載（AIマッチングシステム）" description="有料広告費の20%があなたに" />
-                        <ExampleCard title="近所の会社に求人広告を教える" tag="無料掲載から有料掲載（AIマッチングシステム）へ" description="有料求人広告費の20%があなたに" />
+                        <ExampleCard title="近所の会社に求人広告を教える" tag="有料広告掲載（AIマッチングシステム）へ" description="有料求人広告費の20%があなたに" />
                     </div>
 
                     <div className="mt-10 text-center bg-pink-50 p-6 rounded-[2rem] border border-pink-100">

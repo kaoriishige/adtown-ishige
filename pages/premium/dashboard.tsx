@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { doc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, orderBy, getDoc, Timestamp } from 'firebase/firestore';
 import { NextPage, GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Image from 'next/image';
@@ -28,7 +28,7 @@ declare const __app_id: string;
 const appId = process.env.NEXT_PUBLIC_APP_ID || (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
 
 const PREMIUM_APPS = [
-    { title: "紹介プログラム", href: "/premium/referral", Icon: RiIcons.RiGiftFill, color: "from-amber-400 to-orange-600" },
+    { title: "アプリ紹介プログラム", href: "/premium/referral", Icon: RiIcons.RiGiftFill, color: "from-amber-400 to-orange-600" },
     { title: "スキル交換", href: "/premium/skill", Icon: RiIcons.RiExchangeFundsLine, color: "from-blue-700 to-indigo-950" },
     { title: "あき畑情報", href: "/premium/akihata", Icon: RiIcons.RiLeafLine, color: "from-emerald-700 to-emerald-900" },
     { title: "あき家情報", href: "/premium/akiya", Icon: RiIcons.RiHome4Line, color: "from-slate-700 to-slate-900" },
@@ -42,9 +42,11 @@ const PREMIUM_APPS = [
 ];
 
 const FREE_APPS = [
+    { title: "かんたん家計簿", href: "/apps/SimpleKakeibo", Icon: LucideIcons.Wallet, category: "節約" },
     { title: "スーパー特売&AI献立", href: "/nasu/kondate", Icon: LucideIcons.Utensils, category: "節約" },
     { title: "ドラッグストア特売ナビ", href: "/nasu", Icon: LucideIcons.Store, category: "節約" },
     { title: "最安ガソリンナビ", href: "/apps/AIGasPriceTracker", Icon: LucideIcons.Fuel, category: "生活" },
+    { title: "まとめ買いお得チェック", href: "/apps/BulkBuyCalc", Icon: LucideIcons.ShoppingCart, category: "節約" },
     { title: "アレどこ", href: "/apps/Aredoko", Icon: LucideIcons.Filter, category: "収納" },
     { title: "断捨離AI", href: "/apps/ClosetSlimmerAI", Icon: LucideIcons.WashingMachine, category: "収納" },
     { title: "生活の裏技", href: "/apps/LifeHacksAI", Icon: LucideIcons.Lightbulb, category: "生活" },
@@ -82,6 +84,9 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
     const [foodLossLoading, setFoodLossLoading] = useState(true);
     const [foodLossError, setFoodLossError] = useState<string | null>(null);
 
+    // 家計簿データ用
+    const [kakeiboStats, setKakeiboStats] = useState({ expense: 0, budget: 0, remaining: 0, savings: 0 });
+
     const handleLogout = async () => {
         try {
             const auth = getAuth(app);
@@ -99,7 +104,7 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
         { name: '救急安心センター', number: '#7119', description: '急な病気やケガで救急車を呼ぶか迷った時', url: 'https://www.fdma.go.jp/publication/portal/post2.html', },
         { name: '那須塩原市の休日当番医', description: '那須塩原市の休日・夜間の急病対応', url: 'https://www.city.nasushiobara.tochigi.jp/soshikikarasagasu/kenkozoshinka/kyukyu_kyumei/1/3340.html', },
         { name: '大田原市の休日当番医', description: '大田原市の休日・夜間の急病対応', url: 'https://www.city.ohtawara.tochigi.jp/docs/2013082771612/', },
-        { name: '那須町役場（防災・緊急）', description: '那須町の防災・防犯・緊急情報トップ', url: 'https://www.town.nasu.lg.jp/index2.html', },
+        { name: '那須町の休日当番医', description: '那須町の休日・夜間の急病対応', url: 'https://www.town.nasu.lg.jp/0130/info-0000003505-1.html', },
         { name: '水道のトラブル (有)クリプトン', number: '090-2463-6638', description: '地元で40年。那須エリアの水道修理・緊急対応', url: 'https://xn--bbkyao7065bpyck41as89d.com/emergency/', },
         { name: '消費者ホットライン', number: '188', description: '商品やサービスのトラブル相談', url: 'https://www.caa.go.jp/policies/policy/local_cooperation/local_consumer_administration/hotline/', },
     ], []);
@@ -141,6 +146,51 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
         });
     }, []);
 
+    // 家計簿データ取得
+    useEffect(() => {
+        if (!user?.uid) return;
+
+        // 1. 予算取得
+        const userDocRef = doc(db, 'artifacts', appId, 'kakeibo_entries', user.uid);
+        const unsubscribeBudget = onSnapshot(userDocRef, (snap) => {
+            const budgetData = snap.data()?.budget || 0;
+            setKakeiboStats(prev => ({ ...prev, budget: budgetData }));
+        });
+
+        // 2. 今月の支出取得
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        
+        const endOfMonth = new Date(startOfMonth);
+        endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+
+        const entriesRef = collection(db, 'artifacts', appId, 'kakeibo_entries', user.uid, 'entries');
+        const q = query(
+            entriesRef,
+            where('date', '>=', Timestamp.fromDate(startOfMonth)),
+            where('date', '<', Timestamp.fromDate(endOfMonth))
+        );
+
+        const unsubscribeEntries = onSnapshot(q, (snapshot) => {
+            const totalExpense = snapshot.docs
+                .map(d => d.data())
+                .filter(d => d.type === 'expense')
+                .reduce((sum, d: any) => sum + (d.amount || 0), 0);
+            
+            setKakeiboStats(prev => {
+                const remaining = prev.budget - totalExpense;
+                const savings = remaining > 0 ? remaining : 0;
+                return { ...prev, expense: totalExpense, remaining, savings };
+            });
+        });
+
+        return () => {
+            unsubscribeBudget();
+            unsubscribeEntries();
+        };
+    }, [user?.uid]);
+
     return (
         <div className="bg-[#FFFDFC] min-h-screen text-[#5D5757] font-sans overflow-x-hidden">
             <Head><title>みんなのNasuアプリ - プレミアム</title></Head>
@@ -169,6 +219,29 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
 
                 <main className="p-6 space-y-10">
 
+                    {/* --- EMERGENCY CONTACT (Organic Soft Button) - Moved to Top --- */}
+                    <section className="px-2">
+                        <button 
+                            onClick={() => setShowEmergencyModal(true)} 
+                            className="w-full bg-white/40 backdrop-blur-md border-[3px] border-white/80 rounded-[3rem] p-6 flex items-center gap-5 group active:scale-[0.98] transition-all shadow-lg shadow-rose-100/20"
+                        >
+                            <div className="w-16 h-16 rounded-[2rem] bg-rose-400 flex items-center justify-center text-white shadow-lg shadow-rose-200 group-active:scale-95 transition-all relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-50" />
+                                <RiIcons.RiAlarmWarningLine size={32} className="animate-pulse relative z-10" />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <h4 className="text-[17px] font-black tracking-tight text-[#5D5757]">緊急連絡先リスト</h4>
+                                <p className="text-[11px] font-bold text-gray-400 mt-0.5 tracking-tight">休日当番医、緊急水漏れなど</p>
+                                <p className="text-[10px] font-bold text-rose-300 mt-0.5 tracking-tight flex items-center gap-1 italic">
+                                    Your 24/7 Support Guide
+                                </p>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-200 border border-white">
+                                <RiIcons.RiArrowRightSLine size={24} />
+                            </div>
+                        </button>
+                    </section>
+
                     {/* --- 1. REWARD CARD (Soft & Inviting) --- */}
                     <section className="px-2">
                         <div className="bg-gradient-to-br from-[#FFF5F5] to-[#FFF9F0] rounded-[3.5rem] p-8 border-2 border-white shadow-[0_20px_40px_rgba(255,182,193,0.1)] relative overflow-hidden group">
@@ -176,7 +249,7 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
                                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full border border-pink-100 mb-6">
                                     <IoSparklesOutline className="text-rose-400 text-xs" />
                                     <p className="text-rose-400 font-black text-[9px] tracking-widest uppercase">
-                                        マイご褒美実績
+                                        アプリ紹介報酬
                                     </p>
                                 </div>
                                 
@@ -207,69 +280,45 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
                         </div>
                     </section>
 
-                    {/* --- EMERGENCY CONTACT (Organic Soft Button) --- */}
-                    <section className="px-2">
-                        <button 
-                            onClick={() => setShowEmergencyModal(true)} 
-                            className="w-full bg-white/40 backdrop-blur-md border-[3px] border-white/80 rounded-[3rem] p-6 flex items-center gap-5 group active:scale-[0.98] transition-all shadow-lg shadow-rose-100/20"
-                        >
-                            <div className="w-16 h-16 rounded-[2rem] bg-rose-400 flex items-center justify-center text-white shadow-lg shadow-rose-200 group-active:scale-95 transition-all relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-50" />
-                                <RiIcons.RiAlarmWarningLine size={32} className="animate-pulse relative z-10" />
-                            </div>
-                            <div className="flex-1 text-left">
-                                <h4 className="text-[17px] font-black tracking-tight text-[#5D5757]">緊急連絡先リスト</h4>
-                                <p className="text-[10px] font-bold text-rose-300 mt-0.5 tracking-tight flex items-center gap-1 italic">
-                                    Your 24/7 Support Guide
+                    {/* 家計簿サマリーカード */}
+                    <section className="px-2 mt-6">
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-[3.5rem] p-8 border-2 border-white shadow-lg">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/60 backdrop-blur-sm rounded-full border border-green-100 mb-4">
+                                <LucideIcons.Wallet className="text-green-500 text-xs" />
+                                <p className="text-green-500 font-black text-[9px] tracking-widest uppercase">
+                                    今月の家計
                                 </p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-200 border border-white">
-                                <RiIcons.RiArrowRightSLine size={24} />
-                            </div>
-                        </button>
-                    </section>
-
-                    {/* --- 2. MATCHING (Lifestyle Cards) --- */}
-                    <section className="grid grid-cols-2 gap-4 px-2">
-                        <div className="p-7 rounded-[3rem] bg-white border-2 border-white shadow-[0_15px_30px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:bg-[#FFFDFC] transition-colors">
-                            <div className="w-11 h-11 rounded-2xl bg-[#FFF5F5] flex items-center justify-center text-rose-300 mb-5 border border-rose-50">
-                                <LucideIcons.Briefcase size={22} />
-                            </div>
-                            <p className="text-[16px] font-black tracking-tighter text-[#5D5757] mb-0.5">お仕事探し</p>
-                            <p className="text-[9px] font-black text-rose-200 uppercase tracking-widest mb-4">Rescue Jobs</p>
-                            <div className="bg-rose-50/30 rounded-2xl p-3 border border-rose-50/50">
-                                <p className="text-[9px] font-bold text-rose-300 leading-tight italic">Coming Soon...</p>
-                            </div>
-                        </div>
-                        <div className="p-7 rounded-[3rem] bg-white border-2 border-white shadow-[0_15px_30px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:bg-[#FFFDFC] transition-colors">
-                            <div className="w-11 h-11 rounded-2xl bg-[#FFF9F0] flex items-center justify-center text-amber-300 mb-5 border border-amber-50">
-                                <LucideIcons.Store size={22} />
-                            </div>
-                            <p className="text-[16px] font-black tracking-tighter text-[#5D5757] mb-0.5">お店探し</p>
-                            <p className="text-[9px] font-black text-amber-200 uppercase tracking-widest mb-4">Cute Stores</p>
-                            <div className="bg-amber-50/30 rounded-2xl p-3 border border-amber-50/50">
-                                <p className="text-[9px] font-bold text-amber-300 leading-tight italic">Waiting for you...</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* --- 3. PREMIUM LIBRARY (11個) --- */}
-                    <section>
-                        <div className="flex justify-between items-center mb-5 px-2">
-                            <h3 className="text-[11px] font-black text-gray-400 tracking-widest uppercase">有料アプリ</h3>
-                            {!isPaid && <span className="text-[9px] bg-rose-50 text-rose-400 px-2 py-0.5 rounded-full font-bold">会員限定解除中</span>}
-                        </div>
-                        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 snap-x px-1">
-                            {PREMIUM_APPS.map((app, i) => (
-                                <div key={i} onClick={() => isPaid ? router.push(app.href) : router.push('/premium')} className="snap-center shrink-0 w-20 text-center group">
-                                    <div className={`w-20 h-20 rounded-[2.2rem] flex items-center justify-center mb-2 transition-all shadow-sm border ${isPaid ? 'bg-white border-rose-100 text-rose-400 group-active:scale-90' : 'bg-gray-50 text-gray-300'}`}>
-                                        {isPaid ? <app.Icon size={26} /> : <RiIcons.RiLockFill size={22} />}
-                                    </div>
-                                    <p className="text-[9px] font-bold text-gray-500 tracking-tighter leading-tight break-keep px-1">{app.title}</p>
+                            
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 text-center">
+                                    <p className="text-[11px] font-black text-green-400 mb-1">支出</p>
+                                    <p className="text-[18px] font-black text-[#5D5757]">¥{kakeiboStats.expense.toLocaleString()}</p>
                                 </div>
-                            ))}
-                        </div>
+                                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 text-center">
+                                    <p className="text-[11px] font-black text-blue-400 mb-1">予算残</p>
+                                    <p className={`text-[18px] font-black ${kakeiboStats.remaining < 0 ? 'text-red-400' : 'text-[#5D5757]'}`}>
+                                        ¥{kakeiboStats.remaining.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 text-center">
+                                    <p className="text-[11px] font-black text-orange-400 mb-1">節約</p>
+                                    <p className="text-[18px] font-black text-[#5D5757]">¥{kakeiboStats.savings.toLocaleString()}</p>
+                                </div>
+                            </div>
 
+                            <button 
+                                onClick={() => router.push('/apps/SimpleKakeibo')}
+                                className="w-full mt-6 py-4 bg-white text-green-500 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+                            >
+                                家計簿を開く
+                                <RiIcons.RiArrowRightSLine size={18} />
+                            </button>
+                        </div>
+                    </section>
+
+                    {/* --- 3. PREMIUM CONTENT SECTION (Restructured) --- */}
+                    <section>
                         {/* --- FOOD LOSS FEED (Magazine Style) --- */}
                         <div className="mt-12 px-2">
                             <div className="flex justify-between items-end mb-8 px-2">
@@ -370,14 +419,44 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
                             )}
                         </div>
 
+                        {/* --- 2. MATCHING (Lifestyle Cards) - Moved below Food Loss --- */}
+                        <div className="grid grid-cols-2 gap-4 px-2 mt-8">
+                            <div className="p-7 rounded-[3rem] bg-white border-2 border-white shadow-[0_15px_30px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:bg-[#FFFDFC] transition-colors">
+                                <div className="w-11 h-11 rounded-2xl bg-[#FFF5F5] flex items-center justify-center text-rose-300 mb-5 border border-rose-50">
+                                    <LucideIcons.Briefcase size={22} />
+                                </div>
+                                <p className="text-[16px] font-black tracking-tighter text-[#5D5757] mb-0.5">お仕事探し</p>
+                                <p className="text-[10px] font-bold text-rose-400 mb-0.5">只今準備中</p>
+                                <p className="text-[9px] font-black text-rose-200 uppercase tracking-widest mb-4">Rescue Jobs</p>
+                                <div className="bg-rose-50/30 rounded-2xl p-3 border border-rose-50/50">
+                                    <p className="text-[9px] font-bold text-rose-300 leading-tight italic">Coming Soon...</p>
+                                </div>
+                            </div>
+                            <div className="p-7 rounded-[3rem] bg-white border-2 border-white shadow-[0_15px_30px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:bg-[#FFFDFC] transition-colors">
+                                <div className="w-11 h-11 rounded-2xl bg-[#FFF9F0] flex items-center justify-center text-amber-300 mb-5 border border-amber-50">
+                                    <LucideIcons.Store size={22} />
+                                </div>
+                                <p className="text-[16px] font-black tracking-tighter text-[#5D5757] mb-0.5">お店探し</p>
+                                <p className="text-[10px] font-bold text-amber-400 mb-0.5">只今準備中</p>
+                                <p className="text-[9px] font-black text-amber-200 uppercase tracking-widest mb-4">Cute Stores</p>
+                                <div className="bg-amber-50/30 rounded-2xl p-3 border border-amber-50/50">
+                                    <p className="text-[9px] font-bold text-amber-300 leading-tight italic">Waiting for you...</p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* --- PREMIUM UPSELL (Always visible for testing/promotion) --- */}
                         <div className="mt-8 px-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <div className="bg-pink-50 rounded-[2rem] p-5 border border-pink-100 space-y-4 shadow-sm">
                                 <div className="space-y-1 text-center">
                                     <h4 className="text-sm font-black text-pink-600">プレミアムプラン月額480円</h4>
                                     <p className="text-[10px] font-bold text-pink-400 leading-relaxed">
-                                        合わなければ、いつでも解約できます。<br />
-                                        まずは1ヶ月だけ試してみてください。
+                                        例えば…<br />
+                                        近所の会社に求人広告を教える<br />
+                                        ↓<br />
+                                        無料掲載から有料掲載（AIマッチングシステム）へ<br />
+                                        ↓<br />
+                                        無料掲載を削除
                                     </p>
                                 </div>
                                 <button
@@ -389,12 +468,30 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
                                 </button>
                             </div>
                         </div>
+
+                        {/* --- PAID APPS LIST - Moved below Premium Upsell --- */}
+                        <div className="mt-8">
+                             <div className="flex justify-between items-center mb-5 px-2">
+                                <h3 className="text-[11px] font-black text-gray-400 tracking-widest uppercase">有料アプリ</h3>
+                                {!isPaid && <span className="text-[9px] bg-rose-50 text-rose-400 px-2 py-0.5 rounded-full font-bold">会員限定解除中</span>}
+                            </div>
+                            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 snap-x px-1">
+                                {PREMIUM_APPS.map((app, i) => (
+                                    <div key={i} onClick={() => isPaid ? router.push(app.href) : router.push('/premium')} className="snap-center shrink-0 w-20 text-center group">
+                                        <div className={`w-20 h-20 rounded-[2.2rem] flex items-center justify-center mb-2 transition-all shadow-sm border ${isPaid ? 'bg-white border-rose-100 text-rose-400 group-active:scale-90' : 'bg-gray-50 text-gray-300'}`}>
+                                            {isPaid ? <app.Icon size={26} /> : <RiIcons.RiLockFill size={22} />}
+                                        </div>
+                                        <p className="text-[9px] font-bold text-gray-500 tracking-tighter leading-tight break-keep px-1">{app.title}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </section>
 
                     {/* --- FREE TOOLS (Soft List Design) --- */}
                     <section className="space-y-6 px-3">
                         <div className="flex items-center gap-3 px-2">
-                            <h3 className="text-[11px] font-black text-rose-300 tracking-[0.3em] uppercase italic">Free Lifestyle Tools</h3>
+                            <h3 className="text-[11px] font-black text-rose-300 tracking-[0.3em] uppercase italic">無料プラン</h3>
                         </div>
                         <div className="grid gap-5">
                             {FREE_APPS.map((app, i) => (
