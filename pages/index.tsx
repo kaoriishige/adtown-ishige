@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link'; // <-- 【重要】Linkコンポーネントをインポートしました
 import {
     ShieldCheck, HeartPulse, ShoppingCart, Briefcase, Ticket, Lightbulb, Users, Building2, Rocket, Star, Coins, Sparkles, Smile, Clock, Zap, Gift, Crown, Infinity, HeartHandshake,
-    Store, Brain, Utensils, Droplet, Gamepad, User, Shield, TrendingUp, ArrowLeft, Target, Shirt, Mail, Sun, WashingMachine, Home, LayoutGrid, Award, Filter, Fuel, Heart
+    Store, Brain, Utensils, Droplet, Gamepad, User, Shield, TrendingUp, ArrowLeft, Target, Shirt, Mail, Sun, WashingMachine, Home, LayoutGrid, Award, Filter, Fuel, Heart, Wallet, ShoppingBag
 } from 'lucide-react';
 import {
     RiBankCardFill, RiShieldCheckFill, RiHistoryFill, RiShoppingBagFill, RiAddCircleFill, RiSettings4Fill, RiLogoutBoxRLine, RiPlantFill, RiFlashlightFill, RiHandHeartFill, RiExchangeBoxFill, RiArrowRightSLine, RiGiftFill, RiHeartFill, RiLightbulbFlashLine, RiHome4Line, RiLeafLine, RiExchangeFundsLine
@@ -24,6 +24,9 @@ interface AppItem {
 }
 
 const FREE_APP_LIST: AppItem[] = [
+    { title: "フードロス格安商品速報", category: '節約・特売', description: '賞味期限間近の商品を最大90%OFFでレスキュー！', href: '/premium', Icon: ShoppingBag, disabled: false },
+    { title: "まとめ買いお得チェック", category: '節約・特売', description: '「どっちがお得？」を即座に計算。まとめ買いの適正量も判定', href: '/apps/BulkBuyCalc', Icon: ShoppingCart, disabled: false },
+    { title: "かんたん家計簿", category: '節約・特売', description: '予算と支出をシンプル管理。残金がひと目でわかる', href: '/apps/SimpleKakeibo', Icon: Wallet, disabled: false },
     { title: "最安ガソリン＆価格投稿", category: '生活情報', description: '地域の最安ガソリン価格ランキングと価格投稿', href: '/apps/AIGasPriceTracker', Icon: Fuel, disabled: false },
     { title: "アレどこ (Aredoko)", category: '収納・片付け', description: 'たまにしか使わない大事なモノの「しまった場所」を記録・検索', href: '/apps/Aredoko', Icon: Filter, disabled: false },
     { title: "AIクローゼットスリム化診断", category: '収納・片付け', description: '衣類の断捨離をAIが質問でサポートし、意思決定を支援', href: '/apps/ClosetSlimmerAI', Icon: WashingMachine, disabled: false },
@@ -35,7 +38,7 @@ const FREE_APP_LIST: AppItem[] = [
     { title: "子育て支援情報ナビ", category: '子育て', description: '各市町の子育て・教育情報リンク集', href: '/apps/ParentingInfo', Icon: User, disabled: false },
     { title: "賢人の子育て指針 Wisdom Guide", category: '子育て', description: 'AIと著名人の知恵の言葉から、子育ての羅針盤を見つける', href: '/apps/WisdomGuide', Icon: Award, disabled: false },
     { title: "スーパー特売チラシ＆AI献立ナビ", category: '節約・特売', description: '地域のチラシ確認とプロの節約レシピを提案', href: '/nasu/kondate', Icon: Utensils, disabled: false },
-    { title: "ドラッグストアチラシ", category: '節約・特売', description: 'ドラッグストアの特売情報', href: '/nasu', Icon: Store, disabled: false },
+    { title: "ドラッグストア特売チラシ", category: '節約・特売', description: 'ドラッグストアの特売情報', href: '/nasu', Icon: Store, disabled: false },
     { title: "直感！脳力診断", category: 'エンタメ', description: '心理テストと脳トレ雑学で頭を活性化', href: '/apps/BrainTest', Icon: Brain, disabled: false },
     { title: "那須地区マスターズクイズ", category: 'エンタメ', description: '那須地域の歴史・観光クイズに挑戦', href: '/apps/QuizGame', Icon: Gamepad, disabled: false },
     { title: "地域防災情報ナビ", category: '防災・安全', description: '各市町の防災情報・ハザードマップリンク集', href: '/apps/DisasterInfo', Icon: Shield, disabled: false },

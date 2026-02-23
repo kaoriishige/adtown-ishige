@@ -22,53 +22,60 @@ import { useAffiliateTracker } from '@/lib/affiliate-tracker';
 
 // --- UI部品 ---
 const Pill = ({ children }: { children: React.ReactNode }) => (
-  <span className="inline-flex items-center px-6 py-3 rounded-full bg-white/10 border border-white/15 text-white font-black text-xs md:text-sm tracking-[0.22em] uppercase">
+  <span className="inline-flex items-center px-6 py-2.5 rounded-full bg-white/8 border border-white/20 text-white/90 font-semibold text-xs tracking-[0.18em] uppercase backdrop-blur-sm">
     {children}
   </span>
 );
 
 const FeatureCard = ({ icon, title, desc }: { icon: string; title: string; desc: string }) => (
-  <div className="bg-white rounded-[2.5rem] p-10 md:p-12 shadow-2xl border border-slate-100 hover:-translate-y-2 transition-all duration-500 group">
-    <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">{icon}</div>
-    <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">{title}</h3>
-    <p className="mt-5 text-slate-600 font-bold leading-relaxed text-lg">{desc}</p>
+  <div className="relative bg-white rounded-3xl p-8 md:p-10 shadow-lg border border-slate-100/80 hover:-translate-y-2 hover:shadow-2xl transition-all duration-500 group overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-br from-orange-50/0 to-orange-50/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
+    <div className="relative z-10">
+      <div className="w-16 h-16 flex items-center justify-center bg-orange-50 rounded-2xl text-3xl mb-6 group-hover:scale-110 group-hover:bg-orange-100 transition-all duration-300">{icon}</div>
+      <h3 className="text-xl font-bold text-slate-900 tracking-tight mb-3">{title}</h3>
+      <p className="text-slate-500 leading-relaxed text-sm">{desc}</p>
+    </div>
   </div>
 );
 
 const TroubleCard = ({ title, points, cause }: { title: string; points: string[]; cause: string }) => (
-  <div className="bg-white/5 rounded-[2.5rem] p-10 border border-white/10 hover:border-orange-500/50 transition-all group shadow-2xl">
-    <div className="flex items-center space-x-4 mb-6">
-      <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 font-black text-3xl group-hover:scale-110 transition-transform">
-        !
-      </div>
-      <h4 className="text-2xl font-black text-white">{title}</h4>
+  <div className="bg-white/[0.04] rounded-3xl p-8 border border-white/10 hover:border-red-500/30 hover:bg-white/[0.07] transition-all duration-300 group">
+    <div className="flex items-center gap-3 mb-5">
+      <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">!</div>
+      <h4 className="text-lg font-bold text-white">{title}</h4>
     </div>
-    <ul className="space-y-4 mb-8">
+    <ul className="space-y-2.5 mb-6">
       {points.map((d, i) => (
-        <li key={i} className="text-slate-300 flex items-start text-lg font-bold leading-relaxed">
-          <span className="mr-2 text-red-400 font-black">•</span>
+        <li key={i} className="text-slate-400 flex items-start text-sm leading-relaxed">
+          <span className="mr-2 text-red-500 mt-0.5 flex-shrink-0">▸</span>
           {d}
         </li>
       ))}
     </ul>
-    <div className="bg-red-500/10 p-6 rounded-2xl border-l-4 border-red-500 transform group-hover:translate-x-2 transition-transform">
-      <p className="text-sm font-black text-red-300 uppercase tracking-widest mb-2">👉 根本原因</p>
-      <p className="text-xl font-black text-white leading-relaxed">{cause}</p>
+    <div className="bg-red-500/10 p-5 rounded-2xl border-l-2 border-red-500/60">
+      <p className="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1.5">根本原因</p>
+      <p className="text-sm font-medium text-white/80 leading-relaxed">{cause}</p>
     </div>
   </div>
 );
 
 const Faq = ({ q, a }: { q: string; a: string }) => (
-  <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-lg hover:shadow-2xl transition-shadow">
-    <p className="font-black text-slate-900 text-lg">Q. {q}</p>
-    <p className="mt-3 text-slate-600 font-bold leading-relaxed">A. {a}</p>
+  <div className="group bg-white rounded-2xl border border-slate-100 p-7 hover:border-orange-200 hover:shadow-md transition-all duration-300">
+    <div className="flex gap-3 items-start">
+      <span className="flex-shrink-0 w-7 h-7 bg-orange-500 text-white rounded-lg flex items-center justify-center text-xs font-bold mt-0.5">Q</span>
+      <p className="font-bold text-slate-900">{q}</p>
+    </div>
+    <div className="flex gap-3 items-start mt-4">
+      <span className="flex-shrink-0 w-7 h-7 bg-slate-100 text-slate-500 rounded-lg flex items-center justify-center text-xs font-bold mt-0.5">A</span>
+      <p className="text-slate-500 leading-relaxed text-sm">{a}</p>
+    </div>
   </div>
 );
 
 const StatCard = ({ number, label }: { number: string; label: string }) => (
-  <div className="text-center group">
-    <p className="text-5xl md:text-7xl font-black text-orange-400 group-hover:scale-110 transition-transform">{number}</p>
-    <p className="mt-3 text-white/80 font-bold text-lg">{label}</p>
+  <div className="text-center group py-2">
+    <p className="text-4xl md:text-6xl font-black bg-gradient-to-br from-orange-300 to-amber-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform inline-block">{number}</p>
+    <p className="mt-2 text-white/60 text-sm font-medium tracking-wide">{label}</p>
   </div>
 );
 
@@ -201,231 +208,166 @@ export default function PartnerSignupLP() {
         </title>
         <meta
           name="description"
-          content="株式会社adtown 創業20周年記念事業。20年間で1000社+の集客を支援してきた実績を、アプリ×AIに集約。那須地域限定で地元ユーザーと店舗をマッチング。通常8,800円→先行100社 5,500円（税込）。紹介報酬30%還元。"
+          content="株式会社adtown 20周年記念事業。20年間で1000社+の集客を支援してきた実績を、アプリ×AIに集約。那須地域限定で地元ユーザーと店舗をマッチング。通常8,800円→先行100社 5,500円（税込）。紹介報酬30%還元。"
         />
       </Head>
 
       {/* Sticky Bar */}
-      <div className="bg-slate-950 text-white py-4 text-center text-xs md:text-sm font-black tracking-[0.22em] uppercase sticky top-0 z-[100] shadow-2xl backdrop-blur-md bg-opacity-90">
-        那須地域限定「みんなのNasuアプリ」
-        <span className="ml-3 text-orange-300">先行{PRICE.limitCompanies}社：月額¥{PRICE.campaign.toLocaleString()}（{PRICE.taxLabel}）</span>
+      <div className="bg-black/95 backdrop-blur-xl text-white py-3 text-center text-xs font-medium tracking-[0.18em] uppercase sticky top-0 z-[100] border-b border-white/10">
+        <span className="text-white/50">那須地域限定</span>
+        <span className="mx-3 text-white/20">|</span>
+        <span className="text-amber-400 font-semibold">みんなのNasuアプリ</span>
+        <span className="mx-3 text-white/20">|</span>
+        <span className="text-white/70">先行{PRICE.limitCompanies}社限定 ¥{PRICE.campaign.toLocaleString()}/{PRICE.taxLabel}</span>
+        <span className="ml-3 inline-flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full animate-pulse">残{PRICE.remaining}枠</span>
       </div>
 
       {/* ============================================
           HERO：20周年実績 + 信頼性を最初に
           ============================================ */}
-      <section className="relative min-h-screen flex items-center bg-gradient-to-br from-white via-orange-50/30 to-white overflow-hidden border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-20 text-center relative z-10">
+      <section className="relative min-h-screen flex items-center bg-[#0a0a0a] overflow-hidden border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-24 text-center relative z-10">
 
-          {/* 🎉 20周年記念バッジ */}
-          <div className="mb-10 animate-fade-in">
-            <div className="inline-flex flex-col items-center gap-4 bg-gradient-to-br from-orange-600 to-orange-500 text-white px-12 py-8 rounded-[3rem] border-4 border-orange-400 shadow-2xl transform hover:scale-105 transition-all">
-              <div className="flex items-center gap-3">
-                <span className="text-5xl">🎉</span>
+          {/* 20周年記念バッジ */}
+          <div className="mb-12">
+            <div className="inline-flex flex-col items-center gap-3 px-10 py-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 backdrop-blur-sm">
+              <div className="flex items-center gap-4">
                 <div className="text-left">
-                  <p className="text-2xl md:text-4xl font-black tracking-tight leading-none">株式会社adtown</p>
-                  <p className="text-3xl md:text-5xl font-black tracking-tighter italic mt-1">創業20周年記念事業</p>
+                  <p className="text-sm font-medium tracking-[0.25em] text-amber-400/80 uppercase mb-1">株式会社adtown</p>
+                  <p className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-none">創業<span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">20周年</span>記念事業</p>
                 </div>
-                <span className="text-5xl">🎉</span>
               </div>
-              <div className="bg-white/20 px-6 py-2 rounded-full">
-                <p className="text-sm md:text-base font-black tracking-[0.2em] uppercase">
-                  2006-2026 | 20 Years of Innovation
-                </p>
-              </div>
+              <p className="text-xs text-white/30 tracking-[0.3em] uppercase">2006–2026 · 20 Years of Innovation</p>
             </div>
           </div>
 
-          {/* 🔥 adtown社の実績数字（NEW） */}
-          <div className="mt-10 max-w-5xl mx-auto bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 border border-slate-800 shadow-2xl">
-            <div className="grid md:grid-cols-3 gap-8">
+          {/* adtown社の実績数字 */}
+          <div className="mt-8 max-w-4xl mx-auto rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm divide-x divide-white/10 flex flex-col md:flex-row">
+            <div className="flex-1 px-8 py-8">
               <StatCard number="20年" label="地域広告の実績" />
+            </div>
+            <div className="flex-1 px-8 py-8 border-t md:border-t-0 border-white/10">
               <StatCard number="1000社+" label="累計クライアント" />
+            </div>
+            <div className="flex-1 px-8 py-8 border-t md:border-t-0 border-white/10">
               <StatCard number="1億部" label="情報誌発行部数" />
             </div>
-
-            <div className="mt-8 bg-orange-600/10 border border-orange-500/30 rounded-2xl p-6">
-              <p className="text-lg md:text-xl font-black text-orange-300 leading-relaxed">
-                📰 紙媒体・WEB・YouTubeで那須地域の集客を20年支援してきた
-                <span className="text-white"> 株式会社adtown</span>が、
-                <br />
-                その知見を集約した<span className="text-white underline decoration-orange-400">「アプリ × AI」</span>の新サービスです。
-              </p>
-            </div>
           </div>
 
-          {/* 信用バッジ */}
-          <div className="flex flex-col items-center gap-4 mt-12 mb-12">
-            <div className="inline-flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-full border border-slate-800 shadow-xl">
-              <span className="text-orange-400 font-black tracking-[0.25em] uppercase text-xs md:text-sm">
-                nasu regional ai platform
-              </span>
-            </div>
-
-            <p className="text-slate-700 font-black text-base md:text-lg italic max-w-4xl">
-              「那須地域限定」のアプリを開発し、地元のアプリユーザーと店舗を
-              <span className="text-slate-900 underline decoration-orange-300 underline-offset-8">AIで集客マッチング</span>します。
+          <div className="mt-6 max-w-2xl mx-auto">
+            <p className="text-white/40 text-sm leading-relaxed">
+              紙媒体・WEB・YouTubeで那須地域の集客を20年支援してきた株式会社adtownが、その知見を集約した「アプリ × AI」の新サービスです。
             </p>
+          </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <span className="bg-orange-50 text-orange-700 px-6 py-3 rounded-full border border-orange-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                先行{PRICE.limitCompanies}社（申込順）
-              </span>
-              <span className="bg-slate-50 text-slate-700 px-6 py-3 rounded-full border border-slate-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                ワンプランのみ
-              </span>
-              <span className="bg-slate-50 text-slate-700 px-6 py-3 rounded-full border border-slate-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                初期費用 0円
-              </span>
-            </div>
+
+          {/* バッジ・キャッチコピー */}
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
+            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-5 py-2 rounded-full text-xs font-medium tracking-[0.18em] uppercase">
+              先行{PRICE.limitCompanies}社（申込順）
+            </span>
+            <span className="bg-white/5 text-white/50 border border-white/10 px-5 py-2 rounded-full text-xs font-medium tracking-[0.18em] uppercase">
+              ワンプランのみ
+            </span>
+            <span className="bg-white/5 text-white/50 border border-white/10 px-5 py-2 rounded-full text-xs font-medium tracking-[0.18em] uppercase">
+              初期費用 0円
+            </span>
           </div>
 
           {/* キャッチコピー */}
-          <h1 className="text-5xl md:text-7xl lg:text-[9rem] font-black leading-[0.9] tracking-tighter italic mt-8">
+          <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-black leading-[1] tracking-tighter mt-10 text-white">
             集客を、<br />
-            <span className="text-orange-600">"自動で増える状態"</span>へ。
+            <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-orange-600 bg-clip-text text-transparent">&quot;自動で増える状態&quot;</span>へ。
           </h1>
 
-          <p className="mt-8 text-xl md:text-3xl text-slate-600 font-black max-w-5xl mx-auto leading-tight">
-            紙・WEB・動画で培った<span className="text-orange-600 italic">"地域集客のノウハウ"</span>を、
-            <br />
-            AIアプリに集約しました。
+          <p className="mt-6 text-base md:text-lg text-white/40 max-w-xl mx-auto leading-relaxed font-medium">
+            紙・WEB・動画で培った「地域集客のノウハウ」を、AIアプリに集約しました。
           </p>
 
           {/* アプリ登録状況 */}
-          <div className="mt-12 max-w-5xl mx-auto bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-[3rem] p-8 md:p-12 border-2 border-orange-200 shadow-xl">
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight mb-6">
-              📱 みんなのNasuアプリ 登録者急増中！
-            </h3>
-            <div className="space-y-4 text-left text-slate-700 font-bold leading-relaxed text-base md:text-lg">
-              <p>
-                ✅ <span className="font-black text-orange-600">すでに先行1,000人が登録済み</span>
-              </p>
-              <p>
-                ✅ 現在、那須地域に発信している<span className="font-black text-orange-600">総フォロワー約10万人のインフルエンサー</span>が、みんなのNasuアプリへの登録を積極的に情報発信中！
-              </p>
-              <p>
-                ✅ 今後、<span className="font-black text-orange-600">5,000人、10,000人と登録者の急増が見込まれています</span>。早期参加で先行者メリットを最大化できます。
-              </p>
-            </div>
-
-            <div className="mt-8">
-              <a
-                href="https://minna-no-nasu-app.netlify.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block bg-orange-600 hover:bg-orange-700 text-white text-lg md:text-xl font-black px-10 py-5 rounded-[2rem] shadow-[0_20px_50px_rgba(234,88,12,0.35)] transition transform hover:scale-105 active:scale-95"
-              >
-                みんなのNasuアプリに登録する →
-              </a>
-            </div>
+          <div className="mt-12 max-w-2xl mx-auto rounded-2xl border border-white/10 bg-white/[0.03] p-7 text-left">
+            <p className="text-xs font-semibold text-amber-400 tracking-[0.2em] uppercase mb-4">📱 登録者急増中</p>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3 text-sm text-white/60">
+                <span className="text-amber-400 mt-0.5 flex-shrink-0">✓</span>
+                <span><span className="text-white font-semibold">先行1,000人登録済み</span></span>
+              </li>
+              <li className="flex items-start gap-3 text-sm text-white/60">
+                <span className="text-amber-400 mt-0.5 flex-shrink-0">✓</span>
+                <span>那須地域へ発信する<span className="text-white font-semibold">総フォロワー約10万人のインフルエンサー</span>が登録を情報発信中</span>
+              </li>
+              <li className="flex items-start gap-3 text-sm text-white/60">
+                <span className="text-amber-400 mt-0.5 flex-shrink-0">✓</span>
+                <span>今後<span className="text-white font-semibold">5,000人・10,000人への急増の見込みあり</span></span>
+              </li>
+            </ul>
+            <a
+              href="https://minna-no-nasu-app.netlify.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              アプリを見る →
+            </a>
           </div>
 
-          {/* 💰 紹介報酬制度 */}
-          <div className="mt-12 max-w-5xl mx-auto bg-gradient-to-br from-indigo-50 to-indigo-100/50 rounded-[3rem] p-8 md:p-12 border-2 border-indigo-200 shadow-xl">
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight mb-6">
-              💰 紹介報酬制度で広告費を利益に変える
-            </h3>
-            <div className="space-y-4 text-left text-slate-700 font-bold leading-relaxed text-base md:text-lg">
-              <p>
-                ✅ <span className="font-black text-indigo-600">お客様がアプリ有料プランに登録すると、継続売上の30%を毎月還元</span>
-              </p>
-              <p>
-                ✅ テーブルにQRコードを置くだけで、<span className="font-black text-indigo-600">来店客が登録するたびに継続収益が発生</span>
-              </p>
-              <p>
-                ✅ 100名紹介で月額<span className="font-black text-indigo-600">約14,400円の収入</span>。広告費を実質無料にできます。
-              </p>
-            </div>
-            <div className="mt-6 bg-white rounded-2xl p-6 border border-indigo-100">
-              <p className="text-sm text-slate-600 font-bold italic">
-                ※報酬は月末締め翌月15日払い。詳細は利用規約「第2条（紹介報酬の支払い）」をご確認ください。
-              </p>
-            </div>
+          {/* 紹介報酬制度 */}
+          <div className="mt-6 max-w-2xl mx-auto rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-7 text-left">
+            <p className="text-xs font-semibold text-indigo-400 tracking-[0.2em] uppercase mb-4">💰 紹介報酬制度</p>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3 text-sm text-white/60">
+                <span className="text-indigo-400 mt-0.5 flex-shrink-0">✓</span>
+                <span>お客様が有料プランに登録すると<span className="text-white font-semibold">継続売上の30%を毎月還元</span></span>
+              </li>
+              <li className="flex items-start gap-3 text-sm text-white/60">
+                <span className="text-indigo-400 mt-0.5 flex-shrink-0">✓</span>
+                <span>QRコードを置くだけで<span className="text-white font-semibold">来店客が登録するたびに継続収益が発生</span></span>
+              </li>
+              <li className="flex items-start gap-3 text-sm text-white/60">
+                <span className="text-indigo-400 mt-0.5 flex-shrink-0">✓</span>
+                <span>100名紹介で月額<span className="text-white font-semibold">約14,400円の収入</span>。広告費を実質無料にできます。</span>
+              </li>
+            </ul>
           </div>
 
-          {/* 価格ブロック（アンカリング + 無料なしの理由） */}
-          <div className="mt-12 max-w-4xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 md:p-12 shadow-2xl border border-slate-800">
-            <p className="text-orange-300 font-black tracking-[0.3em] uppercase text-sm">limited offer</p>
-            <div className="mt-4 flex flex-col md:flex-row items-center justify-center gap-6">
-              <p className="text-xl md:text-2xl font-black text-white/70 line-through">
-                通常 月額 ¥{PRICE.regular.toLocaleString()}（{PRICE.taxLabel}）
-              </p>
-              <p className="text-5xl md:text-7xl font-black tracking-tighter italic">
-                ¥{PRICE.campaign.toLocaleString()}
-                <span className="text-lg md:text-2xl text-white/70 font-black">（{PRICE.taxLabel}）</span>
-              </p>
-            </div>
-            <p className="mt-4 text-white/80 font-bold">
-              先行{PRICE.limitCompanies}社・申込順（残 {PRICE.remaining} 枠）
-              <span className="block mt-1 text-white/70 text-sm">
-                ※登録完了後、決済（Stripe/請求書）へ進みます。
-              </span>
-            </p>
-
-            {/* 🆕 無料期間なしの理由 */}
-            <div className="mt-10 bg-white/5 border border-white/10 rounded-2xl p-8">
-              <h4 className="text-2xl font-black text-orange-400 mb-4">
-                💬 なぜ「無料お試し期間」がないのか？
-              </h4>
-              <div className="space-y-4 text-white/80 font-bold leading-relaxed">
-                <p>
-                  <span className="text-white font-black">理由①：本気のパートナーと共に成長したい</span><br />
-                  無料期間で"とりあえず登録"ではなく、本気で集客を改善したいオーナー様と、
-                  長期的な関係を築きたいと考えています。
-                </p>
-
-                <p>
-                  <span className="text-white font-black">理由②：20年の実績に基づく自信</span><br />
-                  adtownは20年間、那須で1000社+の集客を支援してきました。
-                  この実績が、サービスの価値を保証します。
-                </p>
-
-                <p>
-                  <span className="text-white font-black">理由③：紹介報酬でリスクヘッジ</span><br />
-                  お客様をアプリに紹介するだけで、<span className="text-orange-400 font-black">継続売上の30%が毎月還元</span>。
-                  広告費を実質0円にすることも可能です。
-                </p>
+          {/* 価格ブロック */}
+          <div className="mt-10 max-w-2xl mx-auto rounded-2xl border border-white/10 bg-white/[0.04] p-8">
+            <p className="text-xs font-semibold text-amber-400/70 tracking-[0.2em] uppercase mb-5">limited offer</p>
+            <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+              <p className="text-base font-medium text-white/30 line-through">月額 ¥{PRICE.regular.toLocaleString()}({PRICE.taxLabel})</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-5xl md:text-6xl font-black tracking-tight text-white">¥{PRICE.campaign.toLocaleString()}</p>
+                <span className="text-sm text-white/40">{PRICE.taxLabel} / 月</span>
               </div>
             </div>
+            <p className="mt-3 text-sm text-white/30 text-center">先行{PRICE.limitCompanies}社 ・ 申込順（残 {PRICE.remaining} 枠）</p>
 
-            {/* 🆕 リスク低減策 */}
-            <div className="mt-6 bg-orange-600/10 border-2 border-orange-500/30 rounded-2xl p-8">
-              <h4 className="text-2xl font-black text-orange-300 mb-4">
-                🛡️ それでも不安な方へ
-              </h4>
-              <div className="space-y-3 text-white/80 font-bold">
-                <p>
-                  ✅ <span className="text-white">いつでも解約OK</span>（管理画面から1クリック）
-                </p>
-                <p>
-                  ✅ <span className="text-white">初月から紹介報酬が発生</span>（QRコードを置くだけ）
-                </p>
-                <p>
-                  ✅ <span className="text-white">LINEサポート完備</span>（運用の疑問に即回答）
-                </p>
-                <p>
-                  ✅ <span className="text-white">先行100社は¥5,500で固定</span>（値上げ後も据え置き）
-                </p>
-              </div>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {[
+                { icon: '✔', text: 'いつでも解約OK' },
+                { icon: '✔', text: '初月から報酬発生' },
+                { icon: '✔', text: 'LINEサポート完備' },
+                { icon: '✔', text: '先行100社は値上げ後も据置き' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-white/50">
+                  <span className="text-amber-400">{item.icon}</span>
+                  {item.text}
+                </div>
+              ))}
             </div>
 
-            <div className="mt-8 flex flex-col items-center gap-6">
-              <button
-                onClick={() => formRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full md:w-auto bg-orange-600 hover:bg-orange-700 text-white text-xl md:text-2xl font-black px-12 py-6 rounded-[2.5rem] shadow-[0_25px_60px_rgba(234,88,12,0.35)] transition transform active:scale-95"
-              >
-                限定価格で申し込む
-              </button>
-              <p className="text-white/60 font-bold text-sm tracking-widest uppercase italic">
-                運営：株式会社adtown（創業20周年記念事業)
-              </p>
-            </div>
+            <button
+              onClick={() => formRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              className="mt-8 w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-lg font-bold py-5 rounded-xl shadow-[0_8px_32px_rgba(234,88,12,0.4)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+            >
+              限定価格で申し込む
+            </button>
+            <p className="mt-3 text-center text-white/20 text-xs">運営：株式会社adtown（創業20周年記念事業）</p>
           </div>
         </div>
 
         {/* 背景装飾 */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] bg-orange-50/40 rounded-full blur-[120px] -z-10"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-amber-600/5 rounded-full blur-[160px] -z-10 pointer-events-none"></div>
       </section>
 
       {/* ============================================
@@ -854,173 +796,166 @@ export default function PartnerSignupLP() {
       {/* ============================================
           SIGNUP FORM
           ============================================ */}
-      <section ref={formRef} id="signup" className="py-28 md:py-36 px-6 bg-slate-900 text-white relative">
-        <div className="max-w-5xl mx-auto relative z-10">
-          <div className="bg-white text-slate-900 rounded-[5rem] shadow-[0_60px_120px_rgba(0,0,0,0.6)] overflow-hidden border-[15px] border-orange-600">
-            <div className="bg-orange-600 p-12 md:p-16 text-center text-white relative">
-              <h3 className="text-4xl md:text-6xl font-black mb-6 italic tracking-tighter uppercase">Join the Program</h3>
-
-              <div className="space-y-4 font-black">
-                <p className="text-2xl md:text-3xl line-through opacity-80 italic">
-                  通常価格 月額 ¥{PRICE.regular.toLocaleString()}（{PRICE.taxLabel}）
-                </p>
-                <div className="bg-white text-orange-600 inline-block px-10 py-4 rounded-full text-2xl md:text-3xl animate-pulse italic shadow-2xl">
-                  先行{PRICE.limitCompanies}社限定（申込順）：残 {PRICE.remaining} 社
-                </div>
-                <p className="text-5xl md:text-7xl pt-4 uppercase tracking-[0.06em] font-black italic">
-                  月額 ¥{PRICE.campaign.toLocaleString()} <span className="text-xl md:text-2xl">（{PRICE.taxLabel}）</span>
-                </p>
-                <p className="text-white/90 font-bold text-sm md:text-base">
-                  ※ワンプランのみ。登録後に決済（Stripe/請求書）へ進みます。
-                </p>
-              </div>
+      <section ref={formRef} id="signup" className="py-20 md:py-28 px-6 bg-[#0a0a0a] text-white relative border-t border-white/5">
+        <div className="max-w-2xl mx-auto relative z-10">
+          {/* ヘッダー */}
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-amber-400 tracking-[0.25em] uppercase mb-3">join the program</p>
+            <h3 className="text-3xl md:text-4xl font-bold text-white tracking-tight">パートナー登録</h3>
+            <div className="mt-4 inline-flex items-baseline gap-3 bg-white/[0.04] border border-white/10 px-8 py-4 rounded-xl">
+              <span className="text-white/30 text-sm line-through">月額 ¥{PRICE.regular.toLocaleString()}</span>
+              <span className="text-3xl font-black text-white">¥{PRICE.campaign.toLocaleString()}</span>
+              <span className="text-white/40 text-sm">{PRICE.taxLabel} / 月</span>
+              <span className="bg-red-500/80 text-white text-xs font-bold px-2 py-0.5 rounded-md animate-pulse">残{PRICE.remaining}枠</span>
             </div>
+            <p className="mt-3 text-white/30 text-xs">ワンプランのみ。登録後に決済（Stripe/請求書）へ進みます。</p>
+          </div>
 
-            <div className="p-8 md:p-16">
-              <form onSubmit={handleSignup} className="space-y-10">
-                <div className="space-y-3">
-                  <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">店舗・企業名 *</label>
+          {/* フォーム */}
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 md:p-10">
+            <form onSubmit={handleSignup} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-white/40 uppercase tracking-widest">店舗・企業名 *</label>
+                <input
+                  type="text"
+                  autoComplete="organization"
+                  placeholder="株式会社〇〇 / カフェ〇〇"
+                  required
+                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 focus:bg-white/[0.07] transition-all placeholder:text-white/20 text-sm"
+                  value={formData.storeName}
+                  onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-white/40 uppercase tracking-widest">ご担当者名 *</label>
                   <input
                     type="text"
-                    autoComplete="organization"
-                    placeholder="株式会社〇〇 / カフェ〇〇"
+                    autoComplete="name"
+                    placeholder="山田 太郎"
                     required
-                    className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                    value={formData.storeName}
-                    onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                    className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 focus:bg-white/[0.07] transition-all placeholder:text-white/20 text-sm"
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">ご担当者名 *</label>
-                    <input
-                      type="text"
-                      autoComplete="name"
-                      placeholder="山田 太郎"
-                      required
-                      className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                      value={formData.contactPerson}
-                      onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-white/40 uppercase tracking-widest">所在地（那須エリア） *</label>
+                  <input
+                    type="text"
+                    autoComplete="street-address"
+                    placeholder="那須塩原市〇〇町 1-2"
+                    required
+                    className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 focus:bg-white/[0.07] transition-all placeholder:text-white/20 text-sm"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  />
+                </div>
+              </div>
 
-                  <div className="space-y-3">
-                    <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">所在地（那須エリア） *</label>
-                    <input
-                      type="text"
-                      autoComplete="street-address"
-                      placeholder="那須塩原市〇〇町 1-2"
-                      required
-                      className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    />
-                  </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-white/40 uppercase tracking-widest">メールアドレス *</label>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="mail@example.com"
+                    required
+                    disabled={!!authUser}
+                    className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 focus:bg-white/[0.07] transition-all placeholder:text-white/20 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    value={authUser ? authUser.email || '' : formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                  {authUser && (
+                    <p className="text-xs text-white/30">※ログイン済みのアカウントを使用します</p>
+                  )}
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">メールアドレス *</label>
+                {!authUser && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-white/40 uppercase tracking-widest">メールアドレス（確認） *</label>
                     <input
                       type="email"
-                      autoComplete="email"
-                      placeholder="mail@example.com"
+                      autoComplete="off"
+                      placeholder="再入力してください"
                       required
-                      disabled={!!authUser}
-                      className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300 disabled:opacity-60 disabled:cursor-not-allowed"
-                      value={authUser ? authUser.email || '' : formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
-                    {authUser && (
-                      <p className="text-xs text-slate-500 ml-3 font-bold">※ログイン済みのアカウントを使用します</p>
-                    )}
-                  </div>
-
-                  {!authUser && (
-                    <div className="space-y-3">
-                      <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">メールアドレス（確認） *</label>
-                      <input
-                        type="email"
-                        autoComplete="off"
-                        placeholder="再入力してください"
-                        required
-                        className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                        value={formData.confirmEmail}
-                        onChange={(e) => setFormData({ ...formData, confirmEmail: e.target.value })}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">電話番号 *</label>
-                    <input
-                      type="tel"
-                      autoComplete="tel"
-                      placeholder="0287-XX-XXXX"
-                      required
-                      className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                      value={formData.phoneNumber}
-                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                      className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 focus:bg-white/[0.07] transition-all placeholder:text-white/20 text-sm"
+                      value={formData.confirmEmail}
+                      onChange={(e) => setFormData({ ...formData, confirmEmail: e.target.value })}
                     />
                   </div>
+                )}
+              </div>
 
-                  {!authUser && (
-                    <div className="space-y-3">
-                      <label className="text-sm font-black text-slate-500 uppercase tracking-widest ml-3">管理画面用パスワード *</label>
-                      <input
-                        type="password"
-                        autoComplete="new-password"
-                        placeholder="8文字以上推奨"
-                        required
-                        minLength={8}
-                        className="w-full p-6 md:p-7 bg-slate-50 border-2 border-slate-100 rounded-3xl outline-none focus:border-orange-500 text-lg md:text-xl font-bold transition-all placeholder:text-slate-300"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      />
-                    </div>
-                  )}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-white/40 uppercase tracking-widest">電話番号 *</label>
+                  <input
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="0287-XX-XXXX"
+                    required
+                    className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 focus:bg-white/[0.07] transition-all placeholder:text-white/20 text-sm"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  />
                 </div>
 
-                <div className="p-8 md:p-10 bg-orange-50 rounded-[2.5rem] border-2 border-orange-100">
-                  <p className="text-slate-700 mb-6 italic leading-relaxed text-lg font-bold">
-                    ※登録完了後、決済ページへ遷移します。クレジットカード（Stripe）または請求書払いでご利用いただけます。
-                  </p>
-
-                  <label className="flex items-start gap-4 cursor-pointer">
+                {!authUser && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-white/40 uppercase tracking-widest">パスワード *</label>
                     <input
-                      type="checkbox"
-                      className="mt-1 w-7 h-7 text-orange-600 rounded-lg border-orange-200 focus:ring-orange-500 cursor-pointer"
-                      checked={formData.agree}
-                      onChange={(e) => setFormData({ ...formData, agree: e.target.checked })}
+                      type="password"
+                      autoComplete="new-password"
+                      placeholder="8文字以上推奨"
+                      required
+                      minLength={8}
+                      className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-amber-500/50 focus:bg-white/[0.07] transition-all placeholder:text-white/20 text-sm"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     />
-                    <span
-                      className="font-black text-slate-800 underline underline-offset-8 decoration-4 hover:text-orange-600 transition-colors cursor-pointer"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setShowTerms(true);
-                      }}
-                    >
-                      利用規約および紹介報酬制度に同意する
-                    </span>
-                  </label>
-                </div>
+                  </div>
+                )}
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-8 md:py-10 bg-orange-600 hover:bg-orange-700 text-white text-2xl md:text-4xl font-black rounded-[3rem] shadow-[0_30px_80px_rgba(234,88,12,0.45)] transition transform active:scale-95 disabled:opacity-50 italic tracking-tighter"
-                >
-                  {loading ? '通信中...' : '登録して決済へ進む'}
-                </button>
-
-                <p className="text-center text-slate-500 font-bold text-sm leading-relaxed">
-                  登録は1分程度。完了後に決済（ワンプラン）へ進みます。
+              <div className="p-5 bg-amber-500/5 rounded-xl border border-amber-500/15">
+                <p className="text-white/30 mb-4 leading-relaxed text-xs">
+                  ※登録完了後、決済ページへ遷移します。クレジットカード（Stripe）または請求書払いでご利用いただけます。
                 </p>
-              </form>
-            </div>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 w-5 h-5 rounded accent-amber-500 cursor-pointer flex-shrink-0"
+                    checked={formData.agree}
+                    onChange={(e) => setFormData({ ...formData, agree: e.target.checked })}
+                  />
+                  <span
+                    className="text-sm text-white/60 hover:text-amber-400 transition-colors cursor-pointer underline underline-offset-4 decoration-white/20"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowTerms(true);
+                    }}
+                  >
+                    利用規約および紹介報酬制度に同意する
+                  </span>
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-lg font-bold rounded-xl shadow-[0_8px_32px_rgba(234,88,12,0.4)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loading ? '通信中...' : '登録して決済へ進む'}
+              </button>
+
+              <p className="text-center text-white/20 text-xs">
+                登録は1分程度。完了後に決済（ワンプラン）へ進みます。
+              </p>
+            </form>
           </div>
         </div>
 

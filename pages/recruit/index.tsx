@@ -58,28 +58,31 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const BriefcaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-  </svg>
-);
+
 
 // --- コンポーネント: FAQアイテム ---
 const FAQItem = ({ question, children }: { question: string, children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className="border-b border-gray-200">
+    <div className="border-b border-white/5 last:border-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left py-5 flex justify-between items-center hover:bg-gray-50 transition-colors focus:outline-none"
+        className="w-full text-left py-6 flex justify-between items-center group focus:outline-none"
       >
-        <span className="text-lg font-bold text-gray-800 pr-4">{question}</span>
-        <ChevronDownIcon className={`w-6 h-6 text-blue-600 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        <div className="flex gap-4 items-center">
+          <span className="flex-shrink-0 w-8 h-8 bg-blue-600/10 border border-blue-600/20 text-blue-400 rounded-lg flex items-center justify-center text-xs font-bold tracking-tighter">Q</span>
+          <span className="text-lg font-bold text-white/90 group-hover:text-blue-400 transition-colors">{question}</span>
+        </div>
+        <div className={`w-8 h-8 rounded-full border border-white/10 flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-blue-600 border-blue-500 rotate-180' : 'bg-white/5'}`}>
+          <ChevronDownIcon className={`w-4 h-4 ${isOpen ? 'text-white' : 'text-white/30'}`} />
+        </div>
       </button>
-      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[500px] opacity-100 mb-5' : 'max-h-0 opacity-0'}`}>
-        <div className="p-4 bg-gray-50 rounded-lg text-gray-600 leading-relaxed border-l-4 border-blue-500">
-          {children}
+      <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[800px] opacity-100 pb-8' : 'max-h-0 opacity-0'}`}>
+        <div className="flex gap-4 p-6 bg-blue-600/5 rounded-2xl border border-blue-500/10">
+          <span className="flex-shrink-0 w-8 h-8 bg-white/5 border border-white/10 text-white/40 rounded-lg flex items-center justify-center text-xs font-bold tracking-tighter">A</span>
+          <div className="text-white/70 leading-relaxed text-sm font-medium">
+            {children}
+          </div>
         </div>
       </div>
     </div>
@@ -88,18 +91,21 @@ const FAQItem = ({ question, children }: { question: string, children: React.Rea
 
 // --- 統計カード ---
 const StatCard = ({ number, label }: { number: string; label: string }) => (
-  <div className="text-center group">
-    <p className="text-5xl md:text-7xl font-black text-blue-500 group-hover:scale-110 transition-transform">{number}</p>
-    <p className="mt-3 text-white/80 font-bold text-lg">{label}</p>
+  <div className="text-center group py-2">
+    <p className="text-5xl md:text-7xl font-black bg-gradient-to-br from-blue-300 to-indigo-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform inline-block">{number}</p>
+    <p className="mt-2 text-white/60 text-sm font-medium tracking-wide">{label}</p>
   </div>
 );
 
 // --- 課題カード ---
 const TroubleCard = ({ icon, title, desc }: { icon: string; title: string; desc: string }) => (
-  <div className="bg-white/5 rounded-[2.5rem] p-10 border border-white/10 hover:border-blue-500/50 transition-all group shadow-2xl">
-    <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">{icon}</div>
-    <h4 className="text-2xl font-black text-white mb-4">{title}</h4>
-    <p className="text-white/70 font-bold leading-relaxed text-lg">{desc}</p>
+  <div className="bg-white/[0.04] rounded-3xl p-8 border border-white/10 hover:border-blue-500/30 hover:bg-white/[0.07] transition-all duration-500 group overflow-hidden relative">
+    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    <div className="relative z-10">
+      <div className="text-5xl mb-6 group-hover:scale-110 transition-transform inline-block">{icon}</div>
+      <h4 className="text-xl font-bold text-white tracking-tight mb-4">{title}</h4>
+      <p className="text-white/50 leading-relaxed text-sm font-medium">{desc}</p>
+    </div>
   </div>
 );
 
@@ -221,30 +227,34 @@ const RecruitSignupPage: NextPage = () => {
   };
 
   return (
-    <div className="bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 overflow-x-hidden antialiased">
+    <div className="bg-[#0a0a0a] text-white font-sans selection:bg-blue-900/40 overflow-x-hidden antialiased">
       <Head>
         <title>【公式】AI求人パートナー登録｜月額6,600円でAI採用マッチング｜みんなの那須アプリ（株式会社adtown 創業20周年記念事業）</title>
         <meta name="description" content="株式会社adtown 創業20周年記念事業。20年間で1000社+の採用を支援してきた実績を、アプリ×AIに集約。那須地域密着のAIマッチングで理想の人材を月額6,600円でご利用。" />
       </Head>
 
       {/* --- Sticky Bar --- */}
-      <div className="bg-slate-950 text-white py-4 text-center text-xs md:text-sm font-black tracking-[0.22em] uppercase sticky top-0 z-[100] shadow-2xl backdrop-blur-md bg-opacity-90">
-        那須地域限定「AI求人マッチング」
-        <span className="ml-3 text-blue-300">先着{totalSlots}社：割引対応</span>
+      <div className="bg-black/95 backdrop-blur-xl text-white py-3 text-center text-xs font-medium tracking-[0.18em] uppercase sticky top-0 z-[100] border-b border-white/10">
+        <span className="text-white/50">那須地域限定</span>
+        <span className="mx-3 text-white/20">|</span>
+        <span className="text-blue-400 font-semibold text-[10px] md:text-xs">AI求人マッチング</span>
+        <span className="mx-3 text-white/20">|</span>
+        <span className="text-white/70">先着{totalSlots}社限定割引</span>
+        <span className="ml-3 inline-flex items-center gap-1 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full animate-pulse">残{remainingSlots}枠</span>
       </div>
 
       {/* --- ヘッダー --- */}
-      <header className="bg-white/80 backdrop-blur-md shadow-sm sticky top-12 z-50 border-b border-gray-100">
-        <div className="container mx-auto px-4 h-16 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <div className="bg-blue-600 text-white p-1.5 rounded-lg font-bold text-sm">那須</div>
-            <span className="font-extrabold text-xl tracking-tighter">AIマッチング求人</span>
+      <header className="bg-black/80 backdrop-blur-lg sticky top-10 md:top-11 z-50 border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white px-2.5 py-1 rounded-lg font-bold text-[10px] md:text-xs tracking-tighter shadow-lg shadow-blue-500/20">那須</div>
+            <span className="font-extrabold text-lg md:text-xl tracking-tighter text-white">AIマッチング求人</span>
           </div>
           <button
             onClick={scrollToForm}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full font-bold text-sm transition-all shadow-md active:scale-95"
+            className="bg-white/5 hover:bg-white/10 text-white border border-white/10 px-6 py-2 rounded-full font-bold text-xs transition-all active:scale-95 backdrop-blur-sm"
           >
-            登録・決済に進む
+            掲載を申し込む
           </button>
         </div>
       </header>
@@ -253,214 +263,177 @@ const RecruitSignupPage: NextPage = () => {
         {/* ============================================
             HERO：20周年実績 + 信頼性を最初に
             ============================================ */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-white pt-16 pb-20 md:pt-24 md:pb-32">
-          <div className="container mx-auto px-4 relative z-10">
-            {/* 🎉 20周年記念バッジ */}
-            <div className="text-center mb-10 animate-fade-in">
-              <div className="inline-flex flex-col items-center gap-4 bg-gradient-to-br from-blue-600 to-indigo-600 text-white px-12 py-8 rounded-[3rem] border-4 border-blue-400 shadow-2xl transform hover:scale-105 transition-all">
-                <div className="flex items-center gap-3">
-                  <span className="text-5xl">🎉</span>
+        <section className="relative min-h-screen flex items-center bg-[#0a0a0a] overflow-hidden border-b border-white/5">
+          <div className="max-w-7xl mx-auto px-6 py-24 text-center relative z-10">
+
+            {/* 20周年記念バッジ */}
+            <div className="mb-12 animate-fade-in">
+              <div className="inline-flex flex-col items-center gap-3 px-10 py-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 backdrop-blur-sm">
+                <div className="flex items-center gap-4">
                   <div className="text-left">
-                    <p className="text-2xl md:text-4xl font-black tracking-tight leading-none">株式会社adtown</p>
-                    <p className="text-3xl md:text-5xl font-black tracking-tighter italic mt-1">創業20周年記念事業</p>
+                    <p className="text-sm font-medium tracking-[0.25em] text-amber-400/80 uppercase mb-1">株式会社adtown</p>
+                    <p className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-none">創業<span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">20周年</span>記念事業</p>
                   </div>
-                  <span className="text-5xl">🎉</span>
                 </div>
-                <div className="bg-white/20 px-6 py-2 rounded-full">
-                  <p className="text-sm md:text-base font-black tracking-[0.2em] uppercase">
-                    2006-2026 | 20 Years of Regional Business Support
-                  </p>
-                </div>
+                <p className="text-xs text-white/30 tracking-[0.3em] uppercase">2006–2026 · 20 Years of Innovation</p>
               </div>
             </div>
 
-            {/* 🔥 adtown社の実績数字 */}
-            <div className="mt-10 max-w-5xl mx-auto bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 border border-slate-800 shadow-2xl">
-              <div className="grid md:grid-cols-3 gap-8">
-                <StatCard number="20年" label="広告の実績" />
-                <StatCard number="1000社+" label="累計クライアント" />
-                <StatCard number="1億部+" label="情報誌発行部数" />
+            {/* adtown社の実績数字 */}
+            <div className="mt-8 max-w-5xl mx-auto rounded-[2rem] border border-white/10 bg-white/[0.03] backdrop-blur-sm divide-x divide-white/10 flex flex-col md:flex-row shadow-2xl overflow-hidden">
+              <div className="flex-1 px-8 py-8">
+                <StatCard number="20年" label="那須の集客実績" />
               </div>
+              <div className="flex-1 px-8 py-8 border-t md:border-t-0 border-white/10">
+                <StatCard number="1000社+" label="累計取引社数" />
+              </div>
+              <div className="flex-1 px-8 py-8 border-t md:border-t-0 border-white/10">
+                <StatCard number="1億部" label="情報誌発行実績" />
+              </div>
+            </div>
 
-              <div className="mt-8 bg-blue-600/10 border border-blue-500/30 rounded-2xl p-6">
-                <p className="text-lg md:text-xl font-black text-blue-300 leading-relaxed">
-                  📰 紙媒体・WEB・YouTubeで那須地域を20年支援してきた
-                  <span className="text-white"> 株式会社adtown</span>が、
-                  <br />
-                  その知見を集約した<span className="text-white underline decoration-blue-400">「求人アプリ × AI」</span>の新サービスです。
-                </p>
-              </div>
+            <div className="mt-8 max-w-2xl mx-auto">
+              <p className="text-white/40 text-sm leading-relaxed font-medium">
+                紙媒体・WEB・YouTubeで那須地域のビジネスを20年支援してきた株式会社adtownが、その採用知見を集約した「求人アプリ × AI」の新サービスです。
+              </p>
+            </div>
+
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
+              <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-5 py-2 rounded-full text-[10px] md:text-xs font-medium tracking-[0.18em] uppercase">
+                先着100社限定キャンペーン
+              </span>
+              <span className="bg-white/5 text-white/50 border border-white/10 px-5 py-2 rounded-full text-[10px] md:text-xs font-medium tracking-[0.18em] uppercase">
+                AI採用マッチング搭載
+              </span>
+              <span className="bg-white/5 text-white/50 border border-white/10 px-5 py-2 rounded-full text-[10px] md:text-xs font-medium tracking-[0.18em] uppercase">
+                成功報酬 0円
+              </span>
             </div>
 
             {/* キャッチコピー */}
-            <div className="text-center mt-12">
-              <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-black leading-[0.9] tracking-tighter italic">
-                那須の採用を、<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                  AIがスマートに。
-                </span>
-              </h1>
+            <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-black leading-[1] tracking-tighter mt-10 text-white italic">
+              那須の採用を、<br />
+              <span className="bg-gradient-to-r from-blue-400 via-indigo-500 to-blue-600 bg-clip-text text-transparent">AIでスマートに。</span>
+            </h1>
 
-              <p className="mt-8 text-xl md:text-3xl text-slate-600 font-black max-w-5xl mx-auto leading-tight">
-                紙・WEB・動画で培った<span className="text-blue-600 italic">"企業広告のノウハウ"</span>を、
-                <br />
-                AIアプリに集約しました。
-              </p>
+            <p className="mt-8 text-base md:text-xl text-white/40 max-w-2xl mx-auto leading-relaxed font-bold italic">
+              20年の地域実績 × 最新AI。<br />
+              「いい人」を、もっと効率よく、確実に。
+            </p>
 
-              <div className="flex flex-col items-center gap-4 mt-12 mb-12">
-                <div className="inline-flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-full border border-slate-800 shadow-xl">
-                  <BriefcaseIcon className="w-6 h-6 text-blue-400" />
-                  <span className="text-blue-400 font-black tracking-[0.25em] uppercase text-xs md:text-sm">
-                    nasu regional ai recruitment
-                  </span>
-                </div>
-
-                <p className="text-slate-700 font-black text-base md:text-lg italic max-w-4xl">
-                  「那須地域限定」のアプリを開発し、地元の求職者と企業を
-                  <span className="text-slate-900 underline decoration-blue-300 underline-offset-8">AIで採用マッチング</span>します。
-                </p>
-
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <span className="bg-blue-50 text-blue-700 px-6 py-3 rounded-full border border-blue-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                    月額 6,600円
-                  </span>
-                  <span className="bg-green-50 text-green-700 px-6 py-3 rounded-full border border-green-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                    AI採用マッチング搭載
-                  </span>
-                  <span className="bg-slate-50 text-slate-700 px-6 py-3 rounded-full border border-slate-100 font-black tracking-[0.2em] uppercase text-xs md:text-sm">
-                    成功報酬なし
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-6">
-                <button
-                  onClick={scrollToForm}
-                  className="w-full md:w-auto bg-slate-900 hover:bg-slate-800 text-white text-lg font-bold px-10 py-4 rounded-xl shadow-2xl transition-all transform hover:-translate-y-1"
-                >
-                  月額6,600円で登録・決済に進む
-                </button>
-              </div>
-              <p className="mt-4 text-sm text-slate-500">※登録は最短3分。一括払いでのお支払いです。</p>
+            <div className="mt-16 flex flex-col items-center gap-4">
+              <button
+                onClick={scrollToForm}
+                className="mt-8 px-12 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-lg font-bold rounded-xl shadow-[0_8px_32px_rgba(37,99,235,0.4)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+              >
+                月額6,600円で掲載を申し込む
+              </button>
+              <p className="mt-3 text-white/20 text-xs tracking-widest uppercase">運営：株式会社adtown（創業20周年記念事業）</p>
             </div>
           </div>
 
-          {/* 装飾用背景 */}
-          <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-50 -z-10" />
-          <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-96 h-96 bg-indigo-100 rounded-full blur-3xl opacity-50 -z-10" />
+          {/* 背景装飾 */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-blue-600/5 rounded-full blur-[160px] -z-10 pointer-events-none"></div>
         </section>
 
         {/* --- キャンペーンバナー --- */}
-        <section className="container mx-auto px-4 -mt-10 mb-20">
-          <div className="bg-gradient-to-br from-green-400 via-emerald-400 to-teal-500 rounded-3xl p-1 shadow-xl">
-            <div className="bg-white rounded-[1.4rem] p-6 md:p-10 text-center">
-              <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-4">
-                🎉 20周年記念キャンペーン 割引キャンペーン実施中！
-              </h3>
-              <div className="mb-6 flex flex-col md:flex-row items-center justify-center gap-4">
-                <div className="text-center">
-                  <p className="text-slate-500 font-bold text-sm mb-1">定　価</p>
-                  <p className="text-3xl font-black text-slate-400 line-through">¥10,000</p>
-                </div>
-                <div className="text-3xl font-black text-slate-300">→</div>
-                <div className="text-center">
-                  <p className="text-green-600 font-black text-sm mb-1">割引価格（先着100社限定）</p>
-                  <p className="text-4xl md:text-5xl font-black text-green-600">¥6,600</p>
-                  <p className="text-sm text-green-700 font-bold mt-1">/月（一括払い）</p>
-                </div>
-              </div>
-              <p className="text-slate-600 mb-6 font-bold text-lg leading-relaxed">
-                那須地域限定のAI採用マッチングシステムを、
-                <span className="text-green-600 font-black">定価10,000円から34%OFF！</span>
-              </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <div className="flex items-center space-x-2 bg-slate-100 px-4 py-2 rounded-full font-bold">
-                  <span>現在の登録数:</span>
-                  <span className="text-blue-600 text-xl">{registeredCount}社</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-red-50 text-red-600 px-4 py-2 rounded-full font-bold animate-pulse">
-                  <span>残り枠:</span>
-                  <span className="text-xl">{remainingSlots}社</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* --- 使いやすさ・柔軟性セクション --- */}
-        <section className="container mx-auto px-4 mb-20">
-          <div className="rounded-3xl p-1 bg-gradient-to-br from-purple-400 via-pink-400 to-rose-400 shadow-xl">
-            <div className="bg-white rounded-[1.4rem] p-8 md:p-12">
-              <div className="max-w-5xl mx-auto">
-                <div className="text-center mb-10">
-                  <h3 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">
-                    ✨ 求人のオンオフで、自由に運用
-                  </h3>
-                  <p className="text-lg md:text-xl text-slate-600 font-bold">
-                    求人がないときはストップ、必要な時だけオン。<br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-rose-600 font-black">
-                      無駄のない、使いやすい働き方。
-                    </span>
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-6 mb-10">
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 shadow-lg hover:shadow-xl transition-all">
-                    <p className="text-5xl mb-4">🎛️</p>
-                    <h4 className="text-xl font-black text-slate-900 mb-3">求人管理が簡単</h4>
-                    <p className="text-slate-700 font-bold leading-relaxed">
-                      求人がない期間は「一時停止」ボタンでストップ。
-                      月額費用は発生しません。
-                    </p>
+        <section className="py-20 px-6 bg-[#0a0a0a] relative overflow-hidden">
+          <div className="max-w-4xl mx-auto relative z-10">
+            <div className="rounded-[3rem] p-1 bg-gradient-to-br from-blue-500/50 via-indigo-500/50 to-blue-600/50 shadow-2xl">
+              <div className="bg-[#111111] rounded-[2.9rem] p-10 md:p-16 text-center backdrop-blur-3xl">
+                <p className="text-blue-400 font-black tracking-[0.3em] uppercase text-xs mb-6">anniversary offer</p>
+                <h3 className="text-3xl md:text-5xl font-black text-white mb-10 italic tracking-tighter">
+                  先着100社限定キャンペーン
+                </h3>
+                
+                <div className="mb-12 flex flex-col md:flex-row items-center justify-center gap-10">
+                  <div className="text-center opacity-40">
+                    <p className="text-white font-bold text-xs uppercase tracking-widest mb-1">定価</p>
+                    <p className="text-3xl font-black text-white line-through">¥10,000</p>
                   </div>
-
-                  <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-8 border-2 border-pink-200 shadow-lg hover:shadow-xl transition-all">
-                    <p className="text-5xl mb-4">⚡</p>
-                    <h4 className="text-xl font-black text-slate-900 mb-3">必要な時だけON</h4>
-                    <p className="text-slate-700 font-bold leading-relaxed">
-                      新しい求人が発生したら、
-                      いつでも「再開」できます。
-                    </p>
+                  <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
+                    <span className="text-2xl text-white/20">→</span>
                   </div>
-
-                  <div className="bg-gradient-to-br from-rose-50 to-purple-50 rounded-2xl p-8 border-2 border-rose-200 shadow-lg hover:shadow-xl transition-all">
-                    <p className="text-5xl mb-4">💰</p>
-                    <h4 className="text-xl font-black text-slate-900 mb-3">無駄をカット</h4>
-                    <p className="text-slate-700 font-bold leading-relaxed">
-                      採用計画に合わせた柔軟な支払い。
-                      繁忙期だけの利用も可能です。
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-slate-900 text-white rounded-3xl p-8 md:p-10 border-4 border-purple-500 shadow-2xl">
-                  <div className="flex flex-col md:flex-row items-start gap-6">
-                    <div className="flex-shrink-0 text-5xl">📋</div>
-                    <div>
-                      <h4 className="text-2xl font-black mb-4">運用例</h4>
-                      <div className="space-y-3 text-white/90 font-bold leading-relaxed">
-                        <p>
-                          <span className="text-purple-300 font-black">📍 春の採用シーズン：</span>
-                          求人を「ON」にして、新卒・転職希望者を積極採用
-                        </p>
-                        <p>
-                          <span className="text-purple-300 font-black">📍 夏の落ち込み期：</span>
-                          一時停止で費用をカット。求人システムはデータ蓄積中
-                        </p>
-                        <p>
-                          <span className="text-purple-300 font-black">📍 秋の採用再開：</span>
-                          再開ボタンで即、アプリのAIが求職者に自動配信開始
-                        </p>
-                      </div>
+                  <div className="text-center">
+                    <p className="text-blue-400 font-bold text-xs uppercase tracking-widest mb-1">キャンペーン価格</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-6xl md:text-7xl font-black text-white">¥6,600</p>
+                      <span className="text-base text-white/40">税込 / 月</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-10 text-center">
-                  <p className="text-slate-600 font-bold text-lg mb-6">
-                    ✅ 複雑な契約や解約金はなし。<br />
-                    <span className="text-slate-900 font-black text-xl">シンプル × フレキシブル = 最も使いやすい採用ツール</span>
-                  </p>
+                <div className="flex flex-wrap justify-center gap-4">
+                  <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-3 rounded-full">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-bold text-white/70">現在 {registeredCount} 社が登録済み</span>
+                  </div>
+                  <div className="flex items-center gap-3 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg shadow-blue-600/20">
+                    <span className="text-sm font-bold tracking-widest uppercase">残り {remainingSlots} 枠</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] -z-10" />
+        </section>
+
+        {/* --- 使いやすさ・柔軟性セクション --- */}
+        <section className="py-24 px-6 bg-white border-y border-white/5">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <p className="text-indigo-600 font-black tracking-[0.3em] uppercase text-sm mb-4">flexibility</p>
+              <h2 className="text-4xl md:text-6xl font-black text-slate-900 italic tracking-tighter">
+                求人のオンオフで、<br />自由自在な採用運用
+              </h2>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8 mb-12">
+              <div className="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100 hover:shadow-xl transition-all duration-500">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-4xl mb-8 shadow-sm">🎛️</div>
+                <h4 className="text-xl font-black text-slate-900 mb-4 tracking-tight">管理が驚くほど簡単</h4>
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  求人がない期間は「一時停止」ボタンを押すだけ。再募集が必要になるまで、余計なコストは一切かかりません。
+                </p>
+              </div>
+
+              <div className="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100 hover:shadow-xl transition-all duration-500">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-4xl mb-8 shadow-sm">⚡</div>
+                <h4 className="text-xl font-black text-slate-900 mb-4 tracking-tight">必要な時だけ即時ON</h4>
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  欠員が出たら、いつでも「公開」に切り替え可能。AIが即座に最適な求職者へのマッチングを開始します。
+                </p>
+              </div>
+
+              <div className="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100 hover:shadow-xl transition-all duration-500">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-4xl mb-8 shadow-sm">💰</div>
+                <h4 className="text-xl font-black text-slate-900 mb-4 tracking-tight">採用コストの最適化</h4>
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  繁忙期だけのスポット採用や、長期の安定募集など、貴社の採用計画に合わせた柔軟な運用が可能です。
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 rounded-[3rem] p-10 md:p-16 border border-slate-700 shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-[80px] -z-10 group-hover:bg-indigo-600/20 transition-colors duration-700" />
+              <div className="flex flex-col md:flex-row items-center gap-12 text-center md:text-left">
+                <div className="flex-shrink-0 w-24 h-24 bg-white/5 rounded-full border border-white/10 flex items-center justify-center text-5xl">📋</div>
+                <div>
+                  <h4 className="text-2xl font-black text-white mb-6">採用シーンに合わせた運用例</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <span className="text-indigo-400 font-black">●</span>
+                      <p className="text-white/70 font-bold"><span className="text-white">春の採用シーズン</span>：求人を「ON」にして、新卒・転職希望者を積極採用</p>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <span className="text-indigo-400 font-black">●</span>
+                      <p className="text-white/70 font-bold"><span className="text-white">夏の落ち込み期</span>：一時停止で費用をカット。システムにはデータを蓄積中</p>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <span className="text-indigo-400 font-black">●</span>
+                      <p className="text-white/70 font-bold"><span className="text-white">急な欠員時</span>：再開ボタンで即、AIが最適な候補者に自動プッシュ通知</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -468,64 +441,58 @@ const RecruitSignupPage: NextPage = () => {
         </section>
 
         {/* --- みんなのNasuアプリ登録促進 --- */}
-        <section className="container mx-auto px-4 mb-20">
-          <div className="rounded-3xl p-1 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 shadow-xl">
-            <div className="bg-white rounded-[1.4rem] p-8 md:p-12">
-              <div className="max-w-4xl mx-auto">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
-                    <UsersIcon className="w-7 h-7" />
+        <section className="py-24 px-6 bg-slate-50">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden">
+              <div className="p-12 md:p-20 flex flex-col lg:flex-row items-center gap-16">
+                <div className="lg:w-1/2">
+                  <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl mb-8 shadow-lg shadow-blue-500/20">
+                    <UsersIcon />
                   </div>
-                  <div>
-                    <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
-                      みんなのNasuアプリ、求職者登録が急増中。
-                    </h3>
-                    <p className="mt-2 text-slate-600 leading-relaxed font-bold">
-                      すでに先行で<strong className="text-slate-900">1,000人が登録済</strong>。さらに、那須地域に向けて発信している
-                      <strong className="text-slate-900">合計約100,000人のフォロワー</strong>を持つインフルエンサーが、アプリ登録への情報発信を実施中です。
-                      今後も<strong className="text-slate-900">5,000人、10,000人</strong>と登録者増が見込めます。
-                    </p>
+                  <h3 className="text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] mb-8 tracking-tighter italic">
+                    那須地域の<br />求職者登録、急増中。
+                  </h3>
+                  <p className="text-slate-500 font-medium text-lg leading-relaxed mb-10">
+                    すでに先行で<span className="text-slate-900 font-black">1,000人以上</span>がアプリを利用中。さらに地元インフルエンサー（総フォロワー約10万人）との提携により、日々新しい求職者が集まっています。
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-10">
+                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                      <p className="text-xs font-bold text-slate-400 tracking-widest uppercase mb-2">総リーチ人数</p>
+                      <p className="text-3xl font-black text-slate-900 italic">100k +</p>
+                    </div>
+                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                      <p className="text-xs font-bold text-slate-400 tracking-widest uppercase mb-2">先行登録</p>
+                      <p className="text-3xl font-black text-slate-900 italic">1,000 +</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <a
+                      href={NASU_APP_LP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex justify-center items-center px-10 py-5 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                    >
+                      アプリの状況を確認する
+                    </a>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                    <p className="text-xs font-bold tracking-widest text-slate-500">先行登録（求職者）</p>
-                    <p className="mt-2 text-3xl font-black text-slate-900">1,000<span className="text-base font-bold">人</span></p>
-                    <p className="mt-1 text-sm text-slate-600">すでに利用開始</p>
+                <div className="lg:w-1/2 relative">
+                  <div className="aspect-square bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[3rem] p-1 shadow-2xl relative z-10 overflow-hidden group">
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-700" />
+                    <div className="h-full bg-white/10 backdrop-blur-2xl flex flex-col items-center justify-center text-white p-10 text-center">
+                      <p className="text-xs font-black tracking-[0.4em] uppercase mb-4 text-blue-200">matching engine</p>
+                      <p className="text-3xl md:text-4xl font-black italic tracking-tighter leading-tight">
+                        AIが求職者と貴社を<br /><span className="text-blue-200 underline decoration-blue-200/30 underline-offset-8">最短ルート</span>で結ぶ
+                      </p>
+                    </div>
                   </div>
-                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                    <p className="text-xs font-bold tracking-widest text-slate-500">発信規模</p>
-                    <p className="mt-2 text-3xl font-black text-slate-900">約100,000<span className="text-base font-bold">人</span></p>
-                    <p className="mt-1 text-sm text-slate-600">那須向けフォロワー合計</p>
-                  </div>
-                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                    <p className="text-xs font-bold tracking-widest text-slate-500">今後の見込み</p>
-                    <p className="mt-2 text-3xl font-black text-slate-900">5,000〜10,000<span className="text-base font-bold">人</span></p>
-                    <p className="mt-1 text-sm text-slate-600">登録者の増加期待</p>
-                  </div>
+                  {/* 装飾 */}
+                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-100 rounded-full blur-3xl -z-10" />
+                  <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-100 rounded-full blur-3xl -z-10" />
                 </div>
-
-                <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-                  <a
-                    href={NASU_APP_LP_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full md:w-auto text-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-lg px-10 py-4 rounded-2xl shadow-lg shadow-blue-100 transition-all transform hover:-translate-y-1 active:translate-y-0"
-                  >
-                    みんなのNasuアプリを見る（一般ユーザー向け）
-                  </a>
-                  <button
-                    onClick={scrollToForm}
-                    className="w-full md:w-auto text-center bg-white border-2 border-slate-200 hover:border-blue-400 text-slate-900 font-black text-lg px-10 py-4 rounded-2xl shadow-sm transition-all active:scale-95"
-                  >
-                    企業の登録・決済に進む
-                  </button>
-                </div>
-
-                <p className="mt-4 text-center text-xs text-slate-500">
-                  ※ボタンを押すと、別タブで登録用ランディングページが開きます。
-                </p>
               </div>
             </div>
           </div>
@@ -534,53 +501,53 @@ const RecruitSignupPage: NextPage = () => {
         {/* ============================================
             TRUST: adtown社の20年実績
             ============================================ */}
-        <section className="py-28 md:py-36 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white px-6 relative overflow-hidden">
+        <section className="py-32 md:py-48 bg-[#0a0a0a] text-white px-6 relative overflow-hidden">
           <div className="max-w-7xl mx-auto relative z-10">
-            <div className="text-center mb-16">
-              <p className="text-blue-400 font-black tracking-[0.3em] uppercase text-sm mb-4">
-                why trust us?
-              </p>
-              <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter">
-                20年間、那須で<br />
-                <span className="text-blue-400">地域企業様を支援</span>してきました
+            <div className="text-center mb-24">
+              <p className="text-blue-400 font-black tracking-[0.4em] uppercase text-xs mb-6">heritage & trust</p>
+              <h2 className="text-5xl md:text-8xl font-black italic tracking-tighter leading-none mb-8">
+                那須で20年。<br />
+                <span className="bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">「届ける」</span>にこだわってきました
               </h2>
+              <p className="max-w-3xl mx-auto text-white/40 text-lg font-medium leading-relaxed italic">
+                私たちはただの広告会社ではありません。20年間、地域の企業様と膝を突き合わせ、どうすれば理想の顧客、そして理想の採用に出会えるかを追求し続けてきました。
+              </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-12">
+            <div className="grid lg:grid-cols-2 gap-12 items-stretch">
               {/* 左：これまでの実績 */}
-              <div className="bg-white/5 rounded-[3rem] p-10 border border-white/10 backdrop-blur-sm">
-                <h3 className="text-3xl font-black mb-8 text-blue-400">📚 これまでの実績</h3>
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <span className="text-4xl">📰</span>
+              <div className="bg-white/[0.03] rounded-[3.5rem] p-12 md:p-16 border border-white/10 backdrop-blur-sm shadow-2xl">
+                <h3 className="text-2xl font-black mb-12 text-blue-400 tracking-tight flex items-center gap-4">
+                  <span className="w-12 h-0.5 bg-blue-400 rounded-full" />
+                  実績の集積
+                </h3>
+                <div className="space-y-12">
+                  <div className="flex items-start gap-8">
+                    <span className="text-5xl opacity-80">📖</span>
                     <div>
-                      <p className="font-black text-xl">紙媒体制作（地域情報誌）</p>
-                      <p className="text-white/70 font-bold mt-2 leading-relaxed">
-                        地域情報誌・求人チラシ・フリーペーパーなど、
-                        <span className="text-white font-black">累計1000社+</span>の制作実績。
-                        企業様の「求める顧客像」を明確化し、成功に導いてきました。
+                      <p className="font-black text-xl mb-3 text-white">地域情報誌・求人チラシ</p>
+                      <p className="text-white/40 font-medium leading-relaxed">
+                        <span className="text-white font-bold">累計1000社以上</span>の制作実績。企業様の「真の魅力」を言語化し、紙媒体の強みである信頼性を最大限に引き出してきました。
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4">
-                    <span className="text-4xl">🌐</span>
+                  <div className="flex items-start gap-8">
+                    <span className="text-5xl opacity-80">📱</span>
                     <div>
-                      <p className="font-black text-xl">WEBサイト制作・運用</p>
-                      <p className="text-white/70 font-bold mt-2 leading-relaxed">
-                        広告サイト制作、SNS広告など、
-                        デジタル採用の<span className="text-white font-black">トータルサポート</span>。
+                      <p className="font-black text-xl mb-3 text-white">デジタルマーケティング</p>
+                      <p className="text-white/40 font-medium leading-relaxed">
+                        SNS広告やWEBサイト制作を通じた<span className="text-white font-bold">トータルサポート</span>。時代の変化に合わせ、最新の採用手法を提供してきました。
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4">
-                    <span className="text-4xl">🎥</span>
+                  <div className="flex items-start gap-8">
+                    <span className="text-5xl opacity-80">🎬</span>
                     <div>
-                      <p className="font-black text-xl">企業PR動画制作</p>
-                      <p className="text-white/70 font-bold mt-2 leading-relaxed">
-                        YouTubeチャンネル運営で培った動画制作ノウハウを、
-                        <span className="text-white font-black">企業ブランディング</span>に活用。
+                      <p className="font-black text-xl mb-3 text-white">企業ブランディング動画</p>
+                      <p className="text-white/40 font-medium leading-relaxed">
+                        YouTubeで培ったストーリーテリングの技術を、<span className="text-white font-bold">採用ブランディング</span>に応用。求職者の心に響く発信を支援しています。
                       </p>
                     </div>
                   </div>
@@ -588,161 +555,149 @@ const RecruitSignupPage: NextPage = () => {
               </div>
 
               {/* 右：なぜ今「アプリ × AI」なのか */}
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[3rem] p-10 border-4 border-blue-400 shadow-2xl">
-                <h3 className="text-3xl font-black mb-8">💡 なぜ今「アプリ × AI」なのか？</h3>
-                <div className="space-y-6 text-white/95 font-bold leading-relaxed">
-                  <p>
-                    <span className="font-black text-2xl">20年間の結論：</span><br />
-                    紙・WEB・動画は<span className="font-black underline decoration-white/70 underline-offset-4">「認知」には強い</span>。
-                    しかし、<span className="font-black">「応募〜定着」までの導線が弱い</span>。
-                  </p>
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[3.5rem] p-12 md:p-16 text-white border border-blue-400 shadow-[0_32px_64px_rgba(37,99,235,0.3)] flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+                <div className="relative z-10">
+                  <h3 className="text-3xl font-black mb-10 leading-tight">なぜ今、<br /><span className="text-blue-100 italic">「アプリ × AI」</span>なのか？</h3>
+                  
+                  <div className="space-y-8 mb-12">
+                    <div className="bg-black/10 backdrop-blur-md rounded-3xl p-8 border border-white/10">
+                      <p className="text-lg font-black mb-4 flex items-center gap-3">
+                        <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm">❗</span>
+                        従来の広告課題
+                      </p>
+                      <ul className="space-y-3 text-sm text-blue-100/70 font-bold">
+                        <li>• 高額な掲載費用と不透明な効果</li>
+                        <li>• 価値観の不一致による早期離職</li>
+                        <li>• 管理の手間と情報の陳腐化</li>
+                      </ul>
+                    </div>
 
-                  <div className="bg-white/20 rounded-2xl p-6 border-l-4 border-white">
-                    <p className="font-black text-xl mb-3">❌ 従来の求人広告の課題</p>
-                    <ul className="space-y-2">
-                      <li>• 求人掲載費が高額（月数万円〜数十万円）</li>
-                      <li>• 応募が来ても、ミスマッチで辞める</li>
-                      <li>• 求人票の更新・管理が手間</li>
-                      <li>• 効果測定が曖昧</li>
-                    </ul>
+                    <div className="bg-white text-blue-900 rounded-3xl p-8 shadow-2xl">
+                      <p className="text-lg font-black mb-4 flex items-center gap-3">
+                        <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm text-blue-600">✓</span>
+                        AIマッチングの回答
+                      </p>
+                      <ul className="space-y-3 text-sm font-black">
+                        <li>• 6,600円の一括払い × 成功報酬なし</li>
+                        <li>• AIが価値観の適合性を事前に評価</li>
+                        <li>• プッシュ通知による「攻め」の採用</li>
+                      </ul>
+                    </div>
                   </div>
-
-                  <div className="bg-white text-blue-600 rounded-2xl p-6 border-4 border-white shadow-xl">
-                    <p className="font-black text-xl mb-3">✅ AI Active Matching プラン</p>
-                    <ul className="space-y-2 font-black">
-                      <li>• 6,600円（先着100社）＋ 成功報酬なし</li>
-                      <li>• AIが企業価値観と合う人を評価（リピート・定着率UP）</li>
-                      <li>• ＡＩ採用点数は自由に調整可能</li>
-                      <li>• 攻めの広告：AIが最適な候補者に直接アピール</li>
-                      <li>• プッシュ通知で確実にターゲットへリーチ</li>
-                    </ul>
-                  </div>
-
-                  <p className="text-xl font-black italic border-t-2 border-white/30 pt-6">
-                    20年の知見を、最新技術で実装する。<br />
-                    それが「みんなのNasuアプリ」です。
-                  </p>
                 </div>
+
+                <p className="text-xl font-black italic border-t border-white/20 pt-8 mt-auto relative z-10">
+                  20年の実績を、<br />
+                  最先端の技術でアップデート。
+                </p>
               </div>
             </div>
           </div>
 
-          {/* 背景装飾 */}
-          <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
-            <div className="text-[20rem] font-black italic text-white/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
-              20 YEARS
-            </div>
-          </div>
+          <div className="absolute bottom-0 left-0 w-full h-[50vh] bg-gradient-to-t from-blue-600/5 to-transparent pointer-events-none" />
         </section>
 
         {/* ============================================
             CEO MESSAGE
             ============================================ */}
-        <section className="py-28 md:py-36 px-6 bg-white">
-          <div className="max-w-5xl mx-auto">
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[4rem] overflow-hidden shadow-3xl border border-slate-700">
-              <div className="p-12 md:p-16">
-                <p className="text-blue-400 font-black tracking-[0.3em] uppercase text-sm mb-4">
-                  message from ceo
-                </p>
-                <h2 className="text-4xl md:text-5xl font-black text-white mb-8 italic tracking-tight">
-                  20周年、次の20年へ。
-                </h2>
-
-                <div className="flex flex-col md:flex-row gap-10 items-start">
-                  {/* 左：CEO写真（アイコン） */}
-                  <div className="flex-shrink-0">
-                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 border-4 border-blue-400 flex items-center justify-center shadow-2xl">
-                      <span className="text-6xl">👔</span>
+        <section className="py-32 md:py-48 px-6 bg-white overflow-hidden relative">
+          <div className="max-w-5xl mx-auto relative z-10">
+            <div className="bg-[#0a0a0a] rounded-[4rem] overflow-hidden shadow-[0_48px_96px_rgba(0,0,0,0.4)] border border-white/5 relative">
+              <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-blue-600/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="p-12 md:p-24 relative z-10">
+                <div className="flex flex-col md:flex-row gap-16 items-start">
+                  {/* 左：CEO写真（アイコンっぽく） */}
+                  <div className="md:sticky md:top-32 flex-shrink-0">
+                    <div className="relative group">
+                      <div className="absolute inset-0 bg-blue-600/20 rounded-full blur-2xl group-hover:bg-blue-600/40 transition-colors duration-700" />
+                      <div className="w-40 h-40 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 border-2 border-blue-400/30 flex items-center justify-center shadow-2xl relative z-10">
+                        <span className="text-7xl md:text-8xl">👔</span>
+                      </div>
                     </div>
-                    <p className="mt-4 text-center text-white/60 font-bold text-sm">
-                      株式会社adtown<br />
-                      代表取締役
-                    </p>
+                    <div className="mt-8 text-center md:text-left">
+                      <p className="text-white font-black text-2xl mb-1">石下 かをり</p>
+                      <p className="text-blue-400 font-bold text-xs uppercase tracking-widest">Kaori Ishige / CEO</p>
+                    </div>
                   </div>
 
                   {/* 右：メッセージ */}
-                  <div className="flex-1 space-y-6 text-white/90 font-bold leading-relaxed text-lg">
-                    <p>
-                      創業から20年、私たちは那須地域の企業様を支援してきました。
-                    </p>
-
-                    <p>
-                      紙媒体からスタートし、WEB、YouTube、そして今回の
-                      <span className="text-blue-400 font-black">「アプリ × AI」</span>へ。
-                      <br />
-                      形は変わっても、<span className="text-white font-black">「地元企業に最高の人材を届けたい」</span>
-                      という想いは変わりません。
-                    </p>
-
-                    <div className="bg-blue-600/10 border-l-4 border-blue-500 p-6 rounded-r-2xl">
-                      <p className="font-black text-white text-xl mb-3">なぜ今、アプリなのか？</p>
+                  <div className="flex-1">
+                    <p className="text-blue-400 font-black tracking-[0.4em] uppercase text-xs mb-8">visionary leadership</p>
+                    <h2 className="text-4xl md:text-6xl font-black text-white mb-12 italic tracking-tighter leading-tight">
+                      20年の信頼を、<br />次の世代の「採用」へ。
+                    </h2>
+                    
+                    <div className="space-y-8 text-white/50 font-medium leading-relaxed text-lg italic">
                       <p>
-                        それは、これまでの求人広告では
-                        <span className="text-white font-black">「認知で止まっていた」</span>からです。
+                        創業から20年。私たちは一貫して「人が集まり、地域が活性化する」ための支援を続けてきました。
                       </p>
-                      <p className="mt-2">
-                        アプリなら、応募〜面接〜採用までの導線を設計できる。
-                        AIなら、"合う人材"に確実に届けられる。
+                      
+                      <p>
+                        時代と共に、情報を届ける手段は紙からデジタルへと変わりましたが、私たちが最も大切にしている<span className="text-white font-bold">「企業と人の最適な出会い」</span>という本質は変わりません。
                       </p>
-                    </div>
 
-                    <p>
-                      <span className="text-blue-400 font-black text-2xl">求人広告は、基本は完全無料です。</span>
-                      <br />
-                      本気で採用を変えたい企業様と、共に成長したいからです。
-                    </p>
+                      <div className="bg-white/5 border-l-2 border-blue-500 p-8 rounded-r-3xl my-12 shadow-inner">
+                        <p className="text-white font-black text-xl mb-4 italic tracking-tight">AIが変えるのは「効率」だけではありません。</p>
+                        <p className="text-white/70">
+                          従来の広告は、広く誰にでも届く一方で、ミスマッチという課題を抱えていました。AIを導入した理由は、貴社の価値観を理解し、それに共鳴する人材を<span className="text-white font-bold underline decoration-blue-500/50 underline-offset-8">正確に見つけ出すため</span>です。
+                        </p>
+                      </div>
 
-                    <p className="italic text-white/70 border-t border-white/20 pt-6">
-                      20年の実績を、次の20年へ。<br />
-                      みんなのNasuアプリで、那須の未来を一緒に作りましょう。
-                    </p>
-
-                    <div className="pt-4">
-                      <p className="text-white font-black text-xl">株式会社adtown 代表取締役</p>
-                      <p className="text-blue-400 font-black text-3xl mt-2 italic">石下かをり</p>
+                      <p>
+                        私たちは、那須を愛し、那須で頑張る企業様を本気で応援しています。<br />
+                        このAIアプリが、貴社の未来を担う新しい力との出会いとなることを確信しています。
+                      </p>
+                      
+                      <div className="pt-12 border-t border-white/10 mt-12 flex items-center gap-4">
+                        <div className="w-12 h-0.5 bg-blue-500/30" />
+                        <p className="text-white/30 text-xs font-bold tracking-[0.3em] uppercase">adtown 20th anniversary project</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+          <div className="absolute top-0 left-0 w-full h-[30vh] bg-gradient-to-b from-white to-transparent" />
         </section>
 
         {/* --- 悩み・解決セクション --- */}
-        <section className="py-28 md:py-36 bg-slate-900 text-white px-6 relative">
+        <section className="py-32 md:py-48 bg-[#0a0a0a] text-white px-6 relative border-y border-white/5">
           <div className="max-w-7xl mx-auto relative z-10">
-            <div className="text-center mb-16 space-y-4">
-              <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter">THE PROBLEM</h2>
-              <p className="text-blue-400 font-black text-lg md:text-2xl uppercase tracking-[0.25em]">
-                多くの企業が直面する採用の課題
+            <div className="text-center mb-20 space-y-4">
+              <h2 className="text-5xl md:text-8xl font-black italic tracking-tighter text-white/10 uppercase">the challenge</h2>
+              <p className="text-blue-400 font-black text-sm uppercase tracking-[0.4em]">
+                多くの企業が直面する、採用の「三重苦」
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               <TroubleCard
                 icon="💸"
-                title="求人広告費が高い"
-                desc="大手求人サイトに月数万円〜数十万円払っても、応募が来ない。費用対効果が悪すぎる..."
+                title="高騰する広告費"
+                desc="成果の保証がないまま、月数十万円の掲載費を払い続ける。採用コストが経営を圧迫している。"
               />
               <TroubleCard
                 icon="😰"
-                title="採用してもすぐ辞める"
-                desc="面接では良さそうだったのに、入社後にミスマッチが発覚。教育コストが無駄に..."
+                title="定着しないミスマッチ"
+                desc="せっかく採用しても「社風に合わない」と早期離職。教育コストと時間が泡のように消えていく。"
               />
               <TroubleCard
                 icon="⏰"
-                title="求人管理が手間"
-                desc="複数の求人サイトに掲載すると、更新・管理が煩雑。担当者の負担が大きい..."
+                title="更新されない求人情報"
+                desc="複数の媒体管理が煩雑で、最新の情報が届かない。求職者とのスピード感のズレが採用機会を奪う。"
               />
 
-              <div className="lg:col-span-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[4rem] p-14 md:p-16 text-center shadow-3xl">
-                <h3 className="text-3xl md:text-5xl font-black italic tracking-tighter leading-tight text-white">
-                  解決策は「頑張る」ではなく、<br />
-                  <span className="underline decoration-white/70 underline-offset-[10px]">AIで価値観の合う人材を自動評価する仕組み</span>です。
+              <div className="lg:col-span-3 bg-gradient-to-br from-blue-600/10 to-transparent rounded-[4rem] p-12 md:p-20 text-center border border-blue-500/20 shadow-2xl backdrop-blur-sm mt-12 relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50" />
+                <h3 className="text-3xl md:text-5xl font-black italic tracking-tighter leading-tight text-white mb-8">
+                  解決策は「頑張る採用」ではなく、<br />
+                  <span className="text-blue-400">AIによる「価値観の自動評価」</span>を導入すること。
                 </h3>
-                <p className="mt-6 text-xl md:text-2xl font-bold text-blue-50 italic">
-                  評価基準（点数）は自由に調整可能。離職を防ぎ、定着率を高めます。
+                <p className="max-w-2xl mx-auto text-white/50 font-bold leading-relaxed text-lg italic">
+                  貴社が大切にしている文化や条件をAIが学習。点数化することで、相性の良い人材だけを効率的に引き寄せます。
                 </p>
               </div>
             </div>
@@ -752,285 +707,281 @@ const RecruitSignupPage: NextPage = () => {
         {/* ============================================
             SOLUTION: AIマッチング
             ============================================ */}
-        <section className="py-28 md:py-36 px-6 bg-white">
+        <section className="py-32 md:py-48 px-6 bg-white overflow-hidden">
           <div className="max-w-7xl mx-auto text-center">
-            <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter text-slate-900">AI MATCHING</h2>
-            <p className="mt-6 text-2xl md:text-3xl font-black text-blue-600 tracking-tight">
-              求職者 × 企業を、AIで採用マッチング
-            </p>
-            <p className="mt-6 text-slate-600 font-bold text-lg md:text-xl leading-relaxed italic max-w-5xl mx-auto">
-              那須地域限定のアプリだからこそ、「近い・働ける・興味がある」求職者に絞って届けられます。
-              広く浅くではなく、採用に繋がる確度を上げます。
+            <p className="text-blue-600 font-black tracking-[0.4em] uppercase text-xs mb-6">the solution</p>
+            <h2 className="text-5xl md:text-8xl font-black italic tracking-tighter text-slate-900 mb-8">AI MATCHING</h2>
+            <p className="mt-6 text-xl md:text-2xl font-bold text-slate-500 italic max-w-4xl mx-auto leading-relaxed">
+              那須地域に根ざした「みんなのNasuアプリ」だからこそ実現できる、<br />
+              <span className="text-slate-900 border-b-2 border-blue-600/30">独自の高精度マッチング</span>をご体験ください。
             </p>
 
             {/* AIマッチングの仕組み */}
-            <div className="mt-14 max-w-4xl mx-auto bg-gradient-to-br from-slate-900 to-slate-800 rounded-[3rem] p-10 md:p-12 text-white border border-slate-700 shadow-2xl">
-              <h3 className="text-3xl font-black mb-8 text-blue-400">🧠 AIマッチングの仕組み</h3>
-              <div className="space-y-6 text-left">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center font-black text-xl">1</div>
-                  <div>
-                    <p className="font-black text-xl">求職者データの分析</p>
-                    <p className="text-white/70 font-bold mt-2">
-                      希望職種・スキル・勤務地・過去の閲覧履歴をAIが自動分析
-                    </p>
+            <div className="mt-24 max-w-5xl mx-auto flex flex-col lg:flex-row items-stretch gap-1">
+              <div className="flex-1 bg-[#0a0a0a] rounded-t-[3rem] lg:rounded-tr-none lg:rounded-l-[3rem] p-12 md:p-16 text-left relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-[60px] group-hover:bg-blue-600/20 transition-colors" />
+                <h3 className="text-2xl font-black mb-12 text-blue-400 tracking-tight flex items-center gap-4">
+                  <span className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-sm font-black">?</span>
+                  どのようにマッチングするか
+                </h3>
+                <div className="space-y-10 relative z-10">
+                  <div className="flex gap-6">
+                    <span className="text-white/20 font-black text-4xl italic leading-none">01</span>
+                    <div>
+                      <p className="text-white font-black text-lg mb-2 tracking-tight">属性・履歴の多角分析</p>
+                      <p className="text-white/40 text-sm leading-relaxed font-medium">希望職種だけでなく、過去の検索傾向や閲覧履歴から、AIが潜在的な興味を抽出します。</p>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center font-black text-xl">2</div>
-                  <div>
-                    <p className="font-black text-xl">企業の求人条件とマッチング</p>
-                    <p className="text-white/70 font-bold mt-2">
-                      職種・給与・勤務時間・雰囲気と、求職者の希望を照合してマッチ度を算出
-                    </p>
+                  <div className="flex gap-6 font-medium">
+                    <span className="text-white/20 font-black text-4xl italic leading-none">02</span>
+                    <div>
+                      <p className="text-white font-black text-lg mb-2 tracking-tight">価値観のスコアリング</p>
+                      <p className="text-white/40 text-sm leading-relaxed font-medium">貴社の求める人物像と、求職者のパーソナリティを照合。相性を点数化して可視化します。</p>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center font-black text-xl">3</div>
-                  <div>
-                    <p className="font-black text-xl">最適なタイミングで配信</p>
-                    <p className="text-white/70 font-bold mt-2">
-                      「あなたにおすすめの求人」としてプッシュ通知で自動配信
-                    </p>
+                  <div className="flex gap-6">
+                    <span className="text-white/20 font-black text-4xl italic leading-none">03</span>
+                    <div>
+                      <p className="text-white font-black text-lg mb-2 tracking-tight">最適タイミングで配信</p>
+                      <p className="text-white/40 text-sm leading-relaxed font-medium">マッチ度の高い求職者のスマホへ、プッシュ通知でダイレクトに貴社の求人を届けます。</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-8 bg-blue-600/10 border-2 border-blue-500/30 rounded-2xl p-6">
-                <p className="font-black text-lg text-blue-300 mb-2">📍 具体例</p>
-                <p className="text-white/80 font-bold">
-                  「飲食経験あり × 那須塩原在住 × 週3勤務希望」の求職者に、
-                  貴店のパート求人を<span className="text-white font-black">自動配信</span>
+              <div className="flex-1 bg-blue-600 rounded-b-[3rem] lg:rounded-bl-none lg:rounded-r-[3rem] p-12 md:p-16 text-left flex flex-col justify-center shadow-2xl">
+                <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 mb-8">
+                  <p className="text-white font-black text-lg mb-4 italic flex items-center gap-3 decoration-white/30 decoration-2 underline underline-offset-8">
+                    📍 マッチング成功事例
+                  </p>
+                  <p className="text-white/80 font-bold leading-relaxed">
+                    「飲食経験あり × 那須塩原在住 × 土日勤務可能」な人材をAIがピックアップ。貴店のキッチンスタッフ募集を<span className="text-white font-black text-xl">自動配信し、即応募</span>に繋がりました。
+                  </p>
+                </div>
+                <p className="text-white font-black text-2xl tracking-tighter leading-tight italic">
+                  その求人は、<br />
+                  「本当に欲しい人」に届いていますか？
                 </p>
               </div>
             </div>
 
             {/* 機能カード */}
-            <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-10 text-left">
-              <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl border border-slate-100 hover:-translate-y-2 transition-all duration-500 group">
-                <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">🧠</div>
-                <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">AIマッチング</h3>
-                <p className="mt-5 text-slate-600 font-bold leading-relaxed text-lg">
-                  企業価値観と合う人をAIが点数で評価。相性の良い人材に絞ることで離職率を大幅に低減。
-                </p>
-              </div>
-
-              <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl border border-slate-100 hover:-translate-y-2 transition-all duration-500 group">
-                <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">🎯</div>
-                <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">那須地域に限定</h3>
-                <p className="mt-5 text-slate-600 font-bold leading-relaxed text-lg">
-                  地域を絞ることで、「実際に働ける人」だけに届ける効率的な採用を実現。
-                </p>
-              </div>
-
-              <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl border border-slate-100 hover:-translate-y-2 transition-all duration-500 group">
-                <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">📱</div>
-                <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">AIスコア調整</h3>
-                <p className="mt-5 text-slate-600 font-bold leading-relaxed text-lg">
-                  採用時に重視するポイント（スキル・性格等）を点数で自由に調整可能。
-                </p>
-              </div>
-
-              <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl border border-slate-100 hover:-translate-y-2 transition-all duration-500 group">
-                <div className="text-6xl mb-6 group-hover:scale-110 transition-transform">�</div>
-                <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">明確な価格設定</h3>
-                <p className="mt-5 text-slate-600 font-bold leading-relaxed text-lg">
-                  月額6,600円の一括払い。成功報酬なし。隠れた費用はなし。
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* --- パートナーロゴ --- */}
-        <section className="py-20 md:py-28 px-6 bg-slate-50 overflow-hidden border-t border-slate-100">
-          <div className="max-w-7xl mx-auto text-center">
-            <p className="text-sm md:text-base font-black text-slate-400 tracking-[0.45em] uppercase italic">
-              trusted by local partners
-            </p>
-            <p className="mt-2 text-slate-500 font-bold">那須地域の多くの企業様が導入中</p>
-
-            <div className="mt-12 flex flex-wrap justify-center items-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-700">
-              {PARTNER_LOGOS.map((path, i) => (
-                <img key={i} src={path} alt="Partner" className="h-10 md:h-14 w-auto object-contain" />
+            <div className="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+              {[
+                { icon: "🧠", title: "高度なAI評価", desc: "価値観の一致をスコア化し、定着率の高い採用を支援。" },
+                { icon: "🎯", title: "地域特化リーチ", desc: "那須地域で「実際に働ける人」に絞った効率配信。" },
+                { icon: "📱", title: "AIスコア調整", desc: "貴社独自の採用基準に合わせて、AIの評価を最適化。" },
+                { icon: "💎", title: "明快なワンプライス", desc: "月額6,600円の一括払い。追加費用は一切不要。" }
+              ].map((feature, idx) => (
+                <div key={idx} className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 hover:bg-white hover:shadow-xl transition-all duration-500 text-left">
+                  <div className="text-4xl mb-6">{feature.icon}</div>
+                  <h4 className="text-lg font-black text-slate-900 mb-3 tracking-tight">{feature.title}</h4>
+                  <p className="text-slate-500 text-xs font-bold leading-relaxed">{feature.desc}</p>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
+        {/* --- パートナーロゴ --- */}
+        <section className="py-24 px-6 bg-slate-50 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto text-center relative z-10">
+            <p className="text-slate-400 font-black tracking-[0.4em] uppercase text-[10px] mb-12 italic">trusted by local partners</p>
+            <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-40 grayscale hover:grayscale-0 transition-opacity duration-700">
+              {PARTNER_LOGOS.map((path, i) => (
+                <img key={i} src={path} alt="Partner" className="h-10 md:h-14 w-auto object-contain" />
+              ))}
+            </div>
+            <p className="mt-12 text-slate-400 text-sm font-bold">那須地域の様々な企業・団体様にご利用いただいています。</p>
+          </div>
+          <div className="absolute top-1/2 left-0 w-full h-px bg-slate-200 -z-10" />
+        </section>
+
         {/* --- FAQ --- */}
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-4 max-w-3xl">
-            <h3 className="text-3xl font-black text-center mb-12 italic">Q & A</h3>
-            <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-200">
+        <section className="py-32 md:py-48 px-6 bg-white border-y border-slate-100">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-24">
+              <p className="text-blue-600 font-black tracking-[0.4em] uppercase text-xs mb-6">common questions</p>
+              <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter text-slate-900">FAQ</h2>
+            </div>
+            
+            <div className="space-y-4">
               <FAQItem question="月額6,600円で何ができますか？">
                 AIマッチングシステムの完全機能をご利用いただけます。求職者との自動マッチング、AIスコア調整、応募者管理機能など、すべての機能が含まれます。
               </FAQItem>
               <FAQItem question="支払い方法は何ですか？">
-                月額6,600円の一括払いです。クレジットカードでのご支払いをお願いしております。
+                月額6,600円（税込）の一括払いです。クレジットカードによるお支払いをお願いしております。
               </FAQItem>
               <FAQItem question="成功報酬は発生しますか？">
                 いいえ、<strong>一切発生しません</strong>。何名採用が決まっても、追加の費用をいただくことはございません。
               </FAQItem>
               <FAQItem question="解約はいつでもできますか？">
-                はい、いつでも解約可能です。解約手続きは管理画面から簡単に行えます。
+                はい、いつでも解約可能です。管理画面から簡単に行えます。
               </FAQItem>
               <FAQItem question="どのような職種でも掲載できますか？">
                 はい。正社員・パート・アルバイト・契約社員など、雇用形態を問わず掲載可能です。
                 業種も、飲食・小売・製造・医療・介護・IT・建設など、幅広く対応しています。
               </FAQItem>
               <FAQItem question="AIマッチングとは何ですか？">
-                求職者の希望条件（職種・給与・勤務地・勤務時間など）と、貴社の求人条件を照合し、
-                <strong>マッチ度の高い求職者に自動で求人を配信</strong>する機能です。
-                従来の「求職者が検索して見つける」形式ではなく、「AIが最適な求職者に届ける」ため、
-                応募数・質ともに向上します。
+                求職者の希望条件と、貴社の求人条件を照合し、<strong>マッチ度の高い求職者に自動で求人を配信</strong>する機能です。
+                「AIが最適な求職者に届ける」ため、応募数・質ともに向上します。
               </FAQItem>
               <FAQItem question="登録後、すぐに掲載できますか？">
                 はい。登録完了後、管理画面から求人情報を入力いただければ、<strong>即座に掲載</strong>されます。
-                審査や承認はAIが実施します。
               </FAQItem>
             </div>
           </div>
         </section>
 
         {/* --- 登録フォーム --- */}
-        <section className="py-20 bg-slate-50" ref={registrationFormRef}>
-          <div className="container mx-auto px-4">
-            <div className="max-w-2xl mx-auto bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden">
-              <div className="bg-slate-900 p-8 text-center">
-                <h3 className="text-2xl font-bold text-white mb-2">パートナー登録</h3>
-                <p className="text-slate-400 text-sm">3分で完了。月額6,600円でAI採用マッチングを開始。</p>
+        <section id="signup-form" className="py-32 md:py-48 bg-[#0a0a0a] text-white px-6 relative overflow-hidden" ref={registrationFormRef}>
+          {/* 背景装飾 */}
+          <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[160px]" />
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[160px]" />
+          </div>
+
+          <div className="max-w-4xl mx-auto relative z-10">
+            <div className="text-center mb-24">
+              <p className="text-blue-400 font-black tracking-[0.4em] uppercase text-xs mb-6">get started</p>
+              <h2 className="text-5xl md:text-8xl font-black italic tracking-tighter leading-none mb-12">
+                那須の未来を、<br />共につくりましょう。
+              </h2>
+              <div className="inline-flex items-center gap-6 bg-white/5 border border-white/10 px-8 py-4 rounded-3xl backdrop-blur-md">
+                <div className="text-left">
+                  <p className="text-white/40 text-[10px] uppercase font-black mb-1">limited offer</p>
+                  <p className="text-xl font-black">20周年記念・特別優待プラン</p>
+                </div>
+                <div className="w-px h-10 bg-white/10" />
+                <div className="text-left">
+                  <p className="text-white/40 text-[10px] uppercase font-black mb-1">price</p>
+                  <p className="text-xl font-black text-blue-400">¥6,600 <span className="text-xs text-white/40 font-bold">/ 月（一括）</span></p>
+                </div>
               </div>
+            </div>
 
-              <form onSubmit={handleSignup} className="p-8 md:p-12 space-y-6">
-                {/* 企業名 */}
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">企業名・店舗名 <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all"
-                    placeholder="株式会社アドタウン"
-                  />
+            <div className="bg-white/5 backdrop-blur-3xl rounded-[4rem] p-10 md:p-20 border border-white/10 shadow-[0_64px_128px_rgba(0,0,0,0.5)]">
+              <form onSubmit={handleSignup} className="space-y-12">
+                <div className="grid md:grid-cols-2 gap-10">
+                  <div className="space-y-4">
+                    <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-4">企業名 / 店名</label>
+                    <input
+                      type="text"
+                      required
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="株式会社adtown"
+                      className="w-full bg-white/[0.03] border-2 border-white/10 rounded-2xl px-8 py-5 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all font-bold"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-4">ご担当者名</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactPerson}
+                      onChange={(e) => setContactPerson(e.target.value)}
+                      placeholder="那須 太郎"
+                      className="w-full bg-white/[0.03] border-2 border-white/10 rounded-2xl px-8 py-5 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all font-bold"
+                    />
+                  </div>
                 </div>
 
-                {/* 担当者名 */}
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">ご担当者名 <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    value={contactPerson}
-                    onChange={(e) => setContactPerson(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all"
-                    placeholder="那須 太郎"
-                  />
-                </div>
-
-                {/* 所在地 */}
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">所在地 <span className="text-red-500">*</span></label>
+                <div className="space-y-4">
+                  <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-4">所在地</label>
                   <input
                     type="text"
                     required
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all"
                     placeholder="栃木県那須塩原市..."
+                    className="w-full bg-white/[0.03] border-2 border-white/10 rounded-2xl px-8 py-5 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all font-bold"
                   />
                   {!area && address && (
-                    <p className="mt-2 text-xs text-red-500 font-medium">那須塩原市、那須町、大田原市の住所を入力してください。</p>
+                    <p className="mt-2 text-xs text-red-500 font-medium ml-4">那須塩原市、那須町、大田原市の住所を入力してください。</p>
                   )}
                   {area && (
-                    <p className="mt-2 text-xs text-green-600 font-bold flex items-center">
+                    <p className="mt-2 text-xs text-green-400 font-bold flex items-center ml-4">
                       <CheckCircleIcon className="w-3 h-3 mr-1" /> エリア判定：{area}
                     </p>
                   )}
                 </div>
 
-                {/* 電話番号 */}
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">電話番号 <span className="text-red-500">*</span></label>
+                <div className="space-y-4">
+                  <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-4">電話番号</label>
                   <input
                     type="tel"
                     required
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all"
                     placeholder="0287-XX-XXXX"
+                    className="w-full bg-white/[0.03] border-2 border-white/10 rounded-2xl px-8 py-5 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all font-bold"
                   />
                 </div>
 
-                {/* メールアドレス */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">メールアドレス <span className="text-red-500">*</span></label>
+                <div className="grid md:grid-cols-2 gap-10">
+                  <div className="space-y-4">
+                    <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-4">メールアドレス</label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white outline-none transition-all"
+                      className="w-full bg-white/[0.03] border-2 border-white/10 rounded-2xl px-8 py-5 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all font-bold"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">確認用 <span className="text-red-500">*</span></label>
+                  <div className="space-y-4">
+                    <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-4">確認用メールアドレス</label>
                     <input
                       type="email"
                       required
                       value={confirmEmail}
                       onChange={(e) => setConfirmEmail(e.target.value)}
-                      className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all ${email !== confirmEmail && confirmEmail ? 'border-red-400' : 'border-slate-200'}`}
+                      className={`w-full bg-white/[0.03] border-2 rounded-2xl px-8 py-5 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all font-bold ${email !== confirmEmail && confirmEmail ? 'border-red-500/50' : 'border-white/10'}`}
                     />
                   </div>
                 </div>
 
-                {/* パスワード */}
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">管理画面ログイン用パスワード <span className="text-red-500">*</span></label>
+                <div className="space-y-4">
+                  <label className="block text-xs font-black uppercase tracking-[0.2em] text-white/40 ml-4">パスワード</label>
                   <input
                     type="password"
                     required
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all"
                     placeholder="6文字以上"
+                    className="w-full bg-white/[0.03] border-2 border-white/10 rounded-2xl px-8 py-5 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all font-bold"
                   />
                 </div>
 
-                {/* 規約同意 */}
-                <div className="bg-slate-50 p-4 rounded-xl">
-                  <div className="flex items-center space-x-3">
+                <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 md:p-12">
+                  <div className="flex items-center space-x-4 mb-6">
                     <input
                       id="agree-checkbox"
                       type="checkbox"
                       checked={agreed}
                       onChange={(e) => setAgreed(e.target.checked)}
-                      className="w-5 h-5 accent-blue-600 cursor-pointer"
+                      className="w-6 h-6 rounded-lg bg-white/5 border-2 border-white/20 checked:bg-blue-600 transition-all cursor-pointer"
                     />
-                    <label htmlFor="agree-checkbox" className="text-sm font-medium text-slate-700">
-                      <button type="button" onClick={() => setShowTerms(!showTerms)} className="text-blue-600 font-bold hover:underline">利用規約</button>に同意して登録する
+                    <label htmlFor="agree-checkbox" className="text-sm font-bold text-white/70">
+                      <button type="button" onClick={() => setShowTerms(!showTerms)} className="text-blue-400 hover:underline">利用規約</button>に同意して登録する
                     </label>
                   </div>
                   {showTerms && (
-                    <div className="mt-4 p-4 bg-white border border-slate-200 rounded-lg h-48 overflow-y-auto text-xs text-slate-500 leading-relaxed shadow-inner">
-                      <h4 className="font-bold mb-2 text-slate-800">利用規約（抜粋）</h4>
-                      <p className="mb-2">第1条（適用）本規約は、株式会社adtownが提供する本サービスに適用されます。</p>
-                      <p className="mb-2">第2条（無料掲載）先着100社は永久に無料でサービスをご利用いただけます。</p>
-                      <p className="mb-2">第3条（料金）求人情報の掲載は無料です。成功報酬も不要です。</p>
-                      <p>第4条（機密保持）取得した求職者の個人情報は、目的外利用を固く禁じます。</p>
+                    <div className="bg-black/20 border border-white/10 rounded-2xl p-6 h-48 overflow-y-auto text-xs text-white/40 leading-relaxed font-medium">
+                      <h4 className="font-black mb-4 text-white/60">利用規約（抜粋）</h4>
+                      <p className="mb-4">第1条（適用）本規約は、株式会社adtownが提供する本サービスに適用されます。</p>
+                      <p className="mb-4">第2条（無料掲載）先着100社はキャンペーン価格でサービスをご利用いただけます。</p>
+                      <p className="mb-4">第3条（料金）求人情報の掲載は無料です。個別オプションを除き、追加費用は不要です。</p>
+                      <p>第4条（機密保持）取得した求職者の個人情報は、法令に基づき適切に管理いたします。</p>
                     </div>
                   )}
                 </div>
 
                 {error && (
-                  <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm flex items-center animate-shake">
-                    <XCircleIcon className="w-5 h-5 mr-2" />
+                  <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold flex items-center animate-shake">
+                    <XCircleIcon className="w-5 h-5 mr-3" />
                     {error}
                   </div>
                 )}
@@ -1038,50 +989,63 @@ const RecruitSignupPage: NextPage = () => {
                 <button
                   type="submit"
                   disabled={!isFormValid || isLoading}
-                  className="w-full py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xl shadow-xl shadow-blue-200 disabled:opacity-50 disabled:shadow-none transition-all transform hover:-translate-y-1 active:translate-y-0"
+                  className={`w-full py-6 rounded-3xl text-xl font-black italic tracking-widest transition-all shadow-[0_16px_48px_rgba(37,99,235,0.3)] ${
+                    !isFormValid || isLoading 
+                      ? 'bg-white/5 text-white/20 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white hover:shadow-[0_24px_64px_rgba(37,99,235,0.5)] active:scale-[0.98]'
+                  }`}
                 >
-                  {isLoading ? '登録処理中...' : '無料でアカウントを作成'}
+                  {isLoading ? '登録処理中...' : 'アカウントを作成して次へ'}
                 </button>
-                <p className="text-center text-xs text-slate-400">
-                  既にアカウントをお持ちの方は <Link href="/partner/login" className="text-blue-600 font-bold">こちらからログイン</Link>
-                </p>
               </form>
             </div>
           </div>
         </section>
       </main>
 
-      {/* --- フッター --- */}
-      <footer className="bg-slate-900 text-slate-400 py-16">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-            <div>
-              <h5 className="text-white font-bold text-lg mb-6">運営会社</h5>
-              <p className="text-sm leading-relaxed">
-                株式会社adtown<br />
-                栃木県那須塩原市石林698-35<br />
-                （創業20周年・那須の地域活性化を支える）
+      {/* ============================================
+          FOOTER
+          ============================================ */}
+      <footer className="bg-[#0a0a0a] border-t border-white/5 py-24 px-6 text-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-16 mb-24">
+            <div className="space-y-6">
+              <h4 className="text-2xl font-black italic tracking-tighter">
+                adtown <span className="text-blue-500">Recruit</span>
+              </h4>
+              <p className="text-white/40 text-sm font-medium max-w-sm leading-relaxed">
+                那須地域の採用を、AIでスマートに。<br />
+                株式会社adtownは、地域のポテンシャルをテクノロジーで最大化します。
               </p>
             </div>
-            <div>
-              <h5 className="text-white font-bold text-lg mb-6">リンク</h5>
-              <ul className="space-y-4 text-sm">
-                <li><Link href="/privacy" className="hover:text-blue-400 transition-colors">プライバシーポリシー</Link></li>
-                <li><Link href="/terms" className="hover:text-blue-400 transition-colors">利用規約</Link></li>
-                <li><Link href="/sctl" className="hover:text-blue-400 transition-colors">特定商取引法に基づく表記</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="text-white font-bold text-lg mb-6">お問い合わせ</h5>
-              <p className="text-sm">
-                掲載希望・アプリへのご意見は<br />
-                公式HPまたはダッシュボード内より<br />
-                お気軽にお問い合わせください。
-              </p>
+            
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-12">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 mb-6 font-sans">service</p>
+                <ul className="space-y-3 text-sm text-white/60 font-medium">
+                  <li><Link href="/" className="hover:text-white transition-colors">AI Matching</Link></li>
+                  <li><Link href="/" className="hover:text-white transition-colors">Premium Plan</Link></li>
+                  <li><Link href="/" className="hover:text-white transition-colors">Case Studies</Link></li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 mb-6 font-sans">company</p>
+                <ul className="space-y-3 text-sm text-white/60 font-medium">
+                  <li><Link href="/" className="hover:text-white transition-colors">About Us</Link></li>
+                  <li><Link href="/" className="hover:text-white transition-colors">Contact Us</Link></li>
+                  <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                </ul>
+              </div>
             </div>
           </div>
-          <div className="pt-8 border-t border-slate-800 text-center text-xs">
-            <p>&copy; {new Date().getFullYear()} Adtown Co., Ltd. All rights reserved.</p>
+          
+          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-[10px] text-white/20 font-black tracking-widest uppercase font-sans">
+              &copy; {new Date().getFullYear()} adtown inc. all rights reserved.
+            </p>
+            <div className="flex items-center gap-8">
+              <span className="text-[10px] text-white/20 font-black tracking-widest uppercase italic font-sans">member of nasu region development association</span>
+            </div>
           </div>
         </div>
       </footer>

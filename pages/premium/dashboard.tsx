@@ -210,6 +210,7 @@ const PremiumDashboardPage: NextPage<{ user: any, isPaid: boolean }> = ({ user, 
                             <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
                             <h1 className="text-xl font-black tracking-tighter text-[#4A4444]">みんなのNasuアプリ</h1>
                         </div>
+                        {user?.email && <p className="text-[10px] font-bold text-gray-400 pl-4.5 mb-1">{user.email}</p>}
                         <p className="text-[10px] font-bold text-rose-300 tracking-[0.2em] pl-4.5 uppercase">LIFESTYLE PREMIUM</p>
                     </div>
                     <button onClick={() => setShowEmergencyModal(true)} className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center text-rose-400 active:scale-90 transition-all shadow-sm border border-white">
