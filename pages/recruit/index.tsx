@@ -272,7 +272,7 @@ const RecruitSignupPage: NextPage = () => {
                 <div className="flex items-center gap-4">
                   <div className="text-left">
                     <p className="text-sm font-medium tracking-[0.25em] text-amber-400/80 uppercase mb-1">株式会社adtown</p>
-                    <p className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-none">創業<span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">20周年</span>記念事業</p>
+                    \u003cp className=\"text-2xl md:text-3xl font-bold tracking-tight text-white leading-none\"\u003e\u003cspan className=\"bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent\"\u003e20周年\u003c/span\u003e記念事業\u003c/p\u003e
                   </div>
                 </div>
                 <p className="text-xs text-white/30 tracking-[0.3em] uppercase">2006–2026 · 20 Years of Innovation</p>
@@ -631,7 +631,7 @@ const RecruitSignupPage: NextPage = () => {
                     
                     <div className="space-y-8 text-white/50 font-medium leading-relaxed text-lg italic">
                       <p>
-                        創業から20年。私たちは一貫して「人が集まり、地域が活性化する」ための支援を続けてきました。
+                        20年、私たちは一貫して「人が集まり、地域が活性化する」ための支援を続けてきました。
                       </p>
                       
                       <p>
