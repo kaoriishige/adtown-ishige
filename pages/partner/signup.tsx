@@ -204,7 +204,7 @@ export default function PartnerSignupLP() {
     <div className="bg-white text-slate-900 font-sans selection:bg-orange-100 overflow-x-hidden antialiased">
       <Head>
         <title>
-          広告パートナー募集｜みんなのNasuアプリ（株式会社adtown 創業20周年記念事業）｜先行100社 5,500円
+          広告パートナー募集｜みんなのNasuアプリ（株式会社adtown 20周年記念事業）｜先行100社 5,500円
         </title>
         <meta
           name="description"
@@ -362,7 +362,7 @@ export default function PartnerSignupLP() {
             >
               限定価格で申し込む
             </button>
-            <p className="mt-3 text-center text-white/20 text-xs">運営：株式会社adtown（創業20周年記念事業）</p>
+            <p className="mt-3 text-center text-white/20 text-xs">運営：株式会社adtown（20周年記念事業）</p>
           </div>
         </div>
 
@@ -1072,7 +1072,7 @@ export default function PartnerSignupLP() {
 
           <div className="max-w-3xl mx-auto space-y-4">
             <p className="text-xs opacity-30 leading-loose italic font-medium">
-              本プロジェクトは株式会社adtownの<span className="font-black">創業20周年記念事業</span>として運営されています。那須地域の持続可能な発展を目指し、AIと地域住民が共生する新しいマーケティングエコシステムを構築します。
+              本プロジェクトは株式会社adtownの<span className="font-black">20周年記念事業</span>として運営されています。那須地域の持続可能な発展を目指し、AIと地域住民が共生する新しいマーケティングエコシステムを構築します。
             </p>
             <p className="text-xs tracking-[0.3em] opacity-40 pt-6">© 2026 adtown CO., LTD. ALL RIGHTS RESERVED.</p>
           </div>

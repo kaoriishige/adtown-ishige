@@ -229,8 +229,8 @@ const RecruitSignupPage: NextPage = () => {
   return (
     <div className="bg-[#0a0a0a] text-white font-sans selection:bg-blue-900/40 overflow-x-hidden antialiased">
       <Head>
-        <title>【公式】AI求人パートナー登録｜月額6,600円でAI採用マッチング｜みんなの那須アプリ（株式会社adtown 創業20周年記念事業）</title>
-        <meta name="description" content="株式会社adtown 創業20周年記念事業。20年間で1000社+の採用を支援してきた実績を、アプリ×AIに集約。那須地域密着のAIマッチングで理想の人材を月額6,600円でご利用。" />
+        <title>【公式】AI求人パートナー登録｜月額6,600円でAI採用マッチング｜みんなの那須アプリ（株式会社adtown 20周年記念事業）</title>
+        <meta name="description" content="株式会社adtown 20周年記念事業。20年間で1000社+の採用を支援してきた実績を、アプリ×AIに集約。那須地域密着のAIマッチングで理想の人材を月額6,600円でご利用。" />
       </Head>
 
       {/* --- Sticky Bar --- */}
@@ -328,7 +328,7 @@ const RecruitSignupPage: NextPage = () => {
               >
                 月額6,600円で掲載を申し込む
               </button>
-              <p className="mt-3 text-white/20 text-xs tracking-widest uppercase">運営：株式会社adtown（創業20周年記念事業）</p>
+              <p className="mt-3 text-white/20 text-xs tracking-widest uppercase">運営：株式会社adtown（20周年記念事業）</p>
             </div>
           </div>
 
