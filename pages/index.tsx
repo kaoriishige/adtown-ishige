@@ -154,19 +154,10 @@ const PremiumShareCTA: React.FC<{ tone?: 'light' | 'dark' }> = ({ tone = 'light'
 
       <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
         <Link
-          href="/premium"
-          className={`inline-flex justify-center items-center px-6 py-3 rounded-2xl font-black text-sm shadow-lg transition-all transform hover:scale-105 ${isDark
-            ? 'bg-white text-green-900'
-            : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700'
-            }`}
-        >
-          有料プランに加入する（月額480円）
-        </Link>
-        <Link
           href="https://minna-no-nasu-app.netlify.app/users/signup"
-          className={`inline-flex justify-center items-center px-6 py-3 rounded-2xl font-black text-sm border transition-all ${isDark
-            ? 'border-green-400/40 text-green-50 hover:bg-green-900/40'
-            : 'border-gray-300 text-gray-700 hover:bg-white'
+          className={`inline-flex justify-center items-center px-8 py-4 rounded-2xl font-black text-base shadow-lg transition-all transform hover:scale-105 ${isDark
+            ? 'bg-white text-green-900'
+            : 'bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800'
             }`}
         >
           無料プランに登録して詳細を見る
@@ -753,12 +744,12 @@ const IndexPage = () => {
                 ))}
               </ul>
 
-              {/* 有料プラン加入CTA */}
+              {/* 無料プラン登録CTA */}
               <Link
-                href="/premium"
-                className="block w-full text-center bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-lg py-4 px-8 rounded-2xl shadow-lg transition-all transform hover:scale-105"
+                href="https://minna-no-nasu-app.netlify.app/users/signup"
+                className="block w-full text-center bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-black text-lg py-4 px-8 rounded-2xl shadow-lg transition-all transform hover:scale-105"
               >
-                有料プランに加入する（月額480円）
+                まずは無料プランに登録する
               </Link>
 
               <p className="text-xs text-gray-400 mt-3 text-center">
@@ -777,10 +768,10 @@ const IndexPage = () => {
               </p>
               <div className="mt-6">
                 <Link
-                  href="/premium"
-                  className="inline-flex justify-center items-center px-8 py-4 rounded-2xl bg-white text-amber-700 font-black text-base shadow-lg transition-all transform hover:scale-105"
+                  href="https://minna-no-nasu-app.netlify.app/users/signup"
+                  className="inline-flex justify-center items-center px-8 py-4 rounded-2xl bg-white text-green-800 font-black text-base shadow-lg transition-all transform hover:scale-105"
                 >
-                  有料プランに加入する
+                  無料プランに登録して詳細を見る
                 </Link>
               </div>
             </div>
@@ -888,16 +879,16 @@ const IndexPage = () => {
                 Premium Plan
               </p>
               <p className="text-3xl font-black leading-tight">
-                月額480円で<br />全機能が使える。
+                まずは無料登録で<br />全機能の概要をチェック。
               </p>
               <p className="mt-2 text-sm font-bold opacity-80">
-                紹介報酬（20%）を使えば、実質タダになる可能性も。
+                紹介プログラムの詳細は、無料登録後にご確認いただけます。
               </p>
               <Link
-                href="/premium"
-                className="inline-block mt-6 bg-white text-amber-600 font-black text-lg py-4 px-10 rounded-2xl shadow-lg transition-all transform hover:scale-105"
+                href="https://minna-no-nasu-app.netlify.app/users/signup"
+                className="inline-block mt-6 bg-white text-green-700 font-black text-lg py-4 px-10 rounded-2xl shadow-lg transition-all transform hover:scale-105"
               >
-                有料プランに加入する
+                無料プランに登録する
               </Link>
               <p className="text-xs mt-3 opacity-60">※いつでも解約可能</p>
             </div>
@@ -954,14 +945,8 @@ const IndexPage = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Link
-                    href="/premium"
-                    className="inline-flex justify-center items-center px-8 py-4 rounded-2xl bg-white text-pink-800 font-black text-base shadow-lg transition-all transform hover:scale-105"
-                  >
-                    有料プランに加入する
-                  </Link>
-                  <Link
                     href="https://minna-no-nasu-app.netlify.app/users/signup"
-                    className="inline-flex justify-center items-center px-8 py-4 rounded-2xl border border-pink-300/50 text-white font-black text-base hover:bg-pink-800/40 transition-all"
+                    className="inline-flex justify-center items-center px-8 py-4 rounded-2xl bg-white text-pink-800 font-black text-base shadow-lg transition-all transform hover:scale-105"
                   >
                     無料プランに登録して詳細を見る
                   </Link>
