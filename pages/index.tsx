@@ -1,20 +1,36 @@
-// index.tsx (拡散LP完全版: 那須愛 + 一緒に作る + シェアボタン + SNS拡散フック 追加済み)
+// index.tsx
+// 変更点:
+//   ① hasReferral ステート追加（?ref=ID 検知）
+//   ② ShareButtons に hasReferral props + 景表法開示バナー
+//   ③ 「シェアして稼ぐ」紹介報酬セクション追加（PREMIUMセクションの直前）
+//   ④ 有料プラン加入CTA（/premium へのリンク）
+//   ⑤ 全 ShareButtons 呼び出しに hasReferral={hasReferral} を追加
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import {
-    ShieldCheck, HeartPulse, ShoppingCart, Briefcase, Ticket, Lightbulb, Users, Building2, Rocket, Star, Coins, Sparkles, Smile, Clock, Zap, Gift, Crown, Infinity, HeartHandshake,
-    Store, Brain, Utensils, Droplet, Gamepad, User, Shield, TrendingUp, ArrowLeft, Target, Shirt, Mail, Sun, WashingMachine, Home, LayoutGrid, Award, Filter, Fuel, Heart, Wallet, ShoppingBag,
-    Share2 // 【追加】シェアアイコン
+    ShieldCheck, HeartPulse, ShoppingCart, Briefcase, Ticket,
+    Lightbulb, Users, Building2, Rocket, Star, Coins, Sparkles,
+    Smile, Clock, Zap, Gift, Crown, Infinity, HeartHandshake,
+    Store, Brain, Utensils, Droplet, Gamepad, User, Shield,
+    TrendingUp, ArrowLeft, Target, Shirt, Mail, Sun, WashingMachine,
+    Home, LayoutGrid, Award, Filter, Fuel, Heart, Wallet, ShoppingBag,
+    Share2, CheckCircle2, ChevronRight
 } from 'lucide-react';
 import {
-    RiBankCardFill, RiShieldCheckFill, RiHistoryFill, RiShoppingBagFill, RiAddCircleFill, RiSettings4Fill, RiLogoutBoxRLine, RiPlantFill, RiFlashlightFill, RiHandHeartFill, RiExchangeBoxFill, RiArrowRightSLine, RiGiftFill, RiHeartFill, RiLightbulbFlashLine, RiHome4Line, RiLeafLine, RiExchangeFundsLine
+    RiBankCardFill, RiShieldCheckFill, RiHistoryFill, RiShoppingBagFill,
+    RiAddCircleFill, RiSettings4Fill, RiLogoutBoxRLine, RiPlantFill,
+    RiFlashlightFill, RiHandHeartFill, RiExchangeBoxFill, RiArrowRightSLine,
+    RiGiftFill, RiHeartFill, RiLightbulbFlashLine, RiHome4Line, RiLeafLine,
+    RiExchangeFundsLine
 } from 'react-icons/ri';
+import { useAffiliateTracker } from '@/lib/affiliate-tracker';
 
-type IconType = React.FC<React.SVGProps<SVGSVGElement>>;
-
+// ─────────────────────────────────────────────
+// 型定義
+// ─────────────────────────────────────────────
 interface AppItem {
     title: string;
     category: string;
@@ -24,6 +40,9 @@ interface AppItem {
     disabled: boolean;
 }
 
+// ─────────────────────────────────────────────
+// アプリリスト
+// ─────────────────────────────────────────────
 const FREE_APP_LIST: AppItem[] = [
     { title: "フードロス格安商品速報", category: '節約・特売', description: '賞味期限間近の商品を最大90%OFFでレスキュー！', href: '/premium', Icon: ShoppingBag, disabled: false },
     { title: "まとめ買いお得チェック", category: '節約・特売', description: '「どっちがお得？」を即座に計算。まとめ買いの適正量も判定', href: '/apps/BulkBuyCalc', Icon: ShoppingCart, disabled: false },
@@ -53,9 +72,13 @@ const FREE_APP_LIST: AppItem[] = [
 ];
 
 const FREE_CATEGORIES: string[] = [
-    '収納・片付け', '生活情報', '健康支援', '子育て', '節約・特売', 'エンタメ', '防災・安全', 'スキルアップ・キャリア', '診断・運勢', '人間関係', '趣味・文化'
+    '収納・片付け', '生活情報', '健康支援', '子育て', '節約・特売',
+    'エンタメ', '防災・安全', 'スキルアップ・キャリア', '診断・運勢', '人間関係', '趣味・文化'
 ];
 
+// ─────────────────────────────────────────────
+// MenuButton
+// ─────────────────────────────────────────────
 function MenuButton({ href, icon, title, label, color }: any) {
     return (
         <div className="group relative bg-white p-6 rounded-[2.2rem] shadow-sm border border-gray-100 flex items-center gap-5">
@@ -70,141 +93,122 @@ function MenuButton({ href, icon, title, label, color }: any) {
     );
 }
 
-// 【追加】シェアボタンコンポーネント
-// pageUrl: シェアするURL, shareText: シェアするテキスト
-const ShareButtons: React.FC<{ pageUrl: string; shareText: string }> = ({ pageUrl, shareText }) => {
+// ─────────────────────────────────────────────
+// ① ShareButtons（hasReferral 対応版）
+//
+// hasReferral=true のとき:
+//   ・「🎁 あなたの紹介リンクでシェア中」バナーを表示
+//   ・景品表示法・ステマ規制対応の開示文を表示
+//
+// hasReferral=false のとき:
+//   ・通常シェアボタンのみ表示
+// ─────────────────────────────────────────────
+const ShareButtons: React.FC<{
+    pageUrl: string;
+    shareText: string;
+    hasReferral?: boolean;
+}> = ({ pageUrl, shareText, hasReferral = false }) => {
     const encodedUrl = encodeURIComponent(pageUrl);
     const encodedText = encodeURIComponent(shareText);
 
     const shareLinks = [
         {
             label: 'LINEでシェア',
-            // LINE公式シェアURL
             href: `https://social-plugins.line.me/lineit/share?url=${encodedUrl}`,
-            // LINEグリーン
             bgColor: 'bg-[#06C755]',
             hoverColor: 'hover:bg-[#05b34c]',
             icon: (
-                // LINEロゴ（SVG）
                 <svg className="w-5 h-5" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 3C10.6 3 3 9.7 3 18c0 5.2 2.9 9.8 7.4 12.7-.3 1.1-1 3.9-1.2 4.5-.2.8.3.8.6.6.2-.1 3.7-2.5 5.2-3.5.6.1 1.3.1 2 .1 9.4 0 17-6.7 17-15S29.4 3 20 3z" fill="white"/>
+                    <path d="M20 3C10.6 3 3 9.7 3 18c0 5.2 2.9 9.8 7.4 12.7-.3 1.1-1 3.9-1.2 4.5-.2.8.3.8.6.6.2-.1 3.7-2.5 5.2-3.5.6.1 1.3.1 2 .1 9.4 0 17-6.7 17-15S29.4 3 20 3z" fill="white" />
                 </svg>
             ),
         },
         {
             label: 'Xでシェア',
-            // X（旧Twitter）シェアURL
             href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
             bgColor: 'bg-black',
             hoverColor: 'hover:bg-gray-800',
             icon: (
-                // X（旧Twitter）ロゴ（SVG）
                 <svg className="w-5 h-5" viewBox="0 0 1200 1227" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="white"/>
+                    <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="white" />
                 </svg>
             ),
         },
         {
             label: 'Facebookでシェア',
-            // Facebook シェアURL
             href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
             bgColor: 'bg-[#1877F2]',
             hoverColor: 'hover:bg-[#166fe5]',
             icon: (
-                // Facebookロゴ（SVG）
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
             ),
         },
     ];
 
     return (
-        <div className="flex flex-wrap justify-center gap-3 mt-6">
-            {shareLinks.map((s) => (
-                <a
-                    key={s.label}
-                    href={s.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-bold text-sm shadow-lg transition-all transform hover:scale-105 ${s.bgColor} ${s.hoverColor}`}
-                >
-                    {s.icon}
-                    {s.label}
-                </a>
-            ))}
+        <div className="flex flex-col items-center">
+            {/* ① 紹介リンクであることの告知バナー（hasReferral=true のみ表示） */}
+            {hasReferral && (
+                <div className="mb-3 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold px-4 py-2 rounded-full">
+                    <span>🎁</span>
+                    <span>あなたの紹介リンクでシェア中。有料加入で20%の報酬が発生します</span>
+                </div>
+            )}
+
+            {/* シェアボタン群 */}
+            <div className="flex flex-wrap justify-center gap-3">
+                {shareLinks.map((s) => (
+                    <a
+                        key={s.label}
+                        href={s.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-bold text-sm shadow-lg transition-all transform hover:scale-105 ${s.bgColor} ${s.hoverColor}`}
+                    >
+                        {s.icon}
+                        {s.label}
+                    </a>
+                ))}
+            </div>
+
+            {/* ② 景品表示法・ステマ規制（2023年10月施行）対応の開示文（hasReferral=true のみ表示） */}
+            {hasReferral && (
+                <p className="text-[10px] text-gray-400 mt-2 text-center leading-relaxed">
+                    ※このリンクからの有料プラン登録により、紹介者に報酬が発生する場合があります（景品表示法に基づく表記）
+                </p>
+            )}
         </div>
     );
 };
 
-interface LandingData {
-    mainTitle?: string;
-    areaDescription?: string;
-    heroHeadline?: string;
-    heroSubheadline?: string;
-    solutionBenefit1_Title?: string;
-    solutionBenefit1_Desc?: string;
-    solutionBenefit2_Title?: string;
-    solutionBenefit2_Desc?: string;
-    solutionBenefit3_Title?: string;
-    solutionBenefit3_Desc?: string;
-    solutionBenefit4_Title?: string;
-    solutionBenefit4_Desc?: string;
-    freePlanTitle?: string;
-    freePlanSubTitle?: string;
-    freePlanFeatures?: string[];
-    freePlanConclusion?: string;
-    premiumPlanHeadline?: string;
-    premiumPlanDesc?: string;
-    premiumPlanTitle?: string;
-    premiumPlanFeatures?: { title: string; desc: string }[];
-    premiumPlanConclusion?: string;
-    freeReasonTitle?: string;
-    freeReasonDesc?: string;
-    finalCtaTitle?: string;
-    finalCtaSubtext?: string;
-    finalTagline1?: string;
-    finalTagline2?: string;
-}
-import { useAffiliateTracker } from '@/lib/affiliate-tracker';
-
-const LandingPageFallback = () => {
-    return (
-        <div className="p-10 text-center">
-            <h1 className="text-2xl font-bold">Landing Page</h1>
-            <p className="mt-4">Please see the main IndexPage below.</p>
-        </div>
-    );
-};
-
-const SafeHTML: React.FC<{ html?: string }> = ({ html }) => (
-    <div dangerouslySetInnerHTML={{ __html: html || '' }} />
-);
-
-// -------------------------
+// ─────────────────────────────────────────────
 // Page component
-// -------------------------
+// ─────────────────────────────────────────────
 const IndexPage = () => {
     const BASE_LINE_URL = "https://lin.ee/N4x90pv";
     const [lineUrl, setLineUrl] = useState(BASE_LINE_URL);
     const router = useRouter();
 
-    // 【追加】シェア用のページURL・テキスト（クライアントサイドで取得）
     const [currentPageUrl, setCurrentPageUrl] = useState('https://minnanasu.com');
     const SHARE_TEXT = '那須塩原・大田原・那須町の暮らしが便利になる無料アプリ！那須が好きな方はぜひ使ってみてください👇';
+
+    // ① hasReferral ステート（?ref=ID が付いていれば true）
+    const [hasReferral, setHasReferral] = useState(false);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
         document.title = "みんなのNasuアプリ | 公式";
-
-        // 【追加】現在のページURLをシェア用に取得
         setCurrentPageUrl(window.location.href);
 
         try {
             const searchParams = new URLSearchParams(window.location.search);
             const referralId = searchParams.get('ref');
             if (referralId) {
+                // ① ?ref=ID を検知 → hasReferral を true にセット
+                setHasReferral(true);
                 const newUrl = `${BASE_LINE_URL}?ref=${referralId}`;
                 setLineUrl(newUrl);
                 console.log("紹介ID検知: LINEリンクを書き換えました ->", newUrl);
@@ -233,7 +237,7 @@ const IndexPage = () => {
             if (!isDuplicate) acc.push(current);
             return acc;
         }, [] as AppItem[]);
-    }
+    };
 
     const allUniqueApps: AppItem[] = FREE_APP_LIST.reduce((acc, current) => {
         const isDuplicate = acc.some(item => item.title === current.title && item.href === current.href);
@@ -266,7 +270,9 @@ const IndexPage = () => {
     return (
         <div className="bg-white text-gray-800 font-sans">
 
-            {/* Hero Section */}
+            {/* ════════════════════════════════════════
+                Hero Section
+            ════════════════════════════════════════ */}
             <header className="relative bg-white overflow-hidden shadow-lg">
                 <div className="relative w-full aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6] mx-auto">
                     <Image
@@ -284,9 +290,11 @@ const IndexPage = () => {
                             <p className="text-xl font-black text-pink-800 bg-yellow-100 px-6 py-2 rounded-full border border-yellow-300 shadow-md">
                                 最速30秒！LINE友だち追加で無料登録
                             </p>
-                            <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                            <a href={lineUrl} target="_blank" rel="noopener noreferrer"
+                                className="inline-block transition-transform transform hover:scale-105">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
+                                <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png"
+                                    alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
                             </a>
                         </div>
                     </div>
@@ -295,16 +303,11 @@ const IndexPage = () => {
 
             <main>
 
-                {/*
-                  ============================================================
-                  【変更①】感情ファースト：那須愛メッセージ
-                  ※ 元の「20周年感謝企画」セクションの前に配置。
-                     拡散してくれる人はまず「那須が好き」という感情で動く。
-                  ============================================================
-                */}
+                {/* ════════════════════════════════════════
+                    那須愛メッセージ
+                ════════════════════════════════════════ */}
                 <section className="py-16 bg-gradient-to-b from-green-50 to-white border-b">
                     <div className="container mx-auto px-6 text-center max-w-2xl">
-                        {/* 感情的な一言 */}
                         <p className="text-4xl md:text-5xl font-black text-green-800 leading-tight tracking-tighter">
                             那須が好きすぎて、<br />
                             <span className="text-green-600">このアプリを作りました。</span>
@@ -322,7 +325,9 @@ const IndexPage = () => {
                     </div>
                 </section>
 
-                {/* Intro（20周年） */}
+                {/* ════════════════════════════════════════
+                    20周年 Intro
+                ════════════════════════════════════════ */}
                 <section className="text-center py-16 bg-white border-b">
                     <div className="container mx-auto px-6">
                         <h2 className="text-3xl font-bold text-gray-800">
@@ -334,7 +339,9 @@ const IndexPage = () => {
                     </div>
                 </section>
 
-                {/* YouTube */}
+                {/* ════════════════════════════════════════
+                    YouTube
+                ════════════════════════════════════════ */}
                 <section className="py-16 bg-pink-50">
                     <div className="container mx-auto px-6 text-center">
                         <div
@@ -353,17 +360,12 @@ const IndexPage = () => {
                     </div>
                 </section>
 
-                {/*
-                  ============================================================
-                  【追加②】SNS拡散フック：那須こんだてハイライト
-                  ※「今日の夕飯、AIが決めます」は主婦層がシェアしやすい
-                    強力なフック。YouTubeの直後に配置して流れを作る。
-                  ============================================================
-                */}
+                {/* ════════════════════════════════════════
+                    SNS拡散フック：那須こんだてハイライト
+                ════════════════════════════════════════ */}
                 <section className="py-16 bg-orange-50 border-y border-orange-100">
                     <div className="container mx-auto px-6 max-w-3xl">
                         <div className="text-center mb-8">
-                            {/* 拡散を狙った一行キャッチ */}
                             <p className="inline-block bg-orange-100 text-orange-700 text-xs font-black tracking-widest px-4 py-1.5 rounded-full mb-4 uppercase">
                                 SNSで話題
                             </p>
@@ -378,22 +380,25 @@ const IndexPage = () => {
                             </p>
                         </div>
 
-                        {/* 使い方ステップ（視覚的に分かりやすく） */}
                         <div className="grid grid-cols-3 gap-4 my-8">
                             {[
                                 { step: '1', label: '特売チラシを\nチェック', emoji: '🛒' },
                                 { step: '2', label: '冷蔵庫の\n在庫を入力', emoji: '🧊' },
                                 { step: '3', label: 'AIが献立を\n自動提案', emoji: '🍳' },
                             ].map((item) => (
-                                <div key={item.step} className="bg-white rounded-2xl p-4 text-center shadow-sm border border-orange-100">
+                                <div key={item.step}
+                                    className="bg-white rounded-2xl p-4 text-center shadow-sm border border-orange-100">
                                     <div className="text-3xl mb-2">{item.emoji}</div>
-                                    <div className="text-[10px] font-black text-orange-400 tracking-widest mb-1">STEP {item.step}</div>
-                                    <p className="text-xs font-bold text-gray-700 leading-relaxed whitespace-pre-line">{item.label}</p>
+                                    <div className="text-[10px] font-black text-orange-400 tracking-widest mb-1">
+                                        STEP {item.step}
+                                    </div>
+                                    <p className="text-xs font-bold text-gray-700 leading-relaxed whitespace-pre-line">
+                                        {item.label}
+                                    </p>
                                 </div>
                             ))}
                         </div>
 
-                        {/* 拡散を促す一言 */}
                         <div className="text-center bg-white rounded-[2rem] p-6 border border-orange-100 shadow-sm">
                             <p className="text-xl font-black italic text-gray-800">
                                 "考えるのはAI。あなたは、作るだけ。"
@@ -403,17 +408,23 @@ const IndexPage = () => {
                             </p>
                         </div>
 
-                        {/* 【シェアボタン：SNS拡散フックの直下にも配置】 */}
                         <div className="mt-8 text-center">
                             <p className="text-sm font-bold text-gray-500 mb-1">
                                 那須の友人・知人にシェアする
                             </p>
-                            <ShareButtons pageUrl={currentPageUrl} shareText={SHARE_TEXT} />
+                            {/* ⑤ hasReferral を渡す */}
+                            <ShareButtons
+                                pageUrl={currentPageUrl}
+                                shareText={SHARE_TEXT}
+                                hasReferral={hasReferral}
+                            />
                         </div>
                     </div>
                 </section>
 
-                {/* Partner logos */}
+                {/* ════════════════════════════════════════
+                    パートナーロゴ
+                ════════════════════════════════════════ */}
                 <section className="py-16 bg-white border-y">
                     <div className="container mx-auto px-6 text-center">
                         <h3 className="text-sm tracking-widest text-gray-500 mb-8 font-semibold uppercase">
@@ -429,9 +440,7 @@ const IndexPage = () => {
                                         width={150}
                                         height={50}
                                         className="object-contain max-h-12 w-auto"
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                        }}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     />
                                 </div>
                             ))}
@@ -439,7 +448,9 @@ const IndexPage = () => {
                     </div>
                 </section>
 
-                {/* Free Apps Section */}
+                {/* ════════════════════════════════════════
+                    Free Apps Section
+                ════════════════════════════════════════ */}
                 <section className="py-20 bg-white">
                     <div className="container mx-auto px-4 max-w-4xl">
                         <div className="text-center mb-12">
@@ -475,7 +486,6 @@ const IndexPage = () => {
                                 badge="AI × 特売"
                                 badgeColor="bg-orange-100 text-orange-600"
                             />
-
                             <FeaturedAppCard
                                 title="最安ガソリン｜ガソリン価格比較"
                                 description={<>那須地域のガソリン価格をまとめて比較。<br className="hidden md:block" />今いちばん安いスタンドが、ひと目でわかる。</>}
@@ -496,7 +506,6 @@ const IndexPage = () => {
                                 badge="地域最安"
                                 badgeColor="bg-red-100 text-red-600"
                             />
-
                             <FeaturedAppCard
                                 title="ドラッグストア特売ナビ"
                                 description={<>那須地域のドラッグストア特売をまとめてチェック。<br className="hidden md:block" />日用品・薬を、いちばん安い店で。</>}
@@ -529,8 +538,7 @@ const IndexPage = () => {
                                     onClick={() => setSelectedCategory('すべて')}
                                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedCategory === 'すべて'
                                         ? 'bg-gray-800 text-white border-gray-800 shadow-lg'
-                                        : 'bg-white text-green-700 border-green-200 hover:bg-green-100'
-                                        }`}
+                                        : 'bg-white text-green-700 border-green-200 hover:bg-green-100'}`}
                                 >
                                     すべて
                                 </button>
@@ -540,8 +548,7 @@ const IndexPage = () => {
                                         onClick={() => setSelectedCategory(category)}
                                         className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedCategory === category
                                             ? 'bg-green-600 text-white border-green-600 shadow-lg'
-                                            : 'bg-white text-green-700 border-green-200 hover:bg-green-100'
-                                            }`}
+                                            : 'bg-white text-green-700 border-green-200 hover:bg-green-100'}`}
                                     >
                                         {category}
                                     </button>
@@ -554,15 +561,18 @@ const IndexPage = () => {
                             {filteredApps.map(app => (
                                 <div
                                     key={`${app.title}-${app.category}`}
-                                    className={`block p-5 rounded-[2rem] shadow-sm border ${app.disabled ? 'bg-gray-100 text-gray-500 opacity-80 border-gray-300' : 'bg-white border-gray-100'
-                                        }`}
+                                    className={`block p-5 rounded-[2rem] shadow-sm border ${app.disabled
+                                        ? 'bg-gray-100 text-gray-500 opacity-80 border-gray-300'
+                                        : 'bg-white border-gray-100'}`}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className={`p-3 rounded-2xl ${app.disabled ? 'bg-gray-300' : 'bg-green-100 text-green-600'}`}>
                                             <app.Icon className="w-6 h-6" />
                                         </div>
                                         <div className="text-left">
-                                            <h3 className={`font-black text-lg tracking-tight ${app.disabled ? 'text-gray-500' : 'text-gray-800'}`}>{app.title}</h3>
+                                            <h3 className={`font-black text-lg tracking-tight ${app.disabled ? 'text-gray-500' : 'text-gray-800'}`}>
+                                                {app.title}
+                                            </h3>
                                             <p className="text-xs text-gray-500 mt-1 leading-relaxed">{app.description}</p>
                                         </div>
                                     </div>
@@ -578,9 +588,11 @@ const IndexPage = () => {
                                 登録しない理由が、見つかりません。
                             </p>
                             <div className="mt-8 flex flex-col items-center space-y-2">
-                                <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                                <a href={lineUrl} target="_blank" rel="noopener noreferrer"
+                                    className="inline-block transition-transform transform hover:scale-105">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-12 w-auto shadow-md" />
+                                    <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png"
+                                        alt="LINE 友だち追加" height="42" className="h-12 w-auto shadow-md" />
                                 </a>
                                 <p className="text-xs font-bold text-gray-400">
                                     ※完全無料登録・いつでも解約可能
@@ -590,27 +602,19 @@ const IndexPage = () => {
                     </div>
                 </section>
 
-                {/*
-                  ============================================================
-                  【追加③】一緒に作るセクション
-                  ※ 那須が好きな人を「ユーザー」ではなく「仲間・協力者」
-                    として巻き込む。拡散してくれる人の心理に刺さる。
-                    Free Appsセクションの直後に配置。
-                  ============================================================
-                */}
+                {/* ════════════════════════════════════════
+                    一緒に作るセクション
+                ════════════════════════════════════════ */}
                 <section className="py-20 bg-green-900 text-white">
                     <div className="container mx-auto px-6 text-center max-w-2xl">
-                        {/* セクションラベル */}
                         <p className="inline-block bg-green-700 text-green-200 text-xs font-black tracking-widest px-4 py-1.5 rounded-full mb-6 uppercase">
                             那須好きの方へ
                         </p>
-
                         <h2 className="text-3xl md:text-4xl font-black leading-snug">
                             このアプリは、<br />
                             <span className="text-green-300">那須に住む人たちで</span><br />
                             育てていくアプリです。
                         </h2>
-
                         <div className="mt-8 space-y-3 text-lg font-bold text-green-100 leading-relaxed">
                             <p>もし</p>
                             <div className="space-y-1 text-green-300 text-xl">
@@ -620,40 +624,253 @@ const IndexPage = () => {
                             </div>
                             <p className="pt-2">と思っていただけるなら、</p>
                         </div>
-
                         <p className="mt-8 text-2xl font-black text-white">
                             ぜひ、一緒に参加してください。
                         </p>
-
                         <p className="mt-4 text-green-300 text-base leading-relaxed">
                             使うだけで十分です。<br />
                             知り合いに話すだけでも十分です。<br />
                             <strong className="text-white">あなたの一言が、那須の誰かの毎日を変えます。</strong>
                         </p>
 
-                        {/* 【シェアボタン：一緒に作るセクション内】 */}
                         <div className="mt-10">
                             <p className="text-sm font-bold text-green-300 mb-1">
                                 <Share2 className="inline-block w-4 h-4 mr-1 mb-0.5" />
                                 那須好きの友人・知人にシェアする
                             </p>
-                            <ShareButtons pageUrl={currentPageUrl} shareText={SHARE_TEXT} />
+                            {/* ⑤ hasReferral を渡す */}
+                            <ShareButtons
+                                pageUrl={currentPageUrl}
+                                shareText={SHARE_TEXT}
+                                hasReferral={hasReferral}
+                            />
                         </div>
 
-                        {/* LINE登録も並べて案内 */}
                         <div className="mt-10 pt-10 border-t border-green-700 flex flex-col items-center space-y-3">
                             <p className="text-base font-bold text-green-200">
                                 まずはLINE登録から（完全無料）
                             </p>
-                            <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                            <a href={lineUrl} target="_blank" rel="noopener noreferrer"
+                                className="inline-block transition-transform transform hover:scale-105">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
+                                <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png"
+                                    alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
                             </a>
                         </div>
                     </div>
                 </section>
 
-                {/* Paid Apps Section */}
+                {/* ════════════════════════════════════════
+                    ③【新規追加】有料プラン加入 × 紹介報酬セクション
+                    ─ PREMIUMセクションの直前に挿入 ─
+                    
+                    狙い:
+                    ・無料会員に「月額480円で稼げる」を訴求
+                    ・シェアするだけで収益になる仕組みを可視化
+                    ・有料プラン加入CTAを自然な流れで提示
+                ════════════════════════════════════════ */}
+                <section className="py-20 bg-gradient-to-b from-amber-50 to-white border-y border-amber-100">
+                    <div className="container mx-auto px-6 max-w-3xl">
+
+                        {/* セクションヘッド */}
+                        <div className="text-center mb-12">
+                            <p className="inline-block bg-amber-100 text-amber-700 text-xs font-black tracking-widest px-4 py-1.5 rounded-full mb-4 uppercase">
+                                有料プラン × 紹介報酬
+                            </p>
+                            <h2 className="text-3xl md:text-4xl font-black text-gray-800 leading-tight">
+                                シェアするだけで、<br />
+                                <span className="text-amber-600">那須の暮らしが収入になる。</span>
+                            </h2>
+                            <p className="mt-4 text-lg text-gray-600 leading-relaxed">
+                                有料プラン（月額480円）に加入すると、<br className="hidden md:block" />
+                                あなた専用の紹介URLが発行されます。<br className="hidden md:block" />
+                                そのURLをシェアして、友人が有料加入すると<br className="hidden md:block" />
+                                <strong className="text-amber-700">20%の紹介報酬</strong>が入ります。
+                            </p>
+                        </div>
+
+                        {/* 仕組みフロー図 */}
+                        <div className="relative">
+                            {/* ステップカード */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                                {[
+                                    {
+                                        step: '1',
+                                        emoji: '📱',
+                                        title: '無料登録',
+                                        desc: 'LINEで友だち追加\n（完全無料）',
+                                        color: 'border-green-200 bg-green-50',
+                                        labelColor: 'text-green-500',
+                                    },
+                                    {
+                                        step: '2',
+                                        emoji: '⭐',
+                                        title: '有料プラン加入',
+                                        desc: '月額480円で\n全機能が使える',
+                                        color: 'border-amber-200 bg-amber-50',
+                                        labelColor: 'text-amber-500',
+                                    },
+                                    {
+                                        step: '3',
+                                        emoji: '🔗',
+                                        title: '専用URL発行',
+                                        desc: 'あなただけの\n紹介URLが生成',
+                                        color: 'border-blue-200 bg-blue-50',
+                                        labelColor: 'text-blue-500',
+                                    },
+                                    {
+                                        step: '4',
+                                        emoji: '💰',
+                                        title: '紹介報酬20%',
+                                        desc: '友人が加入するたびに\n報酬が発生',
+                                        color: 'border-pink-200 bg-pink-50',
+                                        labelColor: 'text-pink-500',
+                                    },
+                                ].map((item, idx, arr) => (
+                                    <div key={item.step} className="flex md:flex-col items-center gap-3">
+                                        <div className={`flex-1 md:w-full rounded-2xl p-4 text-center border ${item.color} shadow-sm`}>
+                                            <div className="text-3xl mb-2">{item.emoji}</div>
+                                            <div className={`text-[10px] font-black tracking-widest mb-1 ${item.labelColor}`}>
+                                                STEP {item.step}
+                                            </div>
+                                            <p className="text-sm font-black text-gray-800">{item.title}</p>
+                                            <p className="text-xs text-gray-500 mt-1 leading-relaxed whitespace-pre-line">
+                                                {item.desc}
+                                            </p>
+                                        </div>
+                                        {/* 矢印（最後のステップ以外） */}
+                                        {idx < arr.length - 1 && (
+                                            <ChevronRight className="w-5 h-5 text-gray-300 shrink-0 hidden md:block" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 試算ボックス */}
+                        <div className="bg-white rounded-[2rem] border border-amber-200 shadow-md p-8 mb-8">
+                            <h3 className="text-center text-lg font-black text-gray-700 mb-6">
+                                💡 紹介報酬シミュレーション
+                            </h3>
+                            <div className="space-y-4">
+                                {[
+                                    {
+                                        friends: '5人',
+                                        monthly: '480円 × 5人 × 20%',
+                                        reward: '月額 480円',
+                                        note: '→ 自分の有料プラン代が実質タダに',
+                                        highlight: false,
+                                    },
+                                    {
+                                        friends: '10人',
+                                        monthly: '480円 × 10人 × 20%',
+                                        reward: '月額 960円',
+                                        note: '→ 毎月960円の収入に',
+                                        highlight: false,
+                                    },
+                                    {
+                                        friends: '50人',
+                                        monthly: '480円 × 50人 × 20%',
+                                        reward: '月額 4,800円',
+                                        note: '→ 那須の暮らしにプラスの収入',
+                                        highlight: true,
+                                    },
+                                ].map((row) => (
+                                    <div
+                                        key={row.friends}
+                                        className={`flex flex-col md:flex-row md:items-center justify-between gap-2 p-4 rounded-2xl ${row.highlight
+                                            ? 'bg-amber-50 border border-amber-200'
+                                            : 'bg-gray-50 border border-gray-100'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl font-black text-amber-600">{row.friends}紹介</span>
+                                            <span className="text-xs text-gray-400">{row.monthly}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-xl font-black text-gray-800">{row.reward}</span>
+                                            <p className="text-xs text-gray-500">{row.note}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-4 text-center">
+                                ※報酬の詳細・条件はアプリ内「紹介プログラム」ページをご確認ください
+                            </p>
+                        </div>
+
+                        {/* 有料プランの内容 */}
+                        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm p-8 mb-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <p className="text-xs font-black text-amber-500 tracking-widest uppercase mb-1">
+                                        Premium Plan
+                                    </p>
+                                    <h3 className="text-2xl font-black text-gray-800">月額 480円</h3>
+                                    <p className="text-xs text-gray-400 mt-1">いつでも解約可能</p>
+                                </div>
+                                <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                                    <RiGiftFill size={28} className="text-white" />
+                                </div>
+                            </div>
+
+                            <ul className="space-y-3 mb-6">
+                                {[
+                                    '紹介プログラム（20%報酬）が使える',
+                                    '那須スキル交換所へのアクセス',
+                                    '那須あき畑・あき家速報',
+                                    '那須たすけあい速報',
+                                    'おすそわけ畑・爆安セール速報',
+                                    'Nasuフリマ・ちょい手伝い',
+                                    'ペット掲示板・使ってない貸します',
+                                    '今後追加される全プレミアム機能',
+                                ].map((feature) => (
+                                    <li key={feature} className="flex items-start gap-3 text-sm font-bold text-gray-700">
+                                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                                        {feature}
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* 有料プラン加入CTA */}
+                            <Link
+                                href="/premium"
+                                className="block w-full text-center bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-lg py-4 px-8 rounded-2xl shadow-lg transition-all transform hover:scale-105"
+                            >
+                                有料プランに加入する（月額480円）
+                                <ChevronRight className="inline-block w-5 h-5 ml-1 mb-0.5" />
+                            </Link>
+
+                            <p className="text-xs text-gray-400 mt-3 text-center">
+                                ※まずは無料登録（LINE友だち追加）が必要です
+                            </p>
+                        </div>
+
+                        {/* 一言まとめ */}
+                        <div className="text-center bg-amber-900 text-white rounded-[2rem] p-8 shadow-xl">
+                            <p className="text-2xl font-black leading-relaxed">
+                                "那須が好き"という気持ちが、<br />
+                                <span className="text-amber-300">そのまま収入になる。</span>
+                            </p>
+                            <p className="mt-3 text-amber-200 text-sm font-bold">
+                                シェアするだけ。押し売りは不要です。
+                            </p>
+
+                            {/* ⑤ hasReferral を渡す */}
+                            <div className="mt-6">
+                                <ShareButtons
+                                    pageUrl={currentPageUrl}
+                                    shareText={SHARE_TEXT}
+                                    hasReferral={hasReferral}
+                                />
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                {/* ════════════════════════════════════════
+                    Paid Apps Section（PREMIUM SERVICES）
+                ════════════════════════════════════════ */}
                 <section className="py-20 bg-gray-50">
                     <div className="container mx-auto px-4 max-w-4xl">
                         <div className="text-center mb-12">
@@ -745,10 +962,33 @@ const IndexPage = () => {
                                 color="from-purple-500 to-indigo-500"
                             />
                         </div>
+
+                        {/* PREMIUMセクション内加入CTA */}
+                        <div className="mt-12 p-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] shadow-xl text-white text-center">
+                            <p className="text-xs font-black tracking-widest mb-2 opacity-80 uppercase">
+                                Premium Plan
+                            </p>
+                            <p className="text-3xl font-black leading-tight">
+                                月額480円で<br />全機能が使える。
+                            </p>
+                            <p className="mt-2 text-sm font-bold opacity-80">
+                                紹介報酬（20%）を使えば、実質タダになる可能性も。
+                            </p>
+                            <Link
+                                href="/premium"
+                                className="inline-block mt-6 bg-white text-amber-600 font-black text-lg py-4 px-10 rounded-2xl shadow-lg transition-all transform hover:scale-105"
+                            >
+                                有料プランに加入する
+                                <ChevronRight className="inline-block w-5 h-5 ml-1 mb-0.5" />
+                            </Link>
+                            <p className="text-xs mt-3 opacity-60">※いつでも解約可能</p>
+                        </div>
                     </div>
                 </section>
 
-                {/* Reason Free */}
+                {/* ════════════════════════════════════════
+                    Reason Free
+                ════════════════════════════════════════ */}
                 <section className="py-20 bg-white">
                     <div className="container mx-auto px-6 text-center max-w-3xl">
                         <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
@@ -762,7 +1002,9 @@ const IndexPage = () => {
                     </div>
                 </section>
 
-                {/* CTA */}
+                {/* ════════════════════════════════════════
+                    CTA（最終）
+                ════════════════════════════════════════ */}
                 <section id="cta" className="bg-pink-900 text-white">
                     <div className="container mx-auto px-6 py-20 text-center">
                         <div className="max-w-3xl mx-auto">
@@ -777,20 +1019,26 @@ const IndexPage = () => {
                                     <p className="text-lg font-bold text-pink-100">
                                         最速！LINEで友だち追加
                                     </p>
-                                    <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform transform hover:scale-105">
+                                    <a href={lineUrl} target="_blank" rel="noopener noreferrer"
+                                        className="inline-block transition-transform transform hover:scale-105">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png" alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
+                                        <img src="https://scdn.line-apps.com/n/line_add_friends/btn/ja.png"
+                                            alt="LINE 友だち追加" height="42" className="h-14 w-auto shadow-xl" />
                                     </a>
                                 </div>
                             </div>
 
-                            {/* 【追加④】CTAセクション内シェアボタン */}
                             <div className="mt-10 pt-10 border-t border-pink-700">
                                 <p className="text-base font-bold text-pink-200 mb-1">
                                     <Share2 className="inline-block w-4 h-4 mr-1 mb-0.5" />
                                     那須好きの友人・知人にもシェアしてあげてください
                                 </p>
-                                <ShareButtons pageUrl={currentPageUrl} shareText={SHARE_TEXT} />
+                                {/* ⑤ hasReferral を渡す */}
+                                <ShareButtons
+                                    pageUrl={currentPageUrl}
+                                    shareText={SHARE_TEXT}
+                                    hasReferral={hasReferral}
+                                />
                             </div>
 
                             <div className="mt-10 text-pink-300 text-sm md:text-base">
@@ -802,33 +1050,27 @@ const IndexPage = () => {
                 </section>
             </main>
 
-            {/* Footer */}
+            {/* ════════════════════════════════════════
+                Footer
+            ════════════════════════════════════════ */}
             <footer className="bg-gray-900 text-gray-400 text-sm">
                 <div className="container mx-auto py-10 px-6 text-center space-y-3">
                     <Link href="/legal" className="hover:text-white">
                         特定商取引法に基づく表記
                     </Link>
                     <p>みんなのNasuアプリ運営 | 株式会社adtown</p>
-                    <p>
-                        〒329-2711 栃木県那須塩原市石林698-35 | TEL:0287-39-7577
-                    </p>
+                    <p>〒329-2711 栃木県那須塩原市石林698-35 | TEL:0287-39-7577</p>
                 </div>
             </footer>
         </div>
     );
 };
 
-// Featured App Component（変更なし）
+// ─────────────────────────────────────────────
+// FeaturedAppCard（変更なし）
+// ─────────────────────────────────────────────
 const FeaturedAppCard = ({
-    title,
-    description,
-    detail,
-    features,
-    recommend,
-    oneWord,
-    color,
-    badge,
-    badgeColor
+    title, description, detail, features, recommend, oneWord, color, badge, badgeColor
 }: {
     title: string;
     description: React.ReactNode;
@@ -848,27 +1090,19 @@ const FeaturedAppCard = ({
                         <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${badgeColor}`}>
                             {badge}
                         </span>
-                        <h3 className="text-2xl font-black text-gray-800 leading-tight">
-                            {title}
-                        </h3>
+                        <h3 className="text-2xl font-black text-gray-800 leading-tight">{title}</h3>
                     </div>
-                    <p className="text-lg font-bold text-gray-700 leading-relaxed">
-                        {description}
-                    </p>
-                    <p className="text-sm text-gray-500 leading-relaxed">
-                        {detail}
-                    </p>
+                    <p className="text-lg font-bold text-gray-700 leading-relaxed">{description}</p>
+                    <p className="text-sm text-gray-500 leading-relaxed">{detail}</p>
                 </div>
             </div>
-
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white/60 rounded-2xl p-5">
                     <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">できること</h4>
                     <ul className="space-y-2">
                         {features.map((f, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm font-bold text-gray-600">
-                                <span className="text-green-500 mt-0.5">✔</span>
-                                {f}
+                                <span className="text-green-500 mt-0.5">✔</span>{f}
                             </li>
                         ))}
                     </ul>
@@ -878,21 +1112,18 @@ const FeaturedAppCard = ({
                     <ul className="space-y-2">
                         {recommend.map((r, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm font-bold text-gray-600">
-                                <span className="text-pink-400 mt-0.5">●</span>
-                                {r}
+                                <span className="text-pink-400 mt-0.5">●</span>{r}
                             </li>
                         ))}
                     </ul>
                 </div>
             </div>
-
             <div className="mt-6 pt-6 border-t border-gray-200/50 text-center">
-                <p className="text-xl font-black italic text-gray-800">
-                    "{oneWord}"
-                </p>
+                <p className="text-xl font-black italic text-gray-800">"{oneWord}"</p>
             </div>
         </div>
     </div>
 );
 
 export default IndexPage;
+
