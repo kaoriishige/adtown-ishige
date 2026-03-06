@@ -112,6 +112,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     '/contact',
     '/help',
     '/verify-email',
+    '/users/signup',
+    '/users/login',
   ];
 
   // 完全一致、または特定のディレクトリ以下を公開に設定

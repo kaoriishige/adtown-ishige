@@ -163,13 +163,13 @@ const PremiumShareCTA: React.FC<{ tone?: 'light' | 'dark' }> = ({ tone = 'light'
           有料プランに加入する（月額480円）
         </Link>
         <Link
-          href="/premium/referral"
+          href="https://minna-no-nasu-app.netlify.app/users/signup"
           className={`inline-flex justify-center items-center px-6 py-3 rounded-2xl font-black text-sm border transition-all ${isDark
             ? 'border-green-400/40 text-green-50 hover:bg-green-900/40'
             : 'border-gray-300 text-gray-700 hover:bg-white'
             }`}
         >
-          紹介プログラムの詳細を見る
+          無料プランに登録して詳細を見る
         </Link>
       </div>
     </div>
@@ -960,10 +960,10 @@ const IndexPage = () => {
                     有料プランに加入する
                   </Link>
                   <Link
-                    href="/premium/referral"
+                    href="https://minna-no-nasu-app.netlify.app/users/signup"
                     className="inline-flex justify-center items-center px-8 py-4 rounded-2xl border border-pink-300/50 text-white font-black text-base hover:bg-pink-800/40 transition-all"
                   >
-                    紹介プログラムの詳細
+                    無料プランに登録して詳細を見る
                   </Link>
                 </div>
               </div>
